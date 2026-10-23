@@ -43,8 +43,8 @@
 - 描述区分事实、用户判断和待验证假设。
 - 候选需求说明目标、当前依据和预期结果；未确认内容标记为待调查。
 - 优先级由用户讨论确认并记录依据，不由本入口文档代为决定。
-- 产出经过用户检查，不把规划设想描述为已实现功能。
+- 产出经过用户检查，不把规划设想描述成已实现功能。
 
 ## GitHub Issue
 
-在仓库的 [Phase 2：业务需求地图与优先级梳理 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues) 跟踪后续工作。本 Issue 仅创建任务入口，不表示本次已启动或完成正式需求分析。
+在仓库的 [Phase 2：业务需求地图与优先级梳理 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/1) 跟踪后续工作。本 Issue 仅创建任务入口，不表示本次已启动或完成正式需求分析。
