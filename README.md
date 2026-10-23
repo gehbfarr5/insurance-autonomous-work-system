@@ -26,7 +26,7 @@
 ### 后续规划
 
 - [阶段二：业务需求讨论入口](planning/phase-2-business-requirements.md)
-- [GitHub Issue：Phase 2 业务需求地图与优先级梳理](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues)
+- [GitHub Issue：Phase 2 业务需求地图与优先级梳理](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/1)
 
 ## 状态标记
 
