@@ -1,6 +1,6 @@
 # Pixel 专机化：系统更新与清理准备
 
-日期：2026-10-25。状态：初查后用户已授权先备份至外置盘，再按计划逐步清理；外置盘备份进行中，尚未清理、更新系统、重启或访问签到页面。本记录用于对齐设备实际状态与专机化计划。
+日期：2026-10-25。状态：初查后用户已授权先备份至外置盘，再按计划逐步清理；外置盘备份文件层校验完成（整机恢复未验证），尚未清理、更新系统、重启或访问签到页面。本记录用于对齐设备实际状态与专机化计划。
 
 ## 目标与边界
 
@@ -40,7 +40,7 @@ MacServer LaunchAgent 文件内容匹配发现微信读书 bot/weekly、科技�
 
 外置盘 DTC810 已挂载，可用约211GiB；已建立仅当前用户可访问的私密备份目录。运行态文件备份覆盖 /data（包括应用APK、应用数据、共享存储、Magisk/Vector与旧自动化资料）和 /metadata，另准备保存 boot/dtbo/vbmeta 两槽位镜像。备份原始文件和准确路径仅保存在私密记录。此为文件层备份，尚无整机恢复验证，不保证应用运行中多文件一致性、硬件绑定密钥可移植性或完整SELinux/xattr还原。权限限制不等于磁盘加密。
 
-初次传输因 exec-out 合并错误流导致归档头污染，已中断并保留诊断；改用 shell -T 的分离错误流。Toybox --selinux 读取标签失败，已中断该次归档；改用标准归档并单独保存标签清单，明确完整标签还原未验收。小归档二进制传输与读取检查退出0；完整归档仍待结束、检查、哈希和遗漏审阅，不能据小检查标记完整备份PASS。旧失败文件不作为恢复来源。
+初次传输因 exec-out 合并错误流导致归档头污染，已中断并保留诊断；改用 shell -T 的分离错误流。Toybox --selinux 读取标签失败，已中断该次归档；改用标准归档并单独保存标签清单，明确完整标签还原未验收。小归档二进制传输与读取检查退出0；完整归档与分区备份随后已完成文件层验收，结果见下方最终备份结论；不能据小检查代替完整验收。旧失败文件不作为恢复来源。
 
 补充的真实状态：
 
@@ -70,3 +70,52 @@ B：备份后清空重建专机。基线更容易审阅，但丢失登录/私有
 reuse：现有手机、官方22.2更新分支、已有最小探针思路。adapt：root/注入恢复、专机网络与任务管理。avoid：整体继承旧自动化、批量无差别卸载、未备份刷机、把安全补丁属性当完整安全审计。
 
 原始检查保存在工作区 .private/p4-wp01/pixel-cleanup-audit-2026-10-25，包含私密设备资料，不应提交；前轮环境证据见 pixel-environment-2026-10-24.md。清查仍在准备阶段，不标记整机专用化 PASS。
+
+## 第三方应用逐项清单
+
+来源：2026-10-25包管理、版本与进程快照，共36项。进程快照不等于任务启停状态；尤其注入模块的管理APP没有进程，不能据此判断Hook停用。系统组件另外保留私密完整清单，不按专机目标批量删除。以下为处置候选，尚未执行。
+
+| 包名 | 当前版本 | 快照有进程 | 处置候选 |
+| --- | --- | --- | --- |
+| app.revanced.manager.flutter | 1.25.1 | 无 | 移除候选 |
+| com.aurora.store | 4.7.5 | 有 | 维护期保留再收敛 |
+| com.codex.termuxmonitor | 0.2.3-termux-icon | 无 | 先隔离旧逻辑 |
+| com.cpic.kjgxplus | 18.5 | 有 | 保留候选 |
+| com.github.metacubex.clash.meta | 2.11.30.Meta | 有 | 依赖待查 |
+| com.github.uiautomator | 2.4.0 | 无 | 执行工具待收敛 |
+| com.google.android.inputmethod.latin | 17.4.3.909935335-beta-arm64-v8a | 有 | 保留候选 |
+| com.jin.weread.capture | 1.0.0 | 无 | 先隔离旧逻辑 |
+| com.jin.weread.guardian | 0.1.0-probe-debug | 无 | 先隔离旧逻辑 |
+| com.kjgx.capture | 0.3.28-idcard-fallback | 有 | 先隔离旧逻辑 |
+| com.kjgx.hook | 1.0.8-clipboard-import | 无 | 先隔离旧逻辑 |
+| com.mixplorer | 6.68.4 | 有 | 维护期保留再收敛 |
+| com.oasisfeng.greenify | 5.1.1 | 无 | 依赖待查 |
+| com.openai.chatgpt | 1.2026.139 | 无 | 移除候选 |
+| com.pcr532.leon | 1.6.6.9 | 无 | 用途待确认 |
+| com.quark.browser | 10.10.0.1075 | 无 | 维护期保留再收敛 |
+| com.rosan.installer.x | 1.7-20241104 | 有 | 维护期保留再收敛 |
+| com.tencent.weread | 10.1.0 | 无 | 移除候选 |
+| com.termux | 0.118.3 | 无 | 执行工具待收敛 |
+| com.topjohnwu.magisk | 30.7 | 有 | 保留候选 |
+| com.tsng.hidemyapplist | 3.5.r449.1d951a3 | 无 | 依赖待查 |
+| de.syss.MifareClassicTool | 4.1.0 | 无 | 移除候选 |
+| icu.nullptr.applistdetector | 2.4 | 无 | 移除候选 |
+| inc.whew.android.fakegapps | 6.6 | 无 | 依赖待查 |
+| io.github.muntashirakon.AppManager | 4.0.5 | 无 | 维护期保留再收敛 |
+| mark.via | 6.6.0 | 有 | 维护期保留再收敛 |
+| me.zhanghai.android.files | 1.7.4 | 无 | 维护期保留再收敛 |
+| moe.shizuku.privileged.api | 13.6.0.r1086.2650830c | 有 | 依赖待查 |
+| net.dinglisch.android.taskerm | 6.7.3-beta | 无 | 执行工具待收敛 |
+| org.adaway | 6.1.4 | 无 | 依赖待查 |
+| org.autojs.autoxjs.v7 | 7.0.4 | 无 | 执行工具待收敛 |
+| org.fdroid.fdroid | 1.23.2 | 有 | 维护期保留再收敛 |
+| org.localsend.localsend_app | 1.17.0 | 无 | 维护期保留再收敛 |
+| org.lsposed.manager | 2.0 | 无 | 保留候选 |
+| org.swiftapps.swiftbackup | 5.0.8 | 有 | 维护期保留再收敛 |
+| rikka.appops | 9.0.7.r1708.57e6ad70.G | 有 | 依赖待查 |
+
+## 最终备份结论与接续
+
+2026-10-25 00:39文件层校验PASS：主归档15.53GiB、有效清单82项，8个关键APK哈希与源文件一致，相关数据目录覆盖，13个分区大小及相关压缩解码检查通过，框架逻辑导出副本完整性通过。仅132个运行态socket不支持归档，诊断与原始退出1如实保存；无其他归档诊断。早期失败归档排除出有效来源。整机恢复与运行态数据一致性仍未验证。详见[备份结果与恢复边界](p4-wp01-pixel-backup-2026-10-25.md)。
+
+当前仍未清理、升级或重启。第一批行动前补齐Mac实际调用链、Tasker/AutoX.js具体触发和网络/兼容依赖；按备份覆盖逐项停用并复查，不同时进行系统升级与大批卸载。用途待查项不直接删除。
