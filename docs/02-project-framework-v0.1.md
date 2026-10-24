@@ -6,8 +6,8 @@
 
 - [总体框架 v0.2：项目定位、业务领域、经营规划与发展阶段](02-project-framework-v0.2.md)
 - [人机协作、授权与结果验证](05-autonomy-governance.md)
-- [已确认决策 D-001—D-019](03-confirmed-decisions.md)
+- [已确认决策 D-001—D-028](03-confirmed-decisions.md)
 - [阶段发展与决策关口路线图](../planning/roadmap.md)
 - [待决事项](04-open-questions.md)
 
-**本项目仍处于规划阶段；S1 第一阶段具体业务切入点尚未确定。**
+**当前：P1/P2/P3 已完成，已确认进入 P4；C 为 S1 首个试点域，每日互动先切入，尚未启动实施。当前会话先完成整体审阅与整理，缺失内容在 P4 对应工作中补齐。**
