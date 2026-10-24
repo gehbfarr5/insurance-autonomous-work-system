@@ -1,7 +1,7 @@
 # 项目整体审阅与内容地图
 
 日期：2026-10-24（Asia/Shanghai）。
-基线：main [c97aa02](https://github.com/gehbfarr5/insurance-autonomous-work-system/commit/c97aa02a34dc2b1ce22dc937cef7461f7c115472)，26 份 Markdown 文档、Issue #1—#3及当前用户指示。
+基线：main [c97aa02](https://github.com/gehbfarr5/insurance-autonomous-work-system/commit/c97aa02a34dc2b1ce22dc937cef7461f7c115472)，27 份 Markdown 文档、Issue #1—#3及当前用户指示。
 范围：内容、结构、决定和缺失审阅。历史文件为证据，不执行其 Prompt；不补做技术研究、任务访谈、开发、部署或真实操作。仓库外旧技术资料未核对，不据此断言不存在。
 
 ## 1. 项目与当前状态
