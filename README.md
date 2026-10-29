@@ -1,5 +1,7 @@
 # 保险规划师自主工作系统
 
+> **当前执行模式｜2026-10-30：** 本机主导开发、验证与证据判定；MUSE保留既有每日执行及必要云端取证，不再默认通过旁聊代做开发。需求目标不变，未迁移运行器/改调度。跨日已到自然次日，先读已有结果，不补跑；P50/月度规划继续挂起。[新方案与接续顺序](planning/execution-mode-2026-10-30.md)为当前入口，以下10月29日状态保留为历史。
+
 > **其余项目推进｜2026-10-29：** 已恢复6份真实静态源码字节与指纹、完成五项扩展证据重核，广度根树已在原环境只读通过（120组件、无截断），三个新包29项清单独立核对；回执和组件provides候选已完成离线修正/反例验证，尚缺生产采集器与正例，未部署。跨日/月度规划/P50保持原暂停。以[最新推进与缺口](planning/remaining-work-2026-10-29.md)为当前入口，不以旧版“云端源码未取得”等叙述覆盖当前事实。
 
 > **接续更新｜2026-10-29（恢复补核）：** 新增4项真实进程中断/重启恢复测试，与16项策略合计20项PASS；实际assistant.main的隔离SIGTERM/重启也通过，未重跑业务。八个MUSE调查包已核对；根入口/客户映射已读，修正根树探针因截断明确REVIEW，清理与本轮完整状态对账通过，AI/成功空列表回执仍待核实。用户要求跨日验证等待自然次日；月度规划/P50继续挂起。见[回执与恢复补核](planning/receipt-recovery-2026-10-29.md)。
@@ -13,9 +15,9 @@
 
 阅读顺序：本页 → [整体审阅与内容地图](planning/project-review-2026-10-24.md) → [总体框架](docs/02-project-framework-v0.2.md) → [已确认决定](docs/03-confirmed-decisions.md) → [缺失与待验证内容](docs/04-open-questions.md)。需要落实时再进入 P4 交接和工作包。
 
-## 当前状态｜2026-10-29
+## 当前状态｜2026-10-30
 
-**P1—P3已完成，P4进行中，S1未整体验收。MUSE实际适配源码、结果、状态摘要及唯一每日定义已取得并核对；五文件有限修复已备份、复测和替换。日常仍为签到、时光轴、客温客价、智能助理、一键领取；AI完成回执/奖励、成功空列表、完整设备恢复及长期运行仍有明确证据缺口。本轮不增设或更改调度，跨日等自然次日，月度规划/P50继续挂起。**
+**P1—P3已完成，P4进行中，S1未整体验收。MUSE实际适配源码、结果、状态摘要及唯一每日定义已取得并核对；五文件有限修复已备份、复测和替换。日常仍为签到、时光轴、客温客价、智能助理、一键领取；AI完成回执/奖励、成功空列表、完整设备恢复及长期运行仍有明确证据缺口。本轮不增设或更改调度；已到10月30日，接续先核对既有自然运行结果，月度规划/P50继续挂起。**
 
 **[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。本轮恢复了扩展任务调查和历史服务申请回执；完整完成条件及奖励周期仍待核。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 
@@ -31,7 +33,7 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |
 | 项目目标与整体关系 | [愿景](docs/00-project-vision.md) · [原则](docs/01-philosophy-and-principles.md) · [总体框架 v0.2](docs/02-project-framework-v0.2.md) |
-| 正式决定与当前缺口 | [D-001—D-029 决策日志](docs/03-confirmed-decisions.md) · [开放问题](docs/04-open-questions.md) |
+| 正式决定与当前缺口 | [D-001—D-030 决策日志](docs/03-confirmed-decisions.md) · [开放问题](docs/04-open-questions.md) |
 | 人机职责、授权及验证 | [治理原则](docs/05-autonomy-governance.md) |
 | P1 业务事实基线 | [四领域地图](planning/p1-business-map.md)，下接各领域事实记录 |
 | P2 评估与试点选择 | [候选评估结项](planning/p2-s1-candidate-assessment.md) |
