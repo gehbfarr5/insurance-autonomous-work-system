@@ -81,15 +81,16 @@
     "path": "tools/vue-root-metadata.js",
     "sha256": "2af5645c3e067761a18be20500aaddb40178ea0bcd83e585ca4228c6337b50d1",
     "localNodeTest": "PASS: production root, breadth traversal, deep fragments, dedup/cycles, privacy, absent root, explicit errors and truncation reasons",
-    "productionValidated": false,
+    "productionValidated": true,
     "dailyRunnerChanged": false,
-    "handedOffForReadonlyVerification": true
+    "handedOffForReadonlyVerification": true,
+    "validationScope": "read-only AI home metadata only; no answer/reward acceptance"
   },
   "boundary": [
     "asset paths match previously observed indexes, but bytes were downloaded now; not proof of historical loaded bytes",
     "original sources private; public summary does not contain internal code/endpoints or customer values",
     "native static entry is not proof of reward eligibility or runtime availability",
-    "Mac unlocked by user; MUSE read-only recovery, breadth-probe verification and offline implementation requests sent; results pending"
+    "Three result packages independently verified; local offline corrections tested and published as candidates only; live receipt collector and positive evidence still missing"
   ],
   "extensionClassification": {
     "保单芯管家": "仍待核实；用户先前移出每日范围，申请成功非检视/奖励完成",
@@ -97,5 +98,58 @@
     "三节一生": "仍待核实；完成方法产生任务提交，不能当只读浏览",
     "E锦囊激活": "仍待核实；已恢复独立原生入口线索，未证明激活流程/资格",
     "签单协同业务": "仍待核实；有其他协同入口线索，未证明与目标规则映射"
+  },
+  "receivedPackages": [
+    {
+      "name": "five-expansions-recovery",
+      "bytes": 49554,
+      "sha256": "f554dbbf7df537f6200c1dd4877424f5da6afb3b59bd4e4a10bf242dcdbe27b5",
+      "verifiedManifestEntries": 8
+    },
+    {
+      "name": "investigation-root-tree-ai-v2",
+      "bytes": 26995,
+      "sha256": "d3525b51a30b4509d2194064b2607b19526c1c92b8e09e711380ec7e2d9078a7",
+      "verifiedManifestEntries": 13
+    },
+    {
+      "name": "supplement-offline-corrections",
+      "bytes": 14924,
+      "sha256": "edbffec6bf46dfc9e6e55c6c73ce46b07f4edbff44250d46ec6fbc0d96b6c005",
+      "verifiedManifestEntries": 8
+    }
+  ],
+  "readonlyResult": {
+    "status": "ROOTS_FOUND",
+    "nodes": 120,
+    "visited": 694,
+    "queued": 694,
+    "truncated": false,
+    "errors": [],
+    "cleanup": "PASS",
+    "stateBefore": 40,
+    "stateAfter": 43,
+    "added": 3,
+    "changed": 0,
+    "deleted": 0,
+    "controlHashesUnchanged": 8,
+    "providesScope": "app context own properties only; component/prototype chain not covered"
+  },
+  "offlineReview": {
+    "originalV1FalseAcceptancesReproduced": 4,
+    "originalV2": "8 manifest files independently verified; pure candidate, not deployed",
+    "localRevisions": "last-answer association and complete baseline; same request/response/assignment cycle; descriptor-safe ref/Symbol; per-component inherited provides; explicit bounds",
+    "testCases": 40,
+    "pythonResult": "PASS",
+    "nodeResult": "PASS: inheritance, cycles, privacy, accessor traps, shared ancestry and Symbol bounds",
+    "productionCollectorImplemented": false,
+    "providesCandidateLiveValidated": false,
+    "dailyRunnerChanged": false,
+    "files": {
+      "receipt_validator_v2.py": "4b47202fac0cf6668d92a4a1ab79e7cb20b0e19d9e05c24d9b2fb9572cd5804b",
+      "test_receipt_validator_v2.py": "a179af66eebd9e6f481dda76c0d8f7b2d7dc3c255d224c167de4ddb38b98d570",
+      "provides_component_traversal.js": "38f1afe514a83cca5f5635d471d7a451db8d836090085e268a5be35bc1c50104",
+      "test_provides_component_traversal.cjs": "c51ef733a790f7d52fea30dac088571afd6464fcf08df3d50005aeb421dd94ec"
+    }
   }
 }
