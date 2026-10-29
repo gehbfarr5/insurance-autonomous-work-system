@@ -151,5 +151,42 @@
       "provides_component_traversal.js": "38f1afe514a83cca5f5635d471d7a451db8d836090085e268a5be35bc1c50104",
       "test_provides_component_traversal.cjs": "c51ef733a790f7d52fea30dac088571afd6464fcf08df3d50005aeb421dd94ec"
     }
+  },
+  "execution20261030": {
+    "recordedAt": "2026-10-30T00:35:30.112735+08:00",
+    "scope": "local development and read-only SSH; no prepare/auth/business/cron/deploy",
+    "pixel": {
+      "connection": "PASS using existing alias",
+      "device": "sargo",
+      "android": "15",
+      "correctPackageCheck": "application not running",
+      "operationLockPresent": false,
+      "forestEnablePresent": false,
+      "forestDebugPresent": false,
+      "pvuCommandPresent": false,
+      "pvuDebugPresent": false
+    },
+    "dailyRun": "NOT_DUE: before 09:00 Asia/Shanghai; no natural-run result claimed",
+    "museMessagesSent": 0,
+    "collector": {
+      "files": {
+        "tools/receipt-collector/test-collector.cjs": "08b48080fb71ba5c51a1f012390d4cfbcfad5170b30bd02d131c367114830c6f",
+        "tools/receipt-collector/test-expression.cjs": "298ce1f15f1f84a896c99388c1e214e84bf8be726e84f59fc41aa5352f52db51",
+        "tools/receipt-collector/ai-snapshot.js": "1578bdfd5df6aa022f0f7a1ce3619217f2914eb01b976ab649991736314fc258",
+        "tools/receipt-collector/README.md": "bb88daa798d34c8b46d1075faf18270c3b9ca7d68cfff03efaaba75568de0449",
+        "tools/receipt-collector/build-expression.cjs": "9d4edcbb1bb3c4b699b0767140ea8e989f0cec91ff1ca062ba4839141a626f7a",
+        "tools/receipt-collector/reconcile.cjs": "df5a17f007f5f9f8c513035de0f27158613727b2ed8661b6a1f2c03be0ef6d5c"
+      },
+      "treeSyntheticTests": 26,
+      "expressionGuards": "PASS: exact target, resource profile, missing root, invalid profile",
+      "deviceValidated": false,
+      "integrated": false,
+      "deployed": false,
+      "successEmptyCollectorImplemented": false
+    },
+    "testLogHashes": {
+      "collector-tests.txt": "85c975adbf976e0967617fd17a25b409fb3a0660f136fa7e20880efa2fb549ef",
+      "expression-tests.txt": "86dbf2c1bb06c48ecd33430ecf1692e85a7c43557b80db73d3c1ecefe7342642"
+    }
   }
 }
