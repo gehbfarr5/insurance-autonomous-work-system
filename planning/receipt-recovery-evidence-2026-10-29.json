@@ -51,16 +51,39 @@
     "cleanupPerformedByThisCheck": false
   },
   "receiptInvestigation": {
-    "level": "SESSION_REPORTED_NOT_ARTIFACT_VERIFIED",
+    "level": "DOWNLOADED_STRUCTURAL_RESULT_AND_SCRIPT_REVIEWED",
     "reportedResult": "INVEST_DONE",
     "reportedCleanup": "PASS",
     "receiptFieldsEstablished": false,
     "resultRelativePath": "state/runs/invest-ai-customer-20261029-161712-d3b483/result.json",
-    "reportedResultSha256": "1e9c84d9e6fd3dc1351de3b3eae3ecddd2f3def8c786406b01a130f8d4eba93e",
-    "localArtifactHashVerified": false,
-    "package": "runtime-review-20261029-investigation.zip",
-    "continuation": "static component/store/source investigation requested; no additional prepare",
-    "currentUIBlock": "coordinate noWindowsAvailable; library blank; screenshot unavailable"
+    "resultSha256": "1e9c84d9e6fd3dc1351de3b3eae3ecddd2f3def8c786406b01a130f8d4eba93e",
+    "localArtifactHashVerified": true,
+    "v2ManifestVerifiedEntries": 9,
+    "auditManifestVerifiedEntries": 5,
+    "packages": {
+      "runtime-review-20261029-investigation.zip": {
+        "size": 15094,
+        "sha256": "d39507012030655f3b8f6fcbd70829309de1af3aa9fa12fc0d6f7e3cb7707f40"
+      },
+      "runtime-review-20261029-investigation-v2.zip": {
+        "size": 21617,
+        "sha256": "e2b0c50031bc2e9021bfc5d048e4cc1e3d2d61b346795b1944a87af775981135"
+      },
+      "runtime-review-20261029-investigation-v2-supplement.zip": {
+        "size": 1897,
+        "sha256": "2b38f0be6c7931025356543728a2d639a3941ba7d4035b5d0b983c7545ea1026"
+      },
+      "runtime-review-20261029-investigation-audit.zip": {
+        "size": 9744,
+        "sha256": "69da7bbce8add77018532d833ef3e4aa70bc5a449891be79ee4bd33c4d3e62b0"
+      }
+    },
+    "currentUIBlock": null,
+    "aiFieldNames": "candidate names in prose supplement; actual view access and completion semantics not verified",
+    "customerLoadReceipt": "not located in outer component; static nested component/store tracking in progress",
+    "museRecoveryLog": "manual JSON worker and reread only; not assistant.main recovery evidence",
+    "stateComparisonCoverage": "two key state files plus cron, 13:26 baseline compared with reported after-invest/current hashes; no full tree",
+    "continuation": "static source investigation only; no further device prepare"
   },
   "limits": [
     "all submitted business state in process tests is synthetic",
