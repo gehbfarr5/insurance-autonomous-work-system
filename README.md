@@ -11,13 +11,13 @@
 
 ## 当前状态｜2026-10-29
 
-**P1、P2、P3 已完成；P4 已开展设备准备及有限任务验证，S1 尚未整体验收。** 10月25日设备基础验收已有仓库证据；10月28日会话报告签到、时光轴、客温客价、一键领取已单次实测，智能助理成功一次但奖励待确认。后者尚缺本轮可读取的源码和原始运行证据，不能视为长期运行 PASS。
+**P1—P3已完成，P4进行中，S1未整体验收。本轮已恢复本地原始执行记录：签到、时光轴、客温客价关联奖励及领取有历史文件证据；重复运行跳过有原记录。智能助理问答有原记录，奖励仍REVIEW。Pixel当前SSH与0.17模块哈希匹配PASS。MUSE另有已部署每日任务的后续报告，尚未独立读取云端原文件；本轮不新增或改动调度。**
 
-**[最新进度核对、未同步成果与下一步](planning/progress-reconciliation-2026-10-29.md)**：日常范围已确定为上述五项；五项扩展任务仍待核查；P50/月度规划留月初，目标 2U＝2800。当前不部署定时。远程配置有历史存在性证据，当前连接须只读复验。
+**[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。本轮恢复了扩展任务调查和历史服务申请回执；完整完成条件及奖励周期仍待核。P50/月度规划保留月初，目标2U＝2800。
 
 S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；每日互动为首项切入。C 包含互动、培训、答题、特定活动、客户筛选报送、月度收入计划等，不限定为两个 APP 板块，也不表示所有任务同批实施。
 
-已确认优先研究完全云端化，以日常只用 iPhone 为目标；条件不满足再评估 Pixel 独立执行。Android 注入是用户确认的必要技术前提；具体方案未选。旧项目的代码、运行与页面反馈经验仅作历史参考，不能证明新系统可复用、可运行或发布可靠。
+已确认优先研究完全云端化，以日常只用 iPhone 为目标；条件不满足再评估 Pixel 独立执行。Android 注入是用户确认的必要技术前提；早期“具体方案未选”已由P4的Pixel注入/CDP有限实现推进；云端Android替代仍未完成兼容验收。旧项目经验不替代当前实现的证据。
 
 ## 阅读入口
 
@@ -27,7 +27,7 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |
 | 项目目标与整体关系 | [愿景](docs/00-project-vision.md) · [原则](docs/01-philosophy-and-principles.md) · [总体框架 v0.2](docs/02-project-framework-v0.2.md) |
-| 正式决定与当前缺口 | [D-001—D-028 决策日志](docs/03-confirmed-decisions.md) · [开放问题](docs/04-open-questions.md) |
+| 正式决定与当前缺口 | [D-001—D-029 决策日志](docs/03-confirmed-decisions.md) · [开放问题](docs/04-open-questions.md) |
 | 人机职责、授权及验证 | [治理原则](docs/05-autonomy-governance.md) |
 | P1 业务事实基线 | [四领域地图](planning/p1-business-map.md)，下接各领域事实记录 |
 | P2 评估与试点选择 | [候选评估结项](planning/p2-s1-candidate-assessment.md) |

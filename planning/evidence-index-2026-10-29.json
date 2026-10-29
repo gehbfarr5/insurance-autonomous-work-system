@@ -1,0 +1,117 @@
+{
+  "scope": "仅索引；原始文件不发布。privateRelativePath相对既有受控P4-WP01目录；哈希是本轮读取时的内容哈希，不证明历史不可篡改。",
+  "entries": [
+    {
+      "id": "E01",
+      "privateRelativePath": "forest-exploration-2026-10-26/sign-today-result.json",
+      "sha256": "c76170312dccc2eec98b606a635c3b8df35f9c4bc113ecc30d02be8e0876b399",
+      "bytes": 325,
+      "description": "签到日期与已签状态原始回读"
+    },
+    {
+      "id": "E02",
+      "privateRelativePath": "forest-agent/timeline-discovery/view-result.json",
+      "sha256": "7ea5f72e1a33a32db2c76af53af7d005ed3764353eb194c997d6722f4954d51a",
+      "bytes": 142,
+      "description": "6077ms与原奖励回执"
+    },
+    {
+      "id": "E03",
+      "privateRelativePath": "forest-agent/timeline-discovery/automatic-collection-result.json",
+      "sha256": "872f3c8a81f2666ef8df13ae25c430d6562706292ea44acb98629d07410a8e7f",
+      "bytes": 2333,
+      "description": "485.5到486.5及待领清空"
+    },
+    {
+      "id": "E04",
+      "privateRelativePath": "forest-agent/timeline-discovery/ledger-confirmation.json",
+      "sha256": "edb1a4671206c1ac657fd168bca85290ed67b359d2272dc856f5aaa01af8abe9",
+      "bytes": 449,
+      "description": "签到、时光轴、客温客价分项明细"
+    },
+    {
+      "id": "E05",
+      "privateRelativePath": "forest-agent/state/runs/20261026-022221-87d802/result.json",
+      "sha256": "5e9f9aecb659b962fa8bdbe9fa33c2f92c15ddb04332d392278269913e02273d",
+      "bytes": 5071,
+      "description": "重复执行跳过与清理"
+    },
+    {
+      "id": "E06",
+      "privateRelativePath": "forest-agent/more-energy-20261026/ai-use-result.json",
+      "sha256": "5aedc2c9cd3e347c4e2e8bd06659b886a2e82037cf4dc30a19393c403d21c1db",
+      "bytes": 164,
+      "description": "通用问答在场，无客户选择"
+    },
+    {
+      "id": "E07",
+      "privateRelativePath": "forest-exploration-2026-10-25/rules.json",
+      "sha256": "19dc81a6f4f4ababc5b572b05eec809a539246ed574cba3224786a9f2df91cc2",
+      "bytes": 8079,
+      "description": "官方规则弹层私有快照"
+    },
+    {
+      "id": "E08",
+      "privateRelativePath": "five-items-20261028/核查记录.md",
+      "sha256": "9ab59649627864bc07a18c326ac0fb6a72dbac3f0c8ff3440e46626243b4f611",
+      "bytes": 20016,
+      "description": "扩展调查及MUSE会话报告，混合证据等级"
+    },
+    {
+      "id": "E09",
+      "privateRelativePath": "five-items-20261028/submit-result.png",
+      "sha256": "8ae226a60ea1991efb2c1ddddeaaf6ffead257e26b7bd1c5a18ad2fa1a6b5c0d",
+      "bytes": 112943,
+      "description": "服务申请提交成功页面，本轮已目视核实"
+    },
+    {
+      "id": "E10",
+      "privateRelativePath": "forest-agent/p50-20261026-095705/P50延迟账本复核.json",
+      "sha256": "0ad292c35fc5b3470fe7180965b4aa43a81ac66adaef559ec131a1f8db5984b4",
+      "bytes": 4370,
+      "description": "P50延迟复核，不证明全部名额产奖"
+    },
+    {
+      "id": "E11",
+      "privateRelativePath": "secureview-bridge/artifacts/p4-secureview-v0.17.0-forest-agent-signed.apk",
+      "sha256": "62d0e048e03f86cb074d8af045cbd81c31dc385689f56f35b2d48488feea04f5",
+      "bytes": 41722,
+      "description": "与当前Pixel已装APK哈希相同"
+    },
+    {
+      "id": "S01",
+      "privateRelativePath": "forest-agent/policy.py",
+      "sha256": "6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e",
+      "bytes": 7313,
+      "description": "公开策略原文件"
+    },
+    {
+      "id": "S02",
+      "privateRelativePath": "forest-agent/run.py",
+      "sha256": "1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5",
+      "bytes": 16893,
+      "description": "本地旧执行器及Journal来源"
+    },
+    {
+      "id": "S03",
+      "privateRelativePath": "forest-agent/tasks.py",
+      "sha256": "b13b3bd1d87f4f5a797045739c51a4a65a3891359d3475e94b51b3c3f1afd887",
+      "bytes": 4201,
+      "description": "本地旧只读任务适配"
+    },
+    {
+      "id": "E12",
+      "privateRelativePath": "forest-agent/more-energy-20261026/ledger-confirmation.json",
+      "sha256": "0a9a878da4b47a1947390aed30e9e46a4cebd858639322b11913e88f8255641c",
+      "bytes": 723,
+      "description": "AI后账本无AI来源记录"
+    },
+    {
+      "id": "E13",
+      "privateRelativePath": "forest-agent/自动化验收.md",
+      "sha256": "4a23cf8e5b8819189d153512b8302764992a175c503d712ac427f3ec413f4fcd",
+      "bytes": 5939,
+      "description": "历史验收说明，不能单独代替原始数据"
+    }
+  ]
+}

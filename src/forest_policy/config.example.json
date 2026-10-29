@@ -1,0 +1,8 @@
+{
+  "businessTimezone": "Asia/Shanghai",
+  "stateDirectory": "<PRIVATE_PERSISTENT_STATE_DIRECTORY>",
+  "deviceAlias": "<EXISTING_AUTHORIZED_SSH_ALIAS>",
+  "expectedModuleSha256": "<VERIFIED_LOCAL_ARTIFACT_SHA256>",
+  "maxExistingCustomersPerDay": 1,
+  "schedulerEnabled": false
+}
