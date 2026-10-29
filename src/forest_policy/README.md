@@ -1,6 +1,6 @@
 # 森林离线策略与意图日志
 
-从本地已有单次执行器中恢复的可公开部分。`policy.py`逐字复用；`journal.py`从私有`run.py`提取`atomic_json`和`Journal`，仅补独立导入；16个合成策略测试仅将Journal导入改为本目录。无第三方运行依赖，使用Python 3.9+标准库（须有Asia/Shanghai时区数据）。本轮实测Python版本见核查报告。
+从本地已有单次执行器中恢复的可公开部分。`policy.py`逐字复用；`journal.py`从私有`run.py`提取`atomic_json`和`Journal`，仅补独立导入；16个合成策略测试仅将Journal导入改为本目录。另含4项真实子进程中断/重启恢复测试：持久意图写入后SIGKILL、新进程只读对账不重放、未决结果继续阻塞、真实flock随进程退出释放。业务状态仍为合成数据，不涉及设备或服务重启；仅适用于支持fcntl/SIGKILL的macOS/Linux。无第三方运行依赖，使用Python 3.9+标准库（须有Asia/Shanghai时区数据）。本轮实测Python版本见核查报告。
 
 在仓库根目录运行：
 

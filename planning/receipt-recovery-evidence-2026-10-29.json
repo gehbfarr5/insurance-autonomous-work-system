@@ -1,0 +1,71 @@
+{
+  "recordedAt": "2026-10-29T17:16:34.325385+08:00",
+  "crossDay": "DEFERRED_TO_NATURAL_NEXT_DAY_BY_USER",
+  "P50": "PAUSED",
+  "monthlyPlanning": "PAUSED",
+  "publicSuite": {
+    "total": 20,
+    "passed": 20,
+    "newRealProcessCases": 4
+  },
+  "actualAssistantIsolatedRecovery": {
+    "status": "PASS",
+    "runtimeAssistantSha256": "813f6dd22f6b4559044041d41683e3c22e12bb10e41113c19b53f9d480c45351",
+    "mode": "actual assistant.main in separate child interpreters; mock device/evaluate, network forbidden",
+    "signal": "SIGTERM",
+    "persistedBeforeSignal": "DISPATCHING/UNKNOWN",
+    "cleanup": "PASS",
+    "restartStatus": "REVIEW",
+    "restartPreparedOrSubmitted": false,
+    "productionExecuted": false
+  },
+  "artifacts": {
+    "publicProcessTests": {
+      "sha256": "aacfa7458a8a9c12560a31446ce9402469b29b1b54c7356e9f88eed118f18490",
+      "location": "public repository"
+    },
+    "publicSuiteLog": {
+      "sha256": "4d225d9f7cb5a0fcb53130b799d25d5450e81261d98e1d2596fe74a451752a73",
+      "location": "existing controlled private runtime review directory"
+    },
+    "assistantProcessHarness": {
+      "sha256": "33a94bcba948314de5eb08c31f5618d32b376e1daf2fd04b044c9e1bb320de83",
+      "location": "existing controlled private runtime review directory"
+    },
+    "assistantProcessResult": {
+      "sha256": "4808064e10e440ea504c79c44a81ad53f0cfb2dc857e3fc44c9e0788da2efd3b",
+      "location": "existing controlled private runtime review directory"
+    },
+    "pixelReadonlyState": {
+      "sha256": "eef003541346a2064f76f3c8b63380ae062b0bb592431a860a58f641d3a53a9f",
+      "location": "existing controlled private runtime review directory"
+    }
+  },
+  "deviceReadonlyCheck": {
+    "deviceTimestamp": "2026-10-29T17:15:08+08:00",
+    "exit": 0,
+    "operationLockPresent": false,
+    "applicationRunning": false,
+    "autoEnableMarkerPresent": false,
+    "inspectionMarkerPresent": false,
+    "cleanupPerformedByThisCheck": false
+  },
+  "receiptInvestigation": {
+    "level": "SESSION_REPORTED_NOT_ARTIFACT_VERIFIED",
+    "reportedResult": "INVEST_DONE",
+    "reportedCleanup": "PASS",
+    "receiptFieldsEstablished": false,
+    "resultRelativePath": "state/runs/invest-ai-customer-20261029-161712-d3b483/result.json",
+    "reportedResultSha256": "1e9c84d9e6fd3dc1351de3b3eae3ecddd2f3def8c786406b01a130f8d4eba93e",
+    "localArtifactHashVerified": false,
+    "package": "runtime-review-20261029-investigation.zip",
+    "continuation": "static component/store/source investigation requested; no additional prepare",
+    "currentUIBlock": "coordinate noWindowsAvailable; library blank; screenshot unavailable"
+  },
+  "limits": [
+    "all submitted business state in process tests is synthetic",
+    "no device reboot/network interruption/business replay",
+    "no natural cross-day test",
+    "current direct device observation is not historical log or full cleanup proof"
+  ]
+}
