@@ -76,14 +76,69 @@
       "runtime-review-20261029-investigation-audit.zip": {
         "size": 9744,
         "sha256": "69da7bbce8add77018532d833ef3e4aa70bc5a449891be79ee4bd33c4d3e62b0"
+      },
+      "runtime-review-20261029-investigation-v3.zip": {
+        "size": 4460,
+        "sha256": "2de8d99225f3e9a2a43c7b6ed5e5ed652fd12b4de0c9e879f8c68677b77b396f"
+      },
+      "runtime-review-20261029-investigation-v3-correction.zip": {
+        "size": 5251,
+        "sha256": "16ae6939b8d8a016db0ba36350ef5a17237e8c3e3a26ed18795b7e6ee82913d3"
+      },
+      "runtime-review-20261029-investigation-root-tree.zip": {
+        "size": 10453,
+        "sha256": "b2542ded97fcda9093318bd89b808e34c534f45a0fcdc6a8e9529b51664affd3"
+      },
+      "runtime-review-20261029-investigation-root-tree-ai.zip": {
+        "size": 23321,
+        "sha256": "224610bd47c565b7847b8a8eef831982c275f12c8303b902349c5d314b8ffc7e"
       }
     },
     "currentUIBlock": null,
     "aiFieldNames": "candidate names in prose supplement; actual view access and completion semantics not verified",
-    "customerLoadReceipt": "not located in outer component; static nested component/store tracking in progress",
+    "customerLoadReceipt": "v3 reports same empty/nonloading state and loading transition on non-success; transition alone is insufficient; independent success evidence still required",
     "museRecoveryLog": "manual JSON worker and reread only; not assistant.main recovery evidence",
-    "stateComparisonCoverage": "two key state files plus cron, 13:26 baseline compared with reported after-invest/current hashes; no full tree",
-    "continuation": "static source investigation only; no further device prepare"
+    "stateComparisonCoverage": "corrected AI probe has independent full index comparison: 37 before, 40 after, 3 new diagnostic files, 0 changed/deleted; 8 control hashes unchanged. Earlier rounds retain their narrower coverage.",
+    "continuation": "bounded read-only probes completed and cleaned; actual answer receipt and successful-empty response evidence still missing",
+    "v3ManifestVerifiedEntries": 3,
+    "staticSourceEvidenceLevel": "downloaded prose interpretation only; source body and function hashes still missing",
+    "v3CorrectionManifestVerifiedEntries": 4,
+    "firstRootProbe": {
+      "manifestVerifiedEntries": 5,
+      "result": "INVEST_DONE",
+      "cleanup": "PASS in downloaded result",
+      "ai": "app._instance null; production container _vnode and fragment children not traversed",
+      "customer": "computed and existing store mappings observed; nonempty list; no successful-empty evidence",
+      "stateTreeComparison": "previous before index (34 files) recovered; previous immediate after index was not saved; do not reconstruct historical after"
+    },
+    "correctedProbe": {
+      "sourceSha256": "a3a785e5135300da70f326ecc183c14a1e99bfd95dd1d446ef985939ee63e93c",
+      "offlineNodeResult": "PASS production root null-instance, fragments, cycles/dedup, privacy and explicit errors",
+      "deployedDailyRunner": false,
+      "deviceReadonlyResult": "REVIEW / AI_ROOT_TRUNCATED, 101 components; root container vnode paths present; no question sent",
+      "manifestEntriesVerified": 13,
+      "actualExpressionMatchesLocal": true,
+      "actualTestsMatchLocal": true,
+      "controlFilesUnchanged": 8,
+      "stateTreeBefore": 37,
+      "stateTreeAfter": 40,
+      "addedDiagnosticFiles": 3,
+      "changedExistingFiles": 0,
+      "deletedFiles": 0,
+      "result": "REVIEW",
+      "reason": "UnsafeState: AI_ROOT_TRUNCATED",
+      "aiMetadataStatus": "TRUNCATED",
+      "nodeCount": 101,
+      "cleanup": {
+        "status": "PASS",
+        "inspectionClosed": true,
+        "applicationStopped": true
+      },
+      "resultArtifactSha256": "70b29e29892e119cffe2433708d97e8fc4cbe1ce1a04573174211f7fe280d4e1",
+      "originalRunResultSha256": "011dc4bbdacebee831c17465028f3770dc506f18e52ed830d15a41e2f60fca74",
+      "exportedResultReorderedToSourceInsertionOrderMatchesOriginalHash": true,
+      "recordsObservation": "props records and historyRecords arrays observed empty in this fresh homepage; no prior-answer absence inference"
+    }
   },
   "limits": [
     "all submitted business state in process tests is synthetic",
