@@ -1,0 +1,193 @@
+{
+  "recordedAt": "2026-10-29T13:17:06.230151+08:00",
+  "scope": "MUSE提供原始哈希，本轮独立核对下载/解包后脱敏文件哈希；不代表直接读取云存储原字节。源码、结果和补丁本体私存。",
+  "archiveSha256": "7b3ec91570e08d5f7bba0647c96a14a2d9b7a32ddd8640f1bfaf9fc7fc4aeffb",
+  "supplementArchiveSha256": "30a9f24aa399cc12138a0725febcab3869c58a714cd4d29e1f4e412fef8177ba",
+  "entries": [
+    {
+      "path": "forest-agent/run.py",
+      "originalSha256ReportedByMuse": "b83dbdcfa55e625e6d101439bac79a681a0e01f1bf7810b41d36206182e72c36",
+      "exportSha256Verified": "65d5c9946c0c7019034198dc7b6f85cdf410158257963718298dbf92c485b8b4",
+      "bytes": 18681
+    },
+    {
+      "path": "forest-agent/assistant.py",
+      "originalSha256ReportedByMuse": "b47a720bcf9ab8786a54e4ce94ff29b176e1cac459e0bec0dc386b4f9ebe9be9",
+      "exportSha256Verified": "b47a720bcf9ab8786a54e4ce94ff29b176e1cac459e0bec0dc386b4f9ebe9be9",
+      "bytes": 11334
+    },
+    {
+      "path": "forest-agent/tasks.py",
+      "originalSha256ReportedByMuse": "b13b3bd1d87f4f5a797045739c51a4a65a3891359d3475e94b51b3c3f1afd887",
+      "exportSha256Verified": "b13b3bd1d87f4f5a797045739c51a4a65a3891359d3475e94b51b3c3f1afd887",
+      "bytes": 4201
+    },
+    {
+      "path": "forest-agent/policy.py",
+      "originalSha256ReportedByMuse": "6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e",
+      "exportSha256Verified": "6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e",
+      "bytes": 7313
+    },
+    {
+      "path": "forest-agent/poll_utils.py",
+      "originalSha256ReportedByMuse": "2aa681b3c15d7fc78e3e998130fbc7dbafafb77f7c522ae40f061ce1743fc4e5",
+      "exportSha256Verified": "2aa681b3c15d7fc78e3e998130fbc7dbafafb77f7c522ae40f061ce1743fc4e5",
+      "bytes": 2037
+    },
+    {
+      "path": "forest-agent/accept_ai.py",
+      "originalSha256ReportedByMuse": "1c357f185e0e3527550837bffca411b8b5731fac13216b99959e1ff27b967ede",
+      "exportSha256Verified": "1c357f185e0e3527550837bffca411b8b5731fac13216b99959e1ff27b967ede",
+      "bytes": 10994
+    },
+    {
+      "path": "interface-audit/forest_cdp.py",
+      "originalSha256ReportedByMuse": "1550b390cc8262b7c229729f04931fe0b72407d1d524228a56dde8a869c1c08c",
+      "exportSha256Verified": "eb9610a902041c6680608e1730a807e07e916d42910669a0e821ca099f2f45e5",
+      "bytes": 6282
+    },
+    {
+      "path": "forest-agent/snapshot.js",
+      "originalSha256ReportedByMuse": "ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d",
+      "exportSha256Verified": "ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d",
+      "bytes": 1271
+    },
+    {
+      "path": "forest-agent/refresh.js",
+      "originalSha256ReportedByMuse": "9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5",
+      "exportSha256Verified": "9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5",
+      "bytes": 2815
+    },
+    {
+      "path": "forest-agent/action.js",
+      "originalSha256ReportedByMuse": "6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e",
+      "exportSha256Verified": "6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e",
+      "bytes": 1727
+    },
+    {
+      "path": "forest-agent/timeline-view.js",
+      "originalSha256ReportedByMuse": "67e046e936892126cedb425c69571bc27f29accd82df33affa79d1645f3fcca2",
+      "exportSha256Verified": "67e046e936892126cedb425c69571bc27f29accd82df33affa79d1645f3fcca2",
+      "bytes": 1881
+    },
+    {
+      "path": "forest-agent/pins.json",
+      "originalSha256ReportedByMuse": "2dd676686e4adf85be69d188ebe4ed1d9a8c853cab5268ae2aa6889b893337d2",
+      "exportSha256Verified": "50d5626cebed37ea7d186968eef825a3a674379ce3891ca6185ff196ca06f15a",
+      "bytes": 975
+    },
+    {
+      "path": "forest-agent/navigation-pins.json",
+      "originalSha256ReportedByMuse": "a7cdcb0e43b49ee654e04133249ce0028d335785f41dc866e2c299c951843d25",
+      "exportSha256Verified": "a7cdcb0e43b49ee654e04133249ce0028d335785f41dc866e2c299c951843d25",
+      "bytes": 1317
+    },
+    {
+      "path": "forest-agent/scope.json",
+      "originalSha256ReportedByMuse": "ecab6f6b68d175c448d5933e76b10a854787b5cc72e12596eafb9fb13620451a",
+      "exportSha256Verified": "ecab6f6b68d175c448d5933e76b10a854787b5cc72e12596eafb9fb13620451a",
+      "bytes": 294
+    },
+    {
+      "path": "forest-agent/test_diag_poll.py",
+      "originalSha256ReportedByMuse": "5e84cb9de50dcaea6aaf409adc7e223cd20f8de5f568433d5506298ff6a9dd9c",
+      "exportSha256Verified": "5e84cb9de50dcaea6aaf409adc7e223cd20f8de5f568433d5506298ff6a9dd9c",
+      "bytes": 1796
+    },
+    {
+      "path": "forest-agent/test_lock_recovery.py",
+      "originalSha256ReportedByMuse": "4e118f0892d0ad9e80635e16747c6fecbb3ba911239548d85c7dc37510ba75b5",
+      "exportSha256Verified": "4e118f0892d0ad9e80635e16747c6fecbb3ba911239548d85c7dc37510ba75b5",
+      "bytes": 931
+    },
+    {
+      "path": "forest-agent/test_policy.py",
+      "originalSha256ReportedByMuse": "9c618de481546c5d6c10dca4ee6be4af6bbe3b394efedaf3b9753fc06875988b",
+      "exportSha256Verified": "9c618de481546c5d6c10dca4ee6be4af6bbe3b394efedaf3b9753fc06875988b",
+      "bytes": 6914
+    },
+    {
+      "path": "forest-agent/test_tasks.py",
+      "originalSha256ReportedByMuse": "b5624c88118773f056df1fc835083a5ac403a4455459ebb5dcbf21cb96606dc1",
+      "exportSha256Verified": "b5624c88118773f056df1fc835083a5ac403a4455459ebb5dcbf21cb96606dc1",
+      "bytes": 2705
+    },
+    {
+      "path": "cron/sunshine-forest-daily-execution.md",
+      "originalSha256ReportedByMuse": "22658ddb697d94846e6b2f3c45339675acc4d353903626723dfa91d34fc0f7df",
+      "exportSha256Verified": "f2c30d6ca3caa661cbcc2fa5aaa8ac996b33fafe36e7c2001a43b1624602c660",
+      "bytes": 4730
+    },
+    {
+      "path": "results/main-20261029-092111-result.json",
+      "originalSha256ReportedByMuse": "e26364600c2eace540cd516b2254da1caded1bbd23ce3434f9ad6be80006d16a",
+      "exportSha256Verified": "e26364600c2eace540cd516b2254da1caded1bbd23ce3434f9ad6be80006d16a",
+      "bytes": 5473
+    },
+    {
+      "path": "results/accept-ai-20261029-102201-result.json",
+      "originalSha256ReportedByMuse": "1cf6396783e1870b25d311ecf4bb20f3839ef76eb6b9a3a7427b48420b3cc626",
+      "exportSha256Verified": "ba8db5f88c69b2027b755f841d4d41b7e44d467109884e22bb265a97997499fc",
+      "bytes": 2105
+    },
+    {
+      "path": "results/assistant-20261029-summary.json",
+      "originalSha256ReportedByMuse": "23fae805b5ccf957b542c778337e6ad92a27fb1fe0b1b6d480da92fa3080c996",
+      "exportSha256Verified": "5df79ebd255bf882eefaa9a5004ef6df51aac172466599ef64fa572ecb8995bc",
+      "bytes": 711
+    },
+    {
+      "path": "forest-agent/open-client-list.js",
+      "originalSha256ReportedByMuse": "956d8fb2eb3086c4ed1e0f938e824d9faa400553c50d62000405fb03b3c2f45b",
+      "exportSha256Verified": "956d8fb2eb3086c4ed1e0f938e824d9faa400553c50d62000405fb03b3c2f45b",
+      "bytes": 596
+    },
+    {
+      "path": "forest-agent/customer-pins.json",
+      "originalSha256ReportedByMuse": "bc9e1262343ddb7a4ad066a4b747eeedf3708463e9b9409e259d2f27d6453894",
+      "exportSha256Verified": "bc9e1262343ddb7a4ad066a4b747eeedf3708463e9b9409e259d2f27d6453894",
+      "bytes": 607
+    },
+    {
+      "path": "forest-agent/timeline-pins.json",
+      "originalSha256ReportedByMuse": "f47b11d74b03a5b6bdfedcf6f71e62463154c0798d62de1dc89a0a4b0bf3da19",
+      "exportSha256Verified": "f47b11d74b03a5b6bdfedcf6f71e62463154c0798d62de1dc89a0a4b0bf3da19",
+      "bytes": 1735
+    }
+  ],
+  "candidateNotDeployed": [
+    {
+      "path": "forest-agent/assistant.py",
+      "baseExportSha256": "b47a720bcf9ab8786a54e4ce94ff29b176e1cac459e0bec0dc386b4f9ebe9be9",
+      "candidateSha256": "813f6dd22f6b4559044041d41683e3c22e12bb10e41113c19b53f9d480c45351"
+    },
+    {
+      "path": "forest-agent/run.py",
+      "baseExportSha256": "65d5c9946c0c7019034198dc7b6f85cdf410158257963718298dbf92c485b8b4",
+      "candidateSha256": "cdc6a025c1d7597670d2f7ccebd3d2c9e396f3bd8e24ac149f8ce28cd5c066a1"
+    },
+    {
+      "path": "forest-agent/tasks.py",
+      "baseExportSha256": "b13b3bd1d87f4f5a797045739c51a4a65a3891359d3475e94b51b3c3f1afd887",
+      "candidateSha256": "1cbcaee7492380db3d86d6f27eb31d13a41cc1bb7cecd0cb8aa7ff39a0625d6b"
+    },
+    {
+      "path": "forest-agent/test_tasks.py",
+      "baseExportSha256": "b5624c88118773f056df1fc835083a5ac403a4455459ebb5dcbf21cb96606dc1",
+      "candidateSha256": "c6fa535209ffdf3612b59ce5d4bbb83732277d4863a39e0e163d1e4877dee73c"
+    },
+    {
+      "path": "interface-audit/forest_cdp.py",
+      "baseExportSha256": "eb9610a902041c6680608e1730a807e07e916d42910669a0e821ca099f2f45e5",
+      "candidateSha256": "6f17b22025c3186309700041debacd5cfd0c2abfc1f48e3a2fc2cfbc4898eefa"
+    }
+  ],
+  "verificationArtifactHashes": {
+    "exported-tests-29-complete.txt": "6c653e22ff199c00a424ebb31cab199914f0e91bb061ba8c7023d22eae6fab54",
+    "regressions-before.txt": "dda63ef681e70ceaf8c8c7a62b1af6a80020bf8131bf418104d484988204561d",
+    "regressions-after.txt": "5f1d1d356f0e01a0765271dae7c3e0aa8d39caf844ecb468f9dee29531f8d36b",
+    "candidate-tests-29.txt": "6c653e22ff199c00a424ebb31cab199914f0e91bb061ba8c7023d22eae6fab54",
+    "candidate-empty-real-predicate.json": "8505321695d7632c21d050a9fd2b936f9a3479f408a32ed4d870dbb8cea9b8fe",
+    "candidate.patch": "59bc134e8d0618ed33d4ca5e17171176e362b55d2d28d5dc8c6cc00ab5b0bfea"
+  }
+}
