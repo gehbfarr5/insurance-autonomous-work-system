@@ -7,6 +7,8 @@
     'isThinkPaused']);
   const errors = [], nodes = [], entries = [];
   const seenVnodes = new WeakSet(), seenComponents = new WeakSet();
+  const queuedVnodes = new WeakSet(), queuedComponents = new WeakSet();
+  const queue = [], truncationReasons = new Set();
   let visited = 0, truncated = false;
   function read(object, key, path) {
     if (!object) return undefined;
@@ -19,7 +21,7 @@
     try { descriptors = Object.getOwnPropertyDescriptors(object); }
     catch (error) { errors.push({path, errorType: error.name}); return []; }
     const keys = Object.keys(descriptors);
-    if (keys.length > 160) truncated = true;
+    if (keys.length > 160) { truncated = true; truncationReasons.add('METADATA_KEYS'); }
     return keys.slice(0, 160).map(key => {
       const descriptor = descriptors[key];
       const result = {key, type: 'value' in descriptor ? typeof descriptor.value : 'accessor'};
@@ -32,10 +34,20 @@
     });
   }
   function budget(depth) {
-    if (depth > 60 || visited++ >= 600) { truncated = true; return false; }
+    if (depth > 250) { truncated = true; truncationReasons.add('DEPTH'); return false; }
+    if (visited++ >= 5000) { truncated = true; truncationReasons.add('OBJECT_COUNT'); return false; }
     return true;
   }
-  function component(instance, path, depth) {
+  function enqueue(kind, object, path, depth) {
+    if (!object || typeof object !== 'object') return;
+    const queued = kind === 'component' ? queuedComponents : queuedVnodes;
+    if (queued.has(object)) return;
+    if (queue.length >= 12000) { truncated = true; truncationReasons.add('QUEUE_COUNT'); return; }
+    queued.add(object); queue.push({kind, object, path, depth});
+  }
+  function component(object, path, depth) { enqueue('component', object, path, depth); }
+  function vnode(object, path, depth) { enqueue('vnode', object, path, depth); }
+  function inspectComponent(instance, path, depth) {
     if (!instance || typeof instance !== 'object' || seenComponents.has(instance)) return;
     if (!budget(depth)) return;
     seenComponents.add(instance);
@@ -47,7 +59,7 @@
       exposed: metadata(read(instance, 'exposed', path + '.exposed'), path + '.exposed')});
     vnode(read(instance, 'subTree', path + '.subTree'), path + '.subTree', depth + 1);
   }
-  function vnode(value, path, depth) {
+  function inspectVnode(value, path, depth) {
     if (!value || typeof value !== 'object' || seenVnodes.has(value)) return;
     if (!budget(depth)) return;
     seenVnodes.add(value);
@@ -55,7 +67,7 @@
     for (const key of ['children', 'dynamicChildren']) {
       const children = read(value, key, path + '.' + key);
       if (Array.isArray(children)) {
-        if (children.length > 300) truncated = true;
+        if (children.length > 300) { truncated = true; truncationReasons.add('VNODE_CHILDREN'); }
         children.slice(0, 300).forEach((child, index) =>
           vnode(child, path + '.' + key + '[' + index + ']', depth + 1));
       }
@@ -74,7 +86,14 @@
     entries.push({path, present: !!object});
     if (kind === 'component') component(object, path, 0); else vnode(object, path, 0);
   }
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const item = queue[cursor];
+    if (item.kind === 'component') inspectComponent(item.object, item.path, item.depth);
+    else inspectVnode(item.object, item.path, item.depth);
+    if (visited >= 5000) { truncated = true; truncationReasons.add('OBJECT_COUNT'); break; }
+  }
   return {status: errors.length ? 'READ_ERROR' : truncated ? 'TRUNCATED' : nodes.length ? 'ROOTS_FOUND' : 'ROOT_NOT_EXPOSED',
-    entries, nodes, errors, truncated, nodeCount: nodes.length,
-    limits: {visitedObjects: 600, depth: 60, metadataKeysPerObject: 160}};
+    entries, nodes, errors, truncated, truncationReasons: [...truncationReasons], nodeCount: nodes.length,
+    visitedObjects: visited, queuedObjects: queue.length,
+    limits: {visitedObjects: 5000, depth: 250, queueObjects: 12000, metadataKeysPerObject: 160}};
 })()

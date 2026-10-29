@@ -1,0 +1,101 @@
+{
+  "recordedAt": "2026-10-29T18:49:41.083505+08:00",
+  "scope": "remaining P4 WP01 evidence, source review, diagnostic repair; no new business submission",
+  "deferred": [
+    "natural next-day verification",
+    "P50",
+    "monthly planning"
+  ],
+  "artifacts": {
+    "customer-store.js": {
+      "bytes": 140986,
+      "sha256": "2a2c6f282d53de3ad19eab810665f3d001f26ae18a136f36d3311b4b6eb6bf2e",
+      "location": "controlled private remaining-work directory; observed static asset path recorded privately"
+    },
+    "customer-page.js": {
+      "bytes": 30407,
+      "sha256": "ab7346f372b8e9b6a95d315b8ac0244d9a3b946a3e9555f9fe0ed1cf51dceab4",
+      "location": "controlled private remaining-work directory; observed static asset path recorded privately"
+    },
+    "ai-components.js": {
+      "bytes": 271256,
+      "sha256": "7e95caa6e903972c3288861909aa049e87ca49918025d70c2ee1be8cbad3e28a",
+      "location": "controlled private remaining-work directory; observed static asset path recorded privately"
+    },
+    "ai-index.js": {
+      "bytes": 6667046,
+      "sha256": "2d084dbe0711f850b835c9aa6796dc11c2d17f26e6db58677ba15693f24edcf5",
+      "location": "controlled private remaining-work directory; observed static asset path recorded privately"
+    },
+    "ai-home.js": {
+      "bytes": 114851,
+      "sha256": "0895789383e7539c69f810ec21d4d72c0ebb01ae4275b4e7675653847192384f",
+      "location": "controlled private remaining-work directory; observed static asset path recorded privately"
+    },
+    "ai-business.js": {
+      "bytes": 590790,
+      "sha256": "4aeeaecfaa5af2f17fc520919cea4a4cb6f19b5dba48d9bad7d6d6cb39b64a38",
+      "location": "controlled private remaining-work directory; observed static asset path recorded privately"
+    },
+    "historicalRules": {
+      "sha256": "19dc81a6f4f4ababc5b572b05eec809a539246ed574cba3224786a9f2df91cc2",
+      "location": "existing controlled private work package"
+    },
+    "nativeRuntimeBundle": {
+      "sha256": "7a12a2c4c933ec0a69e9e0a7ec4cbf21da55c813db2a4d902d66de79cfa86525",
+      "location": "existing controlled private work package"
+    },
+    "fiveItemHistory": {
+      "sha256": "9ab59649627864bc07a18c326ac0fb6a72dbac3f0c8ff3440e46626243b4f611",
+      "location": "existing controlled private work package"
+    },
+    "birthdayCompletion": {
+      "sha256": "a1814844fab78bb57b9e3fa9fd4737d7fe154b4c9886c5bf89556eba34b61213",
+      "location": "existing controlled private work package"
+    }
+  },
+  "sourceSlices": [
+    {
+      "source": "customer-store.js",
+      "offsetChars": 134407,
+      "lengthChars": 414,
+      "sha256": "e713c99083a3993bf53a15445d769e8cc0e0e0cc1a2823e16627850e7d035478",
+      "scope": "exact source slice bounded by named markers, not claimed to be an AST function"
+    },
+    {
+      "source": "ai-components.js",
+      "offsetChars": 6663,
+      "lengthChars": 1017,
+      "sha256": "3a32f22fd290cbde150a9624ddcee97edf1985167263d6a548a5db3fbe9bb1ec",
+      "scope": "exact source slice bounded by named markers, not claimed to be an AST function"
+    },
+    {
+      "source": "ai-components.js",
+      "offsetChars": 200170,
+      "lengthChars": 367,
+      "sha256": "3a3e827de5bb44756738c6f81f47dcb552a9f3c8ca7c97d31f5db982dce1c39a",
+      "scope": "exact source slice bounded by named markers, not claimed to be an AST function"
+    }
+  ],
+  "diagnosticCandidate": {
+    "path": "tools/vue-root-metadata.js",
+    "sha256": "2af5645c3e067761a18be20500aaddb40178ea0bcd83e585ca4228c6337b50d1",
+    "localNodeTest": "PASS: production root, breadth traversal, deep fragments, dedup/cycles, privacy, absent root, explicit errors and truncation reasons",
+    "productionValidated": false,
+    "dailyRunnerChanged": false,
+    "handedOffForReadonlyVerification": true
+  },
+  "boundary": [
+    "asset paths match previously observed indexes, but bytes were downloaded now; not proof of historical loaded bytes",
+    "original sources private; public summary does not contain internal code/endpoints or customer values",
+    "native static entry is not proof of reward eligibility or runtime availability",
+    "Mac unlocked by user; MUSE read-only recovery, breadth-probe verification and offline implementation requests sent; results pending"
+  ],
+  "extensionClassification": {
+    "保单芯管家": "仍待核实；用户先前移出每日范围，申请成功非检视/奖励完成",
+    "态幸福": "仍待核实；现有证据止于真实建档/测算前",
+    "三节一生": "仍待核实；完成方法产生任务提交，不能当只读浏览",
+    "E锦囊激活": "仍待核实；已恢复独立原生入口线索，未证明激活流程/资格",
+    "签单协同业务": "仍待核实；有其他协同入口线索，未证明与目标规则映射"
+  }
+}
