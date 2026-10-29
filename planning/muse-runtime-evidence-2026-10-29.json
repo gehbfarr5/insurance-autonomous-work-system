@@ -155,7 +155,141 @@
       "bytes": 1735
     }
   ],
-  "candidateNotDeployed": [
+  "verificationArtifactHashes": {
+    "exported-tests-29-complete.txt": "6c653e22ff199c00a424ebb31cab199914f0e91bb061ba8c7023d22eae6fab54",
+    "regressions-before.txt": "dda63ef681e70ceaf8c8c7a62b1af6a80020bf8131bf418104d484988204561d",
+    "regressions-after.txt": "5f1d1d356f0e01a0765271dae7c3e0aa8d39caf844ecb468f9dee29531f8d36b",
+    "candidate-tests-29.txt": "6c653e22ff199c00a424ebb31cab199914f0e91bb061ba8c7023d22eae6fab54",
+    "candidate-empty-real-predicate.json": "8505321695d7632c21d050a9fd2b936f9a3479f408a32ed4d870dbb8cea9b8fe",
+    "candidate.patch": "59bc134e8d0618ed33d4ca5e17171176e362b55d2d28d5dc8c6cc00ab5b0bfea"
+  },
+  "deployedReplacement": {
+    "checkedAt": "2026-10-29T13:32:45.346417+08:00",
+    "outcome": "PASS_LIMITED_FIVE_FILE_REPLACEMENT_AND_OFFLINE_VERIFICATION",
+    "evidenceArchiveSha256": "4ec371e96c16359f4db5a9fa862c31f9ab36b887246fc0f1dd0cca779c9d9260",
+    "installedReadbackArchiveSha256": "aa9b660360ae2586373602e08dd8fc2681b8a646a0030500cbd9e7243b23f9b5",
+    "handoffArchiveSha256": "83810ffad3bd2700322ca968666e32b06f143cf09f605b6732d89e07ede6df6c",
+    "beforeStagedInstalled": [
+      {
+        "path": "forest-agent/assistant.py",
+        "before": "b47a720bcf9ab8786a54e4ce94ff29b176e1cac459e0bec0dc386b4f9ebe9be9",
+        "staged": "813f6dd22f6b4559044041d41683e3c22e12bb10e41113c19b53f9d480c45351",
+        "installed": "813f6dd22f6b4559044041d41683e3c22e12bb10e41113c19b53f9d480c45351",
+        "staged_equals_installed": true
+      },
+      {
+        "path": "forest-agent/run.py",
+        "before": "b83dbdcfa55e625e6d101439bac79a681a0e01f1bf7810b41d36206182e72c36",
+        "staged": "061f18781525ad70e9d3b1906e3a547c1b11ad49a4313360fc734b1229be1154",
+        "installed": "061f18781525ad70e9d3b1906e3a547c1b11ad49a4313360fc734b1229be1154",
+        "staged_equals_installed": true
+      },
+      {
+        "path": "forest-agent/tasks.py",
+        "before": "b13b3bd1d87f4f5a797045739c51a4a65a3891359d3475e94b51b3c3f1afd887",
+        "staged": "1cbcaee7492380db3d86d6f27eb31d13a41cc1bb7cecd0cb8aa7ff39a0625d6b",
+        "installed": "1cbcaee7492380db3d86d6f27eb31d13a41cc1bb7cecd0cb8aa7ff39a0625d6b",
+        "staged_equals_installed": true
+      },
+      {
+        "path": "forest-agent/test_tasks.py",
+        "before": "b5624c88118773f056df1fc835083a5ac403a4455459ebb5dcbf21cb96606dc1",
+        "staged": "c6fa535209ffdf3612b59ce5d4bbb83732277d4863a39e0e163d1e4877dee73c",
+        "installed": "c6fa535209ffdf3612b59ce5d4bbb83732277d4863a39e0e163d1e4877dee73c",
+        "staged_equals_installed": true
+      },
+      {
+        "path": "interface-audit/forest_cdp.py",
+        "before": "1550b390cc8262b7c229729f04931fe0b72407d1d524228a56dde8a869c1c08c",
+        "staged": "a9d556b939ddf44094ff3cce1c313527c2d70407a11a7ef91e588624839d76d6",
+        "installed": "a9d556b939ddf44094ff3cce1c313527c2d70407a11a7ef91e588624839d76d6",
+        "staged_equals_installed": true
+      }
+    ],
+    "downloadedSanitizedReadback": [
+      {
+        "path": "forest-agent/assistant.py",
+        "downloadedInstalledSanitizedSha256": "813f6dd22f6b4559044041d41683e3c22e12bb10e41113c19b53f9d480c45351",
+        "matchesApprovedCandidate": true
+      },
+      {
+        "path": "forest-agent/run.py",
+        "downloadedInstalledSanitizedSha256": "cdc6a025c1d7597670d2f7ccebd3d2c9e396f3bd8e24ac149f8ce28cd5c066a1",
+        "matchesApprovedCandidate": true
+      },
+      {
+        "path": "forest-agent/tasks.py",
+        "downloadedInstalledSanitizedSha256": "1cbcaee7492380db3d86d6f27eb31d13a41cc1bb7cecd0cb8aa7ff39a0625d6b",
+        "matchesApprovedCandidate": true
+      },
+      {
+        "path": "forest-agent/test_tasks.py",
+        "downloadedInstalledSanitizedSha256": "c6fa535209ffdf3612b59ce5d4bbb83732277d4863a39e0e163d1e4877dee73c",
+        "matchesApprovedCandidate": true
+      },
+      {
+        "path": "interface-audit/forest_cdp.py",
+        "downloadedInstalledSanitizedSha256": "6f17b22025c3186309700041debacd5cfd0c2abfc1f48e3a2fc2cfbc4898eefa",
+        "matchesApprovedCandidate": true
+      }
+    ],
+    "originalEnvironmentLogsReviewed": [
+      {
+        "name": "staged-offline-34.log",
+        "tests": 34,
+        "status": "PASS",
+        "sha256": "c49c49e07d21fa9485b173dd08469ed2ea013246516c04a45a0bddb18d2ada95"
+      },
+      {
+        "name": "installed-offline-34.log",
+        "tests": 34,
+        "status": "PASS",
+        "sha256": "78b7e140c6f32cfee1c521d069d11e6d9bfc20cf64fbf47058fef70c5033d214"
+      },
+      {
+        "name": "staged-empty-list.log",
+        "status": "PASS",
+        "sha256": "bacbbcf604f39c105c459efa6912c63956cb9c77a485bd4cfa6653dc414b50c5"
+      },
+      {
+        "name": "installed-empty-list.log",
+        "status": "PASS",
+        "sha256": "bacbbcf604f39c105c459efa6912c63956cb9c77a485bd4cfa6653dc414b50c5"
+      }
+    ],
+    "stateCronVerifiedUnchanged": [
+      {
+        "path": "forest-agent/state/assistant.json",
+        "before": "23fae805b5ccf957b542c778337e6ad92a27fb1fe0b1b6d480da92fa3080c996",
+        "after": "23fae805b5ccf957b542c778337e6ad92a27fb1fe0b1b6d480da92fa3080c996",
+        "unchanged": true
+      },
+      {
+        "path": "forest-agent/state/state.json",
+        "before": "520c4781017624c3c3427183bfc7aa4264007a97bfcf6c80e8feb8baa502cb05",
+        "after": "520c4781017624c3c3427183bfc7aa4264007a97bfcf6c80e8feb8baa502cb05",
+        "unchanged": true
+      },
+      {
+        "path": "crons/daily/sunshine-forest-daily-execution__daily@09:00:00.md",
+        "before": "22658ddb697d94846e6b2f3c45339675acc4d353903626723dfa91d34fc0f7df",
+        "after": "22658ddb697d94846e6b2f3c45339675acc4d353903626723dfa91d34fc0f7df",
+        "unchanged": true
+      }
+    ],
+    "stateCoverage": "Two state files plus cron before/after; full state tree only after snapshot, no full-tree unchanged claim",
+    "stateTreeAfterOnlyCount": 31,
+    "backupRelativePath": "hidden_files/backup-before-candidate-20261029-132651/",
+    "noProductionExecution": "MUSE execution report; only offline testing and five-file replacement authorized",
+    "remaining": [
+      "AI structured answer receipt",
+      "successful empty-list query receipt",
+      "real interruption/restart and natural cross-day evidence"
+    ],
+    "P50": "PAUSED",
+    "monthlyPlanning": "PAUSED"
+  },
+  "candidateNotDeployedHistorical": [
     {
       "path": "forest-agent/assistant.py",
       "baseExportSha256": "b47a720bcf9ab8786a54e4ce94ff29b176e1cac459e0bec0dc386b4f9ebe9be9",
@@ -181,13 +315,5 @@
       "baseExportSha256": "eb9610a902041c6680608e1730a807e07e916d42910669a0e821ca099f2f45e5",
       "candidateSha256": "6f17b22025c3186309700041debacd5cfd0c2abfc1f48e3a2fc2cfbc4898eefa"
     }
-  ],
-  "verificationArtifactHashes": {
-    "exported-tests-29-complete.txt": "6c653e22ff199c00a424ebb31cab199914f0e91bb061ba8c7023d22eae6fab54",
-    "regressions-before.txt": "dda63ef681e70ceaf8c8c7a62b1af6a80020bf8131bf418104d484988204561d",
-    "regressions-after.txt": "5f1d1d356f0e01a0765271dae7c3e0aa8d39caf844ecb468f9dee29531f8d36b",
-    "candidate-tests-29.txt": "6c653e22ff199c00a424ebb31cab199914f0e91bb061ba8c7023d22eae6fab54",
-    "candidate-empty-real-predicate.json": "8505321695d7632c21d050a9fd2b936f9a3479f408a32ed4d870dbb8cea9b8fe",
-    "candidate.patch": "59bc134e8d0618ed33d4ca5e17171176e362b55d2d28d5dc8c6cc00ab5b0bfea"
-  }
+  ]
 }
