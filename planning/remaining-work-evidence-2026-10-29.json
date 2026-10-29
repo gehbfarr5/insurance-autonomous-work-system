@@ -188,5 +188,75 @@
       "collector-tests.txt": "85c975adbf976e0967617fd17a25b409fb3a0660f136fa7e20880efa2fb549ef",
       "expression-tests.txt": "86dbf2c1bb06c48ecd33430ecf1692e85a7c43557b80db73d3c1ecefe7342642"
     }
+  },
+  "integration20261030": {
+    "recordedAt": "2026-10-30T00:53:23.637576+08:00",
+    "actualMainIntegrationTests": 9,
+    "deviceAndTransport": "synthetic and isolated",
+    "runtimeRegressionTests": 29,
+    "realChildRecoveryCases": [
+      {
+        "stage": "dispatch",
+        "signal": "SIGTERM",
+        "durableQuestionStatus": "UNKNOWN",
+        "baselinePreserved": true,
+        "restart": "REVIEW_NO_PREPARE_NO_REPLAY",
+        "cleanup": "PASS",
+        "actualChildProcesses": true,
+        "deviceAndTransport": "synthetic"
+      },
+      {
+        "stage": "dispatch",
+        "signal": "SIGKILL",
+        "durableQuestionStatus": "UNKNOWN",
+        "baselinePreserved": true,
+        "restart": "REVIEW_NO_PREPARE_NO_REPLAY",
+        "cleanup": "NOT_EXECUTED_SIGKILL",
+        "actualChildProcesses": true,
+        "deviceAndTransport": "synthetic"
+      },
+      {
+        "stage": "sent",
+        "signal": "SIGKILL",
+        "durableQuestionStatus": "SENT",
+        "baselinePreserved": true,
+        "restart": "REVIEW_NO_PREPARE_NO_REPLAY",
+        "cleanup": "NOT_EXECUTED_SIGKILL",
+        "actualChildProcesses": true,
+        "deviceAndTransport": "synthetic"
+      }
+    ],
+    "emptyObserverTestMethods": 4,
+    "emptyObserverFailureCases": 13,
+    "emptyObserverLiveVerified": false,
+    "museHandoff": {
+      "sent": true,
+      "bytes": 29510,
+      "sha256": "75b40537c25204c6c0cb10dd97bed162b09f5660dd98c4c097d9f8470fa1aec7",
+      "consolidatedFollowups": 1,
+      "observerCorrectedSha256": "06d070c00c8f596f2f134cf6e1fd2fa2ff83aeb373aae0df212341cd1d117960",
+      "installationEvidenceVerified": false
+    },
+    "sourceHashes": {
+      "tools/receipt-collector/test_empty_observer.py": "bfc1d6e12615b39ceb8e2a896f60a015a37c37d43727b66ed49da2b3d59363fc",
+      "tools/receipt-collector/test-collector.cjs": "08b48080fb71ba5c51a1f012390d4cfbcfad5170b30bd02d131c367114830c6f",
+      "tools/receipt-collector/test-expression.cjs": "298ce1f15f1f84a896c99388c1e214e84bf8be726e84f59fc41aa5352f52db51",
+      "tools/receipt-collector/bridge.py": "adff7d29f7c475bfcb4c3528561d0025fb18651e91debc262f51b2c2d9f6d20c",
+      "tools/receipt-collector/ai-snapshot.js": "1578bdfd5df6aa022f0f7a1ce3619217f2914eb01b976ab649991736314fc258",
+      "tools/receipt-collector/empty_list_observer.py": "06d070c00c8f596f2f134cf6e1fd2fa2ff83aeb373aae0df212341cd1d117960",
+      "tools/receipt-collector/README.md": "362e4efedeef6a12ece82a03f744b6b16aba1470437ce75be5c9f5c79130a002",
+      "tools/receipt-collector/build-expression.cjs": "9d4edcbb1bb3c4b699b0767140ea8e989f0cec91ff1ca062ba4839141a626f7a",
+      "tools/receipt-collector/reconcile.cjs": "df5a17f007f5f9f8c513035de0f27158613727b2ed8661b6a1f2c03be0ef6d5c"
+    },
+    "privateTestLogs": {
+      "integration-tests.txt": "a8c5e2285ad0b73aba71dc1b68335318bfd80b352441963364b7da4ee612c2ec",
+      "runtime-regression-tests.txt": "b5603f86a7e1dca750a3703af897dc488ece065203508d51e3f53e274d69bdaa",
+      "collector-tests.txt": "85c975adbf976e0967617fd17a25b409fb3a0660f136fa7e20880efa2fb549ef",
+      "integration-process-tests.txt": "bb563beefa54f63c9521f3025cde07f528ee78695fdd8883d5a44bbaf1584856",
+      "empty-observer-tests.txt": "f824d5e1dbfa2d5dd8992f998c9749c69dd7c70d5fa80e6d73c094a8f12cd66c",
+      "packaged-process-tests.txt": "bb563beefa54f63c9521f3025cde07f528ee78695fdd8883d5a44bbaf1584856",
+      "packaged-integration-tests.txt": "104265489e26cc7829f973706009595f6d18a5fe28298fe1f43b63c97fcee2b3",
+      "expression-tests.txt": "86dbf2c1bb06c48ecd33430ecf1692e85a7c43557b80db73d3c1ecefe7342642"
+    }
   }
 }

@@ -18,3 +18,17 @@ node tools/receipt-collector/test-expression.cjs
 覆盖首次空基线、组件树采集、隐私、继承、重放、缺字段、错误/停止/暂停、上下文变化、错误目标和缺资源等。合成组件测试不是实机/业务正例。当前设备APP未运行，本轮未启动补证；09:00自然结果未到时不判漏跑。
 
 依据：[Vue组件实例源码](https://github.com/vuejs/core/blob/main/packages/runtime-core/src/component.ts)、[Vue provide/inject](https://vuejs.org/guide/components/provide-inject)、[CDP Runtime.evaluate](https://chromedevtools.github.io/devtools-protocol/tot/Runtime/#method-evaluate)。复用官方现有机制，适配项目字段；避免引入第三方Agent/网络拦截框架。官方main仅解释机制，不证明生产Vue具体版本相同。
+
+## 10月30日集成与恢复补核
+
+`bridge.py`供现有运行器调用：本机Node构造表达式，使用现有evaluate读取，持久化基线/随机盐后才允许原运行器进入DISPATCHING。子进程失败不输出私密上下文；采集截止向CDP传递，旧不支持total_timeout的适配器必须同时应用受控补丁，不能静默忽略。私有运行器补丁只在受控交付包，不公开内部页面/配置原文。
+
+`empty_list_observer.py`在独立已连接CDP会话上被动观察目标页新发生的查询。仅保留去敏事件字段，读取指定响应正文后在内存检查业务code与空content，不保存响应正文、头、查询参数或请求数据。要求唯一requestId、非空loaderId、HTTP/业务成功、完整加载及原数组对象被新空数组替换且loading结束。此前已完成的查询不能补证；未观测到新查询会超时BLOCKED。此方案没有改变页面请求，不使用Fetch拦截/重放。
+
+关联依赖已审查的源分支和当前唯一查询；不是直接观测Vuex mutation的因果探针。版本profile漂移、其他并发查询或未知赋值均需保守失败，不能据此保证任何任意页面空值成功。SourcePin为既有来源指纹，不冒充现场脚本内容SHA。
+
+本机已对实际assistant.main完成9项隔离集成检查，设备/传输替身阻断业务；3组真实子进程中断/重启分别覆盖DISPATCHING时SIGTERM/SIGKILL、SENT时SIGKILL。重启保留基线与UNKNOWN/SENT且不prepare/重放。SIGTERM有cleanup，SIGKILL没有执行finally，不能称完整手机恢复通过。原29项回归通过。观察器4个测试方法覆盖成功/隐私、13种失败、缺上下文和TERM传播；原始测试输出私存。
+
+已向同一MUSE旁聊交付明确staging复测/通过后有限安装任务，另一次合并严格字段修正；安装状态以原环境证据包核对为准。未要求启动手机、补跑业务或更改09:00调度。
+
+依据：[CDP Network事件及getResponseBody](https://chromedevtools.github.io/devtools-protocol/tot/Network/)、[Runtime.callFunctionOn](https://chromedevtools.github.io/devtools-protocol/tot/Runtime/#method-callFunctionOn)。
