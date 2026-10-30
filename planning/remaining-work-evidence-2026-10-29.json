@@ -314,5 +314,48 @@
       "userActionRequested": "manual Pixel login confirmation; pending",
       "localTransport": "existing SSH alias only; no SSH configuration changes"
     }
+  },
+  "authorizedLoginRetry20261030": {
+    "recordedAt": "2026-10-30T08:09:04.648498+08:00",
+    "authorization": "user explicitly requested one login retry and supplied private image",
+    "existingCredentialMatched": true,
+    "credentialChanged": false,
+    "oldGuardBackedUp": true,
+    "loginSuccessObserved": true,
+    "loginSuccessAt": "2026-10-30T08:06:26+08:00",
+    "firstProbe": {
+      "status": "REVIEW",
+      "businessDispatched": false,
+      "stages": [
+        "prepare_done",
+        "ai_home_navigated"
+      ],
+      "pollCount": 1,
+      "reason": "RuntimeError:RECEIPT_BASELINE_UNAVAILABLE",
+      "cleanup": {
+        "status": "PASS",
+        "inspectionClosed": true,
+        "applicationStopped": true
+      }
+    },
+    "extraDiagnostic": {
+      "status": "REVIEW",
+      "businessDispatched": false,
+      "stages": [],
+      "reason": "TerminatedError:RUN_TERMINATED_BY_SIGNAL",
+      "cleanup": {
+        "status": "PASS",
+        "inspectionClosed": true,
+        "applicationStopped": true
+      }
+    },
+    "extraDiagnosticHelperTriggered": true,
+    "extraDiagnosticStoppedWithTERM": true,
+    "finalGuardPresent": true,
+    "finalAppStopped": true,
+    "finalOperationLockAbsent": true,
+    "businessDispatched": false,
+    "diagnosticsPrepareNowDisabledByDefault": true,
+    "next": "attach-only to existing page; do not clear new auth guard or retry automatically"
   }
 }
