@@ -526,5 +526,115 @@
     "existingAuthBootHookUpdated": true,
     "rebootTested": false,
     "privateEvidenceIndex": ".private/auth-auto-trigger-20261030/{deployment-result,device-tests,final-verification}.json"
+  },
+  "naturalDailyReconciliation20261030": {
+    "recordedAt": "2026-10-30T09:41:57.894281+08:00",
+    "evidenceType": "independently hashed desensitized exports; original result bodies remain in controlled MUSE storage",
+    "packages": [
+      {
+        "name": "sunshine-forest-20261030-incremental-desensitized.zip",
+        "bytes": 11662,
+        "sha256": "941cafb6bd5b3ffdacd2af47335dad88dd935c0031bc42c1cb95b63f836e379f"
+      },
+      {
+        "name": "sunshine-forest-20261030-evidence-desensitized.zip",
+        "bytes": 9467,
+        "sha256": "64b47106ea2e9918a8c490a35454bcdeb503ec1d0a9a6bf9b35d408d473fd9cb"
+      }
+    ],
+    "manifestChecks": {
+      "firstPackage": 6,
+      "incrementalPackage": 5,
+      "status": "PASS"
+    },
+    "schedule": {
+      "enabled": true,
+      "timezone": "Asia/Shanghai",
+      "time": "09:00:00",
+      "nextRun": "2026-10-31T09:00:00+08:00",
+      "duplicateJobs": false,
+      "scheduledFor": "2026-10-30T09:00:00+08:00",
+      "startedAt": "2026-10-30T08:55:35+08:00",
+      "finishedAt": "2026-10-30T09:20:53+08:00",
+      "lastStatus": "failed",
+      "inFlight": false,
+      "queuedRuns": 0,
+      "maxRetries": 0,
+      "retryOnFailure": false,
+      "failureCause": "worker reported work unfinished; no task-specific cause in error_text"
+    },
+    "dailyReconciliation": {
+      "status": "PASS_RECONCILIATION_NOT_ALL_TASKS",
+      "mainReportedStatus": "PASS",
+      "assistantStatus": "REVIEW",
+      "assistantNoReplayState": "SENT",
+      "collectionArithmetic": "PASS",
+      "mainCleanup": "PASS",
+      "assistantCleanup": "PASS",
+      "timeline": "VIEWED_WITH_ACK",
+      "customerTemperatureSeparateReceipt": "NOT_IN_EXPORT",
+      "sign": "SKIP_ALREADY_SIGNED",
+      "rewardAttribution": "COLLECTION_ONLY_NOT_AI_REWARD",
+      "source": "desensitized export; original result bodies retained in MUSE, not independently downloaded"
+    },
+    "assistantBefore": {
+      "present": true,
+      "keys": [
+        "status",
+        "versionBinding",
+        "questionHash",
+        "recordHashes",
+        "conversationHash",
+        "customerSelected",
+        "isAnswering",
+        "contentLoading",
+        "stopped",
+        "last"
+      ],
+      "status": "SNAPSHOT",
+      "customerSelected": false,
+      "isAnswering": false,
+      "contentLoading": false,
+      "stopped": false,
+      "last": null,
+      "recordHashes_count": 0,
+      "questionHash_present": true,
+      "conversationHash_present": true,
+      "reason_field": "MISSING: no reason key exists in receiptBundle.before.",
+      "versionBinding_value": "<NOT_EXPORTED>",
+      "salt_value": "<NOT_EXPORTED>",
+      "context_resourceNames_count": 2
+    },
+    "assistantTimeout": "exact phase and seconds lost to truncated original reason; do not infer or replay SENT",
+    "runtimeComparison": "run.py differs from local copy only at known SSH and SCP transport adaptation; 16 previous installation hashes match current export",
+    "attachOnlyPreflight": "BLOCKED: no unique existing WebView target; no prepare in preflight",
+    "componentProbe": {
+      "status": "REVIEW",
+      "businessDispatched": false,
+      "stages": [
+        "prepare_done",
+        "ai_home_navigated"
+      ],
+      "snapshot": {
+        "status": "REVIEW",
+        "reason": "RECORDS_NOT_UNIQUE"
+      },
+      "cleanup": {
+        "status": "PASS",
+        "inspectionClosed": true,
+        "applicationStopped": true
+      }
+    },
+    "finalDeviceState": {
+      "operationLock": "FREE",
+      "authGuard": "ABSENT",
+      "monitor": "watching"
+    },
+    "unchanged": [
+      "business scheduler",
+      "production state",
+      "AI SENT intent"
+    ],
+    "privateEvidenceRoot": ".private/session-close-20261030/"
   }
 }
