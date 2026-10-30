@@ -422,5 +422,49 @@
     "privateOutputSha256": "4baaaddf0ff82f86b8c5da7ae7019321e62a0bfe3ea2028cca1c62f11b08a303",
     "interpretation": "each authorized automation trigger invokes at most one input; ordinary manual opening has no automatic trigger",
     "passwordOrAccountExported": false
+  },
+  "automaticLoginTrigger20261030": {
+    "recordedAt": "2026-10-30T09:13:47.034669+08:00",
+    "authorization": "user explicitly requires automatic input when own app login prompt appears, including conflicts",
+    "deviceCapabilities": {
+      "registerEvent": "undefined",
+      "addIntentTask": "undefined",
+      "threadsStart": "function",
+      "time": "2026-10-30T00:53:38.450Z"
+    },
+    "design": "singleton detector, per-page episode gate, shared one-shot input lock, join active/recent attempt",
+    "localWorkerRaceTest": "PASS: busy worker no input or global overwrite, late join no input, overlapping sources one input",
+    "helperJoinCases": [
+      {
+        "mode": "already_success",
+        "exit": 0,
+        "launcherCalls": 0,
+        "status": "PASS"
+      },
+      {
+        "mode": "active_other",
+        "exit": 0,
+        "launcherCalls": 0,
+        "status": "PASS"
+      },
+      {
+        "mode": "busy_worker",
+        "exit": 0,
+        "launcherCalls": 1,
+        "status": "PASS"
+      },
+      {
+        "mode": "own_failure",
+        "exit": 2,
+        "launcherCalls": 1,
+        "status": "PASS"
+      }
+    ],
+    "triggerEpisodeTest": "PASS: single trigger, transient overlay no rearm, stable exit rearm",
+    "installation": "WAITING_FOR_EXISTING_DAILY_RUN_TO_FINISH",
+    "deviceTests": "NOT_RUN",
+    "deployed": false,
+    "businessScheduleChanged": false,
+    "newPermissionGranted": false
   }
 }
