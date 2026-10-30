@@ -1,0 +1,9 @@
+{
+  "name": "insurance-carddav-integration-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0"
+  }
+}
