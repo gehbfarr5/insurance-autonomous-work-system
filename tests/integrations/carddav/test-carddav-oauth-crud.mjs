@@ -400,7 +400,7 @@ async function run() {
   console.log('\n================================================================');
   console.log(' ALL CardDAV Acceptance Tests Passed with Complete Assertion.');
   console.log('================================================================');
-  return { status: 'SUCCESS', testTag };
+  process.exit(0);
 }
 
 run().catch((err) => {
