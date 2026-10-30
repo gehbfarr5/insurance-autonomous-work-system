@@ -4,7 +4,7 @@
 
 ## 目标与原则
 
-- **目标**：验证云端托管的 CardDAV MCP 服务（Render）能够被远程 Agent 独立调用，完成 OAuth 2.1 认证、iCloud CardDAV 登录及联系人搜索、创建、读取、修改、删除（CRUD）闭环。
+- **目标**：验证显式指定的云端 CardDAV MCP 服务（首尔云实例或另选环境）能够被远程 Agent 独立调用，完成 OAuth 2.1 认证、iCloud CardDAV 登录及联系人搜索、创建、读取、修改、删除（CRUD）闭环。
 - **Mac 独立性**：测试套件既可在本地执行核验，亦可由任意具备 Node.js 运行环境的云端容器或远程 Agent 运行。正式业务能力由云端 Agent 直连云端 MCP 服务，不依赖本地 Mac 处于开机或在线状态。
 - **安全与凭据保护**：本目录严禁提交任何真实的 Apple ID、App 专用密码、OAuth 访问密钥（Access Key）或客户真实隐私数据。
 - **零误报与零残留**：
@@ -45,12 +45,12 @@
 
 ```bash
 # 进入工作目录并执行测试脚本
-node tests/integrations/carddav/test-carddav-oauth-crud.mjs
+MCP_SERVER_URL="https://seoul-forge-01.tail4db0d9.ts.net" node tests/integrations/carddav/test-carddav-oauth-crud.mjs
 ```
 
-如指定自定义服务地址（默认为 Render pilot 服务）：
+**必须**显式指定测试目标（脚本已移除默认 Render 地址，避免误对回退环境执行真实 CRUD）：
 ```bash
-MCP_SERVER_URL="https://insurance-carddav-mcp-pilot.onrender.com" node tests/integrations/carddav/test-carddav-oauth-crud.mjs
+MCP_SERVER_URL="https://seoul-forge-01.tail4db0d9.ts.net" node tests/integrations/carddav/test-carddav-oauth-crud.mjs
 ```
 
 ---
@@ -81,3 +81,14 @@ MCP_SERVER_URL="https://insurance-carddav-mcp-pilot.onrender.com" node tests/int
 
 - **Render Free 限制**：Render Free Web Service 没有持久化磁盘，服务在闲置 15 分钟后睡眠重置，会导致容器内的 Token Store（`tokens.json.enc`）被还原，使得后台已开启的 `.env 账号开关` 与创建的 Access Key 被抹除。
 - **关于 Envelope Login**：上游的加密信封（Envelope）解决的是 Apple 账户凭据不直接落盘的问题，但不能替代 OAuth Token Store 自身的持久化。长期生产运行应采用支持持久化磁盘的云主机或 VPS 部署。
+
+
+---
+
+## 2026-10-30 首尔云端验收后的执行限制
+
+- 已有 Antigravity 在 Seoul Forge 上真实 OAuth/CRUD 与重启后复验的脱敏证据：见 [Issue #4](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4#issuecomment-6525726042)。**常规健康/备份检查不要再运行本脚本**，因为它会创建、修改并删除 iCloud 测试联系人。
+- 要再次执行 CRUD 时，先核对执行人、目标 MCP_SERVER_URL、App 专用账号、测试 Access Key 和清理回执；保持唯一虚构标签和 try/finally。
+- Render 原实例仅保留回退，不得因遗漏 `MCP_SERVER_URL` 而被误测。
+- 上游现有 Access Key 不具备每 Key 的工具级只读约束；账号 `ALLOW_CONTACTS_WRITE_1=true` 时，不应把同一 MCP 的可写能力直接开放给所有 Agent。参见 [多 Agent 集成基线](../../planning/carddav-multi-agent-insurance-integration-2026-10-30.md)。
+- GitHub 只保存脱敏证据。ChatGPT 自定义 MCP 连接尚待独立实测，不能用本测试套件替代。
