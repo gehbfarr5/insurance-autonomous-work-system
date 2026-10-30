@@ -424,7 +424,7 @@
     "passwordOrAccountExported": false
   },
   "automaticLoginTrigger20261030": {
-    "recordedAt": "2026-10-30T09:13:47.034669+08:00",
+    "recordedAt": "2026-10-30T09:24:00+08:00",
     "authorization": "user explicitly requires automatic input when own app login prompt appears, including conflicts",
     "deviceCapabilities": {
       "registerEvent": "undefined",
@@ -461,10 +461,70 @@
       }
     ],
     "triggerEpisodeTest": "PASS: single trigger, transient overlay no rearm, stable exit rearm",
-    "installation": "WAITING_FOR_EXISTING_DAILY_RUN_TO_FINISH",
-    "deviceTests": "NOT_RUN",
-    "deployed": false,
+    "installation": "PASS_BACKED_UP_INSTALLED_HASH_VERIFIED",
+    "deviceTests": {
+      "startedAt": "2026-10-30T09:19:25.276884+08:00",
+      "cases": [
+        {
+          "case": "cold_manual_open",
+          "status": "PASS",
+          "inputAttempts": 1,
+          "source": "automatic",
+          "explicitHelperCalls": 0,
+          "stableLoggedInActivity": true,
+          "authGuardAbsent": true,
+          "observedActivities": [
+            ".SplashActivity",
+            ".MainActivity",
+            ".nativePlug.login.GestureActivity",
+            ".MainActivity"
+          ]
+        },
+        {
+          "case": "repeated_manual_open",
+          "status": "PASS",
+          "inputAttempts": 1,
+          "source": "automatic",
+          "explicitHelperCalls": 0,
+          "stableLoggedInActivity": true,
+          "authGuardAbsent": true,
+          "observedActivities": [
+            ".SplashActivity",
+            ".MainActivity",
+            ".nativePlug.login.GestureActivity",
+            ".MainActivity"
+          ]
+        },
+        {
+          "case": "automatic_and_explicit_overlap",
+          "status": "PASS",
+          "inputAttempts": 1,
+          "source": "automatic",
+          "explicitHelperCalls": 1,
+          "stableLoggedInActivity": true,
+          "authGuardAbsent": true,
+          "observedActivities": [
+            ".SplashActivity",
+            ".MainActivity",
+            ".nativePlug.login.GestureActivity",
+            ".MainActivity"
+          ]
+        }
+      ],
+      "businessDispatched": false,
+      "duplicateMonitorStart": "PASS_NO_EXTRA_INPUT",
+      "status": "PASS",
+      "operationLockReleased": true,
+      "finishedAt": "2026-10-30T09:20:35.531822+08:00"
+    },
+    "deployed": true,
     "businessScheduleChanged": false,
-    "newPermissionGranted": false
+    "newPermissionGranted": false,
+    "credentialUnchanged": true,
+    "singletonVerification": "PASS: one POSIX monitor lock and fresh watching heartbeat; duplicate startup adds no input",
+    "enginePathCounter": "not applicable: matcher returned zero; not acceptance evidence",
+    "existingAuthBootHookUpdated": true,
+    "rebootTested": false,
+    "privateEvidenceIndex": ".private/auth-auto-trigger-20261030/{deployment-result,device-tests,final-verification}.json"
   }
 }
