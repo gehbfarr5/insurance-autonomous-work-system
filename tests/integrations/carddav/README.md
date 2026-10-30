@@ -90,5 +90,5 @@ MCP_SERVER_URL="https://seoul-forge-01.tail4db0d9.ts.net" node tests/integration
 - 已有 Antigravity 在 Seoul Forge 上真实 OAuth/CRUD 与重启后复验的脱敏证据：见 [Issue #4](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4#issuecomment-6525726042)。**常规健康/备份检查不要再运行本脚本**，因为它会创建、修改并删除 iCloud 测试联系人。
 - 要再次执行 CRUD 时，先核对执行人、目标 MCP_SERVER_URL、App 专用账号、测试 Access Key 和清理回执；保持唯一虚构标签和 try/finally。
 - Render 原实例仅保留回退，不得因遗漏 `MCP_SERVER_URL` 而被误测。
-- 上游现有 Access Key 不具备每 Key 的工具级只读约束；账号 `ALLOW_CONTACTS_WRITE_1=true` 时，不应把同一 MCP 的可写能力直接开放给所有 Agent。参见 [多 Agent 集成基线](../../planning/carddav-multi-agent-insurance-integration-2026-10-30.md)。
+- **2026-10-30 用户决定：所有获授权 Agent 暂时共享完整联系人 CRUD 能力，不做角色分级。** 上游 Access Key 不具备单 Key 读写分层，当前这属于预期的统一授权模式；建议各 Agent 分别使用可撤销的 Key 便于审计，而不以细粒度权限网关作为接入前提。参见 [多 Agent 集成基线](../../planning/carddav-multi-agent-insurance-integration-2026-10-30.md)。
 - GitHub 只保存脱敏证据。ChatGPT 自定义 MCP 连接尚待独立实测，不能用本测试套件替代。
