@@ -7,7 +7,15 @@ import readline from 'node:readline';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
-const BASE_URL = process.env.MCP_SERVER_URL || 'https://insurance-carddav-mcp-pilot.onrender.com';
+const BASE_URL = process.env.MCP_SERVER_URL?.trim();
+if (!BASE_URL) {
+  console.error('MCP_SERVER_URL is required. Pass the explicit target environment URL before running CRUD tests.');
+  process.exit(1);
+}
+if (!/^https:\/\//.test(BASE_URL) || BASE_URL.endsWith('/')) {
+  console.error('MCP_SERVER_URL must be an HTTPS origin without a trailing slash.');
+  process.exit(1);
+}
 const MCP_ENDPOINT = `${BASE_URL}/mcp`;
 const REDIRECT_URI = 'https://httpbin.org/get';
 
