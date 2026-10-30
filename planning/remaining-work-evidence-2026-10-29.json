@@ -357,5 +357,45 @@
     "businessDispatched": false,
     "diagnosticsPrepareNowDisabledByDefault": true,
     "next": "attach-only to existing page; do not clear new auth guard or retry automatically"
+  },
+  "authenticationRepair20261030": {
+    "recordedAt": "2026-10-30T08:21:50.856815+08:00",
+    "scope": "user explicitly requested repair of local authentication automation; existing credentials retained",
+    "verification": {
+      "authentication": "PASS",
+      "singleInputController": "page_left",
+      "callerApplicationReadiness": "PASS: Device.prepare including wait_ready",
+      "extraPageRefresh": "REVIEW: FRESH error, not a login assertion",
+      "cleanup": "PASS",
+      "authGuardPresent": false,
+      "deviceOperationLockPresent": false,
+      "forestFlagsPresent": false,
+      "applicationStopped": true,
+      "credentialUnchangedOnDeployment": true,
+      "offlineCases": 21,
+      "deviceConcurrentLauncherTest": "PASS before input",
+      "timestampCompatibility": "PASS on device",
+      "perAttemptRequestBound": true,
+      "residentWatcherReplacedByOneShot": true,
+      "businessDispatched": false
+    },
+    "backup": "controlled Pixel auth backup before one-shot replacement",
+    "sourceHashes": {
+      "tools/pixel-auth/attempt.js": "b4cb1ed567f4c3e4eeced77b6fbee9f4b3d69dd6496188efcc4b6cf7f2b72828",
+      "tools/pixel-auth/README.md": "2f71a9b254c79303a0d1251d80f4fd0e6cd0ab5126a936fca03a4e48b9774fb5",
+      "tools/pixel-auth/test-attempt.cjs": "720762f39f2c6841c1fc0b6b9c8f69e61d08435a9b2be371a8c14490868bdbbe"
+    },
+    "privateEvidenceHashes": {
+      "offline-tests.txt": "667ad8ece5b8a0615cc0bd442bcbd07f722de5b2140d7a1d1c709f79576efb35",
+      "launch-lock-test.json": "a1eb6a17aff1904dcb63a4958dab39a19a9c9fe957d73666da7c0aafb91a444a",
+      "timestamp-regression.json": "9523ea98778fb51a02e33d15e657c8588c85eeb4a48f4377522ced6fb5a66e92",
+      "final-verification.json": "655452f3a6de874be7298bd88348121be76aec6e59edf6e51e740e9828ca1743",
+      "live-validation-after-fix-output.txt": "695bcdee9a3530efb7c64db25193b40a8535d653837f1e1a23250aecf744a05c"
+    },
+    "limits": [
+      "old watcher absence at migration does not prove why previous attempt was interrupted",
+      "full refresh read remains REVIEW with FRESH error",
+      "one real authentication validation is not long-term/cross-day acceptance"
+    ]
   }
 }
