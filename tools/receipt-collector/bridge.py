@@ -18,10 +18,25 @@ def node(action, value, timeout=5):
         raise RuntimeError('RECEIPT_NODE_FAILED')  # never expose stderr/context
     return result.stdout if action == 'expression' else json.loads(result.stdout)
 
-def baseline(evaluate, question, profile):
+def baseline(evaluate, question, profile, timeout=20, sleep=time.sleep, clock=time.monotonic):
     context = {**profile, 'salt': secrets.token_hex(32), 'expectedQuestion': question}
-    snapshot = capture(evaluate, context)
-    if snapshot.get('status') != 'SNAPSHOT' or snapshot.get('customerSelected') is not False:
+    deadline = clock() + timeout
+    while True:
+        remaining = deadline - clock()
+        if remaining <= 0:
+            raise RuntimeError('RECEIPT_BASELINE_RECORDS_NOT_MOUNTED_TIMEOUT')
+        snapshot = capture(evaluate, context, timeout=remaining)
+        if snapshot.get('status') == 'SNAPSHOT':
+            break
+        diagnostic = snapshot.get('diagnostics', {})
+        count = diagnostic.get('uniqueRecordArrays')
+        if not (snapshot.get('reason') == 'RECORDS_NOT_UNIQUE' and
+                type(count) is int and count == 0):
+            raise RuntimeError('RECEIPT_BASELINE_UNAVAILABLE')
+        # The observed page exists before records mount. Wait for real state;
+        # never substitute an empty array or proceed on ambiguous candidates.
+        sleep(min(1, max(0, deadline - clock())))
+    if snapshot.get('customerSelected') is not False:
         raise RuntimeError('RECEIPT_BASELINE_UNAVAILABLE')
     if any(snapshot.get(k) is not False for k in ['isAnswering','contentLoading','stopped']):
         raise RuntimeError('RECEIPT_BASELINE_NOT_IDLE')

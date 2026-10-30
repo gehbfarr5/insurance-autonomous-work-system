@@ -59,6 +59,20 @@ async function check(name,fn){await fn();count++;console.log('PASS '+name);}
  await check('no root',async()=>assert.equal((await collectAiSnapshot({},options,digest)).status,'REVIEW'));
  await check('missing context',async()=>assert.equal((await collectAiSnapshot(fixture().root,{},digest)).reason,'INVALID_CONTEXT'));
  await check('missing records must not become empty baseline',async()=>{const f=fixture();delete f.home.props.records;assert.equal((await collectAiSnapshot(f.root,options,digest)).reason,'RECORDS_NOT_UNIQUE');});
+ await check('missing versus duplicate record arrays diagnosed without values',async()=>{
+  const f=fixture();delete f.home.props.records;
+  let result=await collectAiSnapshot(f.root,options,digest);
+  assert.equal(result.diagnostics.uniqueRecordArrays,0);assert.equal(result.diagnostics.recordProps.missing,1);
+  f.home.props.records=f.records;
+  f.home.subTree.children.push({component:{type:{name:secret},setupState:{},props:{records:[]},provides:f.home.provides}});
+  result=await collectAiSnapshot(f.root,options,digest);
+  assert.equal(result.status,'REVIEW');assert.equal(result.diagnostics.uniqueRecordArrays,2);
+  assert.equal(result.diagnostics.recordProps.array,2);assert(!JSON.stringify(result).includes(secret));
+ });
+ await check('shared array aliases are one candidate',async()=>{
+  const f=fixture();f.home.subTree.children.push({component:{type:{name:'index'},setupState:{},props:{records:f.records},provides:f.home.provides}});
+  assert.equal((await collectAiSnapshot(f.root,options,digest)).status,'SNAPSHOT');
+ });
  await check('duplicate state provider rejected',async()=>{const f=fixture();f.home.provides[Symbol()]={...f.conversation};assert.equal((await collectAiSnapshot(f.root,options,digest)).reason,'PROVIDERS_NOT_UNIQUE');});
  await check('read exception explicit and secret suppressed',async()=>{const f=fixture();Object.defineProperty(f.home.props,'records',{get(){throw Error(secret);}});const a=await collectAiSnapshot(f.root,options,digest);assert.equal(a.reason,'SNAPSHOT_READ_ERROR');assert(!JSON.stringify(a).includes(secret));});
  await check('cycle dedup and width budget',async()=>{const f=fixture();f.home.subTree.children.push(f.root._vnode);assert.equal((await collectAiSnapshot(f.root,options,digest)).status,'SNAPSHOT');f.home.subTree.children=Array.from({length:5001},()=>({}));assert.equal((await collectAiSnapshot(f.root,options,digest)).reason,'TREE_TRUNCATED');});

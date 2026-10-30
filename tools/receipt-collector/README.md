@@ -32,3 +32,11 @@ node tools/receipt-collector/test-expression.cjs
 已向同一MUSE旁聊交付明确staging复测/通过后有限安装任务，另一次合并严格字段修正；原环境测试输出及有限安装16项哈希/状态索引已核对，15项与本机字节指纹一致，1项含私有连接参数仅远端证明。未导出实际安装文件字节，不能混同本机独立读回。未要求启动手机、补跑业务或更改09:00调度。
 
 依据：[CDP Network事件及getResponseBody](https://chromedevtools.github.io/devtools-protocol/tot/Network/)、[Runtime.callFunctionOn](https://chromedevtools.github.io/devtools-protocol/tot/Runtime/#method-callFunctionOn)。
+
+## 10月30日记录挂载就绪修复
+
+实机诊断确认首页出现时有100个组件但0个records数组；同一页面约2秒后取得空记录SNAPSHOT，再次读取一致。`RECORDS_NOT_UNIQUE`新增纯数量/类型诊断，不输出组件名称、ID或正文。`baseline`仅对明确整数0候选等待真实挂载，截止20秒；多个候选、未知类型/缺诊断、传输错误立即失败，绝不制造空数组。取得后仍要求未选客户且idle。
+
+28项组件检查、5项挂载/截止/歧义/状态/传输测试、4项传输元数据测试、原9项隔离集成通过；私有实际CDP客户程序两项测试覆盖握手和发送/接收超时清理，另验证枚举/列表错误阶段。修复后本机原准备→AI首页→baseline实测SNAPSHOT，cleanup PASS，未发问/选客/业务。MUSE原环境有限安装现已核对：12项证据清单通过，9项安装哈希与after索引一致，8项与本机字节相同；私有CDP文件只保留远端哈希。56项state及cron不变，今日SENT不重放。此为安装验收，不是回答/奖励正例。
+
+`transport_diagnostics.py`仅保存受限阶段、TIMEOUT/FAILED及调用预算，移除命令/输出/端点；在私有CDP原调用点接入，不增加重试或放宽超时。预算不是本次实际耗时；历史截断错误不能由新代码追溯补造。

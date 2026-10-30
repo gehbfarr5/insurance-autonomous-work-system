@@ -573,7 +573,7 @@
       "assistantCleanup": "PASS",
       "timeline": "VIEWED_WITH_ACK",
       "customerTemperatureSeparateReceipt": "NOT_IN_EXPORT",
-      "sign": "SKIP_ALREADY_SIGNED",
+      "sign": "SIGNED_PLUS_0_5_IN_SAME_RUN_SIGN_PHASE_THEN_SKIP_IN_MAIN",
       "rewardAttribution": "COLLECTION_ONLY_NOT_AI_REWARD",
       "source": "desensitized export; original result bodies retained in MUSE, not independently downloaded"
     },
@@ -636,5 +636,112 @@
       "AI SENT intent"
     ],
     "privateEvidenceRoot": ".private/session-close-20261030/"
+  },
+  "recordMountReadinessFix20261030": {
+    "recordedAt": "2026-10-30T11:50:05.291725+08:00",
+    "signCorrection": "downloaded signPhase desensitized receipt independently verified: same-run SIGNED +0.5, subsequent main SKIP is duplicate prevention",
+    "liveObservations": [
+      {
+        "status": "REVIEW",
+        "reason": "RECORDS_NOT_UNIQUE",
+        "diagnostics": {
+          "componentCount": 100,
+          "uniqueRecordArrays": 0,
+          "recordProps": {
+            "missing": 100,
+            "array": 0,
+            "other": 0
+          }
+        },
+        "recordCount": null
+      },
+      {
+        "status": "SNAPSHOT",
+        "reason": null,
+        "diagnostics": null,
+        "recordCount": 0
+      },
+      {
+        "status": "SNAPSHOT",
+        "reason": null,
+        "diagnostics": null,
+        "recordCount": 0
+      }
+    ],
+    "livePatchedBaseline": {
+      "status": "BASELINE_CAPTURED",
+      "customerSelected": false,
+      "recordCount": 0,
+      "cleanup": {
+        "status": "PASS",
+        "inspectionClosed": true,
+        "applicationStopped": true
+      },
+      "businessDispatched": false
+    },
+    "offlineTests": {
+      "components": 28,
+      "baselineReadiness": 5,
+      "transportMetadata": 4,
+      "integration": 9,
+      "privateClientTimeoutMethods": 2
+    },
+    "localInstalled": true,
+    "MUSEInstalled": "PASS_FINITE_INSTALL_EVIDENCE_VERIFIED",
+    "handoff": {
+      "bytes": 13785,
+      "sha256": "f7cde31e1d98e459ef1319f334b3c3eaa261337740dd28b2b760920ec2522c3b",
+      "deliveryConfirmed": true
+    },
+    "privateEvidenceRoot": ".private/session-close-20261030",
+    "installationVerification": {
+      "manifestFiles": 12,
+      "manifestPass": true,
+      "beforeFiles": 150,
+      "afterFiles": 154,
+      "diff": {
+        "added": [
+          "forest-agent/receipt-collector/test_baseline_readiness.py",
+          "forest-agent/receipt-collector/test_transport_diagnostics.py",
+          "forest-agent/receipt-collector/transport_diagnostics.py",
+          "interface-audit/transport_diagnostics.py"
+        ],
+        "changed": [
+          "forest-agent/receipt-collector/ai-snapshot.js",
+          "forest-agent/receipt-collector/bridge.py",
+          "forest-agent/receipt-collector/test-collector.cjs",
+          "forest-agent/receipt_bridge.py",
+          "interface-audit/forest_cdp.py"
+        ],
+        "removed": []
+      },
+      "stateFilesUnchanged": 56,
+      "cronFilesUnchanged": 1,
+      "localByteHashMatches": {
+        "interface-audit/transport_diagnostics.py": true,
+        "forest-agent/receipt_bridge.py": true,
+        "forest-agent/receipt-collector/ai-snapshot.js": true,
+        "forest-agent/receipt-collector/bridge.py": true,
+        "forest-agent/receipt-collector/test-collector.cjs": true,
+        "forest-agent/receipt-collector/test_baseline_readiness.py": true,
+        "forest-agent/receipt-collector/test_transport_diagnostics.py": true,
+        "forest-agent/receipt-collector/transport_diagnostics.py": true
+      },
+      "remoteClientHashOnly": "a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148",
+      "sourceBytesNotDownloaded": true,
+      "signReceipt": "SIGNED +0.5 then SKIP_ALREADY_SIGNED same run",
+      "status": "PASS"
+    },
+    "signEvidence": {
+      "source": "state/runs/20261030-090716-9ab3b6/result.json signPhase",
+      "beforeSigned": false,
+      "afterSigned": true,
+      "balanceDelta": "0.5",
+      "exportHash": "f709122cd2e2f2856c7554365de9f1cc359c04a33fb18c1a93c0ca9d8f0735fe"
+    },
+    "receivedPackage": {
+      "bytes": 23753,
+      "sha256": "3e5d070d54dbcc99e5eaa4bcbae72d97c8f7a4d7d39d37f5c16bbf80ef85c7cf"
+    }
   }
 }

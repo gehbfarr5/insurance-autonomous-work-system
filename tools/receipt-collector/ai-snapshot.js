@@ -51,7 +51,16 @@ async function collectAiSnapshot(root, options, digest) {
         p=Object.getPrototypeOf(p);
       }
     }
-    if(arrays.size!==1)return missing('RECORDS_NOT_UNIQUE');
+    if(arrays.size!==1) {
+      const counts={missing:0,array:0,other:0};
+      for(const n of nodes) {
+        if(!Object.prototype.hasOwnProperty.call(n.props,'records'))counts.missing++;
+        else if(Array.isArray(n.props.records))counts.array++;
+        else counts.other++;
+      }
+      return {...missing('RECORDS_NOT_UNIQUE'),diagnostics:{componentCount:nodes.length,
+        uniqueRecordArrays:arrays.size,recordProps:counts}};
+    }
     if(conversations.size!==1 || customers.size!==1)return missing('PROVIDERS_NOT_UNIQUE');
     const records=[...arrays][0], state=[...conversations][0], customer=[...customers][0];
     if(records.length>1000)return missing('RECORDS_TRUNCATED');
