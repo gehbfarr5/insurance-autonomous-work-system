@@ -397,5 +397,30 @@
       "full refresh read remains REVIEW with FRESH error",
       "one real authentication validation is not long-term/cross-day acceptance"
     ]
+  },
+  "coldReopenLogin20261030": {
+    "startedAt": "2026-10-30T08:27:22.302149+08:00",
+    "status": "PASS",
+    "businessDispatched": false,
+    "helperCalls": 1,
+    "coldStartActivities": [
+      ".SplashActivity",
+      ".MainActivity",
+      ".nativePlug.login.GestureActivity"
+    ],
+    "passwordPageObserved": true,
+    "manualOpenRemainsAtPasswordWithoutTrigger": true,
+    "noAutomaticRequestOnManualOpen": true,
+    "newRequestConfirmed": true,
+    "scriptState": "page_left",
+    "scriptReason": "APPLICATION_READINESS_STILL_REQUIRED",
+    "postLoginActivity": ".MainActivity",
+    "stablePostLoginConfirmed": true,
+    "authGuardAbsent": true,
+    "operationLockReleased": true,
+    "finishedAt": "2026-10-30T08:27:52.750817+08:00",
+    "privateOutputSha256": "4baaaddf0ff82f86b8c5da7ae7019321e62a0bfe3ea2028cca1c62f11b08a303",
+    "interpretation": "each authorized automation trigger invokes at most one input; ordinary manual opening has no automatic trigger",
+    "passwordOrAccountExported": false
   }
 }
