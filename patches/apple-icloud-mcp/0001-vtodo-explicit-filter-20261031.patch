@@ -1,0 +1,46 @@
+diff --git a/src/modules/reminders/service.ts b/src/modules/reminders/service.ts
+index 3b55d98..bd9a13d 100644
+--- a/src/modules/reminders/service.ts
++++ b/src/modules/reminders/service.ts
+@@ -135,7 +135,7 @@ export function createReminderService(deps: ReminderServiceDeps): ReminderServic
+       // 按列表隔离，把失败原因带出去。
+       const settled = await Promise.allSettled(
+         lists.map(async (list) => {
+-          const objects = await caldav.fetchObjects(list.url, undefined);
++          const objects = await caldav.fetchObjects(list.url, undefined, 'VTODO');
+           const reminders: Reminder[] = [];
+           // R2 的提醒版本：单个对象解析失败不能拖垮同一列表里的其它对象——
+           // 隔离在这一层，比外层的按列表 allSettled 低一级。
+diff --git a/src/providers/icloud/caldav.ts b/src/providers/icloud/caldav.ts
+index 6942259..2077efb 100644
+--- a/src/providers/icloud/caldav.ts
++++ b/src/providers/icloud/caldav.ts
+@@ -22,7 +22,7 @@ export interface CalendarObject {
+ export interface CalDavProvider {
+   verify(): Promise<void>;
+   listCalendars(): Promise<CalendarInfo[]>;
+-  fetchObjects(calendarUrl: string, range?: { start: Date; end: Date }): Promise<CalendarObject[]>;
++  fetchObjects(calendarUrl: string, range?: { start: Date; end: Date }, component?: 'VEVENT' | 'VTODO'): Promise<CalendarObject[]>;
+   fetchOne(collectionUrl: string, resourceUrl: string): Promise<CalendarObject>;
+   create(calendarUrl: string, filename: string, ics: string): Promise<CalendarObject>;
+   update(object: CalendarObject): Promise<void>;
+@@ -185,14 +185,18 @@ export function createCalDavProvider(account: AccountConfig): CalDavProvider {
+       }
+     },
+ 
+-    async fetchObjects(calendarUrl, range) {
++    async fetchObjects(calendarUrl, range, component) {
+       const client = await getClient();
+       try {
++        const filters = component === 'VTODO' || (!range && component !== 'VEVENT')
++          ? [{ 'comp-filter': { _attributes: { name: 'VCALENDAR' }, 'comp-filter': { _attributes: { name: 'VTODO' } } } }]
++          : undefined;
+         const objects = await client.fetchCalendarObjects({
+           calendar: { url: calendarUrl },
+           timeRange: range
+             ? { start: range.start.toISOString(), end: range.end.toISOString() }
+             : undefined,
++          filters,
+         });
+         return objects.map((o) => toObject(calendarUrl, o));
+       } catch (err) {
