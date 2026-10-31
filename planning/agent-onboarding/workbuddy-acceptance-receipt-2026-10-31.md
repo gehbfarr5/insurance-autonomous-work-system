@@ -46,3 +46,22 @@ python3 acceptance.py           # 只读验收，输出 evidence.json
 ```
 
 `dcr.json` / `token.json` 仅存在本机 `~/.workbuddy/icloud-mcp/`（0600），不入库。
+
+
+## 主控核查补充（2026-10-31）
+
+**状态分级**：本地 Python MCP SDK 的真实 OAuth、DCR、刷新、新进程连接、Apple 只读功能验收 PASS；**WorkBuddy 应用内原生连接器仍为 BLOCKED**，不能把 SDK 的结果当作原生 UI 已授权。用户已确认 Codex、Antigravity、MUSE 分别通过。
+
+**公共仓库源代码安全复查**：最初提交 `a8151e4` 时，`oauth_login.py`、`mcp_client.py`、`acceptance.py` 对 `token.json`、`dcr.json` 和 `evidence.json` 使用的是源码脚本目录，和此前回执声称的 `~/.workbuddy/icloud-mcp/` 不一致，且未列入 Git 忽略。此项会造成凭据被无意加入公开仓库的风险（尚**未发现此次提交包含实际 Token**）。
+
+本次后续修正：
+- 三个脚本统一使用本地私有目录 `~/.workbuddy/icloud-mcp/` 存放或读取 DCR、OAuth Token 和验收结果；OAuth Token 以 0600 权限原子写入，目录 0700。
+- `oauth_login.py` 在换取令牌前强制核对 OAuth `state`；此前只显示是否相等而没有拒绝不匹配状态。
+- 添加脚本目录的 `.gitignore`，即使旧路径中残留本地文件，也避免意外暂存。
+- 这些是**GitHub 代码修改**，不会自动更改 Mac 上已有的任何 Token、Client ID 或 WorkBuddy 本地连接，亦未代替桌面应用 OAuth。
+
+**本地存量文件核对**：更新 Git 仓库后，仅在 Mac 本地核查 `scripts/agent-onboarding/workbuddy-mcp-client/` 目录是否留存历史 `token.json`、`dcr.json` 或 `evidence.json`；如果存在，将原文件安全归档或迁移到 `~/.workbuddy/icloud-mcp/`（目录 0700、文件 0600），**不在日志、PR、聊天中输出内容**。如已有有效状态文件，优先保留，不要重新授权刷新。
+
+**最后一关**：在 WorkBuddy 应用的连接器管理中，对现存 `icloud-carddav` 点「信任」→「连接」→浏览器完成 OAuth，然后**直接在 WorkBuddy 的普通对话中**调用 `apple_accounts`、`apple_login`、无匹配 `contacts_search`、`calendar_list`、`reminders_lists`、`work_done`。只有该**原生连接器工具调用回执**完成，才将 WorkBuddy Desktop 标记为全面 PASS。Python SDK 的 token.json 与应用内 OAuth 状态不能预设为同一份。
+
+注意：未来建立 WorkBuddy 独立 Access Key 有利于独立撤销和审计，但不是完成现有原生 OAuth 的先决条件。先复用可用的受控凭据，之后再完成统一密钥体系中的分离/轮换。

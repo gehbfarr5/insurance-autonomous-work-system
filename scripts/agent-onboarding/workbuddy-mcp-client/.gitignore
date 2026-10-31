@@ -1,0 +1,6 @@
+# OAuth credentials and local evidence must never be committed
+/token.json
+/dcr.json
+/evidence.json
+/*.log
+/.token-*
