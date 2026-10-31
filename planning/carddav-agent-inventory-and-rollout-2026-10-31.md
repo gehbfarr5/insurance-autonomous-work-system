@@ -1,6 +1,6 @@
 # iCloud CardDAV MCP：本地与云端 Agent 全量接入盘点（2026-10-31）
 
-> 状态：**盘点/接入策略确认；不是各客户端已经连接成功**。2026-10-31 用户新增决定：**TGT 暂时忽略，不纳入实施。**本次从已有项目记录、GitHub Issue、WorkBuddy 2026-10-27 环境盘点及厂商当前文档交叉整理。此前项目没有正式冻结过完整 Agent 品牌清单，不能把候选名称写成已部署。
+> **最新增量（2026-10-31）：用户明确确认 Antigravity 与 MUSE 已经完成 MCP 客户端接入；本轮接受用户的完成状态，但尚未独立取得两者原始 OAuth / tools/list 回执。后续不重复为它们配 Key。** 同时首尔服务已核实不只支持联系人，上游还提供 Calendar、Reminders、Mail；[完整多模块能力核查](icloud-mcp-multimodule-expansion-2026-10-31.md)。当前仅 Contacts 开启读写，Calendar/Reminders/Mail 均为 false，且当前 Apple ID 没有 iCloud Mail sender。\n\n> 状态：**盘点/接入策略确认；不是各客户端已经连接成功**。2026-10-31 用户新增决定：**TGT 暂时忽略，不纳入实施。**本次从已有项目记录、GitHub Issue、WorkBuddy 2026-10-27 环境盘点及厂商当前文档交叉整理。此前项目没有正式冻结过完整 Agent 品牌清单，不能把候选名称写成已部署。
 >
 > 现有联系人服务（已部署，不重建）：`https://seoul-forge-01.tail4db0d9.ts.net/mcp`；云端 Apple CardDAV OAuth/虚构联系人 CRUD/重启后复验报告见 [Issue #4](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4#issuecomment-6525726042)。用户已确认：**所有获授权 Agent 具有相同联系人完整 CRUD 能力，暂不按角色做权限网关**。
 
@@ -16,9 +16,9 @@
 
 | 对象 | 当前运行归类 | 用户/项目记录与来源 | MCP 接入方式 | 当前实际状态 | 优先级 |
 | --- | --- | --- | --- | --- | --- |
-| **Meta MUSE 个人 Agent** | **云端持久 VM** | 本项目 MUSE 已承担阳光森林每日 09:00 调度，保留持久 state；Meta 确认 Muse Secure VM 是持久云机 | **先在 Muse 对话内请求创建 Custom Connector**，目标为公开 Streamable HTTP MCP URL + OAuth。第三方已有基于 SDK 桥接案例；该实例是否能直接处理目标 MCP 的 OAuth，**必须实测**，不要把 Muse Code 的配置当成个人 Muse 的设置 | **MUSE 云端业务运行有证据；CardDAV MCP 未接入/未验收** | **P0** |
+| **Meta MUSE 个人 Agent** | **云端持久 VM** | 本项目 MUSE 已承担阳光森林每日 09:00 调度，保留持久 state；Meta 确认 Muse Secure VM 是持久云机 | **先在 Muse 对话内请求创建 Custom Connector**，目标为公开 Streamable HTTP MCP URL + OAuth。第三方已有基于 SDK 桥接案例；该实例是否能直接处理目标 MCP 的 OAuth，**必须实测**，不要把 Muse Code 的配置当成个人 Muse 的设置 | **用户确认：MUSE CardDAV MCP 已接入（本轮未独立复验客户端回执）** | **P0** |
 | **Codex CLI/Desktop** | 本地 M5 Pro Mac | [Issue #6 本地回执](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6#issuecomment-6527350475)：Codex CLI 0.162.0，MCP URL 已加入，OAuth 页面已打开；专属 Access Key 已发放 | `codex mcp login icloud-carddav` 完成已有 OAuth；不重复 `mcp add` 或发 Key；再在 Codex 内 tools/list + apple_login + contacts_search | **MCP 配置 PASS，OAuth/真实工具调用未验收** | **P0** |
-| **Google Antigravity IDE** | 本地 M5 Pro Mac | 同 Issue #6 本地回执：Antigravity.app 2.27.0，`~/.gemini/config/mcp_config.json` 已加 `serverUrl`，IDE 未显示条目；独立 Key 已发 | IDE `MCP Servers → Manage MCP Servers → View raw config` 找到实际读取配置，Reload/Refresh 后 Authenticate，OAuth + tools/list；不能只用原自动化测试脚本的成功作为 IDE 成功 | **配置文件存在，IDE 未加载、OAuth 未验收** | **P0** |
+| **Google Antigravity IDE** | 本地 M5 Pro Mac | 同 Issue #6 本地回执：Antigravity.app 2.27.0，`~/.gemini/config/mcp_config.json` 已加 `serverUrl`，IDE 未显示条目；独立 Key 已发 | IDE `MCP Servers → Manage MCP Servers → View raw config` 找到实际读取配置，Reload/Refresh 后 Authenticate，OAuth + tools/list；不能只用原自动化测试脚本的成功作为 IDE 成功 | **用户确认：Antigravity CardDAV MCP 已接入（本轮未独立复验客户端回执）** | **P0** |
 | **Tencent WorkBuddy 桌面版** | 本地 M5 Pro Mac Electron | 2026-10-27 本机只读盘点：WorkBuddy 5.9.2，shell/MCP 均由本机执行；当时 `~/.workbuddy/mcp.json` 仅 `andromeld` disabled | 用户级 `~/.workbuddy/mcp.json` 添加独立远程 HTTP MCP 条目，或界面「连接器→自定义连接器」；按 OAuth+PKCE 授权。**保留现有其他连接器** | **支持原生 MCP；本服务未见安装回执** | **P0** |
 | **Tencent WorkBuddy 云端任务** | 按任务启动的**隔离云沙箱** | 盘点说明云任务是独立执行模式，个人连接凭据本地保存，云端持久性/凭据复用未证实 | 在真正云任务中单独验证远程 MCP/云托管 OAuth；不能直接复用桌面端 `~/.workbuddy` Token。是否重复 OAuth、密钥是否跨任务保存待测 | **云端 MCP 未验收；不是持久 VM 的替代** | P1 |
 | **ChatGPT Chat / ChatGPT Work** | OpenAI 托管交互和云工作能力 | Work 可用已连接插件，但不表示当前账号可以添加任意 MCP；ChatGPT 自定义 MCP 的完整读写官方当前面向 Business / Enterprise/Edu Web | 符合账户工作空间权限时通过 Plugins 加自定义 MCP 并 OAuth；否则使用已连接的 iCloud 相关插件完成适用任务，不谎称它与自建 CardDAV 是同一连接 | **自建 MCP 连接未验收；平台套餐可能构成限制** | P1 |
@@ -77,3 +77,11 @@
 - **已有 Codex / Antigravity：** 当前首尔 Auth Store 中已有独立 Key，不重复生成；本地 UI OAuth 与 MCP tools/list 仍待获取自身回执，见 [Issue #6](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6#issuecomment-6527350475)。
 - **历史其他工具：** 以前讨论/使用过 Antigravity CLI(`agy`)、Gemini CLI，以及 OpenClaw 的方案评估。这些不等于保险项目现阶段有独立常驻实例，也不作为首批必接。必要时后续单独确认是否与现有桌面 Agent 共享配置。
 - **TGT：** 按用户最新要求明确为 `PAUSED_BY_USER`，不再调查、询问或部署。
+
+
+## 8. 2026-10-31 最新状态覆盖规则
+
+- **已连接：Antigravity 与 MUSE**（用户报告完成）。早期 MUSE 不支持/IDE 尚未加载的历史文字仅作为接入故障的过程记录，不再作为当前实时状态。
+- **仍待接：Codex / WorkBuddy 桌面与云端任务 / 其他平台**，按照本清单的客户端逐个推进。
+- **服务范围扩大：** 同一 iCloud MCP 具有 Calendar、Reminders、Mail 模块，不再把项目视作纯联系人系统。具体能力/开关/限制见 [多模块扩展审计](icloud-mcp-multimodule-expansion-2026-10-31.md)。
+- **尚未授权开启新模块**：生产仍只允许联系人读写；日历/提醒事项打开前检查已有 ChatGPT iCloud Calendar 插件造成的重复入口与现存 MUSE/Antigravity OAuth 会话兼容。
