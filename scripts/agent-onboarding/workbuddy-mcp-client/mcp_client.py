@@ -16,11 +16,11 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
 BASE = "https://seoul-forge-01.tail4db0d9.ts.net/mcp"
-HERE = os.path.dirname(os.path.abspath(__file__))
+STATE_DIR = os.path.expanduser("~/.workbuddy/icloud-mcp")
 
 
 def token():
-    return json.load(open(os.path.join(HERE, "token.json")))["access_token"]
+    return json.load(open(os.path.join(STATE_DIR, "token.json")))["access_token"]
 
 
 def dump_result(res):
