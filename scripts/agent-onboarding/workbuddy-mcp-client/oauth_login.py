@@ -12,13 +12,14 @@ import os
 import re
 import secrets
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
 BASE = "https://seoul-forge-01.tail4db0d9.ts.net"
-HERE = os.path.dirname(os.path.abspath(__file__))
+STATE_DIR = os.path.expanduser("~/.workbuddy/icloud-mcp")
 KEY_PATH = os.path.expanduser("~/.config/insurance-carddav-mcp/access_key")
 REDIRECT = "http://127.0.0.1:8765/callback"
 
@@ -47,7 +48,10 @@ def request(op, url, data=None, headers=None):
 
 
 def main():
-    dcr = json.load(open(os.path.join(HERE, "dcr.json")))
+    os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+    os.chmod(STATE_DIR, 0o700)
+    with open(os.path.join(STATE_DIR, "dcr.json")) as f:
+        dcr = json.load(f)
     client_id = dcr["client_id"]
     access_key = open(KEY_PATH).read().strip()
 
@@ -82,8 +86,9 @@ def main():
         excerpt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body2))[:300]
         print("no authorization code. server said:", excerpt)
         sys.exit(2)
-    print("authorization code: received | state echoed correctly:",
-          parsed.get("state", [""])[0] == state)
+    if parsed.get("state", [""])[0] != state:
+        raise SystemExit("OAuth state mismatch: authorization rejected")
+    print("authorization code received | OAuth state verified")
 
     st3, _, body3 = request(
         op, BASE + "/token",
@@ -96,10 +101,18 @@ def main():
     tok = json.loads(body3)
     tok["_obtained_at"] = int(time.time())
     tok["_client_id"] = client_id
-    path = os.path.join(HERE, "token.json")
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w") as f:
-        json.dump(tok, f, indent=2)
+    path = os.path.join(STATE_DIR, "token.json")
+    fd, staged = tempfile.mkstemp(prefix=".token-", dir=STATE_DIR)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(tok, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(staged, 0o600)
+        os.replace(staged, path)
+    finally:
+        if os.path.exists(staged):
+            os.unlink(staged)
     print("token stored:", path)
     print("scope:", tok.get("scope"), "| expires_in:", tok.get("expires_in"),
           "| refresh_token:", bool(tok.get("refresh_token")),
