@@ -8,7 +8,7 @@ import {
 } from '../../src/customer-ops/carddav-followup.mjs';
 
 const ONE = {
-  contact_id: 'contact-1', address_book_id: 'book-A', name: { full: '王叔叔' },
+  contact_id: 'contact-1', address_book_id: 'book-A', name: { full: '示例客户甲' },
   phones: [{ value: '+86 138 0000 0000' }], note: '客户原有备注',
 };
 
@@ -39,7 +39,7 @@ const rejectsCode = async (cb, code) => {
 test('search + exact name + read chooses only one contact', async () => {
   const { callTool, state } = fakeTool();
   const out = await resolveUniqueContact(callTool, {
-    sessionId: 'session-1', query: '王', exactName: '王叔叔',
+    sessionId: 'session-1', query: '示例', exactName: '示例客户甲',
   });
   assert.equal(out.contact_id, ONE.contact_id);
   assert.deepEqual(state.calls.map(x => x.name), ['contacts_search', 'contacts_read']);
@@ -48,10 +48,10 @@ test('search + exact name + read chooses only one contact', async () => {
 test('one fuzzy candidate without exact identity is rejected', async () => {
   const { callTool } = fakeTool();
   await rejectsCode(() => resolveUniqueContact(callTool, {
-    sessionId: 'session-1', query: '王', exactName: '王先生',
+    sessionId: 'session-1', query: '示例', exactName: '示例客户乙',
   }), 'NOT_FOUND');
   await rejectsCode(() => resolveUniqueContact(callTool, {
-    sessionId: 'session-1', query: '王',
+    sessionId: 'session-1', query: '示例',
   }), 'EXACT_MATCH_REQUIRED');
 });
 
@@ -66,7 +66,7 @@ test('exact phone comparison handles formatted mainland numbers', async () => {
 test('duplicate names are ambiguous', async () => {
   const { callTool } = fakeTool({ contacts: [ONE, { ...ONE, contact_id: 'other-id' }] });
   await rejectsCode(() => resolveUniqueContact(callTool, {
-    sessionId: 'session-1', query: '王', exactName: '王叔叔',
+    sessionId: 'session-1', query: '示例', exactName: '示例客户甲',
   }), 'AMBIGUOUS');
 });
 
@@ -74,7 +74,7 @@ test('truncated or partially failed search cannot be trusted', async () => {
   for (const options of [{ truncated: true }, { partial: [{ address_book_id: 'bad' }] }]) {
     const { callTool } = fakeTool(options);
     await rejectsCode(() => resolveUniqueContact(callTool, {
-      sessionId: 'session-1', query: '王', exactName: '王叔叔',
+      sessionId: 'session-1', query: '示例', exactName: '示例客户甲',
     }), 'INCOMPLETE_SEARCH');
   }
 });
