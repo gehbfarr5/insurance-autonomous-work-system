@@ -1,0 +1,21 @@
+diff --git a/tests/unit/modules/reminders-service.test.ts b/tests/unit/modules/reminders-service.test.ts
+--- a/tests/unit/modules/reminders-service.test.ts
++++ b/tests/unit/modules/reminders-service.test.ts
+@@ -117,7 +117,7 @@
+     const service = createReminderService({ account: makeAccount(), caldav });
+     await service.list({});
+     expect(caldav.fetchObjects).toHaveBeenCalledTimes(1);
+-    expect(caldav.fetchObjects).toHaveBeenCalledWith(LIST, undefined);
++    expect(caldav.fetchObjects).toHaveBeenCalledWith(LIST, undefined, 'VTODO');
+   });
+ 
+   it('filters by completion state', async () => {
+@@ -158,7 +158,7 @@
+     const service = createReminderService({ account: makeAccount(), caldav });
+     await service.list({ list_ids: [encodeUrl(OTHER)] });
+     expect(caldav.fetchObjects).toHaveBeenCalledTimes(1);
+-    expect(caldav.fetchObjects).toHaveBeenCalledWith(OTHER, undefined);
++    expect(caldav.fetchObjects).toHaveBeenCalledWith(OTHER, undefined, 'VTODO');
+   });
+ 
+   it('raises NOT_FOUND naming a list_id that matches nothing', async () => {
