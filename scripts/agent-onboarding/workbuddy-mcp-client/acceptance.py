@@ -15,7 +15,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
 BASE = "https://seoul-forge-01.tail4db0d9.ts.net/mcp"
-HERE = os.path.dirname(os.path.abspath(__file__))
+STATE_DIR = os.path.expanduser("~/.workbuddy/icloud-mcp")
 EVID = {}
 
 
@@ -70,7 +70,7 @@ def summarize_rem_items(d):
 
 
 async def main():
-    tok = json.load(open(os.path.join(HERE, "token.json")))["access_token"]
+    tok = json.load(open(os.path.join(STATE_DIR, "token.json")))["access_token"]
     hc = httpx2.AsyncClient(headers={"Authorization": "Bearer " + tok}, timeout=90)
     probe = "zz-accept-" + "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
     async with streamable_http_client(BASE, http_client=hc) as s:
@@ -122,8 +122,11 @@ async def main():
             EVID["work_done"] = wd if isinstance(wd, (dict, list)) else str(wd)[:200]
 
     await hc.aclose()
-    out = os.path.join(HERE, "evidence.json")
-    json.dump(EVID, open(out, "w"), ensure_ascii=False, indent=2)
+    out = os.path.join(STATE_DIR, "evidence.json")
+    fd = os.open(out, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(EVID, f, ensure_ascii=False, indent=2)
+    os.chmod(out, 0o600)
     print(json.dumps(EVID, ensure_ascii=False, indent=2))
 
 
