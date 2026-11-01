@@ -34,6 +34,7 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 用途 | 权威入口 |
 | --- | --- |
 | 当前阶段与下一步 | [P0—P4 路线图](planning/roadmap.md) |
+| iCloud MCP 多 Agent 接入（2026-11-01） | **[已接入 Agent 与验收台账](planning/icloud-mcp-agent-connection-status-2026-11-01.md)** · [持续跟踪 Issue #6](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6) |
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |
 | 项目目标与整体关系 | [愿景](docs/00-project-vision.md) · [原则](docs/01-philosophy-and-principles.md) · [总体框架 v0.2](docs/02-project-framework-v0.2.md) |
