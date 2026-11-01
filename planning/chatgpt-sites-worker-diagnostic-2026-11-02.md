@@ -16,7 +16,7 @@
 目录：[integrations/chatgpt-sites/worker-diagnostics](../integrations/chatgpt-sites/worker-diagnostics/README.md)
 
 - `bridge-client.mjs`：纯服务端 ESM，无用户自定义 URL/tool name，固定 POST `/v1/contacts/groups/list` 和 `{}`；只允许 HTTPS 基址；使用 Site Secret（不进入前端）；返回时仅保留 `name` 和整数 `member_count`。
-- `bridge-client.test.mjs`：Node 22 `node --test` 本地离线 **7/7 PASS**，覆盖成功、字段裁剪、缺配置、HTTP/URL 拒绝、401、fetch 抛错、JSON/schema 错误、Abort 超时。测试仅使用虚构内容，没有访问真实 iCloud。
+- `bridge-client.test.mjs`：Node 22 `node --test` 本地离线 **8/8 PASS**，覆盖成功、字段裁剪、缺配置、HTTP/URL 拒绝、401、fetch 抛错、JSON/schema 错误、Abort 超时。测试仅使用虚构内容，没有访问真实 iCloud。
 - `README.md`：接入示例和分阶段日志规范，候选模块**尚未嵌入现有 Site v2，也尚未发布**。不能将 7/7 当作端到端 PASS。
 
 ## 下一轮唯一允许的 Site 改动（需要真正 Site 编辑环境）
@@ -34,6 +34,21 @@
 - 首尔桥接继续实施**服务器端**方法白名单与输出字段裁剪；原 MCP 的 `scope=mcp` 不等于只读权限。不要将全 MCP Token 放在 Site、前端、日志或公开仓库。
 - 之前曾有凭据在聊天中暴露。应列入待计划轮换清单，先审查对其他 Agent 的依赖和无损替换步骤，再在安全通道轮换；此次未更改凭据。
 - 完整 33 项工具接入需另列只读/写入、批量修改、删除、幂等性/ETag 与显式审批门槛。**当前仅聚焦真实分组只读。**
+
+## 2026-11-02 新增重要发现：Funnel `/bridge` 路由
+
+通过首尔服务器实际运行的 `tailscale funnel status --json` **只读取证**（没有改变任何 Funnel 配置）：
+
+- HTTPS :443 的 handler `/` 指向 **127.0.0.1:17734**（原 MCP）；
+- HTTPS :443 的 handler `/bridge` 指向 **127.0.0.1:17735**（独立受限桥接）；
+- 17735 仅监听 **127.0.0.1**，因此云端 Site 必须通过已授权的公开 Funnel 路由访问，不能直接访问服务内部环回端口。
+- 这揭示一个**具体、可验证的路径错配风险**：如果 Site Worker 使用不带 `/bridge` 的 HTTPS 基址，向 `/v1/contacts/groups/list` 发起调用，就可能命中根路由的原 MCP 而非只读桥接。正确的候选外部路径应为 `/bridge/v1/contacts/groups/list`，但**实际 Site Secret 的 URL 值未读取，尚不能断定它当前缺少前缀**。
+- 官方 Tailscale Serve/Funnel `--set-path` 文档说明前缀挂载和反向代理机制；站点运行时是否准确匹配并把前缀转给预期后端，仍需真实 Site Worker 外连证据确认。
+- 已更新版本化候选 `bridge-client.mjs`，严格接受 HTTPS 根路径或 `/bridge` 基址，保留固定只读 endpoint，新增 /bridge 路由单元测试，离线 **8/8 PASS**。没有修改真正的 Site v2 Worker 或生产服务器。
+- 本轮 Chat 会话对现有 `icloud_contacts_groups_list` **再次实际只读调用**：仍返回 `INVALID_ARGUMENT: iCloud bridge request failed`。随后首尔桥接最近五分钟的 `journald` 统计为 0 行；这与“没有观察到桥接请求”一致，但**日志可能没有完整记录所有请求**，不能单独证明请求绝对没到达。
+- 从首尔本机访问自己 Funnel 域名的测试出现 TLS 校验证书错误；既有环境存在内外路由差异，**不能使用该本机回环测试替代云端公网连通性测试**，也不要用 `curl -k` 的状态码冒充端到端 TLS 通过。
+
+**Worker 源码恢复后的新增第一步：** 在不输出 Secret 值的前提下，审查 `ICLOUD_BRIDGE_URL` 的**URL pathname 是否等于 `/bridge`**，并通过 Worker 分阶段日志确认 `fetch_started` 是否触发；不要再次盲目更换 Token 或重建插件。
 
 ## 已知状态
 
