@@ -45,6 +45,20 @@
 4. **统一治理**：对现有 Key 做归属与最后使用时间登记（在**私有安全台账**，公开 GitHub 只写是否具备独立撤销能力）；不因整理账目轮换运行中的密钥。
 5. **业务闭环**：联系人唯一匹配→可核验跟进任务→日历/提醒事项，不把技术接入完成等同于保险客户工作流完工。避免触发 MUSE 既有自动化。
 
+## 2026-11-01 ChatGPT 插件与运行面后续排查
+
+**阶段性证据（不是 ChatGPT MCP 通过）**：
+
+- 个人私有插件 `insurance-icloud-mcp` 有两份，同指向 `https://seoul-forge-01.tail4db0d9.ts.net/mcp`：v0.1.0（ID `plugins_6ae5971b69288191b59eaf6104a020a4`）、v1.0.0（ID `plugins_6ae596f08e6881919af6862a64092566`）。通过当前 Plugin Creator 读取其实际 `plugin.json`、`mcp.json`、`.codex-plugin/plugin.json`、`.mcp.json`。
+- 两份均为 `streamable-http` + `OAuth DCR`，均声明了远程 MCP，均**未设置显式 `requires_local_executor: true`**。用户在网页插件目录发现两者均被标记「仅限桌面端」；官方插件文档说明，导入包声明 `mcp.json/.mcp.json` 时即使远程 HTTPS 也可能被分类为 Desktop only。这是插件包/运行面限制，**不等于服务器只能本地联网**。
+- 用户报告插件已安装；网页 Chat 及「立即试用」会话没有暴露 `contacts_groups_list` 等自建工具（**0 个当前可调用自建工具**）。此时 `CHAT_MCP_NOT_AVAILABLE`，不能把普通 iCloud Calendar 或 Seoul Forge 恢复管理插件的工具算进来。
+- 当前未取得 macOS **ChatGPT App / Chat Local / Work Local** 的自建工具实测；**不能把 Codex CLI 成功或网页版失败直接移植到这两种环境的判定**。本轮从 Chat 尝试读取已连接浏览器时返回“Requires originating browser context”，不能远程替代用户本地 App 的 UI 验收。
+- 官方帮助文档：[Plugins in ChatGPT](https://help.openai.com/en/articles/20001256-plugins-in-chatgpt)、[Desktop-only plugins](https://developers.openai.com/plugins/deploy/desktop-only)、[Custom MCP availability](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt)、[Sites-hosted plugin](https://help.openai.com/en/articles/20001547-hosting-a-plugin-with-chatgpt-sites)。
+- **下一实测顺序**：Mac 最新 ChatGPT 桌面版 → 先 Chat 的本地执行支持面（如可用）再 Work Local → 指定 v1.0.0 插件，逐一核查可选、可连接、可发现 33 工具、只读 `contacts_groups_list`。不可调用时记录插件列表/权限提示，避免重试已有 OAuth 或创建第三份插件。
+- **若桌面端仍失败**：按运行面/账号权限 BLOCKED 结案当前导入型插件方案；另外只做一项独立的 Sites 托管 MCP **只读演示可行性研究**，先虚构数据、验证权限和工具暴露，再研究到已部署首尔服务的安全 OAuth 桥接。不得把 Sites 理解为自动绕过订阅或工作空间 MCP 限制。
+- **重复项**：目前建议 B v1.0.0 `KEEP_PRIMARY_CANDIDATE`、A v0.1.0 `DUPLICATE_CANDIDATE`；在安装/授权和依赖影响核对前均**不卸载**，不动首尔 OAuth/Token Store/其他 Agent。
+- 用户已反馈 Codex 新版接入完成，但尚无可归档的最新版独立 `tools/list=33` 报告；在收到具体回执前仍保留 OLD VERSION PASS 的证据级别，不自动改写。
+
 ## 相关追踪
 
 - [Issue #4：首尔 CardDAV 核心服务](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4)
