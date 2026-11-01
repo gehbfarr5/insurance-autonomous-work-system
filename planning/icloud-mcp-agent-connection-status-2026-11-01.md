@@ -59,6 +59,15 @@
 - **重复项**：目前建议 B v1.0.0 `KEEP_PRIMARY_CANDIDATE`、A v0.1.0 `DUPLICATE_CANDIDATE`；在安装/授权和依赖影响核对前均**不卸载**，不动首尔 OAuth/Token Store/其他 Agent。
 - 用户已反馈 Codex 新版接入完成，但尚无可归档的最新版独立 `tools/list=33` 报告；在收到具体回执前仍保留 OLD VERSION PASS 的证据级别，不自动改写。
 
+## 2026-11-01 ChatGPT Work Local 执行环境门槛
+
+- 用户提供的 macOS ChatGPT 验收报告明确标记 **`WORK_LOCAL_UNAVAILABLE`**：当前会话未获得可验证的 Mac 本地执行器或切换 Work Local 的控制接口；测试发生于 ChatGPT 会话工具通道，而非已证明的 Work Local。
+- 因此本次 **不是 Work Local MCP E2E 失败**；不能用当前工具列表中 0 项 `contacts_groups_list` 来证明 Mac 本地线程中的插件也不可用。保留以下子状态：`CHAT_DESKTOP_TOOLS_MISSING`（桌面 Chat 会话已观察到）、`WORK_LOCAL_UNAVAILABLE`（环境未建立）、`WORK_CLOUD_MCP_NOT_TESTED`（若之前有受限报告仍按具体执行证据单独记录）。
+- 官方 [ChatGPT Work and Codex](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex) 说明：Desktop 可选择 ChatGPT→Work，本地文件/应用访问受套餐与空间授权、逐步开放影响；**从桌面 App 发起 Work 不自动证明任务运行在 Mac 本地**。
+- **停止条件**：在没有确切 Work Local 入口、Mac 文件访问或本地执行证据之前，不再发送同一 MCP 验收 Prompt 到普通 Chat 会话；不将其记成 `WORK_LOCAL_MCP_FAIL`，也不推断账号永久不支持。
+- **下一项可验证路径**：ChatGPT Sites 托管**只用虚构数据的只读 MCP 演示工具**，验证安装→插件实际工具可见→Chat 或 Work 实际调用。官方 [Sites 托管插件文档](https://help.openai.com/en/articles/20001547-hosting-a-plugin-with-chatgpt-sites) 声明此途径可用，但**不保证外部首尔 MCP 的 OAuth 桥接、33 项工具或当前套餐的写入权限**。演示成功之前，不接入真实 Apple 联系人、日历或提醒事项。
+- 两份个人插件 v0.1.0/v1.0.0 均暂保留；未完成依赖验证前不得卸载。服务器、Token Store、其他 Agent 均无需修改。
+
 ## 相关追踪
 
 - [Issue #4：首尔 CardDAV 核心服务](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4)
