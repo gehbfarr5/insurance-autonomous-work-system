@@ -68,6 +68,15 @@
 - **下一项可验证路径**：ChatGPT Sites 托管**只用虚构数据的只读 MCP 演示工具**，验证安装→插件实际工具可见→Chat 或 Work 实际调用。官方 [Sites 托管插件文档](https://help.openai.com/en/articles/20001547-hosting-a-plugin-with-chatgpt-sites) 声明此途径可用，但**不保证外部首尔 MCP 的 OAuth 桥接、33 项工具或当前套餐的写入权限**。演示成功之前，不接入真实 Apple 联系人、日历或提醒事项。
 - 两份个人插件 v0.1.0/v1.0.0 均暂保留；未完成依赖验证前不得卸载。服务器、Token Store、其他 Agent 均无需修改。
 
+## 2026-11-01 Sites MCP Chat 独立 PASS — 重要里程碑
+
+- **`SITES_CHAT_MCP_PASS`**：用户反馈「iCloud MCP Capability Test」已安装、`demo_contacts_groups_list` 调用成功；当前 ChatGPT 普通 Chat 会话随后独立发现并实际调用 `mcp__iCloud_MCP_Capability_Test__demo_contacts_groups_list`，得到两个虚构分组 `测试客户=3`、`测试家庭=2`，调用无错误。
+- 这是**ChatGPT 普通 Chat 真实 MCP 工具可调用**的实测证据，明确区别于历史“导入型 `mcp.json` 私人插件 Desktop only / 工具不可见”。
+- **范围严格限定**：Sites 托管的**一个虚构只读工具**；未接入真实首尔 iCloud MCP、其 OAuth、真实通讯录或完整 33 项工具；没有对任何客户数据做读写。生产接入状态仍 `NOT CONNECTED VIA CHAT`。
+- **阶段进度**：Chat 路线的**工具暴露/实际调用门槛已跨过**，下一项问题转为 Sites→首尔 MCP 的安全授权桥接及最小生产只读调用。未完成之前不得将完整 Chat iCloud 接入标为 PASS。
+- **Work 不自动继承 Chat PASS**；Work Cloud / Local 仍需分别验收，之前的 `WORK_LOCAL_UNAVAILABLE` 证据不变。
+- [本次 POC 任务书与实际回执](./chatgpt-chat-sites-mcp-poc-2026-11-01.md)。
+
 ## 相关追踪
 
 - [Issue #4：首尔 CardDAV 核心服务](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4)
