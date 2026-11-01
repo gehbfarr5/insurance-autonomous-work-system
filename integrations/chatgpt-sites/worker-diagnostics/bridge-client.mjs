@@ -67,10 +67,10 @@ export async function listIcloudGroups({
   // A server-side secret still needs a fixed, trusted HTTPS destination.
   // The caller cannot provide a URL, path, method, or arbitrary tool name.
   if (base.protocol !== 'https:' || !base.hostname || base.username || base.password ||
-      base.search || base.hash || !['', '/'].includes(base.pathname)) {
+      base.search || base.hash || !['', '/', '/bridge', '/bridge/'].includes(base.pathname)) {
     fail('BRIDGE_CONFIG_INVALID', 'config_url_invalid');
   }
-  const endpoint = new URL(ALLOWED_PATH, base);
+  const endpoint = new URL(base.pathname.replace(/\/?$/, '/') + ALLOWED_PATH.slice(1), base);
   emit('request_prepared');
 
   const controller = new AbortController();
