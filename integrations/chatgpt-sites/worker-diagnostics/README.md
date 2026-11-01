@@ -6,8 +6,9 @@
 
 作为原有 **iCloud MCP Capability Test v2** 的 Site **服务端 Worker** 调用 `icloud_contacts_groups_list` 时的候选替换模块。它不是完整 Site 源码，不能直接上传代替现有站点，也不适用于浏览器端 JS。
 
-- 只允许 POST `ICLOUD_BRIDGE_URL + /v1/contacts/groups/list`，固定 `{}` 请求体。
+- 只允许 POST 固定 `/v1/contacts/groups/list`，固定 `{}` 请求体。**首尔 Funnel 现有路由为 `/bridge` → 127.0.0.1:17735，因此使用该 Funnel 入口时 `ICLOUD_BRIDGE_URL` 应为 `https://seoul-forge-01.tail4db0d9.ts.net/bridge`（仅服务端配置，不是公开 Secret）；最终发往 `/bridge/v1/contacts/groups/list`。若未来更换桥接路由需同步审核。
 - 服务端读取 `ICLOUD_BRIDGE_URL`、`ICLOUD_BRIDGE_TOKEN`；绝不可放进网页或 GitHub。
+- `ICLOUD_BRIDGE_URL` 只允许 HTTPS 根路径或固定 `/bridge` 前缀；不允许用户自定义路径或任意转发。
 - 支持请求分阶段诊断：`config_missing`、`config_url_invalid`、`fetch_started`、`fetch_error`、`fetch_timeout`、`response_received`、`response_schema_invalid`、`success`。
 - 日志仅允许追踪 ID、阶段、整数状态码和执行耗时，不记录密钥、完整 URL、原始响应体、联系人明细、异常消息。
 - 输出仅限分组名称与整数成员数量，不接受工具名/路径/请求参数传入，不允许任意 MCP 转发。
