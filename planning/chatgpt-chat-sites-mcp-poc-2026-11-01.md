@@ -1,7 +1,19 @@
 # ChatGPT Chat 原生调用能力 POC — Sites-hosted MCP（2026-11-01）
 
-> 状态：**READY FOR WORK EXECUTION / NOT STARTED**。这是交接规范，不是执行回执。
+> 状态：**SITES_CHAT_MCP_PASS（2026-11-01）**。原下方交接规范为历史计划；实际执行回执见下一节。
 > 目标：在当前账号条件下，判定 **ChatGPT 普通 Chat 会话**能否真实调用由 ChatGPT Sites 托管的 MCP 工具。**本 POC 不接入真实 iCloud，也不修改生产 MCP**。
+
+## 2026-11-01 实际验收回执：SITES_CHAT_MCP_PASS
+
+**结论：已通过，普通 Chat 可以调用 Sites 托管的 MCP 工具。** 本状态覆盖文档原先的 `READY FOR WORK EXECUTION / NOT STARTED`（该文字保留为历史计划）。
+
+- 用户报告：在已安装的 **iCloud MCP Capability Test** 插件中，实际调用 `demo_contacts_groups_list`；`isError: false`，正确返回两个完全虚构分组。
+- **ChatGPT 当前普通 Chat 会话独立复验**：工具目录暴露 `mcp__iCloud_MCP_Capability_Test__demo_contacts_groups_list`；实际调用 `{}` 返回 `structuredContent.groups` 为 `[{"name":"测试客户","member_count":3},{"name":"测试家庭","member_count":2}]`，无调用错误；这是 MCP 工具调用，不是插件元数据读取或静态网页展示。
+- 该 POC 只注册了虚构只读工具；未触达真实 iCloud、首尔生产 MCP、联系人、日历、提醒事项或 OAuth 密钥。**不代表首尔原有 33 项工具已从 ChatGPT 接入。**
+- 与此前失败分开记录：v0.1.0 / v1.0.0 **导入型私人 MCP 插件**在 Chat 中不可调用；这次 **Sites 托管插件**则独立成功，不应将旧路线直接标为 PASS。
+- **下一阶段待定义，不在本次 POC 执行**：研究 Sites-hosted 工具向首尔现有 MCP 的**最小只读、经授权**连接；先确认运行时服务端私密凭据处理、OAuth / 网络链路及账户权限；通过真实只读分组查询后才考虑扩展 33 项及写入操作。
+- Work Cloud / Work Local 是否能调用该 Sites 插件尚未由本次独立验证证明；Work Local 维持 `WORK_LOCAL_UNAVAILABLE` 阶段性状态。
+- 测试 Site 与插件暂建议保留作为可复现基线；两份旧插件是否清理仍须依赖审计。
 
 ## 背景与已排除路线
 
