@@ -58,3 +58,13 @@ test('timeout is classified with abort', async () => {
   })});
   assert.equal(await errorCode(promise),'BRIDGE_TIMEOUT');
 });
+
+test('Funnel /bridge path prefix routes to the bridge listener, not root MCP', async () => {
+  let target;
+  const result=await listIcloudGroups({env:{...env,ICLOUD_BRIDGE_URL:'https://bridge.example.org/bridge'},fetchImpl:async(url)=>{
+    target=url;
+    return reply({groups:[{name:'Real group',member_count:1}]});
+  }});
+  assert.equal(target,'https://bridge.example.org/bridge/v1/contacts/groups/list');
+  assert.equal(result.groups[0].member_count,1);
+});
