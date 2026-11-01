@@ -1,6 +1,6 @@
 # iCloud MCP 多 Agent 接入与验收台账（2026-11-01）
 
-> **当前状态记录；不是凭据清单，也不是“所有 Agent 均已验收”的结项声明。** 基于用户提供的 MUSE / WorkBuddy / Vela / Antigravity 执行回执、[Issue #6 的 Codex 真实 CLI 验收记录](../issues/6)、以及 2026-11-01 12:54（UTC+8）对首尔生产容器的独立只读健康核验。历史阶段说明保留在各 Issue 评论里，以本页日期和证据级别判断最新接入状态。
+> **当前状态记录；不是凭据清单，也不是“所有 Agent 均已验收”的结项声明。** 基于用户提供的 MUSE / WorkBuddy / Vela / Antigravity 执行回执、[Issue #6 的 Codex 真实 CLI 验收记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6)、以及 2026-11-01 12:54（UTC+8）对首尔生产容器的独立只读健康核验。历史阶段说明保留在各 Issue 评论里，以本页日期和证据级别判断最新接入状态。
 
 ## 概况
 
