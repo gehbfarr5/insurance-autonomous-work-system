@@ -1,5 +1,7 @@
 # iCloud MCP 多 Agent 接入与验收台账（2026-11-01）
 
+> **最新总状态（2026-11-02）**：首尔 MCP 生产可用、五个外部 Agent 不同程度已接入；普通 Chat 与 Work Cloud **同一 Sites 插件的虚构工具**均真实调用 PASS；**真实 iCloud 桥接尚未通过且 Site v2 源码 Git checkout 受阻，ChatGPT 生产接入子项目已决定 PARKED**。下方较早的「Work NOT VERIFIED」等是**历史时点记录，不代表现在的最新验收**。完整调研、部署、测试、失败和暂停决策以 [2026-11-02 全阶段总归档](./icloud-mcp-master-handover-2026-11-02.md) 为准。
+
 > **当前状态记录；不是凭据清单，也不是“所有 Agent 均已验收”的结项声明。** 基于用户提供的 MUSE / WorkBuddy / Vela / Antigravity 执行回执、[Issue #6 的 Codex 真实 CLI 验收记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6)、以及 2026-11-01 12:54（UTC+8）对首尔生产容器的独立只读健康核验。历史阶段说明保留在各 Issue 评论里，以本页日期和证据级别判断最新接入状态。
 
 ## 概况
