@@ -187,4 +187,4 @@ Pixel于17:37:35通过原SSH别名再次只读核对：Pixel 3a / Android 15/API
 
 证据边界：v0.17源码SHA-256为93151ce3…；v0.19 fixture SHA-256为5028250d…，属于脱敏测试夹具且明确不可部署。live v0.19原文件未导出到本机；本结论仅确认现有源码/fixture的结构化透传路径，live精确解析和Pixel AutoX执行兼容仍待验证。
 
-触发候选的workerReason也完成隐私加固：从已核对的本机auth-worker.js与attempt.js提取当前固定原因码并做白名单检查；未知原因改记OTHER。测试逐项核对原因码覆盖，并证明大写敏感样例不会进入诊断文件。另建只读Pixel sidecar采集器，只接受预期schema/字段/枚举；未知字段、原因码或超128条事件均拒绝，合成测试通过。2026-11-02 17:59只读检查Pixel 3a / Android 15的守护为watching、guardBlocked=false、requests=6；采集器在实际Pixel上返回NO_DIAGNOSTIC_FILE，与候选未安装一致。本轮无设备变更、无重启、无业务重跑。
+触发候选的workerReason也完成隐私加固：从已核对的本机auth-worker.js与attempt.js提取当前固定原因码并做白名单检查；未知原因改记OTHER。测试逐项核对原因码覆盖，并证明大写敏感样例不会进入诊断文件。另建只读Pixel sidecar采集器，只接受预期schema/字段/枚举；未知字段、原因码或超128条事件均拒绝，合成测试及monitor sidecar生产者→采集器端到端检查通过。2026-11-02 17:59只读检查Pixel 3a / Android 15的守护为watching、guardBlocked=false、requests=6；采集器在实际Pixel上返回NO_DIAGNOSTIC_FILE，与候选未安装一致。本轮无设备变更、无重启、无业务重跑。

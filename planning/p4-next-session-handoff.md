@@ -144,6 +144,6 @@ GitHub 继续作为权威记录：更新对应工作包与 P4 Issue，不维护�
 
 本机对已知runner数据通路完成静态集成核对：v0.17脱敏源及脱敏v0.19 fixture均完整透传森林准备事件，不裁剪新增loginState字段；v0.18→v0.19补丁只有三项版本常量替换。独立契约测试通过，精确live runner仍未导出，设备运行兼容未验证。
 
-Pixel触发候选现在对工作器原因码使用固定白名单，未知值映射OTHER；来源枚举覆盖和敏感样例反例通过。严格只读sidecar采集器已完成并在Pixel实际运行一次，返回NO_DIAGNOSTIC_FILE；17:59设备仍watching、requests=6。设备未改，业务未重跑。
+Pixel触发候选现在对工作器原因码使用固定白名单，未知值映射OTHER；来源枚举覆盖、敏感样例反例及monitor sidecar到采集器端到端合成检查通过。严格只读sidecar采集器已完成并在Pixel实际运行一次，返回NO_DIAGNOSTIC_FILE；17:59设备仍watching、requests=6。设备未改，业务未重跑。
 
 下次本机优先完成三候选的本地集成包和恢复/回滚核查；若需更强live证据，再请求MUSE只读导出，不让MUSE主导本地诊断。设备安装/守护重启需另行明确授权；11月3日自然运行只读检查，月度规划/P50继续挂起。
