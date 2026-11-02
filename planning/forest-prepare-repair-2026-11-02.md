@@ -127,3 +127,11 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 证据边界：v0.17源码SHA-256为93151ce3…；v0.19 fixture SHA-256为5028250d…，属于脱敏测试夹具且明确不可部署。live v0.19原文件未导出到本机；本结论仅确认现有源码/fixture的结构化透传路径，live精确解析和Pixel AutoX执行兼容仍待验证。
 
 触发候选的workerReason已通过静态枚举白名单加固，未知原因归为OTHER；覆盖与敏感样例反例检查通过。只读Pixel采集器对未知字段、原因码及超过128条事件fail-closed；合成测试和monitor sidecar生产者→采集器端到端检查通过。18:10 Pixel实时只读结果为Pixel 3a / Android 15、guardBlocked=false、requests=6、NO_DIAGNOSTIC_FILE；说明候选未安装。未对设备作写入或重启。
+
+### Pixel当前触发监控与候选复核｜2026-11-02 18:30左右
+
+通过既有SSH别名再次只读核对：设备为Pixel 3a / Android 15，AutoX主进程和脚本进程均在运行；`monitor-status.json`为`watching`、`guardBlocked=false`、`requests=6`。部署版`monitor.js`、`trigger.js`、`auth-worker.js`、`attempt.js`哈希分别与本机受控副本一致（`238d86a8…`、`0243ee09…`、`f6fb7d23…`、`b4cb1ed5…`）。只读采集器返回`NO_DIAGNOSTIC_FILE`，确认触发诊断候选尚未部署。未写设备、重启监控、输入手势或触发业务。
+
+这次快照证明监控当前存活，不能还原11月2日历史窗口的屏幕/应用/手势页/本人/guard/episode分项值。对原运行的归因仍是“监控在派发前未调用手势工作器”，没有证据表明输入器接到请求后输入失败；具体未通过哪一道派发门禁仍未知。
+
+审查未部署的监控候选时发现`elapsedMs`原先记为设备累计运行时长，现已修正为相对本监控进程启动的单调时长。本机`node --check`及诊断集成测试通过，新增700毫秒断言；审阅包已按新文件更新并重算哈希，旧包保留为本地历史副本。Pixel上仍未安装候选，明日自然运行仍需观察到真实门禁事件后才能判定具体上游条件。
