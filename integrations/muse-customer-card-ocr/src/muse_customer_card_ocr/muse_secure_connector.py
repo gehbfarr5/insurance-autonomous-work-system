@@ -22,6 +22,7 @@ from .secure_connector import BearerOcrRequest, BearerOcrResponse, SecureBearerC
 
 
 HELPER_PROCESS_GRACE_SECONDS = 5.0
+MAX_HELPER_PROCESS_TIMEOUT_SECONDS = MAX_HELPER_TIMEOUT_SECONDS + HELPER_PROCESS_GRACE_SECONDS
 _CONTENT_TYPE = "application/x-www-form-urlencoded"
 
 
@@ -64,7 +65,7 @@ class SubprocessStdioHelperInvoker:
     def __call__(self, stdin_payload: bytes, *, timeout_seconds: float) -> bytes:
         if not isinstance(stdin_payload, bytes) or len(stdin_payload) > MAX_STDIO_ENVELOPE_BYTES:
             raise HelperInvocationFailure() from None
-        if not _valid_timeout(timeout_seconds):
+        if not _valid_process_timeout(timeout_seconds):
             raise HelperInvocationFailure() from None
         try:
             completed = self._run(
@@ -205,4 +206,14 @@ def _valid_timeout(value: object) -> bool:
         type(value) is float
         and math.isfinite(value)
         and 0 < value <= MAX_HELPER_TIMEOUT_SECONDS
+    )
+
+
+def _valid_process_timeout(value: object) -> bool:
+    if type(value) is int:
+        return 0 < value <= MAX_HELPER_PROCESS_TIMEOUT_SECONDS
+    return (
+        type(value) is float
+        and math.isfinite(value)
+        and 0 < value <= MAX_HELPER_PROCESS_TIMEOUT_SECONDS
     )

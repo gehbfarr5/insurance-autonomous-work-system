@@ -5,7 +5,7 @@ import json
 import re
 import uuid
 from os import PathLike
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlencode
 
 from .errors import (
@@ -38,6 +38,11 @@ from .secure_connector import (
     BearerOcrResponse,
     SecureBearerConnector,
 )
+from .access_token_connector import (
+    QueryParamAccessTokenOcrRequest,
+    QueryParamAccessTokenOcrResponse,
+    SecureQueryParamAccessTokenConnector,
+)
 
 
 BAIDU_HANDWRITING_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/handwriting"
@@ -49,22 +54,29 @@ _QUOTA_PROVIDER_CODES = frozenset({17, 19})
 
 
 class BaiduOcrClient:
-    """Image preparation and response parsing behind an injected Bearer port.
+    """Image preparation and response parsing behind an injected secure port.
 
     This client has no direct network session and never reads or stores an API
-    key. The injected connector is responsible for protected Bearer auth.
+    key or Access Token. The connector selected by ``auth_mode`` supplies
+    protected authentication outside this Python package. ``bearer`` remains
+    the compatibility default; production MUSE wiring should explicitly use
+    ``query_param:access_token`` with its secured custom connector.
     """
 
     def __init__(
         self,
-        connector: SecureBearerConnector | None,
+        connector: SecureBearerConnector | SecureQueryParamAccessTokenConnector | None,
         *,
         timeout: float = 45.0,
+        auth_mode: Literal["bearer", "query_param:access_token"] = "bearer",
     ) -> None:
         if timeout <= 0:
             raise ValueError("timeout must be positive")
+        if auth_mode not in {"bearer", "query_param:access_token"}:
+            raise ValueError("unsupported OCR authentication mode")
         self._connector = connector
         self._timeout = timeout
+        self._auth_mode = auth_mode
 
     def close(self) -> None:
         close = getattr(self._connector, "close", None)
@@ -97,25 +109,38 @@ class BaiduOcrClient:
             request_id=request_id,
         )
         body = _build_form_body(prepared, request_id=request_id)
-        request = BearerOcrRequest(
-            request_id=request_id,
-            method="POST",
-            url=BAIDU_HANDWRITING_URL,
-            auth_scheme="bearer",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            body=body,
-            timeout_seconds=self._timeout,
-        )
-
         try:
-            response = self._connector.send(request)
+            if self._auth_mode == "bearer":
+                request = BearerOcrRequest(
+                    request_id=request_id,
+                    method="POST",
+                    url=BAIDU_HANDWRITING_URL,
+                    auth_scheme="bearer",
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    body=body,
+                    timeout_seconds=self._timeout,
+                )
+                response = self._connector.send(request)
+                if not isinstance(response, BearerOcrResponse):
+                    raise InvalidResponseError(request_id=request_id)
+            else:
+                request = QueryParamAccessTokenOcrRequest(
+                    request_id=request_id,
+                    method="POST",
+                    url=BAIDU_HANDWRITING_URL,
+                    auth_mode="query_param:access_token",
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    body=body,
+                    timeout_seconds=self._timeout,
+                )
+                response = self._connector.send(request)
+                if not isinstance(response, QueryParamAccessTokenOcrResponse):
+                    raise InvalidResponseError(request_id=request_id)
         except SecureConnectorTimeout:
             raise RequestTimeoutError(request_id=request_id) from None
         except SecureConnectorFailure:
             raise NetworkError(request_id=request_id) from None
 
-        if not isinstance(response, BearerOcrResponse):
-            raise InvalidResponseError(request_id=request_id)
         _raise_for_http_status(response.status_code, request_id=request_id)
         payload = _json_payload(response.body, request_id=request_id)
         blocks, service_log_id = _parse_ocr_payload(payload, request_id=request_id)
@@ -137,7 +162,8 @@ def recognize_customer_card(
     full_image_authorized: bool = False,
     mime_type: str | None = None,
     allowed_root: str | PathLike[str] | None = None,
-    connector: SecureBearerConnector | None = None,
+    connector: SecureBearerConnector | SecureQueryParamAccessTokenConnector | None = None,
+    auth_mode: Literal["bearer", "query_param:access_token"] = "bearer",
     client: BaiduOcrClient | None = None,
 ) -> OcrResult:
     """Recognize one complete image after an explicit call-site opt-in.
@@ -146,7 +172,7 @@ def recognize_customer_card(
     MUSE's consent/authorization policy. No image is cropped or masked here.
     """
     own_client = client is None
-    active_client = client or BaiduOcrClient(connector)
+    active_client = client or BaiduOcrClient(connector, auth_mode=auth_mode)
     try:
         return active_client.recognize(
             image,

@@ -1,6 +1,11 @@
 """MUSE customer-card OCR client, deterministic extraction, and field mapping."""
 
 from .client import BAIDU_HANDWRITING_URL, BaiduOcrClient, recognize_customer_card
+from .access_token_connector import (
+    QueryParamAccessTokenOcrRequest,
+    QueryParamAccessTokenOcrResponse,
+    SecureQueryParamAccessTokenConnector,
+)
 from .errors import (
     AuthenticationError,
     FullImageOcrNotAuthorizedError,
@@ -46,6 +51,18 @@ from .muse_baidu_helper import (
     HelperTimeoutError,
     serve_one_stdio_request,
 )
+from .muse_baidu_token_helper import (
+    BAIDU_ACCESS_TOKEN_CREDENTIAL_SLOT,
+    BaiduQueryParamHandwritingHelper,
+    BaiduQueryParamHttpTransport,
+    TokenHelperHttpResponse,
+    TokenHelperNetworkError,
+    TokenHelperOcrResponse,
+    TokenHelperRequestError,
+    TokenHelperResponseError,
+    TokenHelperTimeoutError,
+    serve_one_stdio_token_request,
+)
 from .muse_secure_connector import (
     HelperInvocationFailure,
     HelperInvocationTimeout,
@@ -53,6 +70,7 @@ from .muse_secure_connector import (
     StdioHelperInvoker,
     SubprocessStdioHelperInvoker,
 )
+from .muse_token_query_connector import SecureQueryParamAccessTokenConnectorAdapter
 from .models import (
     BoundingBox,
     CharacterCandidate,
@@ -68,12 +86,15 @@ from .secure_connector import (
 )
 
 __all__ = [
+    "BAIDU_ACCESS_TOKEN_CREDENTIAL_SLOT",
     "BAIDU_BEARER_CREDENTIAL_SLOT",
     "BAIDU_HANDWRITING_URL",
     "AuthenticationError",
     "AddressBookRequiredError",
     "BaiduHandwritingOcrHelper",
     "BaiduOcrClient",
+    "BaiduQueryParamHandwritingHelper",
+    "BaiduQueryParamHttpTransport",
     "BaiduSecureHttpTransport",
     "BearerOcrRequest",
     "BearerOcrResponse",
@@ -107,6 +128,8 @@ __all__ = [
     "PermissionDeniedError",
     "ProbabilityStats",
     "ProviderError",
+    "QueryParamAccessTokenOcrRequest",
+    "QueryParamAccessTokenOcrResponse",
     "QuotaExceededError",
     "RateLimitError",
     "RequestTimeoutError",
@@ -117,10 +140,19 @@ __all__ = [
     "SecureBearerConnectorAdapter",
     "SecureConnectorFailure",
     "SecureConnectorTimeout",
+    "SecureQueryParamAccessTokenConnector",
+    "SecureQueryParamAccessTokenConnectorAdapter",
+    "TokenHelperHttpResponse",
+    "TokenHelperNetworkError",
+    "TokenHelperOcrResponse",
+    "TokenHelperRequestError",
+    "TokenHelperResponseError",
+    "TokenHelperTimeoutError",
     "build_contacts_create_arguments",
     "call_contacts_create",
     "extract_primary_customer",
     "map_to_icloud_fields",
     "serve_one_stdio_request",
+    "serve_one_stdio_token_request",
     "recognize_customer_card",
 ]

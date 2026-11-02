@@ -70,3 +70,26 @@ Command:
 ```bash
 PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests -v
 ```
+
+## WP7-A Baidu Access Token query adapter
+
+- Date: 2026-11-02
+- Package version: 0.5.0
+- Branch: `codex/wp7-muse-baidu-token-query-adapter-20261102`
+- Base: `codex/wp6-muse-baidu-secure-connector-20261102` at `43a7f8732a1188047b8a6f6531600647a112baf6`
+- Test runtime: macOS, Python 3.14.7, Pillow 12.2.0
+- Complete package regression: PASS — 76 tests, 0 failures, 0 errors (all 56 WP6-C tests remain passing; 20 token-query tests added)
+- Editable package install: PASS — version 0.5.0 built and imported; both token-query and WP6-C Bearer adapters exported
+- WP7 Mock coverage: fixed HTTPS host/path and POST; exact `query_param:access_token` mode; one synthetic `access_token` query key injected only by the Mock Vault transport; no token in the Python request or stdio envelope; stdin form-body transfer; HTTP 200/401/429 and error-body suppression; 302 returned without following; transport and helper timeout; transport exceptions; request/response bounds; rejection of caller URL/method/query/auth/header and endpoint fields; structured stdout and empty stderr; 60-second helper timeout plus 5-second subprocess grace.
+- Test data: generated fictional JPEG, synthetic OCR JSON, and Mock-only Access Token; no production credential or customer data.
+- Network/provider/iCloud: no MUSE helper or Vault call, no Baidu API call, no iCloud MCP operation, and no contact mutation.
+- MUSE binding: pending. `BaiduQueryParamHttpTransport`, `SecureQueryParamAccessTokenConnector`, and the token-query stdio envelope are package-owned ports. The MUSE custom connector's actual helper call contract, protected token source, expiry/refresh behavior, redirect behavior, and URL/query log redaction have not been verified. The package does not obtain or refresh an Access Token.
+
+Commands:
+
+```bash
+PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests -v
+/tmp/insurance-wp4-venv/bin/python -m pip install --no-deps -e .
+```
+
+These checks verify package logic and install metadata only. They do not establish live Baidu authentication or MUSE cloud acceptance.
