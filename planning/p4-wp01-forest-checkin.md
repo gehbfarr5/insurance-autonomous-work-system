@@ -8,6 +8,12 @@ MUSE只读导出并确认安装后live `run.py`原始源码的最小脱敏片段
 
 live源码确认runner先写命令/使能标记、发wake key，再force-stop并启动应用；最长70秒每秒轮询resumed Activity，仅当精确`GestureActivity`出现才调用`pixel-auth-start`一次。11月2日完整系统记录没有该Activity，监控requests未增加且输入审计无本轮记录，故密码/手势入口未被调用；本次失败不是该入口执行手势错误的证据。唤醒键没有解锁步骤，不能从屏幕交互态推出Keyguard已隐藏。主流程另因森林内部`user`/`empNoAES`/`operateFlag`合并门禁一次采样失败而阻断，但历史没有逐项值。底层原因仍待未来运行观测；不改密码、不重放业务、不改变调度。
 
+### Keyguard只读观测候选v2｜2026-11-02 21:52
+
+现有v1诊断只记录屏幕亮灭，不能还原Keyguard锁屏状态。私有review-only v2在monitor的同一采样点加入`keyguardShowing`（`isKeyguardLocked()`）与`deviceLocked`（`isDeviceLocked()`）布尔值和固定读取状态码，保留所有既有触发/输入门禁，读取失败时不改变业务分支但明确记`READ_FAILED`。官方说明`isKeyguardLocked()`可在屏幕熄灭时为true且不等同于要求认证；`isDeviceLocked()`才表示当前用户应用是否仍需认证。候选及采集器schema v2的离线集成/脱敏检查已通过，review包SHA-256 `07008d505a301bcc5f044c69bb43abadfde33444df6ca3e50ea96778e6c838f9`；未安装、未运行于Pixel，AutoX实机兼容未知。安装或重启监控需单独授权及备份/回滚门禁。
+
+21:54通过既有SSH只读确认Pixel 3a / Android 15，当前部署版`monitor.js`哈希仍为`238d86a8ec06c5a92579ea54377956f282cbed824c32b2c56823a2924cb906fd`，`watching`、`guardBlocked=false`、`requests=6`，未发现v2诊断文件；设备保持原基线，本次未写设备或触发业务。该当前状态不回溯11月2日历史锁屏状态。
+
 09:38:47 Asia/Shanghai 经现有 SSH 别名连接 Pixel 3a（Android 15/API 35），执行已部署的 monitor-start helper。helper 的健康分支确认原 PID、锁 inode 与新鲜心跳一致并返回，不启动新实例；只向本地启动日志追加一条确认记录。未进入 App、未输入密码、未触发每日任务或其他业务。helper SHA-256：`6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，远端 `sh -n` 通过。私有副本与原始日志保留在仓库外本机私有目录。
 
 10月30日和10月31日的原始记录都确认：同轮先签到 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。10月31日领取 `+6.5`，但客温客价没有独立收据，AI虽发送问题仍因回答对账超时、无after回执而为REVIEW。11月1日原始记录包确认主流程在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未执行，cleanup PASS；不是签到被跳过。11月2日自然运行最终主流程也在prepare阻断、没有签到动作，五项未执行。之后一次获准补跑安装了v0.19并完成准备链路修复尝试，详情见下段；本段此前“无补跑”状态已被该后续事件更新。10月31—11月1脱敏记录包外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7文件且 `HASHES.txt` 所列6项全部匹配；私有原包不进公开仓库。每日唯一任务及周期不变。

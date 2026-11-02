@@ -117,7 +117,7 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 
 ### 森林准备候选版本索引更正｜2026-11-02
 
-二次逐文件哈希审查发现，最初的本机登录态候选曾从v0.18 staging资产拷贝，促销关闭模块索引为2559；v0.19安装包内同源脚本SHA-256为`d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`，实际索引为2561。最初候选从未安装，因此未影响设备。现已从该精确v0.19资产重建被动等待候选，测试只提供2561并通过；若回退到2559，合成成功路径失败。设备端AutoX运行时和live runner解析兼容仍未验证。
+二次逐文件哈希审查发现，最初的本机登录态候选曾从v0.18 staging资产拷贝，促销关闭模块索引为2559；v0.19安装包内同源脚本SHA-256为`d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`，实际索引为2561。最初候选从未安装，因此未影响设备。现已从该精确v0.19资产重建被动等待候选，测试只提供2561并通过；若回退到2559，合成成功路径失败。该段记录时设备端AutoX运行时和live runner解析兼容仍未验证；21:37补取后live runner解析路径已静态核实，Pixel端运行兼容仍待实机验证。
 
 与v0.19适配器指纹匹配的runtime bundle SHA-256为`ade689b53535d322de7c4d83d055f35be8de98f39f2886040d495f03d71b2c6f`；从该bundle静态提取的模块584导出`default.user`初始为空对象，且该初始化定义未包含`empNoAES`或`operateFlag`。因此登录字段异步填充前被单次快照读为空在技术上成立；这只是静态机制证据，不能回溯11月2日真实字段状态，也不能解释认证触发器未派发的具体门禁。
 
@@ -207,3 +207,17 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 - 森林模块另在一次登录态快照中检查`user`、`empNoAES`、`operateFlag`；三项任一不满足即终局`LOGIN_STATE_MISSING`，没有等待登录响应的分支。历史结果没有三项逐项布尔值，也没有Keyguard状态，故不能判定当时是锁屏、登录响应未到、路由或其他应用态问题。
 
 **更新后的归因：** 已证直接原因是runner精确Activity门禁未满足，认证入口因此未派发；没有证据指向密码/手势输入动作错误。唤醒键只证明发起唤醒，不能证明设备已解锁；“Keyguard挡住登录页”仍是待证假设。下一步先只读核实后续运行所需的screen/Keyguard/resumed-Activity/派发阶段快照，再决定是否需要改runner唤醒与登录就绪主路径。现有部署和每日调度保持不变，不为诊断重放业务；任何新安装或监控重启仍需相应授权。
+
+### Keyguard只读观测候选v2｜2026-11-02 21:52
+
+离线复核发现此前sidecar候选只记录`screenOn`，不足以判断“设备仍锁定”这一假设。比较了两条可观测路径：独立shell快照的改动少，但既有`dumpsys window policy`在Termux上下文不可用，也不能与监控每次派发门禁时间对齐；在现有monitor循环中只读采集Android系统Keyguard状态，可将数据与同一时间的屏幕/前台Activity/账号标记/guard/episode门禁对应。选择第二条，仅作为未部署诊断候选。
+
+Android官方API语义不同：`KeyguardManager.isKeyguardLocked()`报告锁屏界面逻辑上是否显示；屏幕熄灭时也可能为true，而且不能单独证明需要认证。`isDeviceLocked()`则报告当前用户的应用是否仍需要锁屏认证。[isKeyguardLocked官方文档](https://developer.android.com/reference/android/app/KeyguardManager#isKeyguardLocked()) [isDeviceLocked官方文档](https://developer.android.com/reference/android/app/KeyguardManager#isDeviceLocked()) `Context.KEYGUARD_SERVICE`提供该管理器。[Context API](https://developer.android.com/reference/android/content/Context#KEYGUARD_SERVICE)
+
+候选v2在既有监控采样点采集`keyguardShowing`、`deviceLocked`及固定`keyguardReadStatus`（`OK`、`SERVICE_MISSING`或`READ_FAILED`）；没有系统解锁、Keyguard dismiss、点击、输入、业务或状态清理动作。既有screen/app/GestureActivity/account/guard/recheck/episode派发门禁、调用顺序及`monitor-status.json`保持不变。v2使用新文件名和schema，避免旧v1侧车被误当成新格式；采集器只接受固定字段、固定状态码、最多128条记录并fail-closed，不输出marker值或原始异常。
+
+离线检查：`node --check`、Node门禁集成（七类阻断、单次派发、基线状态模式不变、Keyguard读取失败时明确报状态且原门禁仍按原样运行、脱敏与128事件上限）通过；Python采集器合成校验与语法通过，包含v1拒绝、Keyguard状态一致性、未知字段/原因码和敏感样例反例。首次Node集成测试发现测试夹具重复定义`getSystemService`导致window stub覆盖keyguard stub；修正mock后所有检查重跑通过，此为测试夹具问题，不是候选设备运行失败。
+
+review-only归档`auth-diagnostic-review-only-keyguard-v2.zip` SHA-256 `07008d505a301bcc5f044c69bb43abadfde33444df6ca3e50ea96778e6c838f9`，ZIP完整性及内部清单核对通过；包仅含候选、严格只读采集器、测试和说明，保存在仓库外本机私有目录。**尚未在Android/AutoX实机运行，未安装到Pixel，未重启monitor或触发应用/业务。** 现有MUSE只读导出记录每日任务`Asia/Shanghai 09:00`、下一次`2026-11-03 09:00 CST`、导出时`running_runs=0`；不改该任务。部署前需单独设备写操作授权、备份、核对实时monitor哈希并准备回滚；授权后只用于下一次自然运行取证，不重放11月2日业务。
+
+21:54经既有SSH别名再次只读复核当前设备为Pixel 3a / Android 15；当前`monitor.js` SHA-256仍为基线`238d86a8ec06c5a92579ea54377956f282cbed824c32b2c56823a2924cb906fd`，状态`watching`、`guardBlocked=false`、`requests=6`；设备上不存在v2诊断文件。此快照只确认当前候选仍未部署且monitor当前健康，不回溯11月2日Keyguard/登录态，也不证明下一轮结果。

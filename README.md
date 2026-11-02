@@ -4,6 +4,8 @@
 
 > **阳光森林与 Pixel 登录助手最新核查｜2026-11-02 21:37：** 11月2日自然运行与获准v0.19补跑均未进入五项业务，助理为REVIEW/NOT_SENT、主流程为登录态BLOCKED，两段cleanup PASS。完整日志/UsageStats未见`GestureActivity`，派发计数未增、输入审计无记录。MUSE只读取得安装后live v0.19 runner最小脱敏片段（live SHA-256 `de9bd83c…`；本机摘录SHA-256 `8cf4de84…`），确认启动顺序为写命令/使能标记→wake key→force-stop→启动；最多70秒轮询resumed Activity，只有精确`GestureActivity`出现才单次调用本地认证入口，没有解锁Keyguard步骤。因此已知入口未被调用，本次失败不支持归咎密码/手势输入动作；Keyguard、页面路由及登录字段当时状态仍未知。森林模块对登录态三字段只做一次门禁，缺项即阻断。下一步先取得有界脱敏的screen/Keyguard/Activity/派发阶段快照，再决定修复；不重放业务、不改每日调度，P50/月度规划继续挂起。详细证据见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。
 
+> **Keyguard根因观测候选｜2026-11-02 21:52：** 离线审查发现既有诊断候选只记录屏幕亮灭，无法区分Keyguard是否显示/系统是否仍要求认证。已准备review-only v2，在同一监控采样点只读采集`isKeyguardLocked()`与`isDeviceLocked()`布尔值，API失败显式记录`READ_FAILED`，不改变现有派发门禁或`monitor-status.json`；脱敏采集器改用schema v2并拒绝旧版/不一致字段。Node语法、七个门禁及单次派发行为对比、采集器schema/敏感样例/上限验证、Python语法均通过。候选未部署，Android/AutoX实机兼容仍待验证；Pixel安装或监控重启需单独授权。两API语义见[Android KeyguardManager官方文档](https://developer.android.com/reference/android/app/KeyguardManager#isKeyguardLocked())和[Context.KEYGUARD_SERVICE](https://developer.android.com/reference/android/content/Context#KEYGUARD_SERVICE)。
+
 > **离线诊断候选更新｜2026-11-02：** 森林登录态被动等待候选最多重采样8秒，只记录三个字段各自的存在性布尔值、采样时间和等待时长；保持原有状态门禁，不触发认证或业务动作。触发监控候选与部署源码完成8场景行为对比；助理入口候选保持固定方法指纹和唯一菜单门禁。三项候选的集成、合成验证及只读采集器端到端检查已完成，私有审阅包含回滚说明并已核验；均未部署。安装后live v0.19 runner的静态解析/Activity门禁已由脱敏源码片段确认；AutoX运行时兼容及诊断候选上线仍待验证，sidecar替换/重启另需授权。
 
 > **助理入口诊断候选｜2026-11-02：** 另一项本地候选把 Vue 是否存在、`onClickApp` 方法是否存在、固定方法指纹是否匹配、目标菜单是否恰好一项分别写入脱敏结果，并记录采样时间；所有原有门禁仍需通过才可调用，不放宽指纹、不提前调用。合成检查及Python语法检查通过，未部署。当前已形成触发监控、森林登录态、助理入口三项离线诊断候选；森林准备字段已有静态透传证据，live runner门禁结构现已确认，但AutoX运行时兼容仍待补核；三项候选维持本机，不安装。
