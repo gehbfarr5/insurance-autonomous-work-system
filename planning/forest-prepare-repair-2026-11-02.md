@@ -187,3 +187,9 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 为区分“输入器能否在登录页出现时自动处理”与“11月2日为何没触发”，回查了本机受控结果和已公开的工具验收记录。私有 `authorized-login-retry-result.json`（SHA-256 `15d86cae5021edd7a9e30279abc75dd0bdcdd6ba6aeeba587d8a4d9cebabe9a7`）记录 10月30日08:06:26观察到登录成功；`existingCredentialMatched=true`、`credentialChanged=false`、`businessDispatched=false`。此外，[登录工具验收记录](../tools/pixel-auth/README.md)记载09:19—09:20实机验证冷启动、再次重开、自动检测与显式入口重叠三种情形，均只输入一次并稳定进入登录后主页；其中冷启动与再次重开由自动检测触发，重叠场景同时包含自动检测和显式入口，用于验证共享锁只输入一次。以上证明10月30日当时部署版本在精确本人手势页条件下具备自动处理能力，但不证明任意密码弹窗/任意页面都能触发。
 
 与11月2日对照：11月2日完整系统Activity记录没有出现目标手势页，监控请求数未增，认证工作器没有派发证据；因此10月30日正例不能替代11月2日的触发链，也不能把11月2日结果归为输入器回归。当前Pixel入口哈希仍匹配10月30日已核验版本。准确结论是：**自动输入在既有三种实机路径上验证通过；11月2日故障发生在认证派发之前；冷启动后为何未进入手势页仍未定因。**
+
+### UsageStats 独立交叉核验｜2026-11-02 19:34
+
+再次通过既有SSH别名只读查询 Pixel `dumpsys usagestats`，设备端过滤后仅保留11月2日11:14—11:17屏幕交互事件和目标包Activity类型/类别。记录显示11:15:29 `SCREEN_INTERACTIVE`，随后11:15:31恢复Splash、11:15:32恢复Main、11:15:41恢复BridgeWeb；11:17:25再次恢复Splash、11:17:26恢复Main，11:17:50 Main停止。筛选窗口中的目标Activity序列仍没有 `GestureActivity`。这与logcat保留的启动路径独立吻合，并确认屏幕在该时段已进入交互态；**交互态不等于Keyguard已隐藏**。
+
+筛选窗口没有保留 `KEYGUARD_SHOWN` / `KEYGUARD_HIDDEN` UsageStats 事件。此缺席不是解锁证明，不能据此排除Keyguard。故能进一步确认的是“屏幕交互后应用恢复到Main/Bridge，仍未到认证页”；不能确认当时是否已解锁，也不能将Keyguard定为原因。仅将过滤摘要保存在本机忽略目录，不导出其他应用UsageStats记录。

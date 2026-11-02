@@ -10,6 +10,8 @@
 
 再核对10月30日既有验收：私有一次性登录结果记`loginSuccessObserved=true`、凭据未变、无业务派发；[Pixel登录工具记录](../tools/pixel-auth/README.md)还记录冷启动与再次重开由自动检测触发、显式入口与自动检测重叠三种实机情形均只输入一次并稳定到主页。这支持“精确本人手势页出现时自动输入”已在10月30日验证，但不能证明11月2日触发链；11月2日没有进入目标手势Activity，因此失败仍在输入器之前。
 
+19:34只读查询Pixel UsageStats独立印证11:15:29进入`SCREEN_INTERACTIVE`，之后目标应用恢复Splash/Main/BridgeWeb，11:17:25再次启动Splash/Main，没有`GestureActivity`。这证明屏幕进入交互态，不证明Keyguard已隐藏；记录中没有Keyguard show/hide事件不能用来推断已解锁。过滤摘要仅留在本机私有目录。
+
 本次会话可收尾条件：报告、README、路线图、开放问题和本交接采用同一证据边界并推送到main；Issue #3追加可追溯记录；本地工作区变更仅含本任务文档。后续首要工作是只读取得安装后live v0.19 runner，或在后续有界运行中记录screen/keyguard/前台Activity/派发计数/是否调用Pixel入口脚本的布尔值，再决定最小修复。无需重放业务；跨日结果等真实次日自然运行；诊断sidecar安装/监控重启须另行授权，P50/月度规划继续挂起。
 
 ### 本机离线诊断候选更新｜2026-11-02
