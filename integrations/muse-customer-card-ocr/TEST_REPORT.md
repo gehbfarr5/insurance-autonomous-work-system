@@ -51,3 +51,22 @@ Command:
 ```bash
 PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests -v
 ```
+
+## WP6-C Secure Vault connector helper and adapter
+
+- Date: 2026-11-02
+- Package version: 0.4.0
+- Branch: `codex/wp6-muse-baidu-secure-connector-20261102`
+- Base: `codex/wp5-icloud-create-adapter-20261102` at `4cd6985c6a32227787f22301f50c451a8b96e6d8`
+- Complete package regression: PASS — 56 tests, 0 failures, 0 errors (the prior 44 tests remain passing; 12 connector/helper tests added)
+- Editable package install: PASS — version 0.4.0 built and imported with helper/adapter exports
+- Mock coverage: bounded JSON stdin body transfer; test-only Secure Vault placeholder replacement; fixed HTTPS host/path and POST; no caller-controlled URL/method; no redirect; body and timeout limits; 401/403/408/429/5xx mapping; timeout/network classification; raw error-body suppression; no OCR text, image marker, or mock Bearer value in stdout/stderr; no shell and empty environment for the optional subprocess invoker.
+- Test data: generated image and synthetic body/response markers; no customer data and no real credential.
+- Network/provider/MUSE: no external network call, no MUSE Secure Vault call, no real helper invocation, no Baidu request, and no iCloud operation.
+- MUSE integration status: pending. `BaiduSecureHttpTransport`, `StdioHelperInvoker`, and the JSON stdio envelope are package-owned interfaces, not a documented MUSE API. The MUSE-side binding must be implemented against its actual helper contract and independently verify credential injection, endpoint restrictions, redirect behavior, timeout, and log suppression.
+
+Command:
+
+```bash
+PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests -v
+```

@@ -1,6 +1,6 @@
 # MUSE family-card OCR package
 
-Version 0.3.0. This branch updates WP2 for the 2026-11-02 full-image plan and adds the `contacts_create` parameter adapter. It contains no production MUSE Secure Vault adapter and makes no Baidu API calls. Tests do not invoke real MCP tools or perform iCloud operations.
+Version 0.4.0. This branch carries the full-image OCR and iCloud parameter adapters and adds a package-owned, fixed-endpoint stdio helper protocol plus a Python `SecureBearerConnector` adapter. It does not implement an undocumented MUSE Secure Vault API and makes no Baidu API calls. Tests use Mock transports only; no real MCP tool or iCloud operation is invoked.
 
 ## Full-image authorization
 
@@ -12,9 +12,9 @@ When called, the package sends the complete image representation after EXIF orie
 
 Python no longer reads `BAIDU_OCR_AK`, `BAIDU_OCR_SK`, or any production API key. It does not retrieve or cache a Baidu token. `BaiduOcrClient` builds one request and calls an injected `SecureBearerConnector` port. The request indicates `auth_scheme="bearer"` and has no token field or `Authorization` header. The connector implementation must attach the Bearer credential from its protected store outside this package.
 
-`SecureBearerConnector.send(BearerOcrRequest) -> BearerOcrResponse` is a package-internal adapter contract used by tests. It is **not** represented as the actual MUSE Secure Vault helper interface. No helper interface, stdin format, or production HTTP behavior is inferred here. MUSE must provide the real helper specification before a concrete adapter can be implemented.
+`SecureBearerConnector.send(BearerOcrRequest) -> BearerOcrResponse` remains a package-internal interface. This branch adds a package-defined JSON stdin/stdout envelope and `SecureBearerConnectorAdapter`; it is not represented as MUSE's production helper API. The MUSE helper's actual invocation and Vault HTTP interface are still pending documentation.
 
-The historic Baidu handwriting endpoint and form body remain in the request builder. The newer single-key Bearer route for that endpoint is not verified. The adapter Mock tests validate package behavior only; they do not prove that MUSE or Baidu accepts this auth route. Do not attach a production secret directly in Python to make the Mock pass.
+The historic Baidu handwriting endpoint and form body remain in the request builder. Baidu's current [API Key authentication documentation](https://cloud.baidu.com/doc/AI_REFERENCE/s/Hm5us339w) describes Bearer authentication for public-cloud OCR interfaces; this package and MUSE binding have not been live-tested against that route. The older AK/SK pair is not interchangeable with the newer single API Key. Do not attach a production secret directly in Python to make the Mock pass.
 
 ```python
 from muse_customer_card_ocr import (
@@ -42,6 +42,18 @@ contact_draft = map_to_icloud_fields(extraction)
 ```
 
 The client retains Baidu's `recognize_granularity=small` and `probability=true` parameters, response blocks, available coordinates, line confidence, character candidates, and safe service/request IDs. Errors expose categories and status codes, not response bodies. It has no internal logger, and OCR text, request bodies, and response bodies are excluded from object `repr` output. MUSE must keep transport-level HTTP debug logs off because helper-level traces could expose request details.
+
+## Fixed Baidu helper and Python connector adapter
+
+`muse_baidu_helper.py` and `muse_secure_connector.py` add a testable package-owned boundary:
+
+- Only the HTTPS handwriting endpoint is accepted; the stdio request envelope has no URL, host, path, method, headers, or credential fields.
+- The helper constructs a fixed POST request with form content type, a bounded request body, an explicit timeout, and `allow_redirects=False`.
+- The body crosses the helper boundary as base64 JSON on stdin. Stdout carries one structured response envelope; successful OCR response bytes are base64 encoded for IPC, while non-2xx bodies and transport error details are discarded. Neither helper nor adapter logs to stdout/stderr outside the protocol response.
+- `SecureBearerConnectorAdapter` rejects any request that differs from the fixed URL, POST method, Bearer mode, content type, size, or timeout policy; it maps helper timeout/network failures to the package's safe connector exceptions.
+- `BaiduSecureHttpTransport` and `StdioHelperInvoker` are local package protocols. `baidu_ocr_bearer` is a logical credential slot name, not a Vault placeholder syntax or secret. The Mock tests simulate replacement with a synthetic Bearer value entirely inside the mock transport.
+
+No real MUSE helper interface or production connector is present in this branch. Before use in MUSE, its documented Secure Vault API must be mapped to `BaiduSecureHttpTransport` or the stdio invoker. The MUSE binding must inject the Bearer header outside this package, restrict the endpoint, disable redirects, and keep stdout/stderr and transport diagnostics from recording request or response data. The tests prove the package boundary only; they do not prove MUSE has those capabilities.
 
 ## Field extraction and review gates
 
@@ -76,13 +88,13 @@ cd /path/to/repo/integrations/muse-customer-card-ocr
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-Tests use generated fictional images, OCR payloads, a Mock Bearer connector, and a Mock `contacts_create` invoker. They cover explicit opt-in, no API-key fields in the Python request, auth/rate/timeout/error handling, image validation/preprocessing, structure parsing, field extraction, ID/birthday review gates, canonical and MCP-native field projection, explicit address-book selection, omission of missing optional fields, and sensitive `repr`/logging behavior. They make no network calls.
+Tests use generated fictional images, OCR payloads, Mock Vault placeholder substitution, and a Mock `contacts_create` invoker. They cover the fixed helper endpoint, stdin body transfer, simulated Bearer injection, redirect prohibition, size/timeout bounds, safe error classification, no sensitive stdout/stderr, image processing, structure parsing, field extraction, ID/birthday review gates, iCloud field projection, explicit address-book selection, and omitted optional fields. They make no network calls.
 
 ## MUSE integration checklist
 
-1. Check out branch `codex/wp5-icloud-create-adapter-20261102`; run the offline suite in an isolated venv first.
-2. Obtain MUSE's real Secure Vault helper documentation and confirm how it attaches Bearer auth, restricts host/path/method, accepts binary or encoded form data, returns status/body, and maps timeouts. Implement only a thin adapter from that documented interface to `SecureBearerConnector`; map helper timeout/transport failures to `SecureConnectorTimeout` or `SecureConnectorFailure`, do not pass a production key to this package or its Python process, and do not log the helper's raw request or response.
-3. Keep the adapter mocked until the real helper contract and credential isolation are independently verified. No helper is present in this branch.
+1. Check out branch `codex/wp6-muse-baidu-secure-connector-20261102`; run the offline suite in an isolated venv first.
+2. Obtain MUSE's real Secure Vault helper documentation and map it to the package-owned `BaiduSecureHttpTransport` / `StdioHelperInvoker` seam. Do not infer a MUSE helper function name, stdin shape, placeholder syntax, or credential API from these local protocols.
+3. The MUSE-side binding must attach Bearer credentials outside Python, restrict the allowed HTTPS host/path/method, disable redirects, enforce body and timeout bounds, return structured status/body data, and suppress request/response/error logs. Keep it mocked until these properties are documented and verified.
 4. A real Baidu call would send a complete image. Perform none until the authorized MUSE workflow, connector, quota/cost, and separate API-test approval are ready. Any first API test must use a generated fictional image only.
 5. The caller owns the attachment lifecycle. This package reads but does not delete or persist the MUSE attachment, OCR text, or temporary files. Keep OCR text transient and out of ordinary logs, traces, and long-term Agent memory.
 6. Do not pass `full_image_authorized=True` based only on tool visibility. The calling workflow must ensure the complete-image authorization is applicable to the submitted photo.

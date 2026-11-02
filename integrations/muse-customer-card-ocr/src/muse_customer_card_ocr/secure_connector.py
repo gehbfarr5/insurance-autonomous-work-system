@@ -8,9 +8,10 @@ from typing import Literal, Mapping, Protocol
 class BearerOcrRequest:
     """Package-internal port request for a secret-injecting Bearer connector.
 
-    This is not the MUSE Secure Vault helper's wire/API contract. A MUSE-side
-    adapter must be written only after that helper's real interface is known.
-    The request contains no token or Authorization header.
+    The package has a separate stdio/helper adapter, but this remains an
+    internal interface rather than MUSE's Secure Vault wire/API contract. The
+    real MUSE binding must follow its documented interface. The request contains
+    no token or Authorization header.
     """
 
     request_id: str

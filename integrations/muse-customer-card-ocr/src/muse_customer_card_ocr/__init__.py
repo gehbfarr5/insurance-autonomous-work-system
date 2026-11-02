@@ -34,6 +34,25 @@ from .contacts_create_adapter import (
     build_contacts_create_arguments,
     call_contacts_create,
 )
+from .muse_baidu_helper import (
+    BAIDU_BEARER_CREDENTIAL_SLOT,
+    BaiduHandwritingOcrHelper,
+    BaiduSecureHttpTransport,
+    HelperHttpResponse,
+    HelperNetworkError,
+    HelperOcrResponse,
+    HelperRequestError,
+    HelperResponseError,
+    HelperTimeoutError,
+    serve_one_stdio_request,
+)
+from .muse_secure_connector import (
+    HelperInvocationFailure,
+    HelperInvocationTimeout,
+    SecureBearerConnectorAdapter,
+    StdioHelperInvoker,
+    SubprocessStdioHelperInvoker,
+)
 from .models import (
     BoundingBox,
     CharacterCandidate,
@@ -49,10 +68,13 @@ from .secure_connector import (
 )
 
 __all__ = [
+    "BAIDU_BEARER_CREDENTIAL_SLOT",
     "BAIDU_HANDWRITING_URL",
     "AuthenticationError",
     "AddressBookRequiredError",
+    "BaiduHandwritingOcrHelper",
     "BaiduOcrClient",
+    "BaiduSecureHttpTransport",
     "BearerOcrRequest",
     "BearerOcrResponse",
     "BoundingBox",
@@ -61,6 +83,14 @@ __all__ = [
     "CustomerCardFields",
     "FieldExtractionResult",
     "FullImageOcrNotAuthorizedError",
+    "HelperHttpResponse",
+    "HelperNetworkError",
+    "HelperOcrResponse",
+    "HelperRequestError",
+    "HelperResponseError",
+    "HelperTimeoutError",
+    "HelperInvocationFailure",
+    "HelperInvocationTimeout",
     "HttpError",
     "ICloudContactDraft",
     "ImageInputError",
@@ -82,11 +112,15 @@ __all__ = [
     "RequestTimeoutError",
     "ReviewReason",
     "SecureBearerConnector",
+    "StdioHelperInvoker",
+    "SubprocessStdioHelperInvoker",
+    "SecureBearerConnectorAdapter",
     "SecureConnectorFailure",
     "SecureConnectorTimeout",
     "build_contacts_create_arguments",
     "call_contacts_create",
     "extract_primary_customer",
     "map_to_icloud_fields",
+    "serve_one_stdio_request",
     "recognize_customer_card",
 ]
