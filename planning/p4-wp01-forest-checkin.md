@@ -2,7 +2,7 @@
 
 ## 最新运行与守护状态｜2026-11-02
 
-10月30日签到回执已更正：同轮先签到并 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。MUSE旁聊可见摘要称10月31日同样先 `SIGNED +0.5`、之后才跳过；其原始结果包仍未独立取得。11月1日任务在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未进入业务、cleanup PASS，不是签到被跳过。11月2日MUSE只读包确认任务启用和09:00时点；08:59—09:00进行中快照中主流程仍在prepare且锁BUSY，签到 `signPhase=null`、后续 `SKIP=null`，没有当日签到结论。该包哈希已核对；没有等待、补跑或推断最终结果。
+10月30日签到回执已更正：同轮先签到并 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。MUSE旁聊可见摘要称10月31日同样先 `SIGNED +0.5`、之后才跳过；其原始结果包仍未独立取得。11月1日任务在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未进入业务、cleanup PASS，不是签到被跳过。11月2日最终脱敏包已下载两次，文件字节一致且ZIP结构有效；包内7项成员哈希与自带清单匹配，但本机外层SHA-256与MUSE旁聊显示值差一位，外层身份校验未通过。包中所列结果为唯一任务启用且每日09:00；早先快照中 `signPhase=null`、后续 `SKIP=null`。最终主流程09:00:57于prepare阶段 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`、未到森林WebView/CDP目标，没有签到动作，清理PASS、锁空闲；五项均未执行。因此11月2日也不是签到跳过，而是尚未进入签到阶段。源码清单不含源码字节；没有补跑。
 
 Pixel 登录助手发现并修复组件退出生命周期：helper 原先在所有退出路径调用 `pm default-state`；Android shell 调用以 `flags=0` 更改组件状态，会结束所在 AutoX 引擎。新实现固定目标组件，root-only 精确调用 Android 15 `IPackageManager` 并用 `DONT_KILL_APP`，仅真实启动时保存/恢复原状态、读回校验；健康/已运行路径不更改组件，原子目录锁有 owner 校验。冷启动、自动与显式入口同时触发、重复启动均实机通过；同次总输入一次，未派发业务。11月2日守护 PID/锁 inode与部署快照一致、心跳新鲜、组件为默认态，跨日存活读数通过。整机重启、完整恢复、业务长期运行仍未通过验收。
 

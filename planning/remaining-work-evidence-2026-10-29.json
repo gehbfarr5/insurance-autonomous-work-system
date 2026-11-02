@@ -941,10 +941,99 @@
       "collect": "NOT_YET_RECORDED"
     },
     "limits": [
-      "MUSE package is a time-bounded in-progress snapshot, not the natural-run final result",
+      "The downloaded ZIP is a time-bounded in-progress snapshot, not the natural-run final result",
+      "The downloaded final ZIP is structurally valid and its seven members match its embedded manifest, but the locally computed outer SHA-256 differs from the MUSE-displayed value; archive identity is unresolved",
       "No process was started, stopped, waited for, or modified; no phone access or business replay",
       "10-31 and 11-01 raw result packages remain independently unavailable",
       "archive member integrity verified locally; SOURCE_MANIFEST declares hashes but source file bytes were not included for local comparison"
-    ]
+    ],
+    "naturalFinalSummary": {
+      "observedAtLocal": "2026-11-02T09:06+08:00",
+      "sourceType": "downloaded sanitized final-result ZIP; package contents inspectable, but the displayed MUSE outer digest does not match local bytes",
+      "main": {
+        "status": "BLOCKED",
+        "reason": "PREPARE_TIMEOUT_NO_FALLBACK",
+        "recordedAtLocal": "2026-11-02T09:00:57+08:00",
+        "businessPhaseEntered": false,
+        "forestWebViewOrCdpTargetReached": false
+      },
+      "assistant": {
+        "status": "REVIEW",
+        "reason": "PREPARE_TIMEOUT_NO_FALLBACK",
+        "recordedAtLocal": "2026-11-02T08:58:15+08:00",
+        "assistantJson": "INTENT / NOT_SENT",
+        "questionSentOrRepeated": false
+      },
+      "fiveItems": {
+        "sign": "NOT_EXECUTED; no before/after balance",
+        "timelineReadonly": "NOT_EXECUTED; no new read-only task entry",
+        "customerTemperatureValueReadonly": "NOT_EXECUTED; no independent receipt",
+        "assistant": "REVIEW / NOT_SENT",
+        "collect": "NOT_EXECUTED; balance and pending amount not read"
+      },
+      "cleanup": {
+        "status": "PASS as reported in the downloaded sanitized package; external archive identity unresolved",
+        "inspectionClosed": true,
+        "applicationStopped": true,
+        "runnerLock": "FREE",
+        "noResidualRun": true
+      },
+      "state": {
+        "entryCount": 11,
+        "lastTrustedTerminalDate": "2026-10-31",
+        "pendingEmpty": true,
+        "dedupeState": "preserved"
+      },
+      "nextSchedule": "2026-11-03 09:00 Asia/Shanghai; no replay of 11-02",
+      "evidenceStatus": "PARTIAL_VERIFICATION_OUTER_SHA256_MISMATCH",
+      "sourcePackage": {
+        "filename": "sunshine-forest-20261102-final-desensitized.zip",
+        "sizeBytes": 5854,
+        "sha256DisplayedByMUSE": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45dbd5e25ad3c",
+        "sha256ComputedLocally": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
+        "outerSha256Match": false,
+        "repeatDownloadsByteIdentical": true,
+        "zipStructureTest": "PASS",
+        "embeddedMemberHashesMatch": 7,
+        "embeddedMemberHashes": {
+          "MAIN_RESULT_SANITIZED.json": "0867fdc7d6f55f57d168499b4b0c87db7469ea9fc3a20f55d43255e36713d42f",
+          "ASSISTANT_RESULT_SANITIZED.json": "1a2bffc72098244b47cc4f17d8ecd49b562c510d513674f767d42e0a76474485",
+          "STATE_AND_PREPARE_SANITIZED.json": "28e7fccc4f0fd7696d70cdf34c595dbba17a3a3b7f7d5cbd79ef8d9c1ee4993b",
+          "TASK_DEFINITION_AND_LOCK.json": "839659aabe5bc9b8925e3f316bda4fde6a477bbdcd26d72c16815bfe84241878",
+          "FIVE_ITEMS_CONCLUSIONS.json": "8bc0641980895521c5bd49c57f1d9810777bec3bb4d1b1e3a47f14e18b4e28e0",
+          "SOURCE_MANIFEST.json": "25410ac0b3fa10617e437bd858dbc603a41b07f32986da1e04410152eb662bf5",
+          "README.md": "d3ceba453f904f74558206760e49ce03c89dc6f327847032d2937b90d484044f"
+        },
+        "archiveIdentityAuthenticatedByDisplayedDigest": false,
+        "sourceManifestEntriesReported": 8,
+        "sourceManifestIncludedSourceBytes": false,
+        "sourceHashesIndependentlyComparedToSourceFiles": false
+      }
+    },
+    "finalPackageExportRequest": {
+      "status": "DOWNLOADED_LOCAL_OUTER_SHA256_MISMATCH; EMBEDDED_MEMBER_HASHES_MATCH",
+      "requestedAtApproxLocal": "2026-11-02T09:06+08:00",
+      "scope": "existing final result, assistant/NOT_SENT, prepare and cleanup, final locks/processes, schedule and five-item conclusions; sanitized per-file hashes",
+      "noRunOrBusinessActionRequested": true,
+      "sensitiveFieldsExcluded": true,
+      "completedAtApproxLocal": "2026-11-02T09:07+08:00",
+      "sha256DisplayedByMUSE": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45dbd5e25ad3c",
+      "sha256ComputedLocally": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
+      "outerSha256Match": false,
+      "packageSizeBytes": 5854,
+      "repeatDownloadsByteIdentical": true,
+      "zipStructureTest": "PASS",
+      "verifiedEmbeddedMemberCount": 7,
+      "embeddedMemberHashes": {
+        "MAIN_RESULT_SANITIZED.json": "0867fdc7d6f55f57d168499b4b0c87db7469ea9fc3a20f55d43255e36713d42f",
+        "ASSISTANT_RESULT_SANITIZED.json": "1a2bffc72098244b47cc4f17d8ecd49b562c510d513674f767d42e0a76474485",
+        "STATE_AND_PREPARE_SANITIZED.json": "28e7fccc4f0fd7696d70cdf34c595dbba17a3a3b7f7d5cbd79ef8d9c1ee4993b",
+        "TASK_DEFINITION_AND_LOCK.json": "839659aabe5bc9b8925e3f316bda4fde6a477bbdcd26d72c16815bfe84241878",
+        "FIVE_ITEMS_CONCLUSIONS.json": "8bc0641980895521c5bd49c57f1d9810777bec3bb4d1b1e3a47f14e18b4e28e0",
+        "SOURCE_MANIFEST.json": "25410ac0b3fa10617e437bd858dbc603a41b07f32986da1e04410152eb662bf5",
+        "README.md": "d3ceba453f904f74558206760e49ce03c89dc6f327847032d2937b90d484044f"
+      },
+      "sourceBytesIncluded": false
+    }
   }
 }
