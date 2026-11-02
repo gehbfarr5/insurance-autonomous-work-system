@@ -227,3 +227,9 @@ review-only归档`auth-diagnostic-review-only-keyguard-v2.zip` SHA-256 `07008d50
 经既有SSH别名只读核对，Pixel的`pixel-auth-monitor-start` SHA-256为`6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，与本机受控副本一致；入口返回`MONITOR_LOCK_AND_HEARTBEAT_CONFIRMED`。该入口用于健康确认或启动，不会在监控已健康时自动重启；其启动路径会读取并恢复AutoX Activity原组件状态。当前确认了受控入口和健康基线，但尚未执行候选安装/重启，也未实测回退过程。
 
 若后续获准部署，须先备份并核对live `monitor.js`，通过现有`stop`标记等待旧监控释放锁，再替换为Keyguard候选、移除停止标记并调用既有启动入口；启动后核对候选哈希、watching状态及新鲜心跳。任何哈希或健康检查失败都恢复原文件并停止。此流程仍需在设备写入前完成明确的回退门禁；不启动应用登录、不输入手势、不触发业务、不改state/cron/09:00调度。
+
+### 有界候选更正｜2026-11-02 22:06
+
+部署前复核发现上版v2候选不应安装：持续相同门禁下可能每5秒重写整份sidecar，且诊断写失败会抛出主循环，存在影响原监控的风险。v2此前未部署。现改为一次性v3候选，仅在下一自然任务窗口`2026-11-03 08:55–09:55 Asia/Shanghai`采集；Pixel时区/时钟于22:01只读核对为`Asia/Shanghai`，与Mac时钟相符。相同样本最多每30秒记录一次；写失败写固定failure标记并发Android错误日志，禁用后续诊断写入但保持原监控继续。原有触发/工作器门禁及`monitor-status.json`字段由本机合成测试与旧版逐场景比较覆盖。
+
+v3私有review-only包SHA-256为`edb4e0425f6379fac41e53d45a781e028ca9597a6df8734ed9691bb5778ccc26`；候选monitor SHA-256为`40f1fd5ea62e726f351e3e0f3203e07777c9a34ce1b56898e1615344c76e17a7`，严格只读采集器SHA-256为`2f2e50fc869c4ee8ed3bb88ff1b649323bec671f0f3426cfee8e78bdb68565da`。Node语法及门禁集成、Python语法/采集器检查、远端收集shell选择逻辑测试、ZIP完整性及包内清单哈希均通过。诊断写失败时固定标记/Android日志为尽力报告；若无sidecar/标记，仍只能判为无诊断证据。v3仍未在Android/AutoX实机验证，未安装到Pixel；针对旧v2哈希的部署授权不得用于v3。部署v3需以新哈希重新明确授权，并先备份、核对、恢复路径；不补跑业务或改调度/state。
