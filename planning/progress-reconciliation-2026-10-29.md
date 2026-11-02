@@ -4,7 +4,14 @@
 
 Pixel 登录助手 EXIT 组件状态恢复会杀掉 AutoX 引擎的根因已通过脚本与 Android 退出记录定位。现使用 Android 15 root-only 固定组件调用，以 `DONT_KILL_APP` 恢复组件并读回；手动冷启动、与显式入口并发及重复启动的实机回归通过。11月2日只读读数与10月30日部署快照同 PID/锁 inode、心跳新鲜、组件默认态，跨日守护存活读数通过。公开源码及方法见[认证助手说明](../tools/pixel-auth/README.md)，原始安装/设备证据仍私存。
 
-10月31日和11月1日仍只有MUSE旁聊摘要：前者先签到+0.5后跳过重复签到，客温客价无独立收据、AI未确认回答、一键领取已有奖励完成；后者在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未进入业务、cleanup PASS。11月2日进行中快照包与最终结果包均下载；最终包两次下载字节一致且ZIP结构有效，7项成员哈希与其自带清单匹配。首次显示的外层哈希与原附件复算值相差一位；09:42 MUSE按原附件实际字节重算SHA-256，返回值与本机5,854字节文件一致（8个文件），因此外层身份现已验证，早先“未认证”结论在此更正并保留为历史。包中所列结果为主流程09:00:57 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，未到WebView/CDP、五项未执行；助理 `REVIEW / NOT_SENT`，cleanup PASS、runner.lock FREE、state不变（11条，最后可信终态10月31日）。包内源码清单未提供源码字节。09:38:47 Pixel 3a现有 monitor-start 健康分支确认既有 PID/锁 inode/新鲜心跳匹配并提前返回；未启动新实例或业务，仅追加本地状态日志。此前没有等待、重跑或改排程。P50/月度规划仍挂起。
+10月31日与11月1日的只读脱敏原始记录包已从既有MUSE旁聊下载并独立核对：外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7个文件，`HASHES.txt`中的6个成员哈希均匹配。包保存在本机忽略的 `.private/continuation-20261030/`，公开仓库只写摘要与哈希索引。
+
+- **10月31日主流程：** `PASS`，09:13:20记录。`signPhase`先 `SIGNED +0.5`（余额544→544.5），之后主流程才 `SKIP_ALREADY_SIGNED`；领取 `COLLECTED +6.5`（余额544.5→551，最后快照待领0）。时光轴 `VIEWED` 6055ms、`awardAcknowledged=true`、未保存客户内容，状态完成时间09:11:04。**客温客价没有独立回执**，共享时光轴路径不可改标为该项完成。
+- **10月31日智能助理：** 09:04:18已有发送记录，`SENT / REVIEW`；回答对账超时0.080893秒，没有after回执，不重发、不判答案或奖励确认。较早一轮被信号终止且未发送；其结果缺cleanup字段。
+- **11月1日：** 主流程09:01:56 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，cleanup PASS；没有业务阶段，五项均 `NOT_EXECUTED`。智能助理scheduled轮 `REVIEW / NOT_SENT`、cleanup PASS；assistant.json为 `INTENT / NOT_SENT`，`sentAt`键缺失（不是null）。更早一轮 `NOT_SENT` 且 `cleanup=NOT_OWNED`。
+- **包内明确缺失：** 两日都没有独立客温客价收据或单独账本；11月1日没有任何运行快照且state无当日readOnlyTasks条目；两日assistant运行均无快照；10月31日scheduled assistant无after回执，早期结果无cleanup键；主流程11月1日结果不含before/after、decisions、signPhase、时光轴或业务回执。`latest.json`未作为来源。
+
+11月2日进行中快照与最终结果包均已下载；最终包外层身份经09:42原附件重算及本机比较通过（5,854字节，8成员，7个内含哈希匹配）。最终主流程09:00:57 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，未到WebView/CDP，五项均未执行；助理 `REVIEW / NOT_SENT`，cleanup PASS、runner.lock FREE、state不变（11条）。包内源码清单未提供源码字节。09:38:47 Pixel 3a monitor-start健康分支确认既有PID/锁inode/新鲜心跳匹配并提前返回；未启动新实例或业务，仅追加本地状态日志。此前没有等待、重跑或改排程。P50/月度规划仍挂起。
 
 > **当前执行模式｜2026-10-30：** 本机主导开发、验证与证据判定；MUSE保留既有每日执行及必要云端取证，不再默认通过旁聊代做开发。需求目标不变，未迁移运行器/改调度。跨日已到自然次日，先读已有结果，不补跑；P50/月度规划继续挂起。[新方案与接续顺序](execution-mode-2026-10-30.md)为当前入口，以下10月29日状态保留为历史。
 

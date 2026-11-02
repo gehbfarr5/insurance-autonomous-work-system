@@ -4,7 +4,7 @@
 
 09:38:47 Asia/Shanghai 经现有 SSH 别名连接 Pixel 3a（Android 15/API 35），执行已部署的 monitor-start helper。helper 的健康分支确认原 PID、锁 inode 与新鲜心跳一致并返回，不启动新实例；只向本地启动日志追加一条确认记录。未进入 App、未输入密码、未触发每日任务或其他业务。helper SHA-256：`6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，远端 `sh -n` 通过。私有副本与原始日志保留在 Git 忽略目录。
 
-10月30日签到回执已更正：同轮先签到并 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。MUSE旁聊可见摘要称10月31日同样先 `SIGNED +0.5`、之后才跳过；其原始结果包仍未独立取得。11月1日任务在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未进入业务、cleanup PASS，不是签到被跳过。11月2日最终脱敏包已下载两次，文件字节一致且ZIP结构有效；包内7项成员哈希与自带清单匹配。首次显示的外层哈希与原附件复算值相差一位；09:42 MUSE按原附件字节重算的SHA-256与本机5,854字节文件一致（8个文件），外层身份现已验证。包中所列结果为唯一任务启用且每日09:00；早先快照中 `signPhase=null`、后续 `SKIP=null`。最终主流程09:00:57于prepare阶段 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`、未到森林WebView/CDP目标，没有签到动作，清理PASS、锁空闲；五项均未执行。因此11月2日也不是签到跳过，而是尚未进入签到阶段。源码清单不含源码字节；没有补跑。
+10月30日和10月31日的原始记录都确认：同轮先签到 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。10月31日领取 `+6.5`，但客温客价没有独立收据，AI虽发送问题仍因回答对账超时、无after回执而为REVIEW。11月1日原始记录包确认主流程在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未执行，cleanup PASS；不是签到被跳过。11月2日最终脱敏包身份及内部清单哈希已验证，最终主流程在prepare阻断、没有签到动作，五项未执行。10月31—11月1脱敏记录包外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7文件且 `HASHES.txt` 所列6项全部匹配；私有原包不进公开仓库。每日唯一任务及周期不变，无补跑或排程修改。
 
 Pixel 登录助手发现并修复组件退出生命周期：helper 原先在所有退出路径调用 `pm default-state`；Android shell 调用以 `flags=0` 更改组件状态，会结束所在 AutoX 引擎。新实现固定目标组件，root-only 精确调用 Android 15 `IPackageManager` 并用 `DONT_KILL_APP`，仅真实启动时保存/恢复原状态、读回校验；健康/已运行路径不更改组件，原子目录锁有 owner 校验。冷启动、自动与显式入口同时触发、重复启动均实机通过；同次总输入一次，未派发业务。11月2日守护 PID/锁 inode与部署快照一致、心跳新鲜、组件为默认态，跨日存活读数通过。整机重启、完整恢复、业务长期运行仍未通过验收。
 

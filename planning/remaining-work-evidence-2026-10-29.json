@@ -806,7 +806,7 @@
   },
   "museNaturalSummaries20261031_20261101": {
     "observedAt": "2026-11-02T08:59+08:00",
-    "sourceType": "visible MUSE sidechat daily-report summaries; not independent raw result/receipt downloads",
+    "sourceType": "Visible MUSE sidechat summaries; superseded for available records by the independently downloaded and hash-verified sanitized archive below.",
     "2026-10-31": {
       "main": "PASS per MUSE summary; cleanup PASS; recorded 09:13:20",
       "signPhase": {
@@ -847,8 +847,8 @@
       "cleanup": "PASS per MUSE summary; app stopped; device and runner locks released",
       "dedupe": "11 prior records, no new entry per MUSE summary"
     },
-    "rawPackageDownloaded": false,
-    "evidenceLimit": "Use these as reported summaries only until source packages are independently downloaded."
+    "rawPackageDownloaded": true,
+    "evidenceLimit": "The sanitized 2026-10-31/2026-11-01 export is locally verified. Its explicit missing-file list remains authoritative; the package does not include source-file bytes."
   },
   "museSnapshot20261102": {
     "source": "User-authorized read-only response in existing MUSE sidechat; local UI download and archive integrity checks",
@@ -944,7 +944,7 @@
       "The downloaded ZIP is a time-bounded in-progress snapshot, not the natural-run final result",
       "The downloaded final ZIP is structurally valid and its seven members match its embedded manifest, but the locally computed outer SHA-256 differs from the MUSE-displayed value; archive identity is unresolved",
       "No process was started, stopped, waited for, or modified; no phone access or business replay",
-      "10-31 and 11-01 raw result packages remain independently unavailable",
+      "At the 08:59-09:00 snapshot, 10-31/11-01 packages had not yet been independently downloaded; a later export was downloaded and verified at 09:49 on 2026-11-02 (see museNaturalEvidenceExport20261031_20261101).",
       "archive member integrity verified locally; SOURCE_MANIFEST declares hashes but source file bytes were not included for local comparison"
     ],
     "naturalFinalSummary": {
@@ -1094,5 +1094,106 @@
     "responseAtApproxLocal": "2026-11-02T09:42+08:00",
     "recomputedSha256": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
     "localComparison": "PASS; 5854 bytes, 8 archive members"
+  },
+  "museNaturalEvidenceExport20261031_20261101": {
+    "observedAtLocal": "2026-11-02T09:49:55+08:00",
+    "source": "Read-only export from the existing MUSE sidechat; no run, business action, code execution, or schedule/state change requested or performed.",
+    "package": {
+      "name": "sunshine-forest-20261031-20261101-records-desensitized.zip",
+      "bytes": 7148,
+      "sha256": "02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9",
+      "privatePath": ".private/continuation-20261030/sunshine-forest-20261031-20261101-records-desensitized.zip",
+      "ignoredByGit": true,
+      "zipMembers": 7,
+      "zipStructure": "PASS",
+      "hashManifestMemberCount": 6,
+      "memberHashesVerified": "ALL_MATCH"
+    },
+    "2026-10-31": {
+      "main": {
+        "status": "PASS",
+        "recordedAtLocal": "09:13:20.851679+08:00",
+        "cleanup": "PASS"
+      },
+      "sign": {
+        "phaseStatus": "PASS",
+        "outcome": "SIGNED",
+        "delta": 0.5,
+        "balance": "544 -> 544.5",
+        "laterMainDecision": "SKIP_ALREADY_SIGNED"
+      },
+      "timeline": {
+        "status": "VIEWED",
+        "visibleMs": 6055,
+        "awardAcknowledged": true,
+        "customerContentsSaved": false,
+        "finishedAtLocal": "09:11:04"
+      },
+      "customerTemperatureValue": "NO_SEPARATE_RECEIPT",
+      "assistant": {
+        "status": "REVIEW",
+        "questionStatus": "SENT",
+        "sentAtLocal": "09:04:18",
+        "answerReconciliation": "TIMEOUT",
+        "timeoutSeconds": 0.080893,
+        "afterReceipt": "MISSING",
+        "resent": false,
+        "reward": "UNCONFIRMED"
+      },
+      "collect": {
+        "status": "COLLECTED",
+        "delta": 6.5,
+        "balance": "544.5 -> 551",
+        "finalPendingGroups": 0
+      },
+      "assistantEarlyAttempt": {
+        "status": "REVIEW",
+        "questionStatus": "NOT_SENT",
+        "reason": "RUN_TERMINATED_BY_SIGNAL",
+        "cleanupField": "MISSING"
+      }
+    },
+    "2026-11-01": {
+      "main": {
+        "status": "BLOCKED",
+        "reason": "PREPARE_TIMEOUT_NO_FALLBACK",
+        "recordedAtLocal": "09:01:56.920979+08:00",
+        "cleanup": "PASS"
+      },
+      "fiveDailyItems": "NOT_EXECUTED",
+      "assistantScheduled": {
+        "status": "REVIEW",
+        "questionStatus": "NOT_SENT",
+        "reason": "PREPARE_TIMEOUT_NO_FALLBACK",
+        "cleanup": "PASS"
+      },
+      "assistantEarlyAttempt": {
+        "status": "REVIEW",
+        "questionStatus": "NOT_SENT",
+        "reason": "RUN_TERMINATED_BY_SIGNAL",
+        "cleanup": "NOT_OWNED"
+      },
+      "assistantJson": {
+        "phase": "INTENT",
+        "questionStatus": "NOT_SENT",
+        "sentAtField": "MISSING_NOT_NULL"
+      }
+    },
+    "missingArtifacts": [
+      "No separate customer-temperature/value receipt on either date.",
+      "No standalone ledger file on either date.",
+      "No assistant-run snapshots on either date; no main-run snapshots or readOnlyTasks entry for 2026-11-01.",
+      "No after receipt for the 2026-10-31 scheduled assistant result; no cleanup field in its early assistant result.",
+      "The 2026-11-01 main result has no before/after, decisions, signPhase, timeline, or business receipts.",
+      "The assistant.json 2026-11-01 sentAt field is absent, not null."
+    ],
+    "sourceManifest": {
+      "present": true,
+      "sourceEntriesHaveHashes": true,
+      "sourceBytesIncluded": false,
+      "sourceHashesComparedToOriginalSourceFiles": false
+    },
+    "privateRawEvidencePublished": false,
+    "scheduleOrBusinessChanged": false
   }
 }

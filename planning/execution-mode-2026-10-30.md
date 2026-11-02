@@ -263,3 +263,16 @@ AI原TimeoutExpired字符串被截断，原记录缺具体SSH子阶段和精确�
 ### MUSE 原附件外层哈希更正｜2026-11-02 09:42
 
 前节记录了首次展示哈希与原附件后续复算值之间的单字符差异；复算值匹配本机文件，不能据此认定 ZIP 字节损坏。按本轮限定请求，MUSE在原「阳光森林每日执行部署」旁聊对**既有附件的实际字节**重新计算SHA-256，返回值 `a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c`；本机从该附件下载的5,854字节文件 `sunshine-forest-20261102-final-verified.zip` 计算值相同，ZIP有8个成员。故外层身份校验现为 **PASS**，此前“外层未认证”结论在本节更正，原始差异记录仍保留追溯。未生成新结果包、未运行代码、未访问手机或改动业务/调度/state/cron。包内7个结果成员的哈希此前已独立匹配；源码清单仍只有元数据、没有源文件字节。
+
+
+### 2026-11-02 10月31日—11月1日自然结果包恢复与核验
+
+此前记录“10月31/11月1只有旁聊摘要、原始包未下载”是当时的状态。本节按随后从原「阳光森林每日执行部署」旁聊下载的脱敏记录包更正；包内明确缺失项仍保持缺失，不以日报摘要补造字段。
+
+- 文件 `sunshine-forest-20261031-20261101-records-desensitized.zip` 保存于本机受控忽略目录 `.private/continuation-20261030/`，大小7,148字节，SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，与MUSE旁聊所示完全一致。ZIP结构检查通过，共7个成员；`HASHES.txt`列出的6个JSON/README哈希逐一复算匹配。包内 `SOURCE_MANIFEST.json` 另记录来源文件哈希，但没有包含源文件字节，故不声称独立比较了原云端源文件。
+- **10月31日五项：** 主流程 `PASS`（09:13:20.851679+08:00）。`signPhase`状态PASS，签到 `SIGNED +0.5`、余额544→544.5；主流程随后独立记 `SKIP_ALREADY_SIGNED`，不是漏签到。时光轴 `VIEWED` 6055ms，`awardAcknowledged=true`，`customerContentsSaved=false`，state完成时间09:11:04。客温客价没有独立收据。智能助理09:04:18为 `SENT`，但结果为 `REVIEW`：回答对账超时0.080893秒、没有after回执、未重发，因此答案与奖励都未确认。一键领取 `COLLECTED +6.5`，余额544.5→551，最后快照待领组数为0。主流程cleanup PASS。
+- **10月31日智能助理分段：** 08:56早期轮被信号终止，`NOT_SENT`，结果没有cleanup键；scheduled轮停在 `question_sent` 后的回答对账阶段，cleanup PASS。该证据不表示AI回答完成。
+- **11月1日五项：** 主流程 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`（09:01:56.920979+08:00），cleanup PASS；没有签到、浏览、问答或领取业务回执，五项均 `NOT_EXECUTED`。08:55早期助理轮 `REVIEW / NOT_SENT`、cleanup `NOT_OWNED`；08:56 scheduled轮同因prepare超时为 `REVIEW / NOT_SENT`、cleanup PASS；assistant.json为 `INTENT / NOT_SENT`，`sentAt`键缺失而非null。
+- **包内明确缺项：** 两日都没有独立客温客价收据或单独账本；两日assistant运行没有快照；11月1日没有任何主流程快照及当日readOnlyTasks条目；11月1日主结果不含before/after、decisions、signPhase、时光轴或业务回执；10月31日 scheduled assistant没有after回执，早期结果没有cleanup键。`latest.json`已反映11月2日，未作为这两日的来源。
+
+本次仅读取既有旁聊附件、下载脱敏包并复算外层及内层哈希；没有请求新运行、等待/停止任务、访问手机、运行业务代码或更改调度/state/cron。包内结论及哈希摘要已纳入本报告、P4工作包、开放问题、路线图、证据索引与Issue #3；私有原包不进入Git。P4/S1未整体验收；后续优先保留AI `SENT`防重并等待自然结果/可用回执，核对客温客价独立收据及真实空列表正例，五项扩展完整流程/周期、官方时点原依据和整机恢复仍待补。P50/月度规划继续挂起，2U＝2800目标保留。
