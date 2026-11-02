@@ -6,6 +6,8 @@
 
 本轮目标是定位11月2日登录处理为何没有触发，并将已证事实同步到GitHub；不以重跑业务作为验收。完整系统日志没有`GestureActivity`，requests未增、输入审计缺席；哈希匹配的v0.19 fixture只在精确该Activity出现后才调用`pixel-auth-start`。Pixel入口脚本现有哈希仍匹配10月30日已验证版本。因此本次失败不是已观察到的密码/手势输入器错误，而是输入器未收到调用。唤醒键→force-stop→启动后门禁未满足是强推断；安装后live v0.19源和当时Keyguard/字段状态仍缺，不能宣称应用未到手势页的唯一原因已完全证实。
 
+19:26本机进一步核对了安装版APK包装结构：清单声明`GestureActivity`，Application使用SecNeo包装器；普通DEX只定义7个包装类，目标Activity不在标准类定义表，包装器通过native bootstrap委托真实Application。JADX/apkanalyzer找不到该Activity是受保护载荷结构所致，不支持“应用升级删除了Activity”。清单没有`showWhenLocked`/`turnScreenOn`属性，但真实实现不可从普通DEX读取，Keyguard仍不是已证根因。当前Pixel入口脚本哈希仍与10月30日基线一致、应用进程停止。细节与制品哈希见[修复与补跑报告](forest-prepare-repair-2026-11-02.md)。
+
 本次会话可收尾条件：报告、README、路线图、开放问题和本交接采用同一证据边界并推送到main；Issue #3追加可追溯记录；本地工作区变更仅含本任务文档。后续首要工作是只读取得安装后live v0.19 runner，或在后续有界运行中记录screen/keyguard/前台Activity/派发计数/是否调用Pixel入口脚本的布尔值，再决定最小修复。无需重放业务；跨日结果等真实次日自然运行；诊断sidecar安装/监控重启须另行授权，P50/月度规划继续挂起。
 
 ### 本机离线诊断候选更新｜2026-11-02

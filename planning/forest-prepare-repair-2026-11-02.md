@@ -173,3 +173,11 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 只读SSH还确认Pixel上的`pixel-auth-start`当前哈希`8f228b7e…`、设备文件时间10月30日13:22，与本机已验证的10月30日组件生命周期修复版本哈希一致；它不是11月2日新改的脚本。该入口采用锁、在途检查和已有成功状态合并，历史测试覆盖并发去重；11月2日窗口没有它被调用的证据。本轮没有读取或输出私有手势配置，也没有触发输入。
 
 **原因边界更新：** 现已将“为什么没有自动输入”收敛到前置条件：预期手势Activity未出现/未被runner的精确Activity门禁观察到，故认证入口没有触发；不能归因于入口脚本输入错误。至于为什么应用启动后没有手势页，唤醒但未解锁、应用路由或内存登录态未就绪都仍需区分。当前Termux用户上下文的只读`dumpsys window policy`返回`Can't find service: window`，没有取得Keyguard快照；它不代表当时状态。后续优先取得安装后的精确runner源或一次有界运行时门禁快照，再决定是否修改唤醒/解锁/页面就绪主路径；不重放业务，不改密码或手势，不放宽Activity匹配条件。
+
+### 安装版 APK 清单与 DEX 载荷核查｜2026-11-02 19:26 CST
+
+对本机从 Pixel 只读取得的科技个险 18.5 安装包副本作定向静态核验（SHA-256 `169e727670d045afcf34e31a84547144fc091f9eff8e1792abd0897453b746e7`）：AndroidManifest 声明 `com.cpic.kjgxplus.nativePlug.login.GestureActivity`，但 Application 指向 `com.secneo.apkwrapper.AW`。普通 `classes.dex` 的结构头仅含7个类定义，全部属于 `com.secneo.apkwrapper`；`GestureActivity` 不在标准 type/class-definition 表，也不属于可由 JADX/apkanalyzer 直接反编译的类。该名称的字符串出现在 DEX 声明数据区之外的尾部载荷；APK同时包含 `libDexHelper.so` 与包装器资源。包装器 `AW.onCreate()` 会委托到真实 Application 并调用 native bootstrap。这说明“反编译器找不到该类”来自受保护包装/载荷结构，不能作为 Activity 已从 APK 移除的证据；其实现细节仍无法从普通 DEX 静态读取。
+
+清单中的 `GestureActivity` 条目没有 `showWhenLocked` 或 `turnScreenOn` 属性。由于页面实现位于受保护载荷，静态检查无法判断运行时代码是否设置相同窗口行为，故不能据此认定 Keyguard 导致页面未出现。Pixel 当前只读回报仍为 Pixel 3a / Android 15 / API 35，`pixel-auth-start` SHA-256 `8f228b7ef49e36cc384880de9d6d753d1bec9486827d1a67e331297e16bb1eb4`、mtime 10月30日13:22，与此前已核验基线一致；目标应用当前已停止。这些当前快照不回溯11月2日运行状态。
+
+**归因更新：** 11月2日的已证直接停止点仍是森林登录态单次门禁未通过；runner等待的手势 Activity 没有出现在完整补跑窗口的系统 Activity 记录中，requests 未增加，且没有已知认证工作器输入审计。因此此次失败发生在密码/手势脚本被派发之前，现有证据不支持把该脚本判为本次故障原因。为什么应用冷启动后没有进入该 Activity，仍受保护代码、缺少历史 Keyguard/屏幕/路由分项快照及未取得安装后 live v0.19 `run.py` 限制，当前不能定为“解锁手势脚本故障”或“Keyguard故障”。本次只读静态核查，没有启动应用、触发输入、安装候选或重跑业务。
