@@ -53,7 +53,7 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 
 - MUSE 记录里只有助理段 `control` 区的本地无障碍认证路径标记，无精确时间；没有 `target`、`gesturePage`、`accountMatch`、attempt结果、输入调用或 `page_left` 回执。该标记只能说明存在认证路径信息，不能证明本轮触发或输入。
 - 主流程只记录 11:17:26 `.MainActivity`，随后在11:17:57写出 `PREPARE_LOGIN_STATE_MISSING`；`user`、`empNoAES`、`operateFlag`各自状态及检查的精确时点均缺失，检查只知发生在上述区间内。
-- Pixel 只读 logcat 当前仍覆盖该时段，但11:14—11:19片段只有一条11:14:34的 `ActivityThread` 记录，没有认证/手势/输入事件。MUSE既有工作区也没有本轮认证监控日志或认证器版本哈希。
+- **logcat汇总更正（约18:35直接读取Pixel系统缓冲）：** 以`epoch`格式汇总的当前保留窗口为11:15:00.117—11:17:55.279，共691条系统记录，其中121条提到目标应用、72条来自Activity/WindowManager/UsageStats标签（含8条ActivityTaskManager记录）。ActivityTaskManager中的目标Activity依次为`SplashActivity`→`MainActivity`→`BridgeWebActivity`→`MainActivity`，之后再次`SplashActivity`→`MainActivity`；691条记录均未提到`GestureActivity`。但补跑起点11:14:53至11:14:59已不在当前缓冲中。更正此前“11:14—11:19只有一条11:14:34 ActivityThread记录”的不完整摘要：它不是当前系统logcat完整统计。现有日志支持“保留窗口未进入已知手势Activity”，不能排除未保留的前7秒或没有Activity切换日志的短暂UI状态。MUSE既有工作区也没有本轮认证监控日志或认证器版本哈希。
 
 对已从 Pixel 安装版 APK 提取的 `forest-prepare.js` 再做静态核对：文件1493字节，SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`。`step()` 只在启动时读取一次 `__r(584).default.user`；若 `user` 不存在、`empNoAES` 为空或 `operateFlag` 未定义，立即输出 `BLOCKED / LOGIN_STATE_MISSING` 并返回。该登录态门禁没有等待/重试；后续最多8次等待只用于促销弹窗关闭及 `HOME_NOT_READY`。这确定了直接阻断的代码路径是单次登录态快照，但没有逐项诊断信息，无法判断具体缺项。
 

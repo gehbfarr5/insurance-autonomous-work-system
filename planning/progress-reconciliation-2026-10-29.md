@@ -144,7 +144,7 @@ MUSE对脱敏结果及适配源码做只读核查，未访问设备、修改代�
 
 仅查询本机源码、MUSE已有运行记录和Pixel只读日志，未发起认证、输入、安装或业务。通用认证器的调用条件是`target`、`gesturePage`、`accountMatch`均为true；页面未匹配时最多观察4秒后阻断。输入调用前有`INPUT_INTENT_PERSISTED`标记，但现有通用源码未单独记录输入函数返回事件；`page_left`需已知登录后Activity稳定1.5秒，且不等于森林应用内部数据已就绪。
 
-对11:14:53—11:17:57这次v0.19补跑，MUSE现存记录只有助理`control`区无障碍认证路径标记（无精确时间）；`target`/`gesturePage`/`accountMatch`、attempt状态/原因、实际输入与`page_left`均MISSING。主流程`user`、`empNoAES`、`operateFlag`逐项状态和精确采样时刻MISSING；只能将检查时段界定为11:17:26 MainActivity事件至11:17:57结果写出。Pixel logcat仍覆盖该时段，但11:14—11:19片段只有一条11:14:34 `ActivityThread`记录，无认证事件。故直接阻断可确定为合并登录态门禁未通过，具体字段及原因未知；认证器未触发、检测未匹配是可能原因，输入后应用状态未就绪或selector不匹配也不能排除。无证据归咎密码/手势脚本，也无证据确认脚本当轮输入。
+对11:14:53—11:17:57这次v0.19补跑，MUSE现存记录只有助理`control`区无障碍认证路径标记（无精确时间）；`target`/`gesturePage`/`accountMatch`、attempt状态/原因、实际输入与`page_left`均MISSING。主流程`user`、`empNoAES`、`operateFlag`逐项状态和精确采样时刻MISSING；只能将检查时段界定为11:17:26 MainActivity事件至11:17:57结果写出。**logcat汇总更正（约18:35直接读Pixel）：** 当前缓冲实际覆盖11:15:00.117—11:17:55.279，共691条系统记录，其中121条提到目标应用、72条来自Activity/WindowManager/UsageStats标签（含8条ActivityTaskManager记录）；ActivityTaskManager记录Splash→Main→BridgeWeb→Main，之后Splash→Main，全部保留记录均未提到`GestureActivity`。补跑起始11:14:53至11:14:59已不在缓冲。此前“11:14—11:19只有一条11:14:34 ActivityThread记录”并非完整系统logcat统计，应以此次时间受限汇总为准。由此支持“保留窗口未进入已知手势Activity”，仍不能排除缺失的前7秒或没有Activity切换日志的短暂UI状态。直接阻断为合并登录态门禁未通过，具体字段及原因未知；认证器未触发、检测未匹配仍是可能原因，输入后应用状态未就绪或selector不匹配也不能排除。无证据归咎密码/手势脚本，也无证据确认脚本当轮输入。
 
 对已从 Pixel 安装版 APK 提取的 `forest-prepare.js` 静态复核：文件1493字节，SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`。`step()` 启动时只读取一次 `__r(584).default.user`；若 `user` 不存在、`empNoAES` 为空或 `operateFlag` 未定义，立即返回 `BLOCKED / LOGIN_STATE_MISSING`。该门禁没有等待/重试；后续最多8次等待只处理促销弹窗关闭与 `HOME_NOT_READY`。因此直接阻断代码路径已知为单次登录态快照，但具体缺项和手势脚本是否未触发仍未知。
 
