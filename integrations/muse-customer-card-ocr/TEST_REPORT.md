@@ -30,3 +30,24 @@ PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests 
 ```
 
 The tests verify only package logic against the internal Mock port. They do not validate the proposed package port against MUSE's real helper or the newer Baidu Bearer auth route.
+
+## WP5-B iCloud contacts_create adapter
+
+- Date: 2026-11-02
+- Package version: 0.3.0
+- Branch: `codex/wp5-icloud-create-adapter-20261102`
+- Base: `codex/wp4-muse-full-image-ocr-20261102` at `f8dcd17ee96a6c70ab1bddecae9dac894e10891b`
+- Schema evidence: read-only inspection of the active `mcp__icloud_carddav__contacts_create` tool declaration in this session. It specifies top-level `session_id`, optional `address_book_id`, and nested contact fields including `name`, `phones`, `birthday`, `addresses`, and `note`. Omitting `address_book_id` selects the server's first writable book; the adapter therefore requires an explicit ID.
+- Test runtime: isolated local Python 3.14.7 environment with Pillow 12.2.0
+- Complete package regression: PASS — 44 tests, 0 failures, 0 errors
+- Editable package install: PASS — version 0.3.0 built and imported with the new adapter export
+- WP5-B Mock coverage: full nested create arguments, name.full preserved without family/given guesses, mobile/other phone types, birthday ISO formatting, address kept only in `street`, two separate note lines, missing optional fields omitted, explicit address-book requirement, required session/name/mobile validation, and create-only dispatch.
+- Test data: synthetic fictional contact values only; the dispatcher is a `unittest.mock.Mock`.
+- Network/provider/iCloud: no MCP tools invoked, no Apple login performed, no contact created/modified/deleted, and no Baidu request made.
+- Not tested: MUSE-side tool invocation wiring, a real apple_login session, real address-book selection, live MCP schema validation from inside MUSE, duplicate search, and post-create readback. Duplicate gating and readback remain future workflow responsibilities.
+
+Command:
+
+```bash
+PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests -v
+```

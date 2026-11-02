@@ -27,6 +27,13 @@ from .fields import (
     extract_primary_customer,
 )
 from .icloud_mapping import ICloudContactDraft, map_to_icloud_fields
+from .contacts_create_adapter import (
+    AddressBookRequiredError,
+    ContactsCreateArgumentsError,
+    McpToolCaller,
+    build_contacts_create_arguments,
+    call_contacts_create,
+)
 from .models import (
     BoundingBox,
     CharacterCandidate,
@@ -44,11 +51,13 @@ from .secure_connector import (
 __all__ = [
     "BAIDU_HANDWRITING_URL",
     "AuthenticationError",
+    "AddressBookRequiredError",
     "BaiduOcrClient",
     "BearerOcrRequest",
     "BearerOcrResponse",
     "BoundingBox",
     "CharacterCandidate",
+    "ContactsCreateArgumentsError",
     "CustomerCardFields",
     "FieldExtractionResult",
     "FullImageOcrNotAuthorizedError",
@@ -58,6 +67,7 @@ __all__ = [
     "ImageTooLargeError",
     "InvalidResponseError",
     "ManualReviewRequiredError",
+    "McpToolCaller",
     "MissingSecureConnectorError",
     "NetworkError",
     "OcrBlock",
@@ -74,6 +84,8 @@ __all__ = [
     "SecureBearerConnector",
     "SecureConnectorFailure",
     "SecureConnectorTimeout",
+    "build_contacts_create_arguments",
+    "call_contacts_create",
     "extract_primary_customer",
     "map_to_icloud_fields",
     "recognize_customer_card",

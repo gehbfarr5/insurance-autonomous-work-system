@@ -1,6 +1,6 @@
 # MUSE family-card OCR package
 
-Version 0.2.0. This branch updates WP2 for the 2026-11-02 full-image plan. It contains no production MUSE Secure Vault adapter, makes no Baidu API calls, and performs no iCloud operations.
+Version 0.3.0. This branch updates WP2 for the 2026-11-02 full-image plan and adds the `contacts_create` parameter adapter. It contains no production MUSE Secure Vault adapter and makes no Baidu API calls. Tests do not invoke real MCP tools or perform iCloud operations.
 
 ## Full-image authorization
 
@@ -57,7 +57,11 @@ The parser requires a clear primary name, one valid mobile number, and a readabl
 - `address` as the original labelled address;
 - `note` lines in stable order: `性别：...`, then `身份证号：...`.
 
-This draft is a canonical field projection, not a serialized `contacts_create` payload. Repository evidence currently shows the MCP contact name and note shape, but does not define the production phone, birthday, and address input schema. A later MCP adapter must verify that schema. This package does not query, create, modify, or delete contacts.
+The active iCloud MCP tool declaration exposes `contacts_create` as `{session_id, address_book_id?, contact}`. `contact` accepts `name.full`, `phones[]` (`value`, `type`, `primary`), `birthday`, `addresses[]` (including `street`), and `note`. The adapter in `contacts_create_adapter.py` maps the draft to that argument shape. Its tests use synthetic values and a Mock caller; no MCP tool was invoked.
+
+`build_contacts_create_arguments(draft, session_id=..., address_book_id=...)` is a pure serializer. The server's schema says omitting `address_book_id` selects the first writable book, so the serializer rejects a missing/blank ID and always requires an explicit, previously verified target. It passes `session_id` supplied by the caller from the existing `apple_login` session. It keeps the name in `name.full` without guessing family/given boundaries, maps the mobile as `type=["cell"], primary=true`, other numbers as `type=["other"]`, birthday as `YYYY-MM-DD`, the complete address only to `addresses[].street`, and the draft note verbatim. Missing optional fields are omitted. Any text in the resulting argument object is sensitive and must not be logged.
+
+`call_contacts_create(..., call_tool=...)` is an injectable test seam that dispatches only the `contacts_create` tool name. `McpToolCaller` is a local package protocol, not a documented MUSE Python bridge API. No update operation exists in this adapter; it cannot overwrite a contact. It also does not perform duplicate search, so the future workflow must complete its duplicate gate before using it. This package does not connect to the MCP or perform any contact operation by itself.
 
 ## Install and offline regression
 
@@ -72,11 +76,11 @@ cd /path/to/repo/integrations/muse-customer-card-ocr
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-Tests use generated fictional images, OCR payloads, and a Mock Bearer connector. They cover explicit opt-in, no API-key fields in the Python request, auth/rate/timeout/error handling, image validation/preprocessing, structure parsing, field extraction, ID/birthday review gates, native-field projection, and sensitive `repr`/logging behavior. They make no network calls.
+Tests use generated fictional images, OCR payloads, a Mock Bearer connector, and a Mock `contacts_create` invoker. They cover explicit opt-in, no API-key fields in the Python request, auth/rate/timeout/error handling, image validation/preprocessing, structure parsing, field extraction, ID/birthday review gates, canonical and MCP-native field projection, explicit address-book selection, omission of missing optional fields, and sensitive `repr`/logging behavior. They make no network calls.
 
 ## MUSE integration checklist
 
-1. Check out branch `codex/wp4-muse-full-image-ocr-20261102`; run the offline suite in an isolated venv first.
+1. Check out branch `codex/wp5-icloud-create-adapter-20261102`; run the offline suite in an isolated venv first.
 2. Obtain MUSE's real Secure Vault helper documentation and confirm how it attaches Bearer auth, restricts host/path/method, accepts binary or encoded form data, returns status/body, and maps timeouts. Implement only a thin adapter from that documented interface to `SecureBearerConnector`; map helper timeout/transport failures to `SecureConnectorTimeout` or `SecureConnectorFailure`, do not pass a production key to this package or its Python process, and do not log the helper's raw request or response.
 3. Keep the adapter mocked until the real helper contract and credential isolation are independently verified. No helper is present in this branch.
 4. A real Baidu call would send a complete image. Perform none until the authorized MUSE workflow, connector, quota/cost, and separate API-test approval are ready. Any first API test must use a generated fictional image only.
