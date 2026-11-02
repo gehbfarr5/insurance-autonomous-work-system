@@ -1,5 +1,17 @@
 # Pixel 本地认证：自动触发与互斥输入
 
+## 生命周期根因与修复结果｜2026-11-02
+
+`dumpsys` 退出记录中的 AutoX `STATE CHANGE` 与两个既有 helper 的 EXIT trap 对应；源码还显示 `pm default-state`/`pm enable` 会以零 flags 修改组件状态。旧逻辑即使判断“already running”并提前成功退出，也会执行 EXIT trap，故“成功启动检测器”的日志及 `watching` 文件不能证明它继续存活。
+
+修复后的启动流程先用原子目录锁避免 `su` 子进程文件描述符继承差异；繁忙时明确退出，不自动回收未知 owner。仅获锁且确需启动时记录当前组件状态、使用 `DONT_KILL_APP` 临时启用，退出时恢复原始状态并读回；guard 只由记录的 owner 删除。状态读取/写入错误直接失败。monitor-start 以锁 inode、匹配 PID 和新鲜心跳判断存活，不再只信状态 JSON。首次在机测试也保留了一次失败记录（自动登录超时、设备操作锁已释放）；针对已诊断的 FD 继承问题换为目录锁后再验收。
+
+离线 mock 的四条启动器路径通过；修复后 Pixel 实测：组件恢复默认后手动冷启动自动输入一次；自动检测与显式入口重叠总共输入一次；重复启动检测器没有额外输入。未派发签到、领取或客户业务。11月2日只读状态与10月30日部署快照对照：同一守护 PID及锁 inode、心跳年龄2秒、锁持有人1、组件状态0、设备运行未见重启；这是两时点跨日存活核验，不等于持续采样、整机恢复或业务长期验收。私有命令输出、安装备份和逐项回执保留在受控目录，不公开设备配置或凭据。
+
+Android 官方将 `DONT_KILL_APP` 定义为不杀包含该组件的应用，同时警告变更组件状态可能使应用行为不可预测；因此这里只对一个固定启动 Activity 使用，并在目标设备验证进程锁和心跳。[PackageManager API](https://developer.android.com/reference/android/content/pm/PackageManager#DONT_KILL_APP) · [Android 15 AIDL](https://android.googlesource.com/platform/frameworks/base/+/android15-release/core/java/android/content/pm/IPackageManager.aidl) · [AOSP shell 实现：组件状态调用 flags=0](https://android.googlesource.com/platform/frameworks/base/+/4ce707990cdcf0ea0af5a19159ab968db8bede80/services/core/java/com/android/server/pm/PackageManagerShellCommand.java#2301)。
+
+源码 [`AuthComponentState.java`](AuthComponentState.java) 是 Android 15/API 35 专用、root-only 的小型 app_process 工具：固定包/组件、仅 `get` 或 `set 0/1/2`、精确反射 AIDL 方法、状态写入后立即读回。版本签名不匹配时会失败，不自动尝试其他 API。该源码已经在本机 Android 35 SDK 编译成 DEX/JAR、安装到 Pixel 并通过部署读回；构建物、安装回执、适配 helper 和原始退出记录留在受控目录。
+
 > 2026-10-30新增要求：用户已明确要求本人手势页出现就自动输入，并处理与运行器的冲突。单实例检测和共享输入锁已安装；09:19—09:20三项实机验证通过（冷启动、再次重开、显式入口重叠），均仅输入一次并进入主页。以下单次输入修复和08:27测试保留其当时范围。
 
 2026-10-30 已在现有Pixel登录入口安装受控适配，使用原有凭据；不改密码、账号、调度或业务状态。公开仅含自有通用控制器及合成测试，设备适配、账号匹配标记和配置均私存。

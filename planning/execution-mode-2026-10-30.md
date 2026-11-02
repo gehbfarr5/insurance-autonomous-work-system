@@ -193,3 +193,48 @@ AI原TimeoutExpired字符串被截断，原记录缺具体SSH子阶段和精确�
 签到补充脱敏回执已实际下载，原路径为同日主流程result.json的signPhase：09:10:10未签/余额527，SIGNED增量0.5，09:11:57已签/余额527.5，之后主流程重复检查才SKIP_ALREADY_SIGNED。差额独立核对一致。因此前节表中“本轮新增签到奖励不能推出”由本补充更新，当前可确认本日定时轮完成签到+0.5。旧导出覆盖不足和本机先前解读保留追溯，不再用后半段SKIP概括整轮。
 
 下一优先项：保持唯一明日09:00任务，读取下一自然运行的结构化完成/错误回执；不得重放今日SENT。若再有传输错误，依新阶段/预算定位具体主路径；客温客价独立回执、真实成功空、奖励归因及原有扩展/恢复缺口继续保留。P50/月度规划继续挂起。
+
+
+## Pixel 登录助手组件生命周期修复与跨日核查｜2026-11-02
+
+### 本地问题与根因
+
+用户要求在本人手势页出现时自动输入，并处理与运行器显式入口冲突。此前的实机用例已证明冷启动和冲突合并各只输入一次，但常驻守护长期稳定性未验收。10月30日定向复核发现：状态文件仍写 `watching`，其 PID 已无锁持有者；Android 退出记录显示 AutoX 脚本引擎在组件状态变化后退出。两个现有 helper 的 `EXIT` trap 都无条件运行 `pm default-state`，启动路径还用 `pm enable`；AOSP shell 对组件状态变更传入 flags=0。即使“already running”分支，退出时也会改组件状态并结束 AutoX 引擎，留下陈旧状态文件。
+
+### 修复、验证和部署证据
+
+- 新增公开的 [`AuthComponentState.java`](../tools/pixel-auth/AuthComponentState.java)：Android 15/API 35 精确 AIDL 签名，root-only、固定 AutoX 启动 Activity、只允许 `get` / `set 0|1|2`。写入使用 `DONT_KILL_APP` 并立即读回；不支持的版本/签名直接失败，没有静默 API 回退。
+- 两个本地 helper 已备份并有限替换：只有确需启动且持有原子目录 guard 时才读原组件状态、临时启用、退出时恢复并校验；已运行/健康路径不改组件。Guard 采用目录原子创建及 owner 校验；忙/owner 不明时失败关闭，不自动清理。monitor-start 必须同时确认锁 inode、PID匹配和新鲜心跳，不再把状态 JSON 单独作为存活证据。
+- 第一次设备启动测试暴露 root 子进程未继承 Termux `flock` 文件描述符，导致启动超时（未输入、操作锁已释放）；改用原子目录 guard 后继续。该失败与前述组件生命周期根因分别记录，没有用成功结果覆盖失败记录。
+- mock 启动器四路径通过。修复后实机回归 `PASS`：组件回到原默认态后手动冷启动，自动输入1次并稳定到登录后主页；自动触发与显式入口重叠总计1次；重复启动守护无额外输入。认证保护和操作 guard 解除；未派发签到、领取、客户交互或其他业务动作。原凭据未改，helper/安装物在本地先备份。
+- 11月2日08:55:48 Asia/Shanghai SSH只读复核：守护状态 `watching` 且 `guardBlocked=false`；PID及锁 inode与10月30日部署读数一致，进程实际存在、锁持有者1，心跳年龄2秒；组件恢复值0，三个本轮/设备操作 guard 均不存在；设备运行时间428469秒。距离部署读数67.56小时。**跨日守护存活读数 PASS**；这是两个带时点的只读观察，不是连续监控，也不是整机恢复/重启或业务长期运行验收。
+- 私有证据位于 `.private/continuation-20261030/`：安装前后哈希与备份、Android退出记录、4条 mock 输出、两组设备用例及11月2日状态回执。无需公开的设备配置、手势、凭据和原始输出均未纳入仓库。
+
+官方 `PackageManager.DONT_KILL_APP` 说明“不希望杀掉包含该组件的应用”，并明确提醒组件状态变化仍可能造成应用行为不可预测；因此变更严格限定于单个固定组件并做了实际锁/心跳核验。[官方 API](https://developer.android.com/reference/android/content/pm/PackageManager#DONT_KILL_APP)；[AOSP shell 对应代码](https://android.googlesource.com/platform/frameworks/base/+/4ce707990cdcf0ea0af5a19159ab968db8bede80/services/core/java/com/android/server/pm/PackageManagerShellCommand.java#2301)。
+
+### 尚未核实与接续
+
+11月2日08:57本机 Mac 锁屏，MUSE 原生界面读取失败；当时无法确认当天09:00任务是否已运行，10月30日09:00是最近一次成功核对的调度快照。未重跑业务、未更改调度、未改 SSH/网络/密钥。解锁后先只读检查当前运行/锁/排程及已有结果；当天业务绝不补跑、SENT 不重问。登录助手状态转换及守护跨日存活已有实机读数，不做重复组件状态变更。
+
+#### 解锁后 MUSE 旁聊只读核查｜2026-11-02 08:59
+
+用户解锁后，原「阳光森林每日执行部署」旁聊可读。可见的 MUSE 日报摘要称：
+
+- **10月31日：** `signPhase` 为 `SIGNED +0.5`（余额544→544.5），主流程随后 `SKIP_ALREADY_SIGNED`。时光轴回执为 `VIEWED`、6055ms、`awardAcknowledged=true`，未保存客户内容；客温客价仍无独立回执；智能助理为 `SENT/REVIEW`，因node对账超时0.08秒、无after回执而未确认答案；一键领取已有奖励 `COLLECTED +6.5`，余额551、待领空；主流程及清理均记PASS。
+- **11月1日：** 主流程 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，记录09:01:56；五项均未进入业务阶段，故签到未完成而非“签到跳过”。智能助理保持 `INTENT/NOT_SENT`、未提问/重发；清理PASS、APP停止、设备锁和runner.lock释放。MUSE摘要称防重state仍11条，未新增记录。
+
+上述10月31/11月1事实来自旁聊可见摘要，原始result/receipt包尚未单独下载复核，公开记录不将其升格为原文件独立验收。08:59已向同一旁聊发出用户授权的一次性只读请求，要求核对11月2日现有排程、在途进程/锁及当天已有结果，明确禁止启动/停止/等待/重跑或变更。当时截图显示MUSE正在处理；之后返回的快照见下节。此前08:57“Mac锁屏、尚未送达”的记录保留为当时状态，不再代表当前。
+
+#### MUSE 只读快照下载与校验｜2026-11-02 约08:59—09:00
+
+已从原旁聊下载 `sunshine-forest-20261102-readonly-verification.zip` 至本机忽略的 `.private/continuation-20261030/`。UI报告的外层SHA-256与本机计算一致：`2fa8dd52fef6c6863cd6549608ab817b97923b227b132f862b041f72eb21b117`；包内 `HASHES.txt` 列出的6个JSON/README成员均逐一匹配。包含8个来源代码元数据条目的清单，但未含对应源文件字节，本机无法据此独立核对这些源哈希。
+
+只读快照的分层事实如下，均按该检查时点而非当前实时状态记录：
+
+- 唯一任务 `sunshine-forest-daily-execution` 已启用，时区 `Asia/Shanghai`，每日09:00；11月2日轮次当时 `in_flight=true`、running 1、queued 0，下次11月3日09:00。调度层上次记录为11月1日09:05:09 failed，且与业务结果分层。
+- MUSE包称主流程 `run.py run` 在跑、`runner.lock` 为BUSY；仅有08:58:59的一条prepare事件，没有 `result.json` 或快照。故这是准备阶段的进行中状态，不能报作五项完成或最终失败。
+- 助理段已有 `REVIEW / UnsafeState: PREPARE_TIMEOUT_NO_FALLBACK`、`NOT_SENT`，记录08:58:15，cleanup PASS；`assistant.json` 为 `INTENT / NOT_SENT`。
+- 五项分开：签到 `signPhase=null`、后续 `SKIP=null`；时光轴无当日条目；客温客价无独立回执；智能助理 REVIEW；领取无当日记录。没有把空值解释成“已跳过”或“未触发”的终态。
+- 没有等待、访问手机、开始/停止/干预运行或重放业务；当日主流程完成与否仍需以后读取自然产生的最终记录，不能用本快照代替。
+
+包及脱敏逐文件索引记入 `planning/remaining-work-evidence-2026-10-29.json`。10月31/11月1仍只有可见日报摘要，没有其原始结果包。登录助手触发/去重及守护跨日读数已有实证；AI答案/奖励、客温客价独立结果、真实成功空列表、五扩展、完整官方时点、整机恢复仍按既定关口待核。P50/月度规划继续挂起；没有新增持续运行任务。

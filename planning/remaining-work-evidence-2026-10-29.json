@@ -743,5 +743,208 @@
       "bytes": 23753,
       "sha256": "3e5d070d54dbcc99e5eaa4bcbae72d97c8f7a4d7d39d37f5c16bbf80ef85c7cf"
     }
+  },
+  "authenticationLifecycleRepair20261102": {
+    "recordedAt": "2026-11-02T08:55:48+08:00",
+    "source": "Pixel local helper source and Android exit-info; same PID/lock-inode and live heartbeat compared with deployment snapshot; private logs retained locally",
+    "rootCause": "Both legacy helper EXIT traps unconditionally called pm default-state; AOSP shell passed flags=0 for setComponentEnabledSetting. Changing the target component state terminated the AutoX script engine, while the status JSON stayed stale.",
+    "publicSource": {
+      "path": "tools/pixel-auth/AuthComponentState.java",
+      "sha256": "87dac295f0cbb483d9b1dbeebf12d6367b8bbbf0ff38cc02ab85cfea23f197af",
+      "runtime": "Android 15/API 35; root-only; fixed component; exact Binder method; DONT_KILL_APP; readback; no API fallback"
+    },
+    "deployment": {
+      "status": "PASS",
+      "helpers": "pixel-auth-start and pixel-auth-monitor-start replaced after backup; credentials unchanged",
+      "firstAttempt": "FAIL/AUTOMATIC_LOGIN_TIMEOUT before guard fix; no input; operation lock released; preserved in private evidence",
+      "finalDeviceTests": {
+        "status": "PASS",
+        "cases": [
+          "cold manual open after component restore: automatic input once, stable login page",
+          "automatic and explicit overlap: one total input",
+          "duplicate monitor start: no extra input"
+        ],
+        "mockJoinCases": 4,
+        "businessDispatched": false
+      }
+    },
+    "crossDayLiveness": {
+      "status": "PASS_READ_ONLY_TWO_POINT_OBSERVATION",
+      "observedAt": "2026-11-02T08:55:48+08:00",
+      "hoursSinceDeploymentSnapshot": 67.56,
+      "samePid": true,
+      "sameLockInode": true,
+      "freshHeartbeatAgeSeconds": 2,
+      "kernelLockOwners": 1,
+      "componentState": 0,
+      "deviceUptimeSeconds": 428469.69,
+      "operationGuardsPresent": false,
+      "limits": [
+        "not continuous sampling",
+        "not whole-device restore/reboot acceptance",
+        "not business automation acceptance"
+      ]
+    },
+    "dailyTask": {
+      "lastVerifiedScheduleSnapshot": "2026-11-02 read-only package; enabled daily 09:00 Asia/Shanghai; next run 2026-11-03 09:00 CST",
+      "2026-11-02ScheduleAndNaturalRun": "SNAPSHOT_VERIFIED_IN_PROGRESS_NOT_TERMINAL; at approx 08:59-09:00, main run remained in prepare, runner.lock BUSY, no result.json/snapshots; no waiting or intervention",
+      "currentReadOnlyMUSERequest": "sent to the existing sidechat after user unlock; read-only response/package received and locally hash-verified",
+      "2026-11-02InitialObservation": "At 08:55 Asia/Shanghai, MUSE UI read failed because Mac was locked; no task status inferred.",
+      "2026-11-02CurrentReadOnlyMUSERequest": {
+        "status": "RESPONSE_EXPORTED_AND_HASH_VERIFIED",
+        "sentAt": "2026-11-02T08:59+08:00",
+        "observationWindowLocal": "approximately 08:59-09:00 Asia/Shanghai, per package README",
+        "scope": "schedule definition, current in-flight/queue/locks/processes, existing current-day sanitized results only",
+        "noBusinessAction": true,
+        "package": "sunshine-forest-20261102-readonly-verification.zip",
+        "packageSha256": "2fa8dd52fef6c6863cd6549608ab817b97923b227b132f862b041f72eb21b117"
+      },
+      "currentScheduleAndNaturalRun": "SCHEDULE_VERIFIED; NATURAL_RUN_SNAPSHOT_IN_PROGRESS; final same-day result not yet available in snapshot"
+    },
+    "privateEvidenceRoot": ".private/continuation-20261030",
+    "status": "PASS_AUTH_REGRESSION_AND_CROSSDAY_LIVENESS; DAILY_RUN_STATUS_UNVERIFIED"
+  },
+  "museNaturalSummaries20261031_20261101": {
+    "observedAt": "2026-11-02T08:59+08:00",
+    "sourceType": "visible MUSE sidechat daily-report summaries; not independent raw result/receipt downloads",
+    "2026-10-31": {
+      "main": "PASS per MUSE summary; cleanup PASS; recorded 09:13:20",
+      "signPhase": {
+        "receipt": "SIGNED",
+        "delta": 0.5,
+        "balance": "544 to 544.5",
+        "laterMainDecision": "SKIP_ALREADY_SIGNED"
+      },
+      "timeline": {
+        "status": "VIEWED",
+        "visibleMs": 6055,
+        "awardAcknowledged": true,
+        "customerContentSaved": false
+      },
+      "customerTemperatureValue": "No independent receipt; only shared timeline navigation/generic confirmation",
+      "assistant": {
+        "status": "SENT/REVIEW",
+        "answerConfirmed": false,
+        "summaryError": "node reconciliation timeout 0.08s; no after receipt or answer-length observation",
+        "replay": "not repeated"
+      },
+      "collect": {
+        "status": "COLLECTED",
+        "delta": 6.5,
+        "balanceAfter": 551,
+        "pendingEmpty": true
+      }
+    },
+    "2026-11-01": {
+      "main": "BLOCKED",
+      "reason": "PREPARE_TIMEOUT_NO_FALLBACK",
+      "recordedAt": "09:01:56",
+      "fiveItemsEnteredBusinessPhase": false,
+      "assistant": {
+        "status": "INTENT/NOT_SENT",
+        "askedOrRepeated": false
+      },
+      "cleanup": "PASS per MUSE summary; app stopped; device and runner locks released",
+      "dedupe": "11 prior records, no new entry per MUSE summary"
+    },
+    "rawPackageDownloaded": false,
+    "evidenceLimit": "Use these as reported summaries only until source packages are independently downloaded."
+  },
+  "museSnapshot20261102": {
+    "source": "User-authorized read-only response in existing MUSE sidechat; local UI download and archive integrity checks",
+    "observationWindowLocal": "approximately 2026-11-02 08:59-09:00 Asia/Shanghai",
+    "package": {
+      "name": "sunshine-forest-20261102-readonly-verification.zip",
+      "bytes": 5188,
+      "sha256": "2fa8dd52fef6c6863cd6549608ab817b97923b227b132f862b041f72eb21b117",
+      "privatePath": ".private/continuation-20261030/sunshine-forest-20261102-readonly-verification.zip",
+      "ignoredByGit": true,
+      "memberHashesVerifiedAgainstIncludedHASHES": 6,
+      "members": [
+        {
+          "name": "SCHEDULE_AND_STATE.json",
+          "bytes": 1054,
+          "sha256": "4ce40bb388ade6baddbe01b59baa7a9828042ca2238e0f6e4eb53607ace2725e",
+          "verifiedAgainstPackageManifest": true
+        },
+        {
+          "name": "ASSISTANT_EXISTING_RESULT.json",
+          "bytes": 777,
+          "sha256": "c4e3ac2ec57b7f9f1469de6e1482da0884d6e69bf090e8c8cd454da966c7c1fe",
+          "verifiedAgainstPackageManifest": true
+        },
+        {
+          "name": "MAIN_RUN_IN_PROGRESS.json",
+          "bytes": 457,
+          "sha256": "f3b8de885a38c38f5c25bd253b0e5c8cfe74c1fd4cfdf197bca77ef07284788c",
+          "verifiedAgainstPackageManifest": true
+        },
+        {
+          "name": "FIVE_ITEMS.json",
+          "bytes": 955,
+          "sha256": "209099e5e2b6ae3908c29618e8cb5db9d84a34de6530c34ab4e3de62b64eab66",
+          "verifiedAgainstPackageManifest": true
+        },
+        {
+          "name": "SOURCE_MANIFEST.json",
+          "bytes": 1224,
+          "sha256": "8d19bdafe79fadf42629ac998910bf949ce9251dc12e6a8fac68d5bb795f5269",
+          "verifiedAgainstPackageManifest": true
+        },
+        {
+          "name": "README.md",
+          "bytes": 1782,
+          "sha256": "4e44d0d92ee0ce418b30db1cecf36aae66afe8915732f166ae73d23eabad3d14",
+          "verifiedAgainstPackageManifest": true
+        }
+      ],
+      "sourceManifestEntriesReported": 8,
+      "sourceManifestIncludedSourceBytes": false,
+      "sourceHashesIndependentlyComparedToSourceFiles": false
+    },
+    "schedule": {
+      "enabled": true,
+      "timezone": "Asia/Shanghai",
+      "time": "09:00:00 daily",
+      "nextRun": "2026-11-03 09:00:00 CST",
+      "snapshotInFlight": true,
+      "running": 1,
+      "queued": 0,
+      "lastSchedulerStatus": "failed (scheduler layer only)",
+      "lastSchedulerRun": "2026-11-01 09:05:09 CST"
+    },
+    "mainRun": {
+      "snapshotStatus": "IN_PROGRESS",
+      "stage": "prepare",
+      "runnerLock": "BUSY",
+      "resultJsonPresent": false,
+      "snapshotFilesPresent": false,
+      "businessPhaseEntered": "not evidenced in this snapshot",
+      "cleanup": "not yet applicable to the in-progress main run"
+    },
+    "assistant": {
+      "status": "REVIEW",
+      "reason": "UnsafeState: PREPARE_TIMEOUT_NO_FALLBACK",
+      "questionStatus": "NOT_SENT",
+      "cleanup": "PASS",
+      "assistantJson": "INTENT / NOT_SENT"
+    },
+    "fiveItems": {
+      "sign": {
+        "signPhase": null,
+        "laterSkip": null,
+        "status": "NOT_YET_RECORDED"
+      },
+      "timelineReadonly": "NOT_YET_RECORDED",
+      "customerTemperatureValueReadonly": "NOT_YET_RECORDED; no separate receipt",
+      "assistant": "REVIEW / NOT_SENT",
+      "collect": "NOT_YET_RECORDED"
+    },
+    "limits": [
+      "MUSE package is a time-bounded in-progress snapshot, not the natural-run final result",
+      "No process was started, stopped, waited for, or modified; no phone access or business replay",
+      "10-31 and 11-01 raw result packages remain independently unavailable",
+      "archive member integrity verified locally; SOURCE_MANIFEST declares hashes but source file bytes were not included for local comparison"
+    ]
   }
 }
