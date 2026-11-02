@@ -243,8 +243,23 @@ AI原TimeoutExpired字符串被截断，原记录缺具体SSH子阶段和精确�
 
 稍后在原旁聊看到一条最终日报，明确与08:59—09:00进行中快照区分：当日未完成，两段均在准备阶段阻断。主流程于09:00:57记为 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`；未到森林WebView/CDP目标，没有签到动作或前后余额，时光轴与客温客价未执行，一键领取未执行、余额和待领均未读取。助理段 `REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`（08:58:15），`assistant.json` 仍 `INTENT / NOT_SENT`，没有提问或重发。清理 `PASS`：检查关闭、应用停止、`runner.lock` 空闲，无残留运行。旁聊摘要称 `state.json` 仍11条，最后可信终态是10月31日余额551、待领空，防重记录保留；原有每日任务次日09:00照常，不补跑11月2日五项。
 
-当时这份最终结果仅为旁聊摘要；已在原旁聊按授权发出有限只读导出请求。后续收到 `sunshine-forest-20261102-final-desensitized.zip` 并保存于本机受控私有目录。旁聊显示外层SHA-256为 `a2264ec978d660274f8755a736fa474b5d05d290b845257372f45dbd5e25ad3c`；本机两次独立下载的文件字节一致，计算值均为 `a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c`，在第54位 `d`/`b` 不同。因此**外层SHA校验未通过，压缩包身份尚未由旁聊显示摘要认证**。ZIP结构测试通过；包内 `HASHES.txt` 列出的7个成员与其自带清单全部匹配，但这是包内自洽检查，不能消除此差异。`SOURCE_MANIFEST.json` 有8条源码元数据，未含源码字节，故源码哈希也未能与源码文件独立比较。原包及第二次下载留在本机，不纳入公开仓库。
+当时这份最终结果仅为旁聊摘要；已在原旁聊按授权发出有限只读导出请求。后续收到 `sunshine-forest-20261102-final-desensitized.zip` 并保存于本机受控私有目录。首次旁聊显示外层SHA-256为 `a2264ec978d660274f8755a736fa474b5d05d290b845257372f45dbd5e25ad3c`；本机两次独立下载的文件字节一致，计算值均为 `a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c`，当时在第54位 `d`/`b` 不同。该次初审结论之后由09:42对原附件字节的重算所更正，见本节末尾；ZIP结构测试通过；包内 `HASHES.txt` 列出的7个成员与其自带清单全部匹配。`SOURCE_MANIFEST.json` 有8条源码元数据，未含源码字节，故源码哈希也未能与源码文件独立比较。脱敏包保留在本机受控忽略目录，不纳入公开仓库。
 
-**下载包所列结果（外层认证未通过）：** 主流程 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，记录09:00:57.695；未进入业务、未到WebView/CDP，无签到动作或前后余额。助理 `REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`，记录08:58:15.147，`assistant.json` 为 `INTENT / NOT_SENT`；无问题文本、无 `sentAt` 字段。包内称五项均未执行（助理未发送）；清理PASS、runner.lock FREE、无残留运行。state仍11条，最后可信终态日期为10月31日、待领空。主流程结果缺少 `businessDate`、`before/after`、`decisions`、`signPhase`、`readOnlyTimeline`、`preparation`、`warnings`、`observedTotalDelta` 及所有业务阶段/回执字段；按包内明确缺失处理，不推断。日常任务仍启用、Asia/Shanghai每日09:00，下一次11月3日09:00；11月2日不补跑。以上只能作为下载包内容的记录；外层身份未认证，不代表业务成功或全项目验收通过。
+**下载包所列结果（基于现已认证的脱敏包）：** 主流程 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，记录09:00:57.695；未进入业务、未到WebView/CDP，无签到动作或前后余额。助理 `REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`，记录08:58:15.147，`assistant.json` 为 `INTENT / NOT_SENT`；无问题文本、无 `sentAt` 字段。包内称五项均未执行（助理未发送）；清理PASS、runner.lock FREE、无残留运行。state仍11条，最后可信终态日期为10月31日、待领空。主流程结果缺少 `businessDate`、`before/after`、`decisions`、`signPhase`、`readOnlyTimeline`、`preparation`、`warnings`、`observedTotalDelta` 及所有业务阶段/回执字段；按包内明确缺失处理，不推断。日常任务仍启用、Asia/Shanghai每日09:00，下一次11月3日09:00；11月2日不补跑。结果包身份经09:42原附件SHA-256重算已认证；这只确认脱敏包字节，不扩大业务验收范围。
 
 登录助手触发/去重及守护跨日读数已有实证；AI答案/奖励、客温客价独立结果、真实成功空列表、五扩展、完整官方时点、整机恢复仍按既定关口待核。P50/月度规划继续挂起；没有新增持续运行任务。
+
+
+### Pixel 监控健康分支复验与 MUSE 外层哈希追核｜2026-11-02 09:38 起
+
+- 09:38:47 Asia/Shanghai 通过现有 SSH 别名只读确认连接目标为 Pixel 3a（Android 15/API 35）。monitor-start helper 的 SHA-256 为 `6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，shell 语法检查通过。
+- 调用现有 helper 后，它验证原守护 PID、锁 inode与不超过25秒的新鲜心跳相符，走健康短路并返回；没有创建新守护进程，没有启动 App、输入密码或执行阳光森林业务。这个检查向既有本地启动日志追加了一行状态记录，故准确称为健康分支复核，不称完全无写入的纯读取。
+- 原 MUSE 旁聊仍显示最终脱敏ZIP外层哈希与本机两次下载的实际哈希差一位。本轮已在同一旁聊发出只读请求，要求对现有附件按实际字节复算SHA-256与字节数；未要求生成新包或运行任何代码，等待回复。收到并核对前，外层身份仍为未验证。
+- 本轮未改 SSH/网络/密钥、Pixel组件状态、每日任务、state或cron；没有重跑11月2日业务。私有 helper 副本与原始日志仍在 Git 忽略目录，公开仓库只记录脱敏事实和 helper 哈希。
+
+本机新证据索引见 [`remaining-work-evidence-2026-10-29.json`](remaining-work-evidence-2026-10-29.json)。
+
+
+### MUSE 原附件外层哈希更正｜2026-11-02 09:42
+
+前节记录了首次展示哈希与原附件后续复算值之间的单字符差异；复算值匹配本机文件，不能据此认定 ZIP 字节损坏。按本轮限定请求，MUSE在原「阳光森林每日执行部署」旁聊对**既有附件的实际字节**重新计算SHA-256，返回值 `a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c`；本机从该附件下载的5,854字节文件 `sunshine-forest-20261102-final-verified.zip` 计算值相同，ZIP有8个成员。故外层身份校验现为 **PASS**，此前“外层未认证”结论在本节更正，原始差异记录仍保留追溯。未生成新结果包、未运行代码、未访问手机或改动业务/调度/state/cron。包内7个结果成员的哈希此前已独立匹配；源码清单仍只有元数据、没有源文件字节。

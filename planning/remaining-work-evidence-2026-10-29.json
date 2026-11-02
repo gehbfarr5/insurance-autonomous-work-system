@@ -1011,7 +1011,7 @@
       }
     },
     "finalPackageExportRequest": {
-      "status": "DOWNLOADED_LOCAL_OUTER_SHA256_MISMATCH; EMBEDDED_MEMBER_HASHES_MATCH",
+      "status": "OUTER_SHA256_VERIFIED_AFTER_RECOMPUTING_EXISTING_ATTACHMENT",
       "requestedAtApproxLocal": "2026-11-02T09:06+08:00",
       "scope": "existing final result, assistant/NOT_SENT, prepare and cleanup, final locks/processes, schedule and five-item conclusions; sanitized per-file hashes",
       "noRunOrBusinessActionRequested": true,
@@ -1019,7 +1019,7 @@
       "completedAtApproxLocal": "2026-11-02T09:07+08:00",
       "sha256DisplayedByMUSE": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45dbd5e25ad3c",
       "sha256ComputedLocally": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
-      "outerSha256Match": false,
+      "outerSha256Match": true,
       "packageSizeBytes": 5854,
       "repeatDownloadsByteIdentical": true,
       "zipStructureTest": "PASS",
@@ -1033,7 +1033,66 @@
         "SOURCE_MANIFEST.json": "25410ac0b3fa10617e437bd858dbc603a41b07f32986da1e04410152eb662bf5",
         "README.md": "d3ceba453f904f74558206760e49ce03c89dc6f327847032d2937b90d484044f"
       },
-      "sourceBytesIncluded": false
+      "sourceBytesIncluded": false,
+      "initialStatus": "DOWNLOADED_LOCAL_OUTER_SHA256_MISMATCH; EMBEDDED_MEMBER_HASHES_MATCH",
+      "initialSha256DisplayedByMUSE": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45dbd5e25ad3c",
+      "initialSha256ComputedLocally": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
+      "initialOuterSha256Match": false,
+      "checksumReconciliation": {
+        "status": "PASS",
+        "recomputedAtApproxLocal": "2026-11-02T09:42+08:00",
+        "source": "MUSE read-only recalculation from the exact existing sidechat attachment bytes; response was independently compared with the local downloaded file",
+        "sha256RecomputedByMUSE": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
+        "localFile": "sunshine-forest-20261102-final-verified.zip",
+        "localBytes": 5854,
+        "localSha256": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
+        "localMemberCount": 8,
+        "match": true,
+        "correction": "The initially displayed hash string differed by one character from the hash recomputed from the original attachment bytes; the local archive matches the recomputed value."
+      }
     }
+  },
+  "pixelMonitorReadOnly20261102": {
+    "observedAtLocal": "2026-11-02T09:38:47+08:00",
+    "source": "Existing SSH alias and installed monitor-start helper; raw output/log remain in ignored private evidence area",
+    "device": {
+      "model": "Pixel 3a",
+      "codename": "sargo",
+      "android": "15",
+      "sdk": 35
+    },
+    "helperSha256": "6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f",
+    "shellSyntax": "PASS",
+    "healthCheck": {
+      "status": "PASS_EXISTING_MONITOR_HEALTHY",
+      "pidLockInodeMatch": true,
+      "heartbeatAgeSecondsAtMost": 25,
+      "newMonitorStarted": false,
+      "appOpened": false,
+      "authenticationInput": false,
+      "forestBusinessAction": false,
+      "helperReturnedViaHealthyEarlyExit": true,
+      "localLogAppendBytes": 37
+    },
+    "limits": [
+      "point-in-time liveness observation, not continuous monitoring",
+      "not full-device reboot or restore acceptance",
+      "does not verify forest daily business or reward outcomes"
+    ],
+    "privateEvidenceRoot": ".private/continuation-20261030"
+  },
+  "museFinalPackageChecksumFollowup20261102": {
+    "sentAtApproxLocal": "2026-11-02T09:42+08:00",
+    "destination": "existing 阳光森林每日执行部署 MUSE sidechat",
+    "status": "RESPONSE_RECEIVED_LOCAL_HASH_MATCH",
+    "requestScope": "Recompute SHA-256 and byte count from the existing attached final sanitized ZIP bytes only",
+    "newPackageRequested": false,
+    "codeExecutionRequested": false,
+    "businessOrPhoneActionRequested": false,
+    "stateOrScheduleChangeRequested": false,
+    "identityRemainsUnverifiedUntilResponseAndLocalComparison": false,
+    "responseAtApproxLocal": "2026-11-02T09:42+08:00",
+    "recomputedSha256": "a2264ec978d660274f8755a736fa474b5d05d290b845257372f45bbd5e25ad3c",
+    "localComparison": "PASS; 5854 bytes, 8 archive members"
   }
 }
