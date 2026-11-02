@@ -77,6 +77,18 @@
 - **Work 不自动继承 Chat PASS**；Work Cloud / Local 仍需分别验收，之前的 `WORK_LOCAL_UNAVAILABLE` 证据不变。
 - [本次 POC 任务书与实际回执](./chatgpt-chat-sites-mcp-poc-2026-11-01.md)。
 
+## 2026-11-02 Work Cloud Sites MCP 实际调用：PASS
+
+**`WORK_SITES_MCP_PASS`（只读虚构工具，用户提供的 Work Cloud 原生调用回执）。**
+
+- 用户回执明确运行环境为 **ChatGPT Work Cloud**，远程 Linux x86_64 工作区（路径仅属于任务沙箱）；**不是 Work Local**。
+- 在该 Work 会话中，工具路由实际加载已存在的私人 Sites 插件 **`iCloud MCP Capability Test`**。执行 `demo_contacts_groups_list({})`，真实工具结果为两个虚构分组：`测试客户=3`、`测试家庭=2`。未复用此前 Chat 回执。
+- 目录级安装标记未能通过公开目录查询取得，但这一限制不影响**当前 Work 会话工具真正可见并可调用**的事实。
+- 加上此前 Chat 会话对**同一个 Sites 插件**的真实演示调用 `SITES_CHAT_MCP_PASS`，已证明两种模式**可以使用同一插件入口**。不必为了 Chat 与 Work 两个界面各新建一个 Site、插件或桥接 Secret。
+- **尚未证明** Work 可调用真实 `icloud_contacts_groups_list` 并读取 iCloud；用户本轮明确没有调用真实工具、没有写入。首尔桥接/Worker 实际生产链路仍 `PARTIAL`；当前原 Site v2 的源码 checkout 又被官方 Sites 执行环境 Git 代理故障阻断（`git ls-remote` 无法连接 `127.0.0.1:7897`，exit 128）。
+- 后续无需重复 Chat/Work 对虚构 MCP 的兼容性测试。应集中处理**原 Site 源码恢复/外连桥接**，获准后再为 Chat、Work 各自做真实 iCloud 只读验收。
+- 此项为用户 Work 操作回执，当前 Chat 会话不冒称独立进入 Work Cloud 验证；此前 Chat 的虚构工具则已在 Chat 中独立调用过。
+
 ## 相关追踪
 
 - [Issue #4：首尔 CardDAV 核心服务](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/4)
