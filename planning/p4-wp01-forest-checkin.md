@@ -10,7 +10,7 @@ live源码确认runner先写命令/使能标记、发wake key，再force-stop并
 
 ### Keyguard只读观测候选v2｜2026-11-02 21:52
 
-现有v1诊断只记录屏幕亮灭，不能还原Keyguard锁屏状态。私有review-only v2在monitor的同一采样点加入`keyguardShowing`（`isKeyguardLocked()`）与`deviceLocked`（`isDeviceLocked()`）布尔值和固定读取状态码，保留所有既有触发/输入门禁，读取失败时不改变业务分支但明确记`READ_FAILED`。官方说明`isKeyguardLocked()`可在屏幕熄灭时为true且不等同于要求认证；`isDeviceLocked()`才表示当前用户应用是否仍需认证。候选及采集器schema v2的离线集成/脱敏检查已通过，review包SHA-256 `07008d505a301bcc5f044c69bb43abadfde33444df6ca3e50ea96778e6c838f9`；未安装、未运行于Pixel，AutoX实机兼容未知。安装或重启监控需单独授权及备份/回滚门禁。
+现有v1诊断只记录屏幕亮灭，不能还原Keyguard锁屏状态。私有review-only v2在monitor的同一采样点加入`keyguardShowing`（`isKeyguardLocked()`）与`deviceLocked`（`isDeviceLocked()`）布尔值和固定读取状态码，保留所有既有触发/输入门禁，读取失败时不改变业务分支但明确记`READ_FAILED`。官方说明`isKeyguardLocked()`可在屏幕熄灭时为true且不等同于要求认证；`isDeviceLocked()`才表示当前用户应用是否仍需认证。候选及采集器schema v2的离线集成/脱敏检查已通过，候选JS SHA-256 `c34801dcf6d06d3a48395e0ec927c83fd31e9c26a4595218f3357f7e2ca1d1bb`，review包SHA-256 `07008d505a301bcc5f044c69bb43abadfde33444df6ca3e50ea96778e6c838f9`；未安装、未运行于Pixel，AutoX实机兼容未知。安装或重启监控需单独授权及备份/回滚门禁。
 
 21:54通过既有SSH只读确认Pixel 3a / Android 15，当前部署版`monitor.js`哈希仍为`238d86a8ec06c5a92579ea54377956f282cbed824c32b2c56823a2924cb906fd`，`watching`、`guardBlocked=false`、`requests=6`，未发现v2诊断文件；设备保持原基线，本次未写设备或触发业务。该当前状态不回溯11月2日历史锁屏状态。
 
