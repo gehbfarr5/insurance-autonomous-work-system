@@ -235,3 +235,9 @@ review-only归档`auth-diagnostic-review-only-keyguard-v2.zip` SHA-256 `07008d50
 v3私有review-only包SHA-256为`edb4e0425f6379fac41e53d45a781e028ca9597a6df8734ed9691bb5778ccc26`；候选monitor SHA-256为`40f1fd5ea62e726f351e3e0f3203e07777c9a34ce1b56898e1615344c76e17a7`，严格只读采集器SHA-256为`2f2e50fc869c4ee8ed3bb88ff1b649323bec671f0f3426cfee8e78bdb68565da`。Node语法及门禁集成、Python语法/采集器检查、远端收集shell选择逻辑测试、ZIP完整性及包内清单哈希均通过。诊断写失败时固定标记/Android日志为尽力报告；若无sidecar/标记，仍只能判为无诊断证据。v3仍未在Android/AutoX实机验证，未安装到Pixel；针对旧v2哈希的部署授权不得用于v3。部署v3需以新哈希重新明确授权，并先备份、核对、恢复路径；不补跑业务或改调度/state。
 
 22:10再次只读核对Pixel：live monitor仍为原基线哈希`238d86a8…`，启动器哈希`6dd8179d…`，状态`watching`、`guardBlocked=false`、`requests=6`、心跳2秒、文件锁有效；无stop标记或设备操作锁。当前前台是Android Launcher而非目标应用手势页。v3未安装；本轮未写设备或触发认证派发。
+
+### 登录态字段证据补核｜2026-11-02 22:20
+
+确认现有Keyguard监控v3只能回答设备锁屏、目标应用/手势页和认证派发层状态，不能看到森林模块内部`user`、`empNoAES`、`operateFlag`各自是否存在。live v0.19 runner解析`P4ForestAuto:` JSON后直接保存完整对象`self.preparation=item`，无字段白名单丢弃扩展内容的分支；该最小脱敏片段哈希已在上文记录。
+
+为避免把已有带8秒等待的修复候选误当成纯观察，另从与安装APK内一致的`forest-prepare.js`（SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`）建立一个本地只读字段观察草案，草案只输出三个布尔值和采样时间，不输出字段值、不加等待/重试、不改原促销或路由动作。草案SHA-256 `6923c360bbeb41468594e60e6e002f1bd7f8b65968adc85f0debdc2cd6f86bb3`；Node语法及与原版逐场景的分支、属性读取顺序和动作调用对照测试通过。它尚未整合进签名APK、未装机、未实跑。若Keyguard v3自然运行仍留下`LOGIN_STATE_MISSING`的具体字段不明，完整根因验收还需对该观察草案做APK级审查、集成与单独授权；当前v3部署授权不覆盖APK替换。
