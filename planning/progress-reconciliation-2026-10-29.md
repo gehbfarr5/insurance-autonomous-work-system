@@ -180,3 +180,11 @@ Pixel于17:37:35通过原SSH别名再次只读核对：Pixel 3a / Android 15/API
 逐文件哈希核查发现首份登录态候选误用了v0.18 staging促销模块索引2559，尚未安装。v0.19 APK内脚本SHA-256为`d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`，实际索引为2561。已按该精确源码重建候选，测试mock只提供2561并通过；设备未受影响。候选仍只离线通过，AutoX运行时/live runner解析兼容未验证。
 
 另外，v0.19桥接适配器所锁定runtime bundle（SHA-256 `ade689b5…`）中的模块584静态定义把`default.user`初始化为空对象，字段`empNoAES`/`operateFlag`未在初始化时赋值。这说明早期读取为空存在机制可能，但不能把静态结构当成11月2日运行值或根因证明。
+
+### 离线解析兼容与只读采集器｜2026-11-02
+
+本机契约复核了已有MUSE v0.17脱敏run.py及脱敏v0.19 fixture：二者均对P4ForestAuto:后的完整JSON执行JSON解码，将完整对象赋给Device.preparation，并将其直接附加到最终结果；没有对白名单字段做裁剪。v0.18→v0.19补丁脚本仅有三项固定版本/错误码/资产名替换。新的本机契约测试覆盖嵌套loginState诊断字段透传，通过。
+
+证据边界：v0.17源码SHA-256为93151ce3…；v0.19 fixture SHA-256为5028250d…，属于脱敏测试夹具且明确不可部署。live v0.19原文件未导出到本机；本结论仅确认现有源码/fixture的结构化透传路径，live精确解析和Pixel AutoX执行兼容仍待验证。
+
+触发候选的workerReason也完成隐私加固：从已核对的本机auth-worker.js与attempt.js提取当前固定原因码并做白名单检查；未知原因改记OTHER。测试逐项核对原因码覆盖，并证明大写敏感样例不会进入诊断文件。另建只读Pixel sidecar采集器，只接受预期schema/字段/枚举；未知字段、原因码或超128条事件均拒绝，合成测试通过。2026-11-02 17:59只读检查Pixel 3a / Android 15的守护为watching、guardBlocked=false、requests=6；采集器在实际Pixel上返回NO_DIAGNOSTIC_FILE，与候选未安装一致。本轮无设备变更、无重启、无业务重跑。
