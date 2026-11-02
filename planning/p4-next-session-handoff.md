@@ -16,6 +16,8 @@
 
 18:46 CST经既有SSH别名只读复核，Pixel 3a / Android 15 / API 35；原监控PID仍存活，部署`monitor.js`哈希与已知基线一致，状态`watching`、guard未阻断、`requests=6`、心跳新鲜；sidecar采集仍为`NO_DIAGNOSTIC_FILE`。这确认当前设备保持原监控基线，候选未安装；不提供缺失的历史派发门禁值。
 
+随后只读取回当前已安装目标应用APK并在本机解析manifest；受控副本哈希与设备端一致，manifest声明了触发器匹配的手势页Activity，且设备上次更新早于10月30日实机自动触发测试。故暂不支持“Activity类名已被应用更新移除”这一解释；11月2日具体运行是否到达该Activity仍未知。APK留在Git忽略私有目录，不上传。完整证据和限制见[修复与补跑报告](forest-prepare-repair-2026-11-02.md)。
+
 本机静态契约核对、三项诊断候选集成测试、sidecar生产者到只读采集器端到端合成验证，以及私有审阅包哈希及回退边界说明核验均已完成。触发候选的`elapsedMs`已修正为相对监控启动的单调时长，700毫秒断言和集成检查通过；本机审阅包已更新，旧包保留。v0.17导出与脱敏v0.19 fixture完整透传准备JSON；精确live v0.19 runner解析器和AutoX运行兼容仍未知。约18:30 Pixel只读复核确认Pixel 3a / Android 15、AutoX主/脚本进程运行、monitor为watching、guardBlocked=false、requests=6；采集器返回NO_DIAGNOSTIC_FILE，诊断候选未安装。用户随后已确认Mac解锁；本轮直接使用本机和既有SSH核查，未依赖MUSE界面或向旁聊发送命令。下一步：触发sidecar须单独授权并会替换监控脚本、重启监控一次；森林登录态和助理入口候选先取得live解析兼容证据。无业务重跑、不改调度/state，P50/月度规划继续挂起。
 
 先读[本机修复与补跑记录](forest-prepare-repair-2026-11-02.md)，再继续既定 P4；不重开需求访谈。用户明确要求解决11月2日准备阻断并补跑一次，该次补跑已完成且没有重放。跨日验证按用户要求等到真实次日；P50/月度规划挂起。
