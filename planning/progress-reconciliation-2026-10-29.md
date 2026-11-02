@@ -122,6 +122,10 @@ v0.19交付ZIP SHA-256为`0177f6ad3de5a4618c1e83b8fb7ca23bd963ac37793ab997dfb25a
 
 最终脱敏证据包`sunshine-forest-20261102-v019-final-desensitized.zip`本机重算SHA-256为`2e2abb95d64ced6fc4d16887fd7d8cc1ca3d03286c08e8600472c95ab3486579`，与MUSE回报一致；ZIP内5个文件逐项SHA-256通过。原始日志、截图和设备内部数据保存在Git忽略的私有目录，不进入公开仓库。P50/月度规划继续挂起，跨日验证等到自然次日。
 
+### v0.19阻断字段只读取证｜2026-11-02 11:26
+
+MUSE对脱敏结果及适配源码做只读核查，未访问设备、修改代码或写入状态。助理结果的`onClickAppMatches=false`，目标菜单项`aiAlert2026`恰好一项；但没有记录`vue`值或当前方法源码。源码把Vue/方法缺失与方法体不匹配固定`NAV_PIN`合并为同一失败原因，实际分支UNKNOWN，不能据此放宽方法指纹。主流程登录态报错合并检查`user`、`empNoAES`、`operateFlag`，没有逐项存在性或采样时点，三项均UNKNOWN；不能据此判定用户已退出登录。live `assistant.py` 哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`未变；live runner为v0.19哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，本机旧导出runner为v0.17，不可作为当前运行源码。APK内`forest-prepare.js`与本机候选哈希`d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`一致；MUSE工作区无独立源码副本。下一步先完善离线只读诊断，分项记录布尔状态与采样时点、不记录字段值，保持fail-closed且不放宽固定方法pin；新的安装或实机运行需单独授权。
+
 ## 证据边界
 
 自动化运行证据表明：v0.18时bundle patch失败；v0.19时助理准备到达BridgeWebActivity，但调用入口不唯一，主流程登录态门槛失败。两次均没有业务动作或回执。没有奖励或账本变化证据。v0.19已实机安装并读回哈希/版本；这只通过安装及部分准备链路检查，不等于每日业务验收。
