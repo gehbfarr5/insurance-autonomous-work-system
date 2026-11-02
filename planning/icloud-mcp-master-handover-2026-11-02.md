@@ -133,7 +133,7 @@
 | [Cloudflare Agents](https://github.com/cloudflare/agents)、[Cloudflare OAuth Provider](https://github.com/cloudflare/workers-oauth-provider)、[MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | 可复用的远程工具、授权与可测试源码模式 | 属于未来架构候选，**没有在本项目替换/上线** |
 
 **Chat/Work 产品变化（截至本归档日期）：**
-- 2026-10-28 有 OpenAI 负责人公开表示正在研究把 Chat 与 Work 的优势合并，称并未正式推出；外部有 11 月初关于小范围测试计划的报道。**明确区分产品方向、媒体报道与当前账号实际开通状况**。
+- 2026-10-28 有 OpenAI 负责人[公开表示](https://x.com/thsottiaux/status/2115588390414581916)正在研究把 Chat 与 Work 的优势合并，称当时并未正式推出；[BleepingComputer 2026-11-01 报道](https://www.bleepingcomputer.com/news/artificial-intelligence/openai-says-its-doubling-pro-usage-limits-and-bringing-work-features-to-chat/)提到面向小范围用户的合并体验测试计划。[OpenAI ChatGPT 发布说明](https://help.openai.com/en/articles/6825453-chatgpt-release-notes)截至当前日期未提供此次合并全面开放的确认。**明确区分产品方向、媒体报道与当前账号实际开通状况**。
 - 这个变化可能减少模式切换和重复编排，但**不自动修改 Site Worker、Git 源码仓库、桥接 OAuth 或当前账号的自定义 MCP 直接接入权限**。
 - 已有独立实测的“同一个 Site 插件同时服务 Chat/Work Cloud”是稳定的设计发现；产品若合并，也不需要重新为 UI 模式配置两把 Site Secret。未来只以真实版本说明和端到端调用证据决定是否重新开启。
 
