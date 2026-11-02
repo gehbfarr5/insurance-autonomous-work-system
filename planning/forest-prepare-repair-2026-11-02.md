@@ -53,11 +53,11 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 
 - MUSE 记录里只有助理段 `control` 区的本地无障碍认证路径标记，无精确时间；没有 `target`、`gesturePage`、`accountMatch`、attempt结果、输入调用或 `page_left` 回执。该标记只能说明存在认证路径信息，不能证明本轮触发或输入。
 - 主流程只记录 11:17:26 `.MainActivity`，随后在11:17:57写出 `PREPARE_LOGIN_STATE_MISSING`；`user`、`empNoAES`、`operateFlag`各自状态及检查的精确时点均缺失，检查只知发生在上述区间内。
-- **logcat汇总更正（约18:35直接读取Pixel系统缓冲）：** 以`epoch`格式汇总的当前保留窗口为11:15:00.117—11:17:55.279，共691条系统记录，其中121条提到目标应用、72条来自Activity/WindowManager/UsageStats标签（含8条ActivityTaskManager记录）。ActivityTaskManager中的目标Activity依次为`SplashActivity`→`MainActivity`→`BridgeWebActivity`→`MainActivity`，之后再次`SplashActivity`→`MainActivity`；691条记录均未提到`GestureActivity`。但补跑起点11:14:53至11:14:59已不在当前缓冲中。更正此前“11:14—11:19只有一条11:14:34 ActivityThread记录”的不完整摘要：它不是当前系统logcat完整统计。现有日志支持“保留窗口未进入已知手势Activity”，不能排除未保留的前7秒或没有Activity切换日志的短暂UI状态。MUSE既有工作区也没有本轮认证监控日志或认证器版本哈希。
+- **logcat汇总更正（约19:00重新读取Pixel系统缓冲）：** 新读到的`epoch`日志覆盖11:14:50.663—11:17:59.686，共693条系统记录，完整覆盖11:14:53开始的补跑及11:17:57失败记录。目标应用首次出现于11:15:29.825；此前目标包提及数为0。ActivityTaskManager记录`SplashActivity`→`MainActivity`→`BridgeWebActivity`→`MainActivity`→`SplashActivity`→`MainActivity`，全部693条均未提到`GestureActivity`。这次更完整缓冲取代此前“起始前7秒缺失”的限制；仍不能排除没有Activity切换记录的短暂UI覆盖层。更正此前“11:14—11:19只有一条11:14:34 ActivityThread记录”的不完整摘要：它不是当前系统logcat完整统计。MUSE既有工作区没有本轮认证监控日志或认证器版本哈希。
 
 对已从 Pixel 安装版 APK 提取的 `forest-prepare.js` 再做静态核对：文件1493字节，SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`。`step()` 只在启动时读取一次 `__r(584).default.user`；若 `user` 不存在、`empNoAES` 为空或 `operateFlag` 未定义，立即输出 `BLOCKED / LOGIN_STATE_MISSING` 并返回。该登录态门禁没有等待/重试；后续最多8次等待只用于促销弹窗关闭及 `HOME_NOT_READY`。这确定了直接阻断的代码路径是单次登录态快照，但没有逐项诊断信息，无法判断具体缺项。
 
-**结论：** 已确认的直接阻断是森林内部三项登录态字段的合并门禁未通过；源码显示它只采样一次、不等待字段就绪。手势页识别/认证器未触发仍是可能的上游原因，但本轮没有触发/输入回执，不能归因于手势脚本；也不能排除认证已输入后应用登录态尚未装载，或字段读取路径与当前运行状态不匹配。旧的冷启动、重开及并发去重测试通过，不替代本次运行回执。不要据此修改凭据、强制登出或重跑生产业务。
+**结论：** 直接阻断是森林内部三项登录态字段的合并门禁未通过；源码显示它只采样一次、不等待字段就绪。更新后的完整logcat显示runner唤醒并启动APP后没有进入`GestureActivity`；监控请求未增、输入审计无记录，确认已知认证工作器没有被派发。因此没有证据表明密码/手势输入器执行错误；仍缺screen/page/account/guard/episode逐项历史值，以及live v0.19 runner是否执行了本机fixture所示的冷启动命令。不要据此修改凭据、强制登出或重跑生产业务。
 
 ### Pixel AutoX 输入审计补核｜2026-11-02 17:12
 
@@ -150,4 +150,16 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 
 为核实触发器的精确Activity匹配目标是否已从当前安装包移除，通过既有SSH只读读取设备安装APK到本机受控私有目录，并核对设备端/本机副本SHA-256相同。离线清单解析确认当前安装包声明了监控器匹配的手势页Activity；此前10月30日三项Pixel验证记录也观察到相同Activity，且设备报告该应用上次更新为10月22日。因此“匹配的Activity类已从当前安装包消失”不符合现有证据。APK仅留在Git忽略私有目录，没有上传。
 
-这仍不能证明11月2日窗口实际到达该Activity。该窗口保留的Activity日志未显示手势页，而起始前7秒缺失；预检查的屏幕/目标页/本人标记/guard/复核/episode历史布尔值仍没有保存。具体派发门禁仍待诊断sidecar实测，不据此修改识别逻辑或重放业务。
+这仍不能证明11月2日窗口实际到达该Activity。当前重新读取的完整系统缓冲覆盖补跑开始至失败记录，未出现该Activity；但预检查的屏幕/目标页/本人标记/guard/复核/episode历史布尔值没有保存，且系统Activity日志不能排除没有Activity切换的短暂UI覆盖层。精确派发门禁仍未知，不据此修改识别逻辑或重放业务。
+
+### 补跑唤醒与认证触发链根因细化｜2026-11-02 19:00
+
+对当前Pixel系统缓冲和本机runner来源作关联核对：11:15:29.703系统记录设备从`Dozing`唤醒，原因`WAKE_REASON_WAKE_KEY`、细节`android.policy:KEY`；目标应用首次出现于11:15:29.825，Splash于11:15:30.334启动。此前0条目标应用记录。Android官方定义`KEYCODE_WAKEUP=224`，可唤醒设备；`WAKE_REASON_WAKE_KEY`是非电源键的唤醒键事件；Dozing状态下`PowerManager.isInteractive()`为false。[KeyEvent官方文档](https://developer.android.com/reference/android/view/KeyEvent#KEYCODE_WAKEUP) [AOSP唤醒原因定义](https://android.googlesource.com/platform/frameworks/base/+/ee50d90e9d41c877bed65fdfd39240c8693f57b4/core/java/android/os/PowerManager.java#616) [PowerManager.isInteractive](https://developer.android.com/reference/android/os/PowerManager#isInteractive())
+
+本机MUSE v0.17脱敏源码（SHA-256 `93151ce3…`）及v0.19脱敏fixture（SHA-256 `5028250d…`）都含启动顺序`input keyevent 224; am force-stop; monkey launch`，并各含两处force-stop。Android官方将224定义为唤醒键；该命令与系统唤醒时间及随后Splash启动高度吻合，强烈支持runner发出唤醒键后启动了APP。因精确live v0.19 `run.py`尚未导出，这条关联仍标记为高置信推断，不声称已直接核验live命令。脱敏fixture及原始日志仅保留在本机私有目录，不进入公开仓库。
+
+已部署`monitor.js`哈希与本机受控源码一致；它只在`device.isScreenOn()`、目标包和精确`GestureActivity`同时满足时派发，源码没有唤醒调用。当前Pixel缓冲完整覆盖补跑窗口却没有`GestureActivity`，监控计数未增且没有认证输入审计。因此**直接故障不是手势输入器输入错误：输入器没有收到请求**。最有力的运行时解释是runner唤醒并冷启动APP后，APP只到Splash/Main/BridgeWeb，没有进入应用手势页，监控页门禁未通过；无法由现有数据区分当时的screenOn、本人标记、guard或episode值。
+
+另一个与`LOGIN_STATE_MISSING`相符的机制是冷启动后内存登录对象为空：精确bundle的模块584以`user={}`初始化，已发现的`loginEmp`赋值在登录响应分支；runner来源及v0.19 fixture的启动/清理命令含`am force-stop`。因此force-stop可能清空应用进程内用户对象，而本轮没有新的登录响应填充它。由于live v0.19 runner源码及运行时三个字段快照均缺失，这仍是根因链中的高置信假设，不能说已证明force-stop就是唯一原因。
+
+**收尾诊断状态：** 11月2日无派发、无输入、登录态一次性检查失败已由日志、哈希匹配源码和运行记录交叉确认；最可能的链路是runner冷启动后未出现应用手势页，且内存登录态未重新填充。剩余未知是live v0.19确切启动命令及唤醒后Keyguard/三个登录字段状态。无需为了证明旧输入器而重放业务。后续若继续取得live源码，先只读核实`force-stop`；若要在自然运行中定位当前门禁，再使用已准备sidecar（安装/重启仍需单独授权）。
