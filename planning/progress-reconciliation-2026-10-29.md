@@ -11,7 +11,7 @@ Pixel 登录助手 EXIT 组件状态恢复会杀掉 AutoX 引擎的根因已通�
 - **11月1日：** 主流程09:01:56 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，cleanup PASS；没有业务阶段，五项均 `NOT_EXECUTED`。智能助理scheduled轮 `REVIEW / NOT_SENT`、cleanup PASS；assistant.json为 `INTENT / NOT_SENT`，`sentAt`键缺失（不是null）。更早一轮 `NOT_SENT` 且 `cleanup=NOT_OWNED`。
 - **包内明确缺失：** 两日都没有独立客温客价收据或单独账本；11月1日没有任何运行快照且state无当日readOnlyTasks条目；两日assistant运行均无快照；10月31日scheduled assistant无after回执，早期结果无cleanup键；主流程11月1日结果不含before/after、decisions、signPhase、时光轴或业务回执。`latest.json`未作为来源。
 
-11月2日进行中快照与最终结果包均已下载；最终包外层身份经09:42原附件重算及本机比较通过（5,854字节，8成员，7个内含哈希匹配）。最终主流程09:00:57 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，未到WebView/CDP，五项均未执行；助理 `REVIEW / NOT_SENT`，cleanup PASS、runner.lock FREE、state不变（11条）。包内源码清单未提供源码字节。09:38:47 Pixel 3a monitor-start健康分支确认既有PID/锁inode/新鲜心跳匹配并提前返回；未启动新实例或业务，仅追加本地状态日志。此前没有等待、重跑或改排程。P50/月度规划仍挂起。 随后用户明确要求解决该阻断并补跑；经MUSE授权旁聊对v0.18进行一次准备阶段复跑，结果仍为REVIEW/PREPARE_TIMEOUT_NO_FALLBACK、NOT_SENT、stages为空、cleanup PASS。只读日志和bundle比对定位为运行包版本漂移导致旧锚点失败。v0.19本机离线候选已通过构建、签名与保护分支检查；远端部署及本日补跑仍待MUSE界面恢复，见[修复与补跑记录](forest-prepare-repair-2026-11-02.md)。
+11月2日进行中快照与最终结果包均已下载；最终包外层身份经09:42原附件重算及本机比较通过（5,854字节，8成员，7个内含哈希匹配）。最终主流程09:00:57 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，未到WebView/CDP，五项均未执行；助理 `REVIEW / NOT_SENT`，cleanup PASS、runner.lock FREE、state不变（11条）。包内源码清单未提供源码字节。09:38:47 Pixel 3a monitor-start健康分支确认既有PID/锁inode/新鲜心跳匹配并提前返回；未启动新实例或业务，仅追加本地状态日志。此前没有等待、重跑或改排程。P50/月度规划仍挂起。随后用户明确要求解决该阻断并补跑；经MUSE授权旁聊对v0.18进行一次准备阶段复跑，结果仍为REVIEW/PREPARE_TIMEOUT_NO_FALLBACK、NOT_SENT、stages为空、cleanup PASS。只读日志和bundle比对定位为运行包版本漂移导致旧锚点失败。v0.19本机离线候选已通过构建、签名与保护分支检查。首次接续汇报时MUSE界面不可访问；随后已恢复并完成只读门禁与live runner隔离候选生成。当前执行状态以本节末尾[最新现场更新](#当前现场更新2026-11-02)和[修复与补跑记录](forest-prepare-repair-2026-11-02.md)为准。
 
 > **当时的执行模式记录｜2026-10-30：** 本机主导开发、验证与证据判定；MUSE保留既有每日执行及必要云端取证，不再默认通过旁聊代做开发。需求目标不变，未迁移运行器/改调度。跨日已到自然次日，先读已有结果，不补跑；P50/月度规划继续挂起。[新方案与接续顺序](execution-mode-2026-10-30.md)为当前入口，以下10月29日状态保留为历史。
 
@@ -102,27 +102,37 @@ P1—P3已完成，P4进行中，S1未整体验收。MUSE实际适配源码、�
 
 ## 优先级补记｜2026-11-02
 
-用户要求当前优先推进既有自动执行，将多次尝试且成功证据获取把握较低的即时验证后置。最后可见的MUSE排程快照为11月2日08:59，显示唯一每日任务启用、Asia/Shanghai每日09:00、下一次11月3日09:00；不是本次写入时的实时查询。11月2日自然轮最终在prepare阶段 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，五项均未执行、cleanup PASS。故本轮保留原排程，不手动重跑、不调整任务或增加常驻工作；等待既有任务自然尝试，之后再核结果。没有把启用/触发当作业务成功。AI奖励、客温客价独立回执、成功空列表、五项扩展、官方时点依据、整机恢复与跨日验收继续待补；P50/月度规划挂起。
+用户当时要求优先推进既有自动执行，将重复的即时诊断后置；该优先级随后被用户明确更新为解决准备阻断并对11月2日补跑一次。08:59 MUSE排程快照显示唯一每日任务启用、Asia/Shanghai每日09:00、下一次11月3日09:00；当前实时状态见下文。11月2日自然轮最终在prepare阶段 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，五项均未执行、cleanup PASS。P50/月度规划挂起；AI奖励、客温客价独立回执、成功空列表、五项扩展、官方时点依据、整机恢复与跨日验收继续待补。
 
 ## 根因复核与11月2日补跑接续｜2026-11-02
 
-- 11月2日自然执行在准备阶段阻断，主流程没有启动；本轮MUSE复跑记录为 REVIEW / PREPARE_TIMEOUT_NO_FALLBACK，阶段列表为空，问题未发送，清理 PASS。签到、时光轴、客温客价、智能助理业务提交及领取均未执行。
-- 运行日志显示 LSPosed 已加载目标模块并进入 loader hook，随后 bundle patch 失败；没有脚本导航回执。静态核对证明：已安装应用的运行时 bundle 已变更，旧桥接器仍固定在旧 bundle 指纹和旧模块边界，旧锚点在当前包中不存在。根因是运行时版本/打包结构漂移，不是未部署或登录被阻断。
+- **自然轮及v0.18复跑（早期事实）：** 11月2日自然执行在准备阶段阻断；一次v0.18复跑同样返回 `REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`，无业务stage/回执、问题未发送、cleanup PASS。此时五项均未执行。该失败由bundle准备故障导致。
+- 运行日志显示 LSPosed 已加载目标模块并进入 loader hook，随后bundle patch失败。静态核对确认运行bundle已变，旧桥接器仍固定在旧bundle指纹和旧模块边界，旧锚点不在当前包中。这是v0.18准备超时的根因；后续v0.19运行又发现独立的登录态门槛，不能据此说当前唯一问题仍是bundle漂移。
 - 已在本机完成 v0.19 修复候选与离线核验：按当前实测 bundle 指纹锁定 Metro 模块及唯一结构锚点，从该模块现有首页实例导出原弹窗关闭回调；保留未知弹窗阻断，不使用坐标点击，不修改业务范围。
-- APK 用现有项目签名重新签署，包名、版本号和签名证书均核对；离线构建、bundle 语法、补丁 dry-run/apply 和五种弹窗状态分支验证通过。候选包完整性校验通过。
-- 远端 v0.19 staging、安装及11月2日单次补跑尚未完成。MUSE 界面在本次续接时不可访问，故不把本机离线 PASS 写成设备端 PASS。此前 v0.18 复跑没有任何业务阶段或已发送意图，MUSE 快照中的 state / cron 未变，重试前仍会再检查这些条件。
+- APK 用现有项目签名重新签署，包名、版本号和签名证书均核对；离线构建、bundle语法、补丁dry-run/apply、五种弹窗状态分支及候选包完整性检查通过。
+- 随后用户确认按门禁安装并补跑一次。执行前11:13:41只读门禁通过；已备份本次范围内原runner和模块APK，仅替换runner并安装v0.19。安装后runner哈希与隔离候选一致，已安装APK哈希与v0.19候选一致、versionName `0.19.0`。assistant.py、tasks.py、state主文件、cron和调度定义未被安装步骤改动。
+
+## 当前现场更新｜2026-11-02
+
+v0.19交付ZIP SHA-256为`0177f6ad3de5a4618c1e83b8fb7ca23bd963ac37793ab997dfb25ac3c7978c75`，包内5成员哈希通过。runner安装后哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`；v0.19 APK及设备读回SHA-256均为`dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`。本机v0.18 staging源树的模块补丁三文件dry-run通过；MUSE工作区无模块源码树，不把本机复核冒称为MUSE复核。
+
+**原入口一次补跑的实际结果：** 助理段于11:14:53开始、11:16:27记录完成。准备阶段记录v0.19模块哈希、`.MainActivity`和`.web.BridgeWebActivity`，说明旧bundle准备超时已消除；随后调用入口未唯一匹配，结果`REVIEW / ONCLICKAPP_OR_MENU_NOT_UNIQUE_NO_CALL`，仅有`prepare_done`，`questionStatus=NOT_SENT`，无回答、无业务动作、无回执，cleanup PASS。主流程11:16:47开始、11:17:57记录完成；准备阶段止于登录态检查，`BLOCKED / PREPARE_LOGIN_STATE_MISSING`，待决动作为空、无业务stage/回执，cleanup PASS。按指令停止；没有第二轮、重放或清状态。
+
+五项结果：签到、时光轴、客温客价和一键领取未执行；智能助理未完成（未调用、未提问、NOT_SENT）。今日余额与待领未刷新，最近可信终态仍是10月31日旧记录；本轮没有新奖励证据。结束时runner.lock与设备操作锁均FREE，无相关进程。state主文件、cron和调度定义未变；assistant.json今日条目只更新`lastError`，`phase/questionStatus/startedAt`不变且无`sentAt`。每日任务仍启用、Asia/Shanghai每日09:00，下一次11月3日09:00。
+
+最终脱敏证据包`sunshine-forest-20261102-v019-final-desensitized.zip`本机重算SHA-256为`2e2abb95d64ced6fc4d16887fd7d8cc1ca3d03286c08e8600472c95ab3486579`，与MUSE回报一致；ZIP内5个文件逐项SHA-256通过。原始日志、截图和设备内部数据保存在Git忽略的私有目录，不进入公开仓库。P50/月度规划继续挂起，跨日验证等到自然次日。
 
 ## 证据边界
 
-自动化运行证据只表明模块 loader hook 已就绪、后续 bundle patch 抛出 IllegalStateException；不会把这条日志推断为业务动作。设备端没有 P4ForestAuto 导航回执、没有 WebView/CDP 业务阶段、没有奖励或账本变化证据。v0.19 目前是本机候选，尚未在 Pixel/MUSE 运行环境安装或实机加载。
+自动化运行证据表明：v0.18时bundle patch失败；v0.19时助理准备到达BridgeWebActivity，但调用入口不唯一，主流程登录态门槛失败。两次均没有业务动作或回执。没有奖励或账本变化证据。v0.19已实机安装并读回哈希/版本；这只通过安装及部分准备链路检查，不等于每日业务验收。
 
 本地私有目录保存运行 bundle、模块切片、MUSE 导出、源码候选、APK 和详细验证材料；这些原始文件及应用内部数据不进入公开仓库。公开记录只保留脱敏根因、状态和验证级别。
 
 ## 接续动作
 
-1. 在原 MUSE 旁聊提交 v0.19 脱敏交付包；由原环境从当前运行版建立隔离 staging，核对版本、签名、运行器版本替换和无漂移前置状态。
-2. 前置条件满足后，仅替换本次范围内的 runner 与桥接模块，不改 assistant、state、history、cron 或调度。
-3. 通过原入口对11月2日做一次补跑。若准备仍失败，本次即停止；若任何阶段为 SENT/UNKNOWN 或结果不确定，不清状态、不重放。
-4. 单独记录动作尝试、页面完成、奖励确认、重复检查及跨日验证；本轮不改任务时间、不新增常驻任务。P50/月度规划继续挂起。
+1. 在本机离线核对助理调用入口唯一性判据与主流程登录态检查，厘清可安全修复的边界并验证保护分支；保留v0.18备份和当前v0.19运行副本，不改调度。
+2. 跨日验证等到真实次日，只读核对自然任务结果及设备/锁清理；没有新证据前不重放未发送或不确定动作。
+3. 后续若需再次实机验证，先按既有门禁复核并明确仅执行一次的范围；记录动作尝试、页面完成、奖励确认、重复检查和长期运行结果。
+4. 继续补AI结构化答案/奖励、客温客价独立回执、成功空列表、五项扩展完整流程/奖励周期、官方时点原始依据和整机恢复；P50/月度规划（2U＝2800）挂起，不部署定时或新增持续任务。
 
-状态标签：本地候选修复 PASS；远端部署与本日补跑 BLOCKED（MUSE 界面不可访问）；本日业务结果 NOT_EXECUTED；P4/S1 不代表整体验收完成。
+状态标签：v0.19安装及读回 PASS；旧bundle准备超时修复链路有限通过；助理调用入口REVIEW、主流程登录态BLOCKED；五项业务 NOT_EXECUTED/NOT_COMPLETED；两段cleanup PASS；state主文件、cron、每日调度未变；跨日与奖励确认未验收；P4/S1不代表整体验收完成。
