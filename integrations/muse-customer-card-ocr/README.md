@@ -1,99 +1,88 @@
-# MUSE customer-card Baidu OCR tool
+# MUSE family-card OCR package
 
-Status: version 0.1.0. Offline Mock tests are the only verification completed here. MUSE cloud and a real Baidu API call have not been tested. This package does not implement Agent field extraction, batch state, contact lookup, or iCloud writes.
+Version 0.2.0. This branch updates WP2 for the 2026-11-02 full-image plan. It contains no production MUSE Secure Vault adapter, makes no Baidu API calls, and performs no iCloud operations.
 
-## Reuse and implementation choice
+## Full-image authorization
 
-- Reuse the historical ocr_baidu.py Baidu handwriting endpoint, Requests form request, small character granularity, line confidence request, and AK/SK-to-token flow.
-- Adapt the input from file paths to JPEG/PNG bytes or a constrained local attachment path. Preserve returned text blocks, coordinates, character candidates, and confidence. Keep the token only in the client process.
-- Reuse and tighten the old Pillow EXIF correction, max-side resize, and JPEG encoding. HEIC is rejected; this package does not silently tolerate missing HEIF support.
-- Avoid a Baidu SDK, DeepSeek, web server, database, or MCP server. The direct HTTP call is a small, already-used integration. Requests and Pillow are the only runtime dependencies.
-- Baidu's current handwriting API documentation specifies a 4096px maximum side and an 8 MiB maximum URL-encoded image request body. It also documents character candidates/confidence for small and line confidence for probability=true. The package checks the minimum side as 15px. [Baidu handwriting OCR API](https://ai.baidu.com/ai-doc/OCR/hk3h7y2qq)
-- Baidu's OAuth documentation requires AK/SK as token-request URL parameters, and the OCR API requires access_token as a URL parameter. The client follows those protocol requirements; it never logs request URLs, bodies, headers, or provider responses. Keep HTTP debug logging disabled in the MUSE runtime because transport-level debug traces can include request query strings. [Baidu OAuth access token](https://ai.baidu.com/ai-doc/REFERENCE/Lkru0zoz4)
+The previous mandatory `PrivacyMaskResult` gate has been removed. A caller must pass `full_image_authorized=True` to `recognize_customer_card` for every OCR call. The flag is an explicit call-site attestation that the applicable user and organization authorization exists; it is not a legal authorization check or a MUSE permission mechanism.
 
-## Privacy gate
+When called, the package sends the complete image representation after EXIF orientation, size normalization, and JPEG encoding. It does not crop or mask regions. The tool therefore must only be called after the complete-image authorization applies. It accepts JPEG/PNG bytes or paths confined to `~/workspace/user/files` by default. HEIC remains unsupported.
 
-This package does not include a family-card template detector or masking algorithm. Existing evidence does not prove that the identity-number field and lower family/policy sections can be excluded for every rotation, skew, scale, and table offset.
+## Secure Bearer connector boundary
 
-The recognize_customer_card function therefore requires a PrivacyMaskResult with an image derived from the exact source SHA-256, a reviewed policy ID, and redaction declarations for identity number, family-member data, policy data, and premium data. An absent, unverified, mismatched, or incomplete mask raises PRIVACY_MASK_UNVERIFIED before token retrieval or OCR.
+Python no longer reads `BAIDU_OCR_AK`, `BAIDU_OCR_SK`, or any production API key. It does not retrieve or cache a Baidu token. `BaiduOcrClient` builds one request and calls an injected `SecureBearerConnector` port. The request indicates `auth_scheme="bearer"` and has no token field or `Authorization` header. The connector implementation must attach the Bearer credential from its protected store outside this package.
 
-There is currently no family-card masker that can produce a production VERIFIED result. Unit tests use generated blank JPEG/PNG images and a synthetic mask contract to test the API guard. This is not a real-template privacy test and does not make real family cards production-ready.
+`SecureBearerConnector.send(BearerOcrRequest) -> BearerOcrResponse` is a package-internal adapter contract used by tests. It is **not** represented as the actual MUSE Secure Vault helper interface. No helper interface, stdin format, or production HTTP behavior is inferred here. MUSE must provide the real helper specification before a concrete adapter can be implemented.
 
-## Input and output
+The historic Baidu handwriting endpoint and form body remain in the request builder. The newer single-key Bearer route for that endpoint is not verified. The adapter Mock tests validate package behavior only; they do not prove that MUSE or Baidu accepts this auth route. Do not attach a production secret directly in Python to make the Mock pass.
 
-    from pathlib import Path
-    from muse_customer_card_ocr import recognize_customer_card
+```python
+from muse_customer_card_ocr import (
+    BaiduOcrClient,
+    extract_primary_customer,
+    map_to_icloud_fields,
+    recognize_customer_card,
+)
 
-    result = recognize_customer_card(
-        Path.home() / "workspace/user/files/attachment.jpg",
-        mime_type="image/jpeg",
-        privacy_mask=reviewed_mask_result,
-    )
-    payload = result.to_dict()  # Contains OCR text; keep it transient for Agent use.
+# `muse_secure_connector` must be a MUSE-provided adapter implementing the
+# package port after its real helper contract has been confirmed.
+client = BaiduOcrClient(connector=muse_secure_connector)
+result = recognize_customer_card(
+    image_bytes,
+    mime_type="image/jpeg",
+    full_image_authorized=True,
+    client=client,
+)
+extraction = extract_primary_customer(result)
+if extraction.needs_manual_review:
+    # Present review reasons to the authorized operator; do not map or write.
+    raise RuntimeError(extraction.review_reasons)
+contact_draft = map_to_icloud_fields(extraction)
+# `contact_draft` is a canonical projection only. No MCP write is performed.
+```
 
-Paths must resolve under ~/workspace/user/files by default. Tests may pass an explicit allowed_root. The package reads but does not delete attachment files, create image copies, write OCR JSON, or persist results.
+The client retains Baidu's `recognize_granularity=small` and `probability=true` parameters, response blocks, available coordinates, line confidence, character candidates, and safe service/request IDs. Errors expose categories and status codes, not response bodies. It has no internal logger, and OCR text, request bodies, and response bodies are excluded from object `repr` output. MUSE must keep transport-level HTTP debug logs off because helper-level traces could expose request details.
 
-The result retains actual Baidu line text, coordinates, confidence, and optional character/candidate details. Coordinates are relative to the normalized JPEG sent to Baidu; the result includes that JPEG's dimensions. Missing provider fields stay absent; the client does not invent coordinates or scores.
+## Field extraction and review gates
 
-Errors are classified in OcrError.code and OcrError.as_dict(). They do not expose provider response bodies, image paths, OCR text, tokens, or AK/SK. The to_dict method intentionally returns OCR text; do not write it to ordinary logs, traces, or long-lived task state.
+`extract_primary_customer(result)` is deterministic and label-based. It reads only supported explicit labels, stops at recognized family/relative section headings, and does not infer gender, fill a missing value, or choose between conflicting values. An unrecognized or unlabelled layout can produce `needs_manual_review` rather than a guessed field set.
 
-## Offline install and tests
+The parser requires a clear primary name, one valid mobile number, and a readable identity number for this target workflow. Ambiguous OCR candidates on name, mobile, birthday, gender, or ID lead to manual review. Uncertain optional address/other-phone values are omitted. It checks the ID's 18-character format, encoded date validity, checksum, duplicate conflicts, and any conflicting OCR character alternatives. Missing or invalid ID evidence produces `identity_number_uncertain` or `identity_number_conflict`; the parser never repairs OCR characters. The embedded identity-number date is used only to compare against an explicit card birthday. It is never copied into the birthday field. An explicit birthday that conflicts with the checked identity-number date produces manual review. The checksum is a transcription integrity check, not identity verification or a registry lookup.
 
-Python 3.10+. Runtime dependencies: Pillow and Requests. Tests use unittest and Mock responses only:
+`map_to_icloud_fields(extraction)` raises `MANUAL_REVIEW_REQUIRED` for a pending result. For a ready result, it returns a non-writing `ICloudContactDraft` with:
 
-    cd integrations/muse-customer-card-ocr
-    python3 -m venv .venv
-    source .venv/bin/activate
-    python -m pip install -e .
-    python -m unittest discover -s tests -v
+- `name_full` from the primary customer name;
+- `phone_mobile` and `phone_other` from the labelled phone fields;
+- `birthday` as the explicit date only;
+- `address` as the original labelled address;
+- `note` lines in stable order: `性别：...`, then `身份证号：...`.
 
-## MUSE cloud handoff
+This draft is a canonical field projection, not a serialized `contacts_create` payload. Repository evidence currently shows the MCP contact name and note shape, but does not define the production phone, birthday, and address input schema. A later MCP adapter must verify that schema. This package does not query, create, modify, or delete contacts.
 
-Codex has not established a MUSE shell session. This turn does not modify the MUSE VM, SDK Bridge, or automations. MUSE should perform these steps in its own environment:
+## Install and offline regression
 
-1. Fetch branch codex/wp2-muse-customer-card-ocr and locate integrations/muse-customer-card-ocr. Confirm Python 3.12.x. Use an isolated venv so the existing Pillow installation is not upgraded:
+Python 3.10 or later. Runtime dependency: Pillow. Requests and Baidu SDK are not used by this version. In an isolated environment:
 
-       python3 -m venv ~/workspace/.venvs/muse-customer-card-ocr
-       source ~/workspace/.venvs/muse-customer-card-ocr/bin/activate
-       python -m pip install "Pillow==10.2.0" "requests>=2.31,<3"
-       python -m pip install --no-deps -e /path/to/repo/integrations/muse-customer-card-ocr
+```bash
+python3 -m venv ~/workspace/.venvs/muse-customer-card-ocr
+source ~/workspace/.venvs/muse-customer-card-ocr/bin/activate
+python -m pip install "Pillow==10.2.0"
+python -m pip install --no-deps -e /path/to/repo/integrations/muse-customer-card-ocr
+cd /path/to/repo/integrations/muse-customer-card-ocr
+PYTHONPATH=src python -m unittest discover -s tests -v
+```
 
-2. Run the offline tests first. Confirm imports, attachment-root checks, and that PRIVACY_MASK_UNVERIFIED sends no HTTP request.
-3. Only after the organization approves Baidu processing, confirms quota/cost, and separately authorizes a call, add BAIDU_OCR_AK and BAIDU_OCR_SK through MUSE's protected environment-variable facility. Do not put values in shell history, the repository, ordinary config files, or logs. The exact MUSE secret-management surface was not available to Codex. The client disables ambient Requests proxy inheritance so customer images cannot silently route through an unreviewed proxy.
-4. For a real API smoke call, MUSE must generate a fully synthetic image that contains no real personal data, construct a synthetic-only mask result for that image, and perform one call. Verify token acquisition, one handwriting OCR request, result parsing, and error classification. Never label a real customer image synthetic-only.
-5. The package creates no image copies or persistent OCR files. Close the client after use. Do not delete MUSE's original attachment; if MUSE creates a temporary copy, the calling workflow owns its cleanup.
-6. A successful synthetic API call verifies MUSE network, credentials, and Baidu API use. It does not verify family-card field accuracy or the privacy mask.
+Tests use generated fictional images, OCR payloads, and a Mock Bearer connector. They cover explicit opt-in, no API-key fields in the Python request, auth/rate/timeout/error handling, image validation/preprocessing, structure parsing, field extraction, ID/birthday review gates, native-field projection, and sensitive `repr`/logging behavior. They make no network calls.
 
-For the one-call smoke, this snippet creates a blank synthetic PNG in memory and prints only status and counts. Run it only after separate authorization for a billed Baidu test and secure credential configuration:
+## MUSE integration checklist
 
-    import io
-    from PIL import Image
-    from muse_customer_card_ocr import (
-        MaskStatus,
-        PrivacyMaskResult,
-        REQUIRED_REDACTED_REGIONS,
-        recognize_customer_card,
-        source_sha256,
-    )
-
-    buffer = io.BytesIO()
-    Image.new("RGB", (320, 120), "white").save(buffer, format="PNG")
-    synthetic_image = buffer.getvalue()
-    synthetic_mask = PrivacyMaskResult(
-        status=MaskStatus.VERIFIED,
-        source_sha256=source_sha256(synthetic_image),
-        masked_image_bytes=synthetic_image,
-        masked_mime_type="image/png",
-        policy_id="synthetic-smoke-only",
-        redacted_regions=REQUIRED_REDACTED_REGIONS,
-    )
-    result = recognize_customer_card(
-        synthetic_image,
-        mime_type="image/png",
-        privacy_mask=synthetic_mask,
-    )
-    print({"status": result.status, "block_count": len(result.blocks)})
+1. Check out branch `codex/wp4-muse-full-image-ocr-20261102`; run the offline suite in an isolated venv first.
+2. Obtain MUSE's real Secure Vault helper documentation and confirm how it attaches Bearer auth, restricts host/path/method, accepts binary or encoded form data, returns status/body, and maps timeouts. Implement only a thin adapter from that documented interface to `SecureBearerConnector`; map helper timeout/transport failures to `SecureConnectorTimeout` or `SecureConnectorFailure`, do not pass a production key to this package or its Python process, and do not log the helper's raw request or response.
+3. Keep the adapter mocked until the real helper contract and credential isolation are independently verified. No helper is present in this branch.
+4. A real Baidu call would send a complete image. Perform none until the authorized MUSE workflow, connector, quota/cost, and separate API-test approval are ready. Any first API test must use a generated fictional image only.
+5. The caller owns the attachment lifecycle. This package reads but does not delete or persist the MUSE attachment, OCR text, or temporary files. Keep OCR text transient and out of ordinary logs, traces, and long-term Agent memory.
+6. Do not pass `full_image_authorized=True` based only on tool visibility. The calling workflow must ensure the complete-image authorization is applicable to the submitted photo.
 
 ## Rollback
 
-Remove the isolated venv and this package directory, then remove only this tool's dedicated Baidu variables from MUSE's protected environment. This does not change SDK Bridge, iCloud credentials, user attachments, or the Seoul MCP. The package has no background process, database, or service.
+Remove the isolated venv and this branch checkout/package. No credentials or connector configuration are created by this code. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.

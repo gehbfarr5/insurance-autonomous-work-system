@@ -1,47 +1,32 @@
-# Offline test report
+# WP4 code and regression report
 
 - Date: 2026-11-02
-- Package version: 0.1.0
-- Branch: codex/wp2-muse-customer-card-ocr
-- Runtime: macOS host, Python 3.14.7, Pillow 12.2.0, Requests 2.34.2
-- Command: `PYTHONPATH=src /tmp/insurance-wp2-venv/bin/python -m unittest discover -s tests -v`
-- Result: PASS — 25 tests, 0 failures, 0 errors
-- Package check: PASS — `python -m pip install --no-deps -e .` built and installed version 0.1.0 in the isolated temporary venv
-- Test data: generated blank JPEG/PNG images and synthetic in-memory Baidu responses only
-- Network: mocked; no DNS lookup or HTTP request to Baidu was made
-- Not verified: MUSE VM Python 3.12.3 runtime, Baidu credentials/quota, a real Baidu call, family-card masking, OCR accuracy on cards
+- Package version: 0.2.0
+- Branch: `codex/wp4-muse-full-image-ocr-20261102`
+- Plan baseline: `origin/planning/customer-card-full-ocr-20261102` at `655f936`
+- Test runtime: macOS, Python 3.14.7, Pillow 12.2.0; Requests absent from the isolated test venv
+- Offline regression: PASS — 37 tests, 0 failures, 0 errors
+- Editable package install: PASS — version 0.2.0 built and imported from the isolated venv
+- Test data: generated fictional images, synthetic OCR text, and a Mock Bearer connector
+- Network/provider: no connector beyond the Mock; no Baidu request or other network call from tests
+- MUSE cloud: not available to Codex in this session; Python 3.12.3 not tested
+- Not tested: real Secure Vault helper, real Bearer injection, Baidu auth compatibility/endpoint, real OCR, iCloud tool payload schema, or any contact operation
 
-## Test names
+## Coverage summary
 
-Client tests:
+**OCR/connector (13 tests):** explicit full-image opt-in; missing connector; one Bearer-port request without an API key or Authorization header in Python; form parameters; structured OCR text/coordinates/line confidence/character candidates; HTTP 401/403/408/429/503 mapping; connector timeout/failure mapping; Baidu auth/rate/quota/permission/provider errors; invalid JSON/response; image and request-size rejection; independent per-image results; sensitive log/repr checks.
 
-- `test_baidu_auth_rate_and_quota_codes_are_classified`
-- `test_expired_token_is_refetched`
-- `test_http_429_is_rate_limited`
-- `test_invalid_image_is_rejected_before_network`
-- `test_invalid_ocr_json_is_classified`
-- `test_invalid_parameter_provider_code_is_not_mislabeled_authentication`
-- `test_invalid_token_json_is_classified`
-- `test_jpeg_bytes_call_and_token_is_cached`
-- `test_multiple_images_have_independent_results`
-- `test_no_logs_or_repr_include_credentials_or_ocr_text`
-- `test_oversized_input_and_oversized_form_are_rejected`
-- `test_png_is_converted_to_jpeg_and_api_params_are_preserved`
-- `test_provider_rejected_token_is_discarded_for_next_call`
-- `test_structured_result_preserves_coordinates_confidence_and_candidates`
-- `test_timeout_is_classified_without_echoing_transport_details`
-- `test_token_request_uses_documented_url_parameters`
-- `test_unverified_mask_prevents_all_network_requests`
-- `test_wrong_source_digest_or_incomplete_redaction_prevents_requests`
+**Field extraction (12 tests):** primary fields and stop at family section; no DOB derivation from ID; absent, checksum-invalid, duplicate-conflicting, or OCR-ambiguous ID requires review; conflicting card DOB versus ID DOB; name/mobile candidate ambiguity; conflicting mobile; absent/conflicting primary name; invalid birthday and unknown gender; redacted repr.
 
-Image tests:
+**iCloud draft mapping (5 tests):** name/mobile/birthday/address/other phone mapping; gender and ID each on their own note line; optional fields omitted; mapping blocked for review or any non-ready status; redacted repr.
 
-- `test_exif_orientation_is_applied_before_result_dimensions`
-- `test_heic_and_mime_mismatch_are_rejected`
-- `test_input_byte_limit_is_enforced`
-- `test_jpeg_bytes_are_accepted`
-- `test_large_dimensions_are_scaled_to_provider_maximum`
-- `test_path_is_confined_to_configured_attachment_root`
-- `test_png_is_accepted_and_normalized_to_jpeg`
+**Image preparation (7 tests):** JPEG/PNG, conversion, EXIF orientation, downscaling, path confinement, MIME/HEIC rejection, and byte-size limits.
 
-These results establish only local offline behavior. They do not establish provider authentication, cloud connectivity, OCR accuracy, or safe masking of any real card template.
+## Commands
+
+```bash
+PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests -v
+/tmp/insurance-wp4-venv/bin/python -m pip install --no-deps -e .
+```
+
+The tests verify only package logic against the internal Mock port. They do not validate the proposed package port against MUSE's real helper or the newer Baidu Bearer auth route.

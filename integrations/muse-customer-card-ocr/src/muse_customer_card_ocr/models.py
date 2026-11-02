@@ -109,7 +109,7 @@ class OcrResult:
     image_mime_type: str
     image_width: int
     image_height: int
-    mask_policy_id: str
+    upload_mode: str
 
     @property
     def text(self) -> str:
@@ -134,9 +134,8 @@ class OcrResult:
                 "width": self.image_width,
                 "height": self.image_height,
             },
-            "privacy": {
-                "status": "verified",
-                "mask_policy_id": self.mask_policy_id,
+            "upload": {
+                "mode": self.upload_mode,
             },
         }
         if self.service_log_id is not None:

@@ -41,14 +41,19 @@ class OcrError(RuntimeError):
         return result
 
 
-class MissingCredentialsError(OcrError):
-    code = "BAIDU_CREDENTIALS_MISSING"
+class MissingSecureConnectorError(OcrError):
+    code = "SECURE_BEARER_CONNECTOR_MISSING"
     category = "configuration"
 
 
-class PrivacyMaskUnverifiedError(OcrError):
-    code = "PRIVACY_MASK_UNVERIFIED"
-    category = "privacy"
+class FullImageOcrNotAuthorizedError(OcrError):
+    code = "FULL_IMAGE_OCR_NOT_AUTHORIZED"
+    category = "authorization"
+
+
+class ManualReviewRequiredError(OcrError):
+    code = "MANUAL_REVIEW_REQUIRED"
+    category = "review"
 
 
 class ImageInputError(OcrError):
@@ -67,8 +72,8 @@ class RequestTimeoutError(OcrError):
 
 
 class NetworkError(OcrError):
-    code = "NETWORK_ERROR"
-    category = "network"
+    code = "SECURE_CONNECTOR_FAILED"
+    category = "connector"
 
 
 class HttpError(OcrError):
@@ -104,3 +109,11 @@ class InvalidResponseError(OcrError):
 class ProviderError(OcrError):
     code = "BAIDU_OCR_FAILED"
     category = "provider"
+
+
+class SecureConnectorTimeout(Exception):
+    """Adapter-side timeout signal; messages are intentionally not surfaced."""
+
+
+class SecureConnectorFailure(Exception):
+    """Adapter-side transport failure signal; messages are not surfaced."""

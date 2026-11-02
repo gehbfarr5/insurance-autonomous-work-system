@@ -1,38 +1,30 @@
 from __future__ import annotations
 
 import base64
-import os
+import json
 import re
-import threading
-import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from os import PathLike
+from typing import Any
 from urllib.parse import urlencode
-
-import requests
 
 from .errors import (
     AuthenticationError,
+    FullImageOcrNotAuthorizedError,
     HttpError,
     ImageTooLargeError,
     InvalidResponseError,
-    MissingCredentialsError,
+    MissingSecureConnectorError,
     NetworkError,
-    OcrError,
     PermissionDeniedError,
-    PrivacyMaskUnverifiedError,
     ProviderError,
     QuotaExceededError,
     RateLimitError,
     RequestTimeoutError,
+    SecureConnectorFailure,
+    SecureConnectorTimeout,
 )
-from .images import (
-    ImageSource,
-    PreparedImage,
-    read_image_source,
-    prepare_ocr_image,
-)
+from .images import ImageSource, PreparedImage, prepare_ocr_image, read_image_source
 from .models import (
     BoundingBox,
     CharacterCandidate,
@@ -41,14 +33,13 @@ from .models import (
     OcrResult,
     ProbabilityStats,
 )
-from .privacy import (
-    MaskStatus,
-    PrivacyMaskResult,
-    assert_mask_verified,
+from .secure_connector import (
+    BearerOcrRequest,
+    BearerOcrResponse,
+    SecureBearerConnector,
 )
 
 
-BAIDU_TOKEN_URL = "https://aip.baidubce.com/oauth/2.0/token"
 BAIDU_HANDWRITING_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/handwriting"
 BAIDU_FORM_BODY_MAX_BYTES = 8 * 1024 * 1024
 _SERVICE_LOG_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -57,54 +48,26 @@ _RATE_LIMIT_PROVIDER_CODES = frozenset({4, 18})
 _QUOTA_PROVIDER_CODES = frozenset({17, 19})
 
 
-@dataclass(frozen=True, repr=False)
-class BaiduCredentials:
-    api_key: str = field(repr=False)
-    secret_key: str = field(repr=False)
-
-    @classmethod
-    def from_environment(cls) -> BaiduCredentials:
-        api_key = os.environ.get("BAIDU_OCR_AK", "").strip()
-        secret_key = os.environ.get("BAIDU_OCR_SK", "").strip()
-        if not api_key or not secret_key:
-            raise MissingCredentialsError()
-        return cls(api_key=api_key, secret_key=secret_key)
-
-    def __repr__(self) -> str:
-        return "BaiduCredentials(<redacted>)"
-
-
 class BaiduOcrClient:
-    """Direct HTTP client for Baidu handwriting OCR.
+    """Image preparation and response parsing behind an injected Bearer port.
 
-    No request/response bodies or credentials are logged or persisted. The
-    client fails closed unless a matching verified mask result is supplied.
+    This client has no direct network session and never reads or stores an API
+    key. The injected connector is responsible for protected Bearer auth.
     """
 
     def __init__(
         self,
-        credentials: BaiduCredentials | None = None,
+        connector: SecureBearerConnector | None,
         *,
-        session: Any | None = None,
         timeout: float = 45.0,
-        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         if timeout <= 0:
             raise ValueError("timeout must be positive")
-        self._credentials = credentials
-        if session is None:
-            session = requests.Session()
-            # Do not silently route customer images through an ambient proxy.
-            session.trust_env = False
-        self._session = session
+        self._connector = connector
         self._timeout = timeout
-        self._clock = clock
-        self._token: str | None = None
-        self._token_expires_at = 0.0
-        self._token_lock = threading.Lock()
 
     def close(self) -> None:
-        close = getattr(self._session, "close", None)
+        close = getattr(self._connector, "close", None)
         if callable(close):
             close()
 
@@ -112,13 +75,15 @@ class BaiduOcrClient:
         self,
         image: ImageSource,
         *,
+        full_image_authorized: bool = False,
         mime_type: str | None = None,
-        privacy_mask: PrivacyMaskResult | None = None,
-        allowed_root: str | os.PathLike[str] | None = None,
+        allowed_root: str | PathLike[str] | None = None,
     ) -> OcrResult:
         request_id = uuid.uuid4().hex
-        if privacy_mask is None or privacy_mask.status != MaskStatus.VERIFIED:
-            raise PrivacyMaskUnverifiedError(request_id=request_id)
+        if full_image_authorized is not True:
+            raise FullImageOcrNotAuthorizedError(request_id=request_id)
+        if self._connector is None:
+            raise MissingSecureConnectorError(request_id=request_id)
 
         source = read_image_source(
             image,
@@ -126,31 +91,34 @@ class BaiduOcrClient:
             allowed_root=allowed_root,
             request_id=request_id,
         )
-        masked_bytes, masked_mime, policy_id = assert_mask_verified(
-            source.image_bytes,
-            privacy_mask,
-            request_id=request_id,
-        )
         prepared = prepare_ocr_image(
-            masked_bytes,
-            mime_type=masked_mime,
+            source.image_bytes,
+            mime_type=source.mime_type,
             request_id=request_id,
         )
-        body = self._build_form_body(prepared, request_id=request_id)
-        token = self._access_token(request_id=request_id)
+        body = _build_form_body(prepared, request_id=request_id)
+        request = BearerOcrRequest(
+            request_id=request_id,
+            method="POST",
+            url=BAIDU_HANDWRITING_URL,
+            auth_scheme="bearer",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            body=body,
+            timeout_seconds=self._timeout,
+        )
+
         try:
-            response = self._post(
-                BAIDU_HANDWRITING_URL,
-                request_id=request_id,
-                params={"access_token": token},
-                data=body,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            payload = self._json_payload(response, request_id=request_id)
-            blocks, service_log_id = _parse_ocr_payload(payload, request_id=request_id)
-        except AuthenticationError:
-            self._invalidate_access_token(token)
-            raise
+            response = self._connector.send(request)
+        except SecureConnectorTimeout:
+            raise RequestTimeoutError(request_id=request_id) from None
+        except SecureConnectorFailure:
+            raise NetworkError(request_id=request_id) from None
+
+        if not isinstance(response, BearerOcrResponse):
+            raise InvalidResponseError(request_id=request_id)
+        _raise_for_http_status(response.status_code, request_id=request_id)
+        payload = _json_payload(response.body, request_id=request_id)
+        blocks, service_log_id = _parse_ocr_payload(payload, request_id=request_id)
         return OcrResult(
             status="success",
             blocks=blocks,
@@ -159,145 +127,76 @@ class BaiduOcrClient:
             image_mime_type=prepared.mime_type,
             image_width=prepared.width,
             image_height=prepared.height,
-            mask_policy_id=policy_id,
+            upload_mode="full_image_authorized",
         )
-
-    def _build_form_body(self, image: PreparedImage, *, request_id: str) -> bytes:
-        encoded_image = base64.b64encode(image.image_bytes).decode("ascii")
-        form = urlencode(
-            {
-                "image": encoded_image,
-                "recognize_granularity": "small",
-                "probability": "true",
-            }
-        ).encode("ascii")
-        if len(form) > BAIDU_FORM_BODY_MAX_BYTES:
-            raise ImageTooLargeError(request_id=request_id)
-        return form
-
-    def _access_token(self, *, request_id: str) -> str:
-        with self._token_lock:
-            now = self._clock()
-            if self._token and now < self._token_expires_at - 60:
-                return self._token
-
-            credentials = self._credentials
-            if credentials is None:
-                credentials = BaiduCredentials.from_environment()
-                self._credentials = credentials
-            response = self._post(
-                BAIDU_TOKEN_URL,
-                request_id=request_id,
-                params={
-                    "grant_type": "client_credentials",
-                    "client_id": credentials.api_key,
-                    "client_secret": credentials.secret_key,
-                },
-                data=None,
-                headers={},
-            )
-            payload = self._json_payload(response, request_id=request_id)
-            if payload.get("error"):
-                raise AuthenticationError(request_id=request_id) from None
-
-            token = payload.get("access_token")
-            expires_in = payload.get("expires_in")
-            try:
-                expires_seconds = int(expires_in)
-            except (TypeError, ValueError):
-                expires_seconds = 0
-            if (
-                not isinstance(token, str)
-                or not token
-                or expires_seconds <= 0
-            ):
-                raise InvalidResponseError(request_id=request_id)
-
-            self._token = token
-            self._token_expires_at = self._clock() + expires_seconds
-            return token
-
-    def _invalidate_access_token(self, token: str) -> None:
-        with self._token_lock:
-            if self._token == token:
-                self._token = None
-                self._token_expires_at = 0.0
-
-    def _post(
-        self,
-        url: str,
-        *,
-        request_id: str,
-        params: dict[str, str] | None = None,
-        data: dict[str, str] | bytes | None,
-        headers: dict[str, str],
-    ) -> Any:
-        try:
-            response = self._session.post(
-                url,
-                params=params,
-                data=data,
-                headers=headers,
-                timeout=self._timeout,
-                allow_redirects=False,
-            )
-        except requests.Timeout:
-            raise RequestTimeoutError(request_id=request_id) from None
-        except requests.RequestException:
-            raise NetworkError(request_id=request_id) from None
-        except TimeoutError:
-            raise RequestTimeoutError(request_id=request_id) from None
-        except OSError:
-            raise NetworkError(request_id=request_id) from None
-
-        status = getattr(response, "status_code", None)
-        if not isinstance(status, int):
-            raise InvalidResponseError(request_id=request_id)
-        if 200 <= status < 300:
-            return response
-        if status in (401, 403):
-            raise AuthenticationError(
-                request_id=request_id,
-                http_status=status,
-            )
-        if status == 429:
-            raise RateLimitError(request_id=request_id, http_status=status)
-        if status == 408:
-            raise RequestTimeoutError(request_id=request_id, http_status=status)
-        raise HttpError(request_id=request_id, http_status=status)
-
-    @staticmethod
-    def _json_payload(response: Any, *, request_id: str) -> dict[str, Any]:
-        try:
-            payload = response.json()
-        except (ValueError, requests.exceptions.JSONDecodeError):
-            raise InvalidResponseError(request_id=request_id) from None
-        if not isinstance(payload, dict):
-            raise InvalidResponseError(request_id=request_id)
-        return payload
 
 
 def recognize_customer_card(
     image: ImageSource,
     *,
+    full_image_authorized: bool = False,
     mime_type: str | None = None,
-    privacy_mask: PrivacyMaskResult | None = None,
-    allowed_root: str | os.PathLike[str] | None = None,
+    allowed_root: str | PathLike[str] | None = None,
+    connector: SecureBearerConnector | None = None,
     client: BaiduOcrClient | None = None,
 ) -> OcrResult:
-    """Recognize one already-masked image without writing files or logs."""
+    """Recognize one complete image after an explicit call-site opt-in.
+
+    ``full_image_authorized`` is a caller attestation, not a substitute for
+    MUSE's consent/authorization policy. No image is cropped or masked here.
+    """
     own_client = client is None
-    active_client = client or BaiduOcrClient()
+    active_client = client or BaiduOcrClient(connector)
     try:
         return active_client.recognize(
             image,
+            full_image_authorized=full_image_authorized,
             mime_type=mime_type,
-            privacy_mask=privacy_mask,
             allowed_root=allowed_root,
         )
     finally:
         if own_client:
             active_client.close()
+
+
+def _build_form_body(image: PreparedImage, *, request_id: str) -> bytes:
+    encoded_image = base64.b64encode(image.image_bytes).decode("ascii")
+    form = urlencode(
+        {
+            "image": encoded_image,
+            "recognize_granularity": "small",
+            "probability": "true",
+        }
+    ).encode("ascii")
+    if len(form) > BAIDU_FORM_BODY_MAX_BYTES:
+        raise ImageTooLargeError(request_id=request_id)
+    return form
+
+
+def _raise_for_http_status(status_code: int, *, request_id: str) -> None:
+    if type(status_code) is not int:
+        raise InvalidResponseError(request_id=request_id)
+    if 200 <= status_code < 300:
+        return
+    if status_code in (401, 403):
+        raise AuthenticationError(request_id=request_id, http_status=status_code)
+    if status_code == 429:
+        raise RateLimitError(request_id=request_id, http_status=status_code)
+    if status_code == 408:
+        raise RequestTimeoutError(request_id=request_id, http_status=status_code)
+    raise HttpError(request_id=request_id, http_status=status_code)
+
+
+def _json_payload(response_body: bytes, *, request_id: str) -> dict[str, Any]:
+    if not isinstance(response_body, bytes):
+        raise InvalidResponseError(request_id=request_id)
+    try:
+        payload = json.loads(response_body)
+    except (ValueError, UnicodeDecodeError):
+        raise InvalidResponseError(request_id=request_id) from None
+    if not isinstance(payload, dict):
+        raise InvalidResponseError(request_id=request_id)
+    return payload
 
 
 def _parse_ocr_payload(

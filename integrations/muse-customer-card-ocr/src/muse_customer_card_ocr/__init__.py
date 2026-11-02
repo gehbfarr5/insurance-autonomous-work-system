@@ -1,32 +1,32 @@
-"""MUSE customer-card OCR client.
+"""MUSE customer-card OCR client, deterministic extraction, and field mapping."""
 
-The public entry point refuses external OCR unless a verified privacy-mask
-result is supplied. This package does not yet contain a family-card mask
-processor.
-"""
-
-from .client import (
-    BAIDU_HANDWRITING_URL,
-    BaiduCredentials,
-    BaiduOcrClient,
-    recognize_customer_card,
-)
+from .client import BAIDU_HANDWRITING_URL, BaiduOcrClient, recognize_customer_card
 from .errors import (
     AuthenticationError,
+    FullImageOcrNotAuthorizedError,
     HttpError,
     ImageInputError,
     ImageTooLargeError,
     InvalidResponseError,
-    MissingCredentialsError,
+    ManualReviewRequiredError,
+    MissingSecureConnectorError,
     NetworkError,
     OcrError,
     PermissionDeniedError,
-    PrivacyMaskUnverifiedError,
     ProviderError,
     QuotaExceededError,
     RateLimitError,
     RequestTimeoutError,
+    SecureConnectorFailure,
+    SecureConnectorTimeout,
 )
+from .fields import (
+    CustomerCardFields,
+    FieldExtractionResult,
+    ReviewReason,
+    extract_primary_customer,
+)
+from .icloud_mapping import ICloudContactDraft, map_to_icloud_fields
 from .models import (
     BoundingBox,
     CharacterCandidate,
@@ -35,40 +35,46 @@ from .models import (
     OcrResult,
     ProbabilityStats,
 )
-from .privacy import (
-    REQUIRED_REDACTED_REGIONS,
-    MaskStatus,
-    PrivacyMaskResult,
-    source_sha256,
+from .secure_connector import (
+    BearerOcrRequest,
+    BearerOcrResponse,
+    SecureBearerConnector,
 )
 
 __all__ = [
     "BAIDU_HANDWRITING_URL",
     "AuthenticationError",
-    "BaiduCredentials",
     "BaiduOcrClient",
+    "BearerOcrRequest",
+    "BearerOcrResponse",
     "BoundingBox",
     "CharacterCandidate",
+    "CustomerCardFields",
+    "FieldExtractionResult",
+    "FullImageOcrNotAuthorizedError",
     "HttpError",
+    "ICloudContactDraft",
     "ImageInputError",
     "ImageTooLargeError",
     "InvalidResponseError",
-    "MaskStatus",
-    "MissingCredentialsError",
+    "ManualReviewRequiredError",
+    "MissingSecureConnectorError",
     "NetworkError",
     "OcrBlock",
     "OcrCharacter",
     "OcrError",
     "OcrResult",
     "PermissionDeniedError",
-    "PrivacyMaskResult",
-    "PrivacyMaskUnverifiedError",
-    "ProviderError",
     "ProbabilityStats",
+    "ProviderError",
     "QuotaExceededError",
     "RateLimitError",
-    "REQUIRED_REDACTED_REGIONS",
     "RequestTimeoutError",
+    "ReviewReason",
+    "SecureBearerConnector",
+    "SecureConnectorFailure",
+    "SecureConnectorTimeout",
+    "extract_primary_customer",
+    "map_to_icloud_fields",
     "recognize_customer_card",
-    "source_sha256",
 ]
