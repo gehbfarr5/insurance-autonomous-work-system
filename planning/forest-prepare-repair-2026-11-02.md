@@ -221,3 +221,9 @@ Android官方API语义不同：`KeyguardManager.isKeyguardLocked()`报告锁屏�
 review-only归档`auth-diagnostic-review-only-keyguard-v2.zip` SHA-256 `07008d505a301bcc5f044c69bb43abadfde33444df6ca3e50ea96778e6c838f9`，ZIP完整性及内部清单核对通过；其中候选`monitor-diagnostics-candidate.js` SHA-256 `c34801dcf6d06d3a48395e0ec927c83fd31e9c26a4595218f3357f7e2ca1d1bb`，只读采集器SHA-256 `acb97ff752a4b5c066ea47292ea1141632191f25a54ccf0f7a7b670e90f5d8e1`。包仅含候选、严格只读采集器、测试和说明，保存在仓库外本机私有目录。**尚未在Android/AutoX实机运行，未安装到Pixel，未重启monitor或触发应用/业务。** 现有MUSE只读导出记录每日任务`Asia/Shanghai 09:00`、下一次`2026-11-03 09:00 CST`、导出时`running_runs=0`；不改该任务。部署前需单独设备写操作授权、备份、核对实时monitor哈希并准备回滚；授权后只用于下一次自然运行取证，不重放11月2日业务。
 
 21:54经既有SSH别名再次只读复核当前设备为Pixel 3a / Android 15；当前`monitor.js` SHA-256仍为基线`238d86a8ec06c5a92579ea54377956f282cbed824c32b2c56823a2924cb906fd`，状态`watching`、`guardBlocked=false`、`requests=6`；设备上不存在v2诊断文件。此快照只确认当前候选仍未部署且monitor当前健康，不回溯11月2日Keyguard/登录态，也不证明下一轮结果。
+
+### 部署入口只读复核｜2026-11-02 21:57
+
+经既有SSH别名只读核对，Pixel的`pixel-auth-monitor-start` SHA-256为`6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，与本机受控副本一致；入口返回`MONITOR_LOCK_AND_HEARTBEAT_CONFIRMED`。该入口用于健康确认或启动，不会在监控已健康时自动重启；其启动路径会读取并恢复AutoX Activity原组件状态。当前确认了受控入口和健康基线，但尚未执行候选安装/重启，也未实测回退过程。
+
+若后续获准部署，须先备份并核对live `monitor.js`，通过现有`stop`标记等待旧监控释放锁，再替换为Keyguard候选、移除停止标记并调用既有启动入口；启动后核对候选哈希、watching状态及新鲜心跳。任何哈希或健康检查失败都恢复原文件并停止。此流程仍需在设备写入前完成明确的回退门禁；不启动应用登录、不输入手势、不触发业务、不改state/cron/09:00调度。
