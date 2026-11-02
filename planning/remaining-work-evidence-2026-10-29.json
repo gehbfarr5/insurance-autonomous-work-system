@@ -1195,5 +1195,12 @@
     },
     "privateRawEvidencePublished": false,
     "scheduleOrBusinessChanged": false
+  },
+  "executionPriority20261102": {
+    "userDirection": "Prioritize existing automatic execution; defer immediate verification and repeated low-confidence PREPARE_TIMEOUT diagnosis.",
+    "lastScheduleEvidence": "2026-11-02 08:59 Asia/Shanghai snapshot: enabled daily 09:00; next shown as 2026-11-03 09:00. Snapshot only, not a fresh live query at write time.",
+    "latestNaturalResult": "2026-11-02 BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK; five daily items NOT_EXECUTED; cleanup PASS.",
+    "actionThisTurn": "Preserve the existing schedule; no manual rerun, no schedule/state/cron changes, no new persistent task, no new MUSE request.",
+    "verificationPriority": "DEFERRED"
   }
 }
