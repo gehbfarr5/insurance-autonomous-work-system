@@ -50,6 +50,20 @@
 
 **Worker 源码恢复后的新增第一步：** 在不输出 Secret 值的前提下，审查 `ICLOUD_BRIDGE_URL` 的**URL pathname 是否等于 `/bridge`**，并通过 Worker 分阶段日志确认 `fetch_started` 是否触发；不要再次盲目更换 Token 或重建插件。
 
+## 2026-11-02 Site 官方源码恢复回执：停止重试
+
+**最终状态：`SITE_SOURCE_CHECKOUT_BLOCKED / STOPPED`。** 本次仅观察 Sites 官方源码工作流，没有更改原 Site、生产桥接或 iCloud 数据。
+
+- 原 Site：`iCloud MCP Capability Test`，项目 ID `appgprj_6ae74a5f951c81918542ca3d380f8f3c`；发布版本 **v2**，version ID `appgprj_6ae74a5f951c81918542ca3d380f8f3c~appgver_2011b657ef6481918cb478250ae79a7c`。
+- Source commit（Site 元数据报告）：`7260091c01fa91b3c1383f3d00c3080507a8d4f2`。这是绑定的版本信息，**并非本次 `git checkout` 返回的检出 SHA**。
+- 源码绑定：官方 Cloudflare Artifact 仓库，分支 `main`，与上述 Site 关联。
+- 官方助手 `sites/1.1.2` 第一次准备：从已有内容的工作目录进入，缺少 `hosting.json`，源码选择阶段在远端访问前退出；属于工作目录选择问题。
+- 第二次准备：改用空目录，进入远程 Git 阶段。执行 `git ls-remote` 时，执行环境到本地代理 **`127.0.0.1:7897`** 连接失败；**exit code 128**。没有得到 `checkout_path` 或新的 `commit_sha`。
+- 官方流程使用临时授权通道且没有在最终回执中披露值；没有新增长期 GitHub PAT 或生产 iCloud 访问身份。
+- 工作区未恢复：无 Worker 文件读取/修改、无 Site 版本发布、无首尔服务变更。旧 `ICLOUD_BRIDGE_URL` 为 HTTPS 且 pathname 已是 `/bridge`；桥接 Secret 的设置项存在，但因隐藏值未验证非空。**不能据此判断 Worker 代码的 URL 拼接是否正确，更不能认定桥接或 iCloud 故障。**
+- **下一步唯一有效依赖：**通过 OpenAI Support 或 Sites 官方托管源码恢复通道，修复该源代码执行环境的代理或 Git 出站链路，使原项目能完成可信的 checkout。不要再重试 Git 凭据、用沙箱代理做无依据的替换或重建新 Site。
+- 支持工单主题：`Existing private Site source checkout fails at Git remote access`。需附 Site ID、版本、源码绑定和两次失败阶段、脱敏错误、退出码，以及“未修改任何生产数据”的声明；不要附凭据。
+
 ## 已知状态
 
 | 验收环节 | 状态 |
