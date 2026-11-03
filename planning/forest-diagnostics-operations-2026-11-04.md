@@ -1,5 +1,9 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 03:19 CST：当前自然运行与设备门禁
+
+03:19:13在既有MUSE线程只读确认：无Forest任务、running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无进程观察值，唯一每日09:00 Asia/Shanghai schedule仍启用。该回读没有连接Pixel；设备操作锁、monitor/hash、屏幕/Keyguard与前台Activity保持UNKNOWN。本次只记录和等待自然运行；不启动设备、运行collector、安装过期候选、改动schedule或重放业务。运行结束后先刷新MUSE，确认已完成且无并发，再读取同轮脱敏结果；只有后来找到并验证的既有非root证据路径和所有设备门禁均通过，才重新评估Pixel读取。证据：`museReadonlyStatus20261104_031913`。
+
 ## 2026-11-04 03:04 CST：Android诊断权限边界
 
 Android 15 AOSP框架清单将android.permission.DUMP标为signature/privileged/development，并注明不供第三方应用使用；Android官方文档给出的dumpsys入口是adb shell。现有Pixel SSH UID的实际DUMP授权未核，未运行dumpsys或ADB探针。不能假定应用式SSH会话可以读取系统转储；屏幕、Keyguard和前台Activity继续记UNKNOWN，不切换访问通道或授予权限。这是诊断访问约束，不是森林故障根因。证据：androidDumpPermissionReview20261104_030429。[Android 15 AOSP清单](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934)；[Android dumpsys文档](https://developer.android.com/tools/dumpsys)。
@@ -319,7 +323,7 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 
 ## 自然运行顺序
 
-### 当前适用顺序｜2026-11-03 23:58 CST
+### 当前适用顺序｜更新至2026-11-04 03:19 CST
 
 1. 只等待既有2026-11-04 09:00 Asia/Shanghai自然调度；不手动启动、补跑、取消或重放业务。
 2. 运行后先在精确Forest MUSE线程读取该自然轮的脱敏分段、prepare事件摘要、结果、stages、assistant派发状态和cleanup，保留每条数据自己的采样时间；同时重新读当时schedule、running/queued/in-flight、MUSE runner lock及live版本锚点。
@@ -371,6 +375,8 @@ CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；
 ### 当前设备回滚就绪状态｜2026-11-03 23:58 CST
 
 Runbook中的旧monitor备份路径/hash是历史候选事务记录，不是当前live monitor读数，也不证明当前设备操作锁FREE。当前monitor状态/hash与设备操作锁均UNKNOWN，非root读取路径未验证；因此本轮的停止/回滚**文档决策为BLOCKED，不执行设备操作**。MUSE runner lock `FREE`不能代替Pixel操作锁。若后续满足授权与只读门禁，才按下列步骤恢复已核验备份并验证hash/heartbeat；若任一门禁读数不可得，停在BLOCKED，不启动或停止AutoX、不删标记、不恢复旧文件。
+
+03:19:13的最新MUSE空闲元数据只更新调度状态，不刷新设备侧锁或回滚前提；上述设备侧UNKNOWN保持有效，禁止据此执行回滚或停止操作。
 
 
 - 若哈希不符、stop/blocked 标记出现、monitor 状态异常、设备操作锁被占用或 MUSE 报告有并发运行：停止诊断动作；先读清在途状态，不启动另一个流程、不删锁或状态。当前只读检查不授权解除并发锁。
