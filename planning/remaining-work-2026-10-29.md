@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 04:05 CST：回滚runbook历史状态校准
+
+已给运行恢复说明中11月3日monitor部署快照加明确历史标注，并指向11月4日03:47/03:50当前门禁。旧`watching`/锁marker/sidecar读数不作为今天状态；当前设备锁、monitor/hash、UI仍UNKNOWN。结构化证据：`runbookHistoricalSnapshotClarification20261104_0405`。
+
 ## 2026-11-04 04:03—04:04 CST：Drive规则搜索扩展范围
 
 将前一轮10/20上限与每日森林奖励规则的metadata-only检索扩展至所有可访问Drive文件，两个查询仍为0，未取正文。其余规则来源仍未恢复；结果不证明原件不存在或D-029错误。记录：`googleDriveRuleSourceSearchAllAccessible20261104_0404`。

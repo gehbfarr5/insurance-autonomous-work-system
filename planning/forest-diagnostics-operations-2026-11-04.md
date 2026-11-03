@@ -337,10 +337,12 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 - 本次状态抄录存于仓库外受限私有文件`status-readback-20261103-1554-1558.json`，SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`。它是脱敏操作员抄录，不是MUSE原始导出或Pixel stdout；UNKNOWN项和APK哈希的15:22读取时点均保留。
 - 11月4日只读review包`auth-trigger-diagnostics-20261104-review-only`的SHA256SUMS于16:10 CST复算14/14匹配，随后原生命令`shasum -a 256 -c SHA256SUMS.txt`也返回14/14 OK；其monitor候选哈希与15:58 live读数一致。仓库外私有校验记录`review-package-integrity-20261103.json` SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。清单完整性不代表窗口期Keyguard API/sidecar/MUSE对账已实机验收；只用此包中的collector说明，不应用窗口已过期的11月3日v3部署包。
 
+> **历史状态边界：** 下方15:37/15:22快照及monitor `watching`、sidecar尚无记录的状态均为2026-11-03观察，不是当前门禁。它们已被本说明顶部2026-11-04 03:47 MUSE状态和03:50 Pixel有限只读预检所取代；当前Pixel设备操作锁、monitor状态/hash、Keyguard和Activity仍UNKNOWN，不据历史读数执行设备动作。
+
 - **前一时点记录（15:37，已由上方15:54状态读回更新）：** MUSE 14:09 CST 快照报告既有 `Asia/Shanghai 09:00` 任务下一次为 11 月 4 日 09:00，且当时 running/queued/in-flight 均为 0。15:37 CUA 应用清单确认 MUSE 进程运行，但未读回任务状态。不要把旧快照或应用进程状态当成当前任务 readback。
-- Pixel 15:22 CST 通过现有 `pixel3a-kjgx` 别名及其既有 `su` 路径只读复核：`sargo`、Android 15、启动完成；monitor 状态 `watching`、guard 未阻断、心跳新鲜、`requests=0`；设备操作锁、`blocked` 与 `stop` 标记不存在，monitor 自身锁存在。Forest 未在前台，设备 Dozing。
+- Pixel 2026-11-03 15:22 CST 通过现有 `pixel3a-kjgx` 别名及其既有 `su` 路径只读复核：`sargo`、Android 15、启动完成；monitor 状态 `watching`、guard 未阻断、心跳新鲜、`requests=0`；设备操作锁、`blocked` 与 `stop` 标记不存在，monitor 自身锁存在。Forest 未在前台，设备 Dozing。此为历史安装状态，不是2026-11-04当前读数。
 - 已部署的 monitor-only 候选 SHA-256 为 `2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`；其触发器与 worker 哈希仍为 `0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499` 与 `f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。已安装 v0.19 SecureView APK 哈希 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167` 与 runner pin 一致。
-- 输入审计仍为 12 行，最后修改时间 2026-10-31 09:06:46 CST；现有状态记录为 `page_left`，本轮没有认证输入。固定窗口 sidecar 尚未出现，窗口为 2026-11-04 08:55–09:55 CST。登录字段逐项诊断仍不可用，因为 prepare observer 未部署。
+- 输入审计在该2026-11-03历史读取时仍为12行，最后修改时间2026-10-31 09:06:46 CST；当时状态记录为`page_left`，未见认证输入。固定窗口sidecar尚未开始生成，计划窗口为2026-11-04 08:55–09:55 CST。登录字段逐项诊断仍不可用，因为prepare observer未部署。
 
 完整只读 readback 及 MUSE 状态限制见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。恢复基线哈希、设备备份位置、候选及离线验证材料见本机私有审阅包。
 

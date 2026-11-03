@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 04:05 CST — recovery-runbook history boundary clarified
+
+The runbook now labels its 2026-11-03 Pixel `watching`/monitor/sidecar notes as historical and superseded by the latest 03:47 MUSE and 03:50 bounded Pixel observations. Current device lock and monitor/UI state remain UNKNOWN. Evidence: `runbookHistoricalSnapshotClarification20261104_0405`.
+
 ## 2026-11-04 04:03—04:04 CST — Drive search widened to all accessible files
 
 The two targeted metadata-only queries for the 10/20 cap and daily Forest reward rules returned zero results across all accessible Drive files, not only viewed documents. No file contents were fetched. This wider bounded miss still does not establish source absence or negate D-029. Evidence: `googleDriveRuleSourceSearchAllAccessible20261104_0404`.

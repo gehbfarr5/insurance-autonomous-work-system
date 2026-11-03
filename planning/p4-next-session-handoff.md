@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:05 CST — historical runbook state superseded
+
+The recovery runbook now explicitly labels the Nov 3 Pixel monitor/lock/sidecar bullets as historical, superseded by the 03:47 MUSE and 03:50 bounded Pixel checks. Current device lock, monitor, Keyguard, and Activity remain UNKNOWN; do not use the old `watching` readback as a gate. Evidence: `runbookHistoricalSnapshotClarification20261104_0405`.
+
 ## 2026-11-04 04:03–04:04 CST — Drive search widened to accessible files
 
 The two metadata-only queries for the 10/20 cap and daily Forest reward rules returned no results when widened to all accessible Drive files. No contents were fetched. This remains a bounded miss and does not negate D-029. Evidence: `googleDriveRuleSourceSearchAllAccessible20261104_0404`.

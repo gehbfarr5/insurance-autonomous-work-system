@@ -5135,5 +5135,17 @@
     ],
     "contentFetched": false,
     "scopeLimit": "No matching document metadata surfaced for these terms across accessible drives. Does not establish that the original source is absent, filed under different terms or file types, or negate D-029."
+  },
+  "runbookHistoricalSnapshotClarification20261104_0405": {
+    "recordedAt": "2026-11-04T04:05:53+08:00",
+    "source": "Read-only audit of the historical device-state bullets in the recovery runbook against current MUSE/Pixel checkpoints.",
+    "reviewedScope": "planning/forest-diagnostics-operations-2026-11-04.md lines 332-345, including the 2026-11-03 15:54-15:58 readback and prior 15:37/15:22 notes.",
+    "currentEvidence": [
+      "museReadonlyStatus20261104_034707",
+      "pixelReadonlyPreflight20261104_035029",
+      "pixelProcessFilter20261104_035029"
+    ],
+    "clarification": "The prior Pixel monitor watching/hash, operation-marker, and sidecar-before-window observations are dated 2026-11-03 historical evidence. They do not prove current 2026-11-04 device lock, monitor state/hash, Keyguard, Activity, or sidecar status. The runbook now marks these snapshots historical and explicitly defers to the newer UNKNOWN gates.",
+    "actions": "Documentation only. No Pixel connection, root/su use, device write, code/task run, or schedule change."
   }
 }

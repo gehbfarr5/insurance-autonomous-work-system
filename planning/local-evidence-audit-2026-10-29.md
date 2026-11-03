@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 04:05 CST：恢复手册历史设备快照澄清
+
+已将runbook中11月3日15:22/15:58的Pixel `watching`、marker和sidecar记录明确标为历史证据，并注明由11月4日03:47 MUSE与03:50有限Pixel读取更新当前状态。当前设备锁、monitor/hash、Keyguard和Activity仍UNKNOWN；不使用旧读数放行设备操作。结构化记录：`runbookHistoricalSnapshotClarification20261104_0405`。
+
 ## 2026-11-04 04:03—04:04 CST：Drive可访问范围补查
 
 两条限额/每日奖励词面查询扩展至全部可访问Drive文件后无匹配元数据，未读取内容。此有界结果不证明源材料不存在或历史确认未发生；D-029不变。结构化键：`googleDriveRuleSourceSearchAllAccessible20261104_0404`。
