@@ -118,7 +118,7 @@ class CustomerFieldExtractionTests(unittest.TestCase):
             characters=(
                 OcrCharacter(
                     text="9",
-                    candidates=(CharacterCandidate(text="9"), CharacterCandidate(text="0")),
+                    candidates=(CharacterCandidate(text="0"), CharacterCandidate(text="9")),
                 ),
             ),
         )
@@ -135,7 +135,7 @@ class CustomerFieldExtractionTests(unittest.TestCase):
             characters=(
                 OcrCharacter(
                     text="甲",
-                    candidates=(CharacterCandidate(text="甲"), CharacterCandidate(text="乙")),
+                    candidates=(CharacterCandidate(text="乙"), CharacterCandidate(text="甲")),
                 ),
             ),
         )
@@ -144,7 +144,7 @@ class CustomerFieldExtractionTests(unittest.TestCase):
             characters=(
                 OcrCharacter(
                     text="9",
-                    candidates=(CharacterCandidate(text="9"), CharacterCandidate(text="8")),
+                    candidates=(CharacterCandidate(text="8"), CharacterCandidate(text="9")),
                 ),
             ),
         )

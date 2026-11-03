@@ -117,3 +117,28 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
 MUSE staging and re-test steps are documented in `README.md`; they install the package in an isolated environment, run the offline suite, verify extraction decisions and draft mapping, and do not invoke iCloud.
+
+## WP11-B candidate interpretation fix
+
+- Date: 2026-11-03
+- Package version: 0.7.0
+- Development branch: `codex/wp11-family-card-table-parser-20261103`
+- MUSE evidence source: `muse/wp11b-ambiguous-char-handoff-20261103` at `fd85f3b8ac69236e76aa67ba80de0d4365274355`; the original real OCR payload remains in MUSE's protected workspace and is not included here.
+- Confirmed baseline: the MUSE-provided synthetic table reproduction failed on 0.6.0 with `REVIEW_REQUIRED` (expected `READY`), reproducing the real-template aggregate failure.
+- Selected fix: use Baidu's first character candidate as its recognized character. Later alternatives alone no longer force review. Missing character text, disagreement between recognized text and the first candidate, geometry/layout uncertainty, value conflicts, and identity-number validation continue to fail closed. No confidence threshold was introduced because the available aggregate distribution is not a representative calibration set.
+- Regression coverage: the MUSE synthetic table reproduction now passes; existing identity/name/mobile/label ambiguity tests now place the disagreeing candidate first, so a genuine first-candidate mismatch still requires review.
+- Local runtime: macOS, Python 3.14.7, Pillow 12.2.0. The package installed editable as 0.7.0 in a temporary venv with `--no-deps`; pip's isolated build environment supplied the declared build backend.
+- Targeted regression: PASS — 1/1 WP11-B reproduction tests.
+- Complete offline regression: PASS — 90 tests, 0 failures, 0 errors (the previous 89 plus the WP11-B reproduction).
+- Test data: fictional table and values only. No real OCR payload, image, customer value, or credential was read or added.
+- External services and contacts: no MUSE runtime/deployment was changed, no Baidu call was made, and no iCloud read/write/delete call was made.
+- MUSE acceptance: PENDING. MUSE's earlier production status was reported as package 0.5.0; Codex has not independently inspected the live MUSE runtime. An isolated retest task and redacted JSON result template are provided in `../../planning/wp11b-muse-retest-20261103.md` and `../../planning/wp11b-muse-result-template-20261103.json`. The retest must report its actual runtime and production readback.
+
+Commands:
+
+```bash
+python -m pip install --no-deps -e integrations/muse-customer-card-ocr
+cd integrations/muse-customer-card-ocr
+python -m unittest discover -s tests -p 'test_wp11b*.py' -v
+python -m unittest discover -s tests -v
+```

@@ -195,7 +195,7 @@ class TableLayoutExtractionTests(unittest.TestCase):
             characters=(
                 OcrCharacter(
                     text="9",
-                    candidates=(CharacterCandidate(text="9"), CharacterCandidate(text="8")),
+                    candidates=(CharacterCandidate(text="8"), CharacterCandidate(text="9")),
                 ),
             ),
         )
@@ -217,7 +217,7 @@ class TableLayoutExtractionTests(unittest.TestCase):
             characters=(
                 OcrCharacter(
                     text="姓",
-                    candidates=(CharacterCandidate(text="姓"), CharacterCandidate(text="性")),
+                    candidates=(CharacterCandidate(text="性"), CharacterCandidate(text="姓")),
                 ),
             ),
         )

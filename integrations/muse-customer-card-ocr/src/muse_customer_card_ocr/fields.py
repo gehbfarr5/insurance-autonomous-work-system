@@ -584,7 +584,7 @@ def _has_ambiguous_character(block: OcrBlock) -> bool:
     for character in block.characters:
         if character.text is None:
             return True
-        if any(candidate.text != character.text for candidate in character.candidates):
+        if character.candidates and character.candidates[0].text != character.text:
             return True
     return False
 
