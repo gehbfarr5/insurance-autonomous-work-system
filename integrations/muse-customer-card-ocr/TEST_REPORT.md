@@ -374,8 +374,8 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 - Blank-template CLI smoke result: `real_card_ocr_result=BLOCKED`; authorization, distinct-reference, and study-reference gates false; sample and diversity counts null/`NOT_TESTED`; contact-safety gates `NOT_TESTED`.
 - This is local synthetic/mock evidence only. MUSE exact-commit retest, active runtime binding, live UI wiring, and production behavior remain unverified. No real-card data, OCR/provider call, contact operation, production execution/write, deployment, or raw export was used.
 
-### Local Python 3.12 environment availability check (2026-11-03)
+### Local Python 3.12 compatibility check (2026-11-03)
 
-- The local `python3.12` interpreter is 3.12.14, but importing Pillow fails with `ModuleNotFoundError: No module named 'PIL'`. `python3.12 -m pip cache list Pillow` reported no locally built Pillow wheels.
-- Attempted `PYTHONPATH=src python3.12 -m unittest tests.test_acceptance_metrics -v`; package import stopped before test discovery because `muse_customer_card_ocr.__init__` imports the image module. No test assertions ran. Classify this local environment check as `BLOCKED` by the missing dependency, not as a code regression or a MUSE result.
-- No package index was contacted and no dependency was installed. The exact-candidate MUSE task still expects its isolated Python 3.12.3 / Pillow 12.3.0 environment; that run remains unobserved.
+- The system `python3.12` interpreter is 3.12.14 and initially lacked Pillow; the first targeted test attempt stopped before test discovery because package initialization imports the image module. The system pip cache reported no locally built Pillow wheels. No assertions ran in that initial attempt.
+- A disposable local virtual environment then installed the binary Pillow 12.3.0 wheel from the official PyPI index with `--no-deps`. With `PIP_NO_INDEX=1` during the test run, `PYTHONPATH=src python -m unittest discover -s tests -v` passed **148 tests, 0 failures, 0 errors** on Python 3.12.14 / Pillow 12.3.0.
+- This adds local compatibility evidence only. It does not verify MUSE's exact Python 3.12.3 environment, isolated worktree/import pins, WP10 replay, active runtime binding, or live wiring. No MUSE tool, card/reference, OCR provider, contact, production state, or deployment was accessed.
