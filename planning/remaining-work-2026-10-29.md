@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 最新运行门禁与规则原件搜索｜2026-11-03 22:51—22:57 CST
+
+Pixel 22:51:04的非root只读读数确认设备启动及SecureView v0.19 APK pin；设备锁、monitor私有状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。MUSE 22:56:37确认Forest当前无活动/排队/在途，runner lock FREE、无进程，唯一Asia/Shanghai每日09:00 schedule下次11月4日，live hashes不变。Drive四项document metadata-only检索均为0、没有读取正文；本次检索不证明原始规则材料不存在或从未确认。官方时点、周期、触发、限额和当前资格仍需原据。自然运行待发生；未部署/写设备、运行任务、读业务状态或改schedule。证据键：`pixelReadonlyPreflight20261103_225104`、`museReadonlyStatus20261103_225637`、`googleDriveRuleMetadataSearch20261103_225425`。
+
 ## 最新Forest/Pixel只读预检｜2026-11-03 22:37—22:43 CST
 
 MUSE 22:37:51回读当时无Forest活动任务，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live源码哈希不变。22:43:04经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成；SecureView安装APK SHA-256匹配v0.19 pin。设备操作锁、monitor私有状态/hash及显示/Keyguard/前台Activity仍UNKNOWN。没有设备写入、业务state读取、任务/源码运行、部署或调度变化。下一步保留09:00自然运行，先读取MUSE同轮脱敏结果与cleanup；无精确已验证的非root设备方法时不采设备私有状态。证据键`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。

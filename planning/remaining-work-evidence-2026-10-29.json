@@ -2569,6 +2569,67 @@
     "directRuleSourcesFound": 0,
     "interpretation": "No directly relevant rule source surfaced in this bounded metadata search. The result does not establish that original material is absent or was never historically confirmed; timing, reset/repeat cycle, reward trigger, limits, and current eligibility remain unverified."
   },
+  "pixelReadonlyPreflight20261103_225104": {
+    "readAt": "2026-11-03T22:51:04+08:00",
+    "transport": "Existing configured SSH alias only; non-root remote UID 10249; read-only shell.",
+    "remoteUid": 10249,
+    "device": {
+      "model": "Pixel 3a",
+      "android": "15",
+      "bootCompleted": true
+    },
+    "installedSecureViewApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "secureViewHashMatchesKnownV019Artifact": true,
+    "deviceOperationLock": "UNKNOWN; no exact documented non-root read method was available.",
+    "monitorStatusAndHash": "UNKNOWN; private app data not read.",
+    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
+    "rootOrSuUsed": false,
+    "actions": "No process inventory, app/process start or stop, install/deploy, device or state write, business-state read, task/code execution, schedule change, or credential/network change."
+  },
+  "museReadonlyStatus20261103_225637": {
+    "readAt": "2026-11-03T22:56:37+08:00",
+    "source": "Read-only status reply in the existing Sunshine Forest MUSE thread.",
+    "forestTaskActive": false,
+    "schedule": {
+      "enabledCount": 1,
+      "timezone": "Asia/Shanghai",
+      "dailyAt": "09:00:00",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "businessResults": "Not reread.",
+    "otherChats": "Not inspected.",
+    "actions": "No device connection, business-state/raw-log read, job/code/business run, file/schedule/cron/deployment/credential/state change, other-chat inspection, or task interruption."
+  },
+  "googleDriveRuleMetadataSearch20261103_225425": {
+    "recordedAt": "2026-11-03T22:57:19+08:00",
+    "queryWindow": "Executed after the 22:54:25 Asia/Shanghai clock read and recorded by 22:57:19; exact completion second was not captured.",
+    "source": "Connected Google Drive metadata-only search.",
+    "limits": {
+      "itemType": "document",
+      "topn": 8,
+      "bestEffortFetch": false,
+      "contentFetched": false
+    },
+    "queries": [
+      {"query": "阳光森林 规则", "resultCount": 0},
+      {"query": "阳光雨露 结算", "resultCount": 0},
+      {"query": "行为积分 上限", "resultCount": 0},
+      {"query": "三段一生 太享福 E锦囊", "resultCount": 0}
+    ],
+    "directRuleSourcesFound": 0,
+    "interpretation": "No direct rule material surfaced in these bounded metadata searches. No document body was read; this does not prove original material is absent or was never historically confirmed. Timing, cycle, trigger, limits, and current eligibility remain unverified."
+  },
   "liveRunnerDailyTaskMapping20261103_2228": {
     "recordedAt": "2026-11-03T22:28:28+08:00",
     "runtimeStatus": {
