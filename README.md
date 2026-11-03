@@ -2,7 +2,7 @@
 
 > **iCloud MCP 项目归档（2026-11-02）：** 核心首尔 MCP 与现有 Agent 已进入可用阶段；Chat 和 Work Cloud 同一 Sites MCP 演示工具已分别验收，但 **ChatGPT 真实 iCloud 数据链路仍受 Site 源码工作区阻断，子项目暂缓**。完整部署、研究、验收、无效尝试及恢复条件见 [iCloud MCP 全阶段总归档](planning/icloud-mcp-master-handover-2026-11-02.md)，不要将 demo PASS 误称为生产 iCloud PASS。
 
-> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** MUSE 的 0.7.0 与 0.8.0 受限 WP10 结构回放均为 `REVIEW_REQUIRED`；0.8.0 离线 94/94 通过，但真实回放的姓名、手机号、身份证、显式生日和性别仍未匹配，地址按已确认草稿留空。MUSE 报告无百度/iCloud 调用、无生产变更，生产包仍为 0.5.0。Codex 已在 0.8.1 加强近似列距歧义门，本地离线 95/95 通过；0.8.1 MUSE 隔离复验和至少 30 张真实样本门禁待完成，未部署。目标状态为 **VALIDATION_PENDING**。详见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试证据](integrations/muse-customer-card-ocr/TEST_REPORT.md)、[WP11-D MUSE 隔离复验任务](planning/wp11d-muse-retest-20261103.md)及[P4 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6596548305)。
+> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** MUSE 的 0.7.0 与 0.8.0 受限 WP10 结构回放均为 `REVIEW_REQUIRED`；0.8.0 离线 94/94 通过，但真实回放的姓名、手机号、身份证、显式生日和性别仍未匹配，地址按已确认草稿留空。MUSE 报告无百度/iCloud 调用、无生产变更，生产包仍为 0.5.0。Codex 已在 0.8.1 加强近似列距歧义门，本地离线 95/95 通过；0.8.1 MUSE 隔离复验和至少 30 张真实样本门禁待完成，未部署。目标状态为 **VALIDATION_PENDING**。详见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试证据](integrations/muse-customer-card-ocr/TEST_REPORT.md)、[WP11-D MUSE 隔离复验任务](planning/wp11d-muse-retest-20261103.md)及[P4 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6596960499)。
 
 > **阳光森林与 Pixel 登录助手最新核查｜2026-11-02：** Pixel 登录助手 Android 15 固定组件恢复及守护健康分支复核通过。阳光森林11月2日自然执行在准备阶段阻断；原 v0.18 桥接器的 bundle 指纹/旧模块锚点与当前运行包不匹配，模块已加载但补丁失败，五项业务未执行。已完成 v0.19 本机候选修复、离线构建、签名比对和保护分支验证；远端 staging、部署及本日一次补跑仍待 MUSE 界面恢复后完成。详细根因与证据等级见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。P50/月度规划继续挂起。
 
@@ -40,7 +40,7 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 用途 | 权威入口 |
 | --- | --- |
 | 当前阶段与下一步 | [P0—P4 路线图](planning/roadmap.md) |
-| 家庭卡 OCR → iCloud 联系人 | [模块架构与部署状态](integrations/muse-customer-card-ocr/README.md) · [WP11-D MUSE 隔离复验任务](planning/wp11d-muse-retest-20261103.md) · [P4 进度 Issue #3](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6596548305) |
+| 家庭卡 OCR → iCloud 联系人 | [模块架构与部署状态](integrations/muse-customer-card-ocr/README.md) · [WP11-D MUSE 隔离复验任务](planning/wp11d-muse-retest-20261103.md) · [P4 进度 Issue #3](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6596960499) |
 | iCloud MCP 多 Agent 接入（2026-11-01） | **[已接入 Agent 与验收台账](planning/icloud-mcp-agent-connection-status-2026-11-01.md)** · [持续跟踪 Issue #6](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6) |
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |
