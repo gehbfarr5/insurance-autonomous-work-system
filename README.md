@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 06:13 CST — rule-source Gmail search
+
+A targeted Gmail search for D-029 and Sunshine Forest cap/reward/reset terms returned no matches across six queries. No email, thread, or attachment was opened. This bounded result does not disprove the prior D-029 confirmation or establish that the original source never existed; the original timing/source pointer remains unresolved. Evidence: `gmailForestRuleSourceSearch20261104_0612`.
+
 ## 2026-11-04 05:58 CST — consolidated P4 acceptance snapshot
 
 The current gate-by-gate status is recorded in the [P4 handoff](planning/p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst) and `acceptanceGateStatus20261104_0558`. MUSE/Pixel status remains UNKNOWN, the 09:00 run is still ahead, and the Nov 3 failure is localized only to the prepare wait. The runbook is conditionally usable; device stop/rollback remains blocked. At 05:57, Issue #3 was OPEN, `main` was `8db9c83`, and unrelated WP11 PR #17 was OPEN/DRAFT, MERGEABLE/CLEAN with no checks.

@@ -1,5 +1,9 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 06:13 CST：原规则来源追溯扩展至Gmail
+
+六条针对D-029、阳光森林、阳光/雨露值、每日奖励与重置的Gmail搜索均无匹配；未打开邮件或附件。此前确认保持不变，原始时点/周期依据仍待恢复；不因本次未命中关闭规则问题。结构化证据：`gmailForestRuleSourceSearch20261104_0612`。
+
 ## 2026-11-04 05:58 CST：P4验收关口重新聚合
 
 最新逐项状态见[交接验收表](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)与`acceptanceGateStatus20261104_0558`：自然轮待09:00，MUSE/Pixel当前状态UNKNOWN；故障仅定位到prepare等待，根因未知；修复/集成与日常及扩展验收未通过；运行手册为条件式可用、当前设备停止/回滚阻断。Issue #3仍OPEN；05:57 main为`8db9c83`，无关WP11 PR #17为OPEN/DRAFT、MERGEABLE/CLEAN、无checks。

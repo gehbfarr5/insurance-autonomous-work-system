@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 06:13 CST：D-029原始规则来源的Gmail检索
+
+Connected Gmail定向搜索了六组D-029/D029、阳光森林、阳光/雨露值、每日奖励和重置词，均无匹配邮件；未打开任何邮件或附件。此次未命中不否定既有确认、不证明原件不存在，也不补齐时点/周期来源。证据：`gmailForestRuleSourceSearch20261104_0612`。
+
 ## 2026-11-04 05:58 CST：验收关口与GitHub状态快照
 
 已将P4每一关口按当前证据重新聚合，见[交接表](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)及`acceptanceGateStatus20261104_0558`。05:58 CUA仍报告Mac锁定且本地浏览器禁用；未查询MUSE或Pixel。03:47状态过时，09:00自然轮仍未到时。05:57 GitHub显示Issue #3 OPEN、main `8db9c83`；无关WP11 PR #17 OPEN/DRAFT、MERGEABLE/CLEAN、无checks。
