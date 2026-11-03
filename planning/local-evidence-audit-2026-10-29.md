@@ -4,7 +4,7 @@
 
 MUSE正确的「阳光森林每日执行部署」对话于15:54:29回读：唯一既有Asia/Shanghai每日09:00任务，下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17、最近成功10月31日09:15:50，连续失败3次。此前确认的11月3日assistant/main prepare timeout仍无业务阶段/回执、cleanup PASS；本次状态问询未重取业务结果。15:58:24经既有Pixel别名及原`su`路径只读回读Android 15/Dozing、monitor watching、guard清、heartbeat新鲜、requests=0；monitor/trigger/worker哈希一致于部署记录。设备操作锁和前台Activity UNKNOWN；APK pin最后一次直接核验在15:22且当时匹配。无设备写入、业务重跑或调度/state变更。
 
-该读数的仓库外受限私有抄录`status-readback-20261103-1554-1558.json`，SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`，明确不是原始UI/stdout导出。为11月4日准备的私有review包SHA256SUMS于16:10 CST复算14/14匹配；collector、joiner与monitor候选的包内指纹有效，monitor候选与15:58 live值一致。对应私有校验记录`review-package-integrity-20261103.json` SHA-256 `76517ac1c4402600cc81bdeac638e0818139ade09415e09c7f583f7fd8c15d9a`。包完整性不升级AutoX/Keyguard或自然运行结论。
+该读数的仓库外受限私有抄录`status-readback-20261103-1554-1558.json`，SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`，明确不是原始UI/stdout导出。为11月4日准备的私有review包SHA256SUMS于16:10 CST复算14/14匹配，并用原生`shasum`命令得到14/14 OK；collector、joiner与monitor候选的包内指纹有效，monitor候选与15:58 live值一致。对应私有校验记录`review-package-integrity-20261103.json` SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。包完整性不升级AutoX/Keyguard或自然运行结论。
 
 规则源复核：本地历史UI快照`rules.json`（8079字节，SHA-256 `19dc81a6f4f4ababc5b572b05eec809a539246ed574cba3224786a9f2df91cc2`）支持阳光日上限10、雨露日上限20及每人/次/单计量。页面1–7、8–14、15–21、22至月底分段和“统计截止当月末/最终以HR结算”为行为值显示/账务说明，不能推导森林任务重置时刻、重复领奖周期或到账时延。针对Drive中阳光森林、阳光雨露结算周期、官方时点计算、规则、月末统计、日上限等查询本轮未命中；此前最多100条可访问元数据与“保险”目录检查也未命中。此为有界搜索结果，不等于历史从未确认或原件不存在。
 

@@ -4,7 +4,7 @@
 
 - MUSE 15:54:29只读回读：唯一既有调度每日09:00 CST，下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。
 - Pixel 15:58:24经原配置`pixel3a-kjgx`别名及原有`su`只读回读：Android 15、boot完成、Dozing；monitor `watching`、guard清、heartbeat新鲜、requests=0，monitor锁存在，blocked/stop不存在。设备操作锁、前台Activity UNKNOWN。monitor/trigger/worker哈希见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)；APK pin仅确认到15:22读数。
-- 15:54—15:58状态抄录已保存在本机仓库外私有文件`status-readback-20261103-1554-1558.json`（SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`）；这是注明来源和限制的转录，不是原始stdout。11月4日review包清单于16:10 CST复算14/14匹配，对应私有校验记录SHA-256 `76517ac1c4402600cc81bdeac638e0818139ade09415e09c7f583f7fd8c15d9a`。窗口后只用该包的`collect-run-diagnostics.py`与脱敏唯一分段输入；命令、停止门禁及“不要用过期11月3日部署包”见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+- 15:54—15:58状态抄录已保存在本机仓库外私有文件`status-readback-20261103-1554-1558.json`（SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`）；这是注明来源和限制的转录，不是原始stdout。11月4日review包清单于16:10 CST复算14/14匹配，原生`shasum`命令也通过；对应私有校验记录SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。窗口后只用该包的`collect-run-diagnostics.py`与脱敏唯一分段输入；命令、停止门禁及“不要用过期11月3日部署包”见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 - 11月3日prepare超时和根因UNKNOWN不变；本次没有设备写入、业务执行或调度/state更改。登录字段与助理门禁观察器仍离线。只允许既有自然窗口；窗口后必须再次确认MUSE无在途任务，再用原collector只读导出。扩展五项仍全部“仍待核实”；官方重置/重复周期/到账时延原据未找到，不把有界搜索未命中写成从未确认。
 - P4开放、S1未验收；P50/月度规划挂起。
 
