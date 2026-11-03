@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 05:34 CST — PR #17 mergeability readback changed again
+
+At 05:34, GitHub again reported the unrelated open WP11 PR #17 as `MERGEABLE` / `CLEAN`, with no status checks listed; at 05:29 both fields were `UNKNOWN`. Treat these as point-in-time API readings, not a stable PR result. Issue #3 remains OPEN. Local `main` is clean at `7f75200`, matching `origin/main`. Evidence: `githubStateCheck20261104_0534`.
+
 ## 2026-11-04 05:30 CST — MUSE refresh still inaccessible
 
 A fresh CUA surface inventory reports the Mac is locked (automatic unlock failed) and local browser use is disabled in Work settings. No MUSE request was sent. Current task/queue/in-flight, runner lock, live hashes, and the 09:00 run result are therefore UNKNOWN; the last 03:47 MUSE snapshot is stale. Pixel was not queried. A 05:29 GitHub refresh still shows Issue #3 OPEN; PR #17 is OPEN with mergeability and merge-state UNKNOWN and no checks listed. Local `main` remains at `7b0ee8f` and matches `origin/main`. Evidence: `museAccessBlocked20261104_0530`, `githubStateCheck20261104_0529`.

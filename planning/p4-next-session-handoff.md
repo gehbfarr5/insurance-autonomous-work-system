@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 05:34 CST — latest GitHub readback
+
+Issue #3 remains OPEN. GitHub again reports unrelated WP11 PR #17 as `MERGEABLE` / `CLEAN`, with no checks listed. This follows an `UNKNOWN` readback at 05:29 and `MERGEABLE` / `CLEAN` at 05:22; treat mergeability as a fluctuating point-in-time value. Local `main` is clean and matches `origin/main` at `7f75200`. Evidence: `githubStateCheck20261104_0534`.
+
 ## 2026-11-04 05:30 CST — CUA access gate remains closed
 
 A fresh CUA surface inventory reports the Mac is locked and automatic unlock failed; Work settings also disable local browser use. No MUSE request was sent. The 03:47 MUSE status is stale, so current scheduler/task, queue/in-flight, runner lock, and live hashes remain UNKNOWN. Pixel was not queried. Before any device access, unlock the Mac, enable local browser use, then refresh the exact Forest MUSE thread and verify no in-flight task. The reported 09:00 natural run result is not yet available in this session. At 05:29, Issue #3 remained OPEN; PR #17 was OPEN with mergeability/merge-state UNKNOWN and no checks listed; local `main` matched `origin/main` at `7b0ee8f`. Evidence: `museAccessBlocked20261104_0530`, `githubStateCheck20261104_0529`.

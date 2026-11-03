@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 05:34 CST：PR #17 mergeability再次变化
+
+Issue #3仍OPEN。05:34 GitHub读回PR #17为OPEN / MERGEABLE / CLEAN、无checks；05:29同字段为UNKNOWN，05:22则为MERGEABLE/CLEAN。该无关WP11 PR的mergeability视为波动的瞬时读数。`main`与`origin/main`此时均为`7f75200`，工作区干净。证据：`githubStateCheck20261104_0534`。
+
 ## 2026-11-04 05:30 CST：MUSE运行状态因本机访问门禁无法刷新
 
 在05:29 CST的CUA surface inventory中，Mac锁定且自动解锁失败，Work settings禁用本地浏览器；没有MUSE请求/消息。故无法验证当前schedule、任务/队列/在途、runner lock、live hashes或自然运行结果，03:47状态保持历史快照。没有连接Pixel或执行业务。Evidence: `museAccessBlocked20261104_0530`。05:29 GitHub刷新仍见Issue #3 OPEN，PR #17 OPEN但mergeability和mergeStateStatus均返回UNKNOWN、无checks；这取代05:22的MERGEABLE/CLEAN读数。`main`与`origin/main`一致于`7b0ee8f`。Evidence: `githubStateCheck20261104_0529`。

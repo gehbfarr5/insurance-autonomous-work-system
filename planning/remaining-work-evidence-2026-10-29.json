@@ -5394,5 +5394,33 @@
     ],
     "changeSince0522": "At 05:22 GitHub reported PR #17 MERGEABLE/CLEAN; at 05:29 both mergeability fields returned UNKNOWN.",
     "actions": "Read-only status check; no issue, pull request, branch, or merge state was changed."
+  },
+  "githubStateCheck20261104_0534": {
+    "recordedAt": "2026-11-04T05:34:28+08:00",
+    "source": "Read-only GitHub CLI checks of Issue #3 and open pull requests, plus local Git status.",
+    "repository": {
+      "branch": "main",
+      "head": "7f75200b4863270799d4e47393ba94b3d61a23fe",
+      "originMain": "7f75200b4863270799d4e47393ba94b3d61a23fe",
+      "workingTree": "clean at check time"
+    },
+    "issue3": "OPEN",
+    "openPullRequests": [
+      {
+        "number": 17,
+        "title": "Harden Family Card OCR table field mapping",
+        "state": "OPEN",
+        "scope": "Unrelated WP11",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "statusChecks": []
+      }
+    ],
+    "recentReadbacks": [
+      "05:22 MERGEABLE/CLEAN",
+      "05:29 UNKNOWN/UNKNOWN",
+      "05:34 MERGEABLE/CLEAN"
+    ],
+    "actions": "Read-only state check; no issue, pull request, branch, or merge state was changed."
   }
 }
