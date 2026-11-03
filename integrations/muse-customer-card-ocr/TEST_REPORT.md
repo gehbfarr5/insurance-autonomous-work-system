@@ -93,3 +93,27 @@ PYTHONPATH=src /tmp/insurance-wp4-venv/bin/python -m unittest discover -s tests 
 ```
 
 These checks verify package logic and install metadata only. They do not establish live Baidu authentication or MUSE cloud acceptance.
+
+## WP11 table-layout extraction
+
+- Date: 2026-11-03
+- Package version: 0.6.0
+- Development branch: `codex/wp11-family-card-table-parser-20261103`
+- Base: `codex/wp7-muse-baidu-token-query-adapter-20261102` at `8336008d080387ab709d1e0ab9381683b1138e0f`
+- Runtime: macOS, Python 3.14.7, Pillow 12.2.0
+- Baseline before changes: PASS — all 76 WP7 tests
+- Complete regression after changes: PASS — 89 tests, 0 failures, 0 errors (all 76 existing tests plus 13 new WP11 tests)
+- Targeted WP11 tests: PASS — 13/13 (12 geometry/OCR cases plus fail-closed decision semantics)
+- Synthetic table acceptance: 5/5 valid layout fixtures produced `READY`; 7/7 blank, ambiguous, or invalid fixtures produced `REVIEW_REQUIRED`
+- Changed behavior: retains `FieldExtractionResult.status` values for compatibility and adds `decision` (`READY` / `REVIEW_REQUIRED`); parser uses Baidu block coordinates for row clustering and direct-right/next-row same-column pairing; no arbitrary cell or row inference is performed.
+- Test data: synthetic field strings, synthetic ID-shaped checksum values, generated OCR blocks and coordinates only. No real customer OCR response, image, or personal information was read or added.
+- Network/MUSE/iCloud: no Baidu request, no MUSE deployment, no MCP tool call, and no iCloud contact read/write/delete.
+- Confidence limitation: character candidate disagreement is reviewed. Baidu line `average` / `variance` / `min` values are preserved by the existing client, but no numeric review threshold was introduced because this template has no calibrated threshold evidence.
+
+Command:
+
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+MUSE staging and re-test steps are documented in `README.md`; they install the package in an isolated environment, run the offline suite, verify extraction decisions and draft mapping, and do not invoke iCloud.

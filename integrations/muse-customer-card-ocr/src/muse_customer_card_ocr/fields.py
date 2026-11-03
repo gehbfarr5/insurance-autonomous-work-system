@@ -11,6 +11,7 @@ from .models import OcrBlock, OcrResult
 
 class ReviewReason(str, Enum):
     MAIN_CUSTOMER_IDENTITY_UNCLEAR = "main_customer_identity_unclear"
+    TABLE_LAYOUT_UNCERTAIN = "table_layout_uncertain"
     MOBILE_MISSING = "mobile_missing"
     MOBILE_UNCERTAIN = "mobile_uncertain"
     MOBILE_CONFLICT = "mobile_conflict"
@@ -44,7 +45,16 @@ class FieldExtractionResult:
 
     @property
     def needs_manual_review(self) -> bool:
-        return self.status == "needs_manual_review"
+        return self.status != "ready" or bool(self.review_reasons)
+
+    @property
+    def decision(self) -> str:
+        """Explicit workflow decision while preserving the legacy status field."""
+        return (
+            "READY"
+            if self.status == "ready" and not self.review_reasons
+            else "REVIEW_REQUIRED"
+        )
 
     def __repr__(self) -> str:
         return (
@@ -58,6 +68,39 @@ class FieldExtractionResult:
 class _Evidence:
     value: str
     block: OcrBlock
+
+
+@dataclass(frozen=True)
+class _SpatialBlock:
+    index: int
+    block: OcrBlock
+    field_name: str | None
+    inline_value: str
+
+    @property
+    def left(self) -> int:
+        assert self.block.location is not None
+        return self.block.location.left
+
+    @property
+    def top(self) -> int:
+        assert self.block.location is not None
+        return self.block.location.top
+
+    @property
+    def right(self) -> int:
+        assert self.block.location is not None
+        return self.block.location.left + self.block.location.width
+
+    @property
+    def bottom(self) -> int:
+        assert self.block.location is not None
+        return self.block.location.top + self.block.location.height
+
+    @property
+    def center_y(self) -> float:
+        assert self.block.location is not None
+        return self.block.location.top + self.block.location.height / 2
 
 
 _FIELD_LABELS: dict[str, frozenset[str]] = {
@@ -85,16 +128,29 @@ _ID_CHECK_CHARS = "10X98765432"
 
 
 def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
-    """Extract only explicitly labelled top-level customer fields.
+    """Extract explicit top-level fields from line or positioned-table OCR.
 
     Parsing stops at a recognized family/relative section heading. It never
     derives a birthday from an identity number, resolves OCR alternatives,
-    infers gender, or chooses between conflicting values.
+    infers gender, or chooses between conflicting values. Positioned Baidu
+    word blocks may pair a label with its immediate right-hand cell or the
+    uniquely aligned cell in the next visual row. Missing or ambiguous geometry
+    is surfaced for review rather than guessed.
     """
     evidence: dict[str, list[_Evidence]] = {key: [] for key in _FIELD_LABELS}
     in_family_section = False
 
-    for block in result.blocks:
+    indexed_blocks = list(enumerate(result.blocks))
+    if indexed_blocks and all(block.location is not None for _, block in indexed_blocks):
+        indexed_blocks.sort(
+            key=lambda pair: (
+                pair[1].location.top,  # type: ignore[union-attr]
+                pair[1].location.left,  # type: ignore[union-attr]
+                pair[0],
+            )
+        )
+
+    for _, block in indexed_blocks:
         for line in block.text.splitlines():
             clean_line = _clean(line)
             if not clean_line:
@@ -115,7 +171,13 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
         if in_family_section:
             break
 
+    spatial_evidence, spatial_uncertain_fields = _extract_spatial_evidence(result)
+    for field_name, items in spatial_evidence.items():
+        evidence[field_name].extend(items)
+
     reasons: list[ReviewReason] = []
+    if spatial_uncertain_fields:
+        reasons.append(ReviewReason.TABLE_LAYOUT_UNCERTAIN)
     name = _one_value(evidence["name"])
     name_uncertain = any(_has_ambiguous_character(item.block) for item in evidence["name"])
     if (
@@ -233,6 +295,194 @@ def _extract_identity_number(
     uncertain = uncertain or any(_has_ambiguous_character(item.block) for item in items)
     uncertain = uncertain or any(not item.value for item in items)
     return value, uncertain, False
+
+
+def _extract_spatial_evidence(
+    result: OcrResult,
+) -> tuple[dict[str, list[_Evidence]], set[str]]:
+    """Read label/value adjacency from Baidu word-block coordinates.
+
+    Baidu's handwriting response exposes one location per ``words_result``
+    block, not table cells. This routine reconstructs visual rows from those
+    boxes, then accepts only direct right-neighbours or uniquely aligned
+    values immediately below a label. It intentionally does not invent empty
+    cells or bridge arbitrary gaps/rows.
+    """
+    evidence: dict[str, list[_Evidence]] = {key: [] for key in _FIELD_LABELS}
+    uncertain_fields: set[str] = set()
+    family_index, family_top = _family_boundary(result)
+    positioned: list[_SpatialBlock] = []
+
+    for index, block in enumerate(result.blocks):
+        location = block.location
+        if (
+            location is None
+            or location.width <= 0
+            or location.height <= 0
+            or "\n" in block.text
+            or "\r" in block.text
+        ):
+            continue
+        if not _is_before_family(index, location.top, family_index, family_top):
+            continue
+        clean_text = _clean(block.text)
+        if not clean_text:
+            continue
+        field_name, inline_value = _field_label_and_value(clean_text)
+        positioned.append(
+            _SpatialBlock(index, block, field_name, inline_value or "")
+        )
+
+    if not positioned:
+        return evidence, uncertain_fields
+
+    rows = _cluster_visual_rows(positioned)
+    for row_index, row in enumerate(rows):
+        for item_index, label in enumerate(row):
+            if label.field_name is None or label.inline_value:
+                continue
+            if _has_ambiguous_character(label.block):
+                uncertain_fields.add(label.field_name)
+                continue
+
+            candidates: list[_SpatialBlock] = []
+            if item_index + 1 < len(row):
+                right_neighbor = row[item_index + 1]
+                gap = right_neighbor.left - label.right
+                max_gap = max(
+                    24,
+                    3 * max(
+                        label.block.location.height if label.block.location else 0,
+                        right_neighbor.block.location.height
+                        if right_neighbor.block.location
+                        else 0,
+                    ),
+                )
+                if (
+                    right_neighbor.field_name is None
+                    and gap <= max_gap
+                ):
+                    candidates.append(right_neighbor)
+
+            if row_index + 1 < len(rows):
+                below_row = rows[row_index + 1]
+                aligned = [
+                    candidate
+                    for candidate in below_row
+                    if candidate.field_name is None
+                    and _same_visual_column(label, candidate)
+                ]
+                shared_candidates = [
+                    candidate
+                    for candidate in aligned
+                    if sum(
+                        1
+                        for other_label in row
+                        if other_label.field_name is not None
+                        and not other_label.inline_value
+                        and _same_visual_column(other_label, candidate)
+                    )
+                    > 1
+                ]
+                if shared_candidates:
+                    uncertain_fields.add(label.field_name)
+                    for candidate in shared_candidates:
+                        aligned.remove(candidate)
+                candidates.extend(aligned)
+
+            for candidate in candidates:
+                value = _clean(candidate.block.text)
+                if value:
+                    evidence[label.field_name].append(
+                        _Evidence(value=value, block=candidate.block)
+                    )
+
+    return evidence, uncertain_fields
+
+
+def _family_boundary(result: OcrResult) -> tuple[int | None, int | None]:
+    headings: list[tuple[int, int | None]] = []
+    for index, block in enumerate(result.blocks):
+        if any(_is_family_heading(_clean(line)) for line in block.text.splitlines()):
+            headings.append(
+                (index, block.location.top if block.location is not None else None)
+            )
+    if not headings:
+        return None, None
+    positioned_tops = [top for _, top in headings if top is not None]
+    return min(index for index, _ in headings), (
+        min(positioned_tops) if positioned_tops else None
+    )
+
+
+def _is_before_family(
+    index: int,
+    top: int,
+    family_index: int | None,
+    family_top: int | None,
+) -> bool:
+    if family_top is not None:
+        return top < family_top
+    return family_index is None or index < family_index
+
+
+def _field_label_and_value(value: str) -> tuple[str | None, str | None]:
+    match = _LABELED_LINE_RE.fullmatch(value)
+    if match is not None:
+        field_name = _LABEL_TO_FIELD.get(_normalize_label(match.group(1)))
+        if field_name is not None:
+            return field_name, _clean(match.group(2))
+    field_name = _LABEL_TO_FIELD.get(_normalize_label(value))
+    return (field_name, "") if field_name is not None else (None, None)
+
+
+def _cluster_visual_rows(blocks: list[_SpatialBlock]) -> list[list[_SpatialBlock]]:
+    rows: list[list[_SpatialBlock]] = []
+    for block in sorted(blocks, key=lambda item: (item.center_y, item.left, item.index)):
+        matching_rows: list[tuple[float, list[_SpatialBlock]]] = []
+        for row in rows:
+            top = min(item.top for item in row)
+            bottom = max(item.bottom for item in row)
+            row_center = (top + bottom) / 2
+            row_height = max(
+                item.block.location.height
+                for item in row
+                if item.block.location is not None
+            )
+            block_height = block.block.location.height  # always positioned here
+            overlap = max(0, min(bottom, block.bottom) - max(top, block.top))
+            min_height = min(row_height, block_height)
+            same_row = overlap >= 0.25 * min_height or abs(
+                block.center_y - row_center
+            ) <= max(4, 0.45 * max(row_height, block_height))
+            if same_row:
+                matching_rows.append((abs(block.center_y - row_center), row))
+        if matching_rows:
+            min(matching_rows, key=lambda item: item[0])[1].append(block)
+        else:
+            rows.append([block])
+    return [
+        sorted(row, key=lambda item: (item.left, item.index))
+        for row in sorted(rows, key=lambda group: min(item.top for item in group))
+    ]
+
+
+def _same_visual_column(label: _SpatialBlock, candidate: _SpatialBlock) -> bool:
+    label_box = label.block.location
+    candidate_box = candidate.block.location
+    if label_box is None or candidate_box is None:
+        return False
+    overlap = max(
+        0,
+        min(label_box.left + label_box.width, candidate_box.left + candidate_box.width)
+        - max(label_box.left, candidate_box.left),
+    )
+    min_width = min(label_box.width, candidate_box.width)
+    overlap_ratio = overlap / min_width if min_width > 0 else 0.0
+    same_left = abs(label_box.left - candidate_box.left) <= max(
+        8, 0.9 * max(label_box.height, candidate_box.height)
+    )
+    return overlap_ratio >= 0.25 or same_left
 
 
 def _extract_birthday(items: list[_Evidence]) -> tuple[date | None, bool]:

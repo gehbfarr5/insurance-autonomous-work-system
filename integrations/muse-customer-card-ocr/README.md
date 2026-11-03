@@ -1,6 +1,6 @@
 # MUSE family-card OCR package
 
-Version 0.5.0. This package carries the full-image OCR and iCloud parameter adapters, the WP6-C Bearer helper, and a WP7 query-parameter Access Token helper. It does not implement an undocumented MUSE Secure Vault API and makes no Baidu API calls. Tests use Mock transports only; no real MCP tool or iCloud operation is invoked.
+Version 0.6.0. This package carries the full-image OCR and iCloud parameter adapters, the WP6-C Bearer helper, the WP7 query-parameter Access Token helper, and WP11 table-layout field extraction. It does not implement an undocumented MUSE Secure Vault API and makes no Baidu API calls. Tests use Mock transports and synthetic OCR blocks only; no real MCP tool or iCloud operation is invoked.
 
 ## Full-image authorization
 
@@ -86,9 +86,13 @@ The client retains Baidu's `recognize_granularity=small` and `probability=true` 
 
 ## Field extraction and review gates
 
-`extract_primary_customer(result)` is deterministic and label-based. It reads only supported explicit labels, stops at recognized family/relative section headings, and does not infer gender, fill a missing value, or choose between conflicting values. An unrecognized or unlabelled layout can produce `needs_manual_review` rather than a guessed field set.
+`extract_primary_customer(result)` supports both the original `label: value` line format and the Baidu handwriting response's positioned `words_result` blocks. For positioned tables it groups blocks into visual rows using their returned bounding boxes, then pairs an exact supported label with its immediate right-hand block or a uniquely aligned value block in the next row. It stops at recognized family/relative section headings and uses the returned coordinates to place that boundary even when OCR blocks arrive out of reading order. It does not synthesize empty cells, search arbitrary distant rows, infer gender, fill a missing value, or choose between conflicting candidates.
 
-The parser requires a clear primary name, one valid mobile number, and a readable identity number for this target workflow. Ambiguous OCR candidates on name, mobile, birthday, gender, or ID lead to manual review. Uncertain optional address/other-phone values are omitted. It checks the ID's 18-character format, encoded date validity, checksum, duplicate conflicts, and any conflicting OCR character alternatives. Missing or invalid ID evidence produces `identity_number_uncertain` or `identity_number_conflict`; the parser never repairs OCR characters. The embedded identity-number date is used only to compare against an explicit card birthday. It is never copied into the birthday field. An explicit birthday that conflicts with the checked identity-number date produces manual review. The checksum is a transcription integrity check, not identity verification or a registry lookup.
+The parser requires a clear primary name, one valid mobile number, and a readable identity number for this target workflow. Ambiguous character candidates on a field or label, overlapping table columns, conflicting values, and checksum-invalid identity numbers produce a review decision. Table-only text without usable coordinates is not guessed; the legacy line parser still handles explicit `label: value` text. `FieldExtractionResult.status` keeps its previous values (`ready` / `needs_manual_review`) for compatibility, while `FieldExtractionResult.decision` exposes `READY` / `REVIEW_REQUIRED` to callers.
+
+Baidu's `probability=true` response supplies per-line `average`, `variance`, and `min`, and `recognize_granularity=small` can return per-character candidates. The parser treats differing character candidates as ambiguous. It does not apply a numerical probability threshold; confidence-only review needs a template-calibrated threshold before implementation.
+
+The existing extraction gate still requires a clear primary name, one valid mobile number, and a readable identity number. It validates the ID's 18-character format, encoded date and checksum; conflicting or invalid ID evidence requires review, and OCR characters are never repaired. The embedded ID date is used only to compare with an explicit card birthday and is never copied to the birthday field. Conflicting dates require review. Ambiguous field candidates for name, mobile, birthday, gender or ID require review; uncertain optional address/other-phone values are omitted. The checksum is a transcription-integrity check, not identity verification or a registry lookup.
 
 `map_to_icloud_fields(extraction)` raises `MANUAL_REVIEW_REQUIRED` for a pending result. For a ready result, it returns a non-writing `ICloudContactDraft` with:
 
@@ -121,12 +125,30 @@ Tests use generated fictional images, OCR payloads, Mock Vault placeholder subst
 
 ## MUSE integration checklist
 
-1. Check out the WP7 branch and run the complete offline suite in an isolated venv first.
+1. Check out `codex/wp11-family-card-table-parser-20261103` and run the complete offline suite in an isolated venv first.
 2. Obtain MUSE's real Secure Vault/custom connector documentation and map it to the package-owned `BaiduQueryParamHttpTransport` / `StdioHelperInvoker` seam. Do not infer a MUSE helper function name, stdin shape, placeholder syntax, or credential API from these local protocols.
 3. Configure the MUSE-side connector for `query_param:access_token`; it must add only the `access_token` parameter outside Python, restrict the allowed HTTPS host/path/method, disable redirects, enforce body and timeout bounds, return structured status/body data, and suppress URL/query/token and OCR request/response logs. Confirm how the connector obtains and refreshes the Access Token. Keep it mocked until these properties are documented and verified.
 4. A real Baidu call would send a complete image. Perform none until the authorized MUSE workflow, connector, quota/cost, token lifecycle, and separate API-test approval are ready. Any first API test must use a generated fictional image only.
 5. The caller owns the attachment lifecycle. This package reads but does not delete or persist the MUSE attachment, OCR text, or temporary files. Keep OCR text transient and out of ordinary logs, traces, and long-term Agent memory.
 6. Do not pass `full_image_authorized=True` based only on tool visibility. The calling workflow must ensure the complete-image authorization is applicable to the submitted photo.
+
+## WP11 MUSE staging and re-test
+
+WP11 changes extraction only. It does not require a new connector, OCR call, or iCloud MCP call. In MUSE, create a separate checkout and venv so the current runtime stays pinned:
+
+```bash
+git fetch origin codex/wp11-family-card-table-parser-20261103
+git worktree add ~/workspace/wp11-family-card-ocr origin/codex/wp11-family-card-table-parser-20261103
+python3.12 -m venv ~/workspace/.venvs/muse-customer-card-ocr-wp11
+source ~/workspace/.venvs/muse-customer-card-ocr-wp11/bin/activate
+python -m pip install --no-deps -e ~/workspace/wp11-family-card-ocr/integrations/muse-customer-card-ocr
+cd ~/workspace/wp11-family-card-ocr/integrations/muse-customer-card-ocr
+PYTHONPATH=src python -m unittest discover -s tests -v
+```
+
+The MUSE VM's existing Pillow 10.2.0 satisfies the package requirement. Confirm `decision == "READY"` for a unique, valid table fixture and `decision == "REVIEW_REQUIRED"` for blank/overlapping cells, conflicting candidates, ambiguous handwriting, a checksum-invalid identity number, or unavailable geometry. If a sanitized WP10 structural payload is already approved for local testing, keep it in MUSE's protected workspace and compare only the resulting field decisions there; do not copy it into the repository or ordinary logs. Verify `map_to_icloud_fields` still rejects review results and returns the same draft schema for ready results. Do not call Baidu or any iCloud tool during this parser re-test.
+
+Rollback in MUSE by restoring the previously pinned package version 0.5.0 or the WP7 checkout, then rerun that version's offline suite. This rollback affects only the isolated MUSE package environment and does not touch attachments, connectors, or contacts.
 
 ## Rollback
 
