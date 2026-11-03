@@ -4,6 +4,10 @@
 
 静态复核发现`tools/receipt-collector/ai-snapshot.js`曾允许空`recordId`从baseline hash中消失；现要求所有记录ID均为非空字符串，否则返回`REVIEW / RECORD_ID_UNKNOWN`。新增合成回归后采集器29/29 PASS。独立offline provides候选的遍历字段改为数据描述符读取，访问器被阻断且返回`READ_ERROR`；测试PASS。两项都没有部署或实机验收；MUSE安装版本当前UNKNOWN，AI同次完成正例与成功空列表响应/赋值同周期证据仍待自然可观测来源。详见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)及[采集器说明](../tools/receipt-collector/README.md)。
 
+## 空列表观察器上下文门禁｜2026-11-03 17:38 CST
+
+`empty_list_observer.py`现要求sourcePin为非空字符串、salt至少32字符；无效上下文会在CDP请求前返回BLOCKED。针对缺失/错误类型/弱salt新增合成检查，观察器5/5 PASS。此次没有连接页面或补造空客户；真实同周期响应与赋值仍缺，MUSE安装版本UNKNOWN。详情见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。
+
 ## 当前访问门禁与官方来源补查｜2026-11-03 17:25 CST
 
 截至17:25，最新CUA清单显示Muse进程运行，但浏览器清单为空且Work设置禁用浏览器控制；未提供Forest任务或调度状态。没有MUSE/Pixel专用connector；遵守既有约束，未打开不相关WP1上下文、未连接Pixel。最近MUSE并发读取仍为16:23且已过时，当前UNKNOWN。17:06又做4条官方域规则词面查询，未发现相关任务规则。17:12审计11月4日review-only证据链：monitor只能给出目标Activity匹配布尔值，不能识别其他前台Activity，也不输出原始account标记；worker请求/返回不证明认证输入成功；prepare逐字段登录态与assistant gate快照的observer仍离线。修正本机collector对monitor `.failure`标记的处理，存在该标记时输出`PARTIAL_UNKNOWN`，合成路径及14/14包哈希通过。17:22重新核对索引E07的应用内官方规则快照哈希匹配，并查阅原规则弹层：历史日上限/动作计量有据；周选项是明细展示区间、月末文字针对行为积分统计/人管结算，不能当作森林重置或重复周期规则。CPIC官方域对4条规则原文作精确词面搜索未命中。以上均是有界搜索或静态/合成核查，不代表设备运行验收；未命中不证明资料不存在。来源和链接见[扩展来源补查](../planning/remaining-work-2026-10-29.md#扩展来源补查2026-11-03-1652-cst)、[官方规则词面追加](../planning/remaining-work-2026-10-29.md#官方规则词面追加2026-11-03-1706-cst)、[E07原规则弹层复核](../planning/remaining-work-2026-10-29.md#e07原规则弹层复核2026-11-03-1722-cst)及[运行恢复说明](../planning/forest-diagnostics-operations-2026-11-04.md)。

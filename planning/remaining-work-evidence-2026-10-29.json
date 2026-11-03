@@ -1232,5 +1232,21 @@
       "tools/offline-receipt-review/provides_component_traversal.js": "fd06d9ae74e833f9d2aa3aa2acc5c6b61ae8368b5075a06a321de70030bcc1e4",
       "tools/offline-receipt-review/test_provides_component_traversal.cjs": "cd1e868df8ff1937061443679d8da821b24f9c0b2b5eaa129134ad801cff7a2e"
     }
+  },
+  "emptyListObserverContextReview20261103": {
+    "recordedAt": "2026-11-03T17:38:56+08:00",
+    "scope": "Offline passive-observer preflight only; no CDP connection or page interaction.",
+    "change": "Require a non-empty sourcePin string and a salt string of at least 32 characters before any CDP calls. SourcePin format remains opaque because no exact local format is established.",
+    "verification": {
+      "test": "PYTHONDONTWRITEBYTECODE=1 python3 tools/receipt-collector/test_empty_observer.py",
+      "result": "5/5 tests PASS; invalid profile cases perform zero CDP calls"
+    },
+    "files": {
+      "tools/receipt-collector/empty_list_observer.py": "73f30ef2e443100e8f88107273127354b4655952d6114699274e88285a391e1f",
+      "tools/receipt-collector/test_empty_observer.py": "b2ad7db6bef87096c1b1d1a2e21291a72e9b88cc3856a77e59dc3f384b372c3a"
+    },
+    "deployed": false,
+    "realPositiveEvidence": false,
+    "businessActionPerformed": false
   }
 }

@@ -35,4 +35,10 @@ class Tests(unittest.TestCase):
    def recv(self):raise TerminatedError('TERM')
   with self.assertRaises(TerminatedError):mod.observe(Terminated(),PROFILE)
  def test_context_required(self):self.assertEqual(mod.observe(WS(),{})['status'],'BLOCKED')
+ def test_context_types_and_salt_strength_before_cdp(self):
+  for profile in [None,
+    {'sourcePin':'synthetic-pin','salt':'short'},
+    {'sourcePin':'synthetic-pin','salt':123},
+    {'sourcePin':123,'salt':'s'*64}]:
+   ws=WS();self.assertEqual(mod.observe(ws,profile)['status'],'BLOCKED');self.assertEqual(ws.calls,[])
 if __name__=='__main__':unittest.main(verbosity=2)

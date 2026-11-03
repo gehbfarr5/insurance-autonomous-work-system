@@ -1,6 +1,6 @@
 # 实际组件快照采集与对账候选
 
-本机实现已通过隔离集成，MUSE有限安装证据已核对；尚未取得采集器真实业务正例。2026-11-03静态复核发现空`recordId`曾被从baseline hash中省略；现改为返回`REVIEW / RECORD_ID_UNKNOWN`，避免把不完整baseline当成可验证基线。新增合成回归后本机测试29/29 PASS；这只是仓库候选修正，未部署到MUSE，也不是实机/业务验收。与旧纯布尔校验不同，`ai-snapshot.js`从已有根容器遍历组件、读取实际props/setupState/provides，将记录、会话、最后回答、结束和解析状态关联后输出最小快照。此处“实际”指实现的输入接口是真实组件树，不表示已在生产取得正例。错误/未知字段明确REVIEW。
+本机实现已通过隔离集成，MUSE有限安装证据已核对；尚未取得采集器真实业务正例。2026-11-03静态复核发现空`recordId`曾被从baseline hash中省略；现改为返回`REVIEW / RECORD_ID_UNKNOWN`，避免把不完整baseline当成可验证基线。新增合成回归后本机测试29/29 PASS；这只是仓库候选修正，未部署到MUSE，也不是实机/业务验收。被动空列表观察器现要求sourcePin为非空字符串、salt为至少32字符的字符串；profile不合格时在CDP调用前BLOCKED，`test_empty_observer.py`5/5 PASS，同样未部署或实机验收。与旧纯布尔校验不同，`ai-snapshot.js`从已有根容器遍历组件、读取实际props/setupState/provides，将记录、会话、最后回答、结束和解析状态关联后输出最小快照。此处“实际”指实现的输入接口是真实组件树，不表示已在生产取得正例。错误/未知字段明确REVIEW。
 
 复用Vue既有组件/provides结构和当前CDP的Runtime.evaluate（awaitPromise/returnByValue），不新增依赖或服务。原组件提供记录、回答列表和已核实的结束字段；源码及来源资源路径私存。相比增加网络观测，此路径范围小、可离线验证；成功空查询由下方新增被动观察器接入；单独页面快照仍不具有同周期响应与赋值证据。不会直接请求业务接口或替换网络函数。
 
@@ -27,7 +27,7 @@ node tools/receipt-collector/test-expression.cjs
 
 关联依赖已审查的源分支和当前唯一查询；不是直接观测Vuex mutation的因果探针。版本profile漂移、其他并发查询或未知赋值均需保守失败，不能据此保证任何任意页面空值成功。SourcePin为既有来源指纹，不冒充现场脚本内容SHA。
 
-本机已对实际assistant.main完成9项隔离集成检查，设备/传输替身阻断业务；3组真实子进程中断/重启分别覆盖DISPATCHING时SIGTERM/SIGKILL、SENT时SIGKILL。重启保留基线与UNKNOWN/SENT且不prepare/重放。SIGTERM有cleanup，SIGKILL没有执行finally，不能称完整手机恢复通过。原29项回归通过。观察器4个测试方法覆盖成功/隐私、13种失败、缺上下文和TERM传播；原始测试输出私存。
+本机已对实际assistant.main完成9项隔离集成检查，设备/传输替身阻断业务；3组真实子进程中断/重启分别覆盖DISPATCHING时SIGTERM/SIGKILL、SENT时SIGKILL。重启保留基线与UNKNOWN/SENT且不prepare/重放。SIGTERM有cleanup，SIGKILL没有执行finally，不能称完整手机恢复通过。原29项回归通过。观察器现有5个测试方法覆盖成功/隐私、13种失败、profile缺失/错误类型/弱salt（确认不发CDP调用）和TERM传播；本轮`test_empty_observer.py`5/5 PASS，历史原始测试输出私存。
 
 已向同一MUSE旁聊交付明确staging复测/通过后有限安装任务，另一次合并严格字段修正；原环境测试输出及有限安装16项哈希/状态索引已核对，15项与本机字节指纹一致，1项含私有连接参数仅远端证明。未导出实际安装文件字节，不能混同本机独立读回。未要求启动手机、补跑业务或更改09:00调度。
 
