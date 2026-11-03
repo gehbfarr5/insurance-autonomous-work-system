@@ -1,6 +1,10 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
-## 2026-11-04 05:30 CST：自然运行后MUSE状态读回仍不可用
+## 2026-11-04 05:51 CST：自然运行前CUA访问门禁仍关闭
+
+Fresh `cua.getState()` returned no available apps or browsers; it reports that the Mac is locked and automatic unlock failed, and local browser use is disabled in Work settings. No MUSE thread/request, Pixel query/connection, task/code run, or schedule change occurred. The existing 03:47 MUSE reply is stale; scheduler/task, queue/in-flight, runner lock, and live hashes remain UNKNOWN. The scheduled 09:00 Asia/Shanghai run is still ahead, not a result. Keep Pixel access and device writes blocked; after the run, refresh the exact Forest thread only if a clean authorized access path is available. Evidence: `museAccessGate20261104_0551`.
+
+## 2026-11-04 05:30 CST：自然运行前MUSE状态读回仍不可用
 
 05:29 CST CUA inventory报告Mac锁定、自动解锁失败，且Work settings禁用本地浏览器。没有MUSE请求；当前任务/队列/在途、runner lock、live hashes和自然轮结果保持UNKNOWN。Pixel未查询。不得用03:47快照通过设备并发门禁。先由用户解锁Mac并恢复浏览器可用性，再在精确Forest线程读状态；若该访问仍不可用，就记录同轮结果未取得，保持设备字段UNKNOWN。证据：`museAccessBlocked20261104_0530`。
 

@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 05:51 CST：自然运行前访问门禁仍未满足
+
+Fresh CUA inventory reports no available apps or browsers, the Mac locked with automatic unlock failed, and local browser use disabled in Work settings. No MUSE query or Pixel access occurred. The last 03:47 MUSE snapshot is stale; scheduler/task, queue/in-flight, runner lock, live hashes, and the later natural-run result remain UNKNOWN. The existing 09:00 Asia/Shanghai run is still ahead. Restore local access before refreshing the exact Forest thread; do not use the old snapshot as a device gate. Evidence: `museAccessGate20261104_0551`.
+
 ## 2026-11-04 05:30 CST：运行状态访问依赖仍未满足
 
 当前MUSE状态无法刷新：CUA inventory报告Mac锁定且自动解锁失败，同时Work settings禁用本地浏览器。03:47 MUSE读数不是当前并发门禁。自然运行结果、队列/在途、runner lock和live hashes仍UNKNOWN；没有连接Pixel。后续需用户解锁Mac并恢复本地浏览器访问，再由精确Forest线程只读确认。证据：`museAccessBlocked20261104_0530`。

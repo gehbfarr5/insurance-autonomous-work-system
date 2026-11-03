@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 05:51 CST：自然运行前访问与GitHub状态复核
+
+Fresh CUA inventory reports the Mac locked (automatic unlock failed) and local browser use disabled; no MUSE or Pixel query was made. The latest MUSE status remains the stale 03:47 snapshot; current scheduler/task, queue/in-flight, runner lock, live hashes, and the 09:00 result are UNKNOWN. The natural run is still ahead. Issue #3 is OPEN. Unrelated WP11 PR #17 is OPEN/DRAFT with mergeability/merge-state UNKNOWN and no checks. Before this documentation update, local `main` was clean at `2f58f22` and matched GitHub `main`. Evidence: `museAccessGate20261104_0551`, `githubStateCheck20261104_0551`.
+
 ## 2026-11-04 05:44 CST：E锦囊静态路由结论限制
 
 后续本地报告称独立E锦囊入口/JSBridge路由曾在静态包中发现；本轮窄JS词项扫描未关联E锦囊字样与JSBridge路由，也未定位原报告所指六份资源集。把它保留为既有报告线索，当前激活流程与资格仍UNKNOWN；五项分类不变，全部仍待核实。证据：`extensionEvidenceReconciliation20261104_0544`。

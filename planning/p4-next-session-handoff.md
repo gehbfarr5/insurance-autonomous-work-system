@@ -1,5 +1,11 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 05:51 CST — pre-run access gate still closed
+
+Fresh CUA inventory returned no apps/browsers and reports the Mac locked (automatic unlock failed) and local browser use disabled. No MUSE request or Pixel query/connection was made. The 03:47 MUSE snapshot is stale; current scheduler/task, queue/in-flight, runner lock, live hashes, and the 09:00 run result remain UNKNOWN. The run is still ahead. Restore local browser access, refresh the exact Forest thread, and verify no in-flight work before any Pixel access. Evidence: `museAccessGate20261104_0551`.
+
+At 05:51, Issue #3 remained OPEN. PR #17 remains an unrelated WP11 draft and OPEN; mergeability and merge state were UNKNOWN and no checks were listed. Before this docs update, local `main` was clean at `2f58f22`, matching `origin/main` and GitHub's `refs/heads/main`. Evidence: `githubStateCheck20261104_0551`.
+
 ## 2026-11-04 05:44 CST — E锦囊路由结论按已报告线索处理
 
 Earlier local notes report a separate E锦囊 static entry/JSBridge route. This turn's bounded JS token scan did not correlate the E锦囊 label with a JSBridge route and did not identify the exact six source files referenced by that report. Keep the route as a reported static clue only; account activation, eligibility, Forest mapping, reward trigger, and repeat cycle remain UNKNOWN. All five extensions remain `仍待核实`. Evidence: `extensionEvidenceReconciliation20261104_0544`.

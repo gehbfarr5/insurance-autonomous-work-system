@@ -1,5 +1,11 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 05:51 CST：新鲜CUA访问门禁与自然运行时序
+
+At approximately 05:51 CST, fresh `cua.getState()` returned no apps/browsers and reported the Mac locked (automatic unlock failed) and local browser use disabled in Work settings. No MUSE thread/request or Pixel query/connection occurred. The 03:47:07 MUSE status is stale; current scheduler/task, queue/in-flight, runner lock, live hashes, and natural-run result remain UNKNOWN. The existing 09:00 Asia/Shanghai run is still ahead. Do not use the historical MUSE runner lock to permit Pixel access. Evidence: `museAccessGate20261104_0551`.
+
+At 05:51 CST, GitHub still showed Issue #3 OPEN; unrelated WP11 PR #17 was OPEN/DRAFT with mergeability and merge state UNKNOWN and no checks. Local `main` and GitHub `refs/heads/main` were both `2f58f22`, and the worktree was clean before the current documentation edit. Evidence: `githubStateCheck20261104_0551`.
+
 ## 2026-11-04 05:44 CST：E锦囊独立路由来源强度校准
 
 现有本地报告称静态包复核发现独立E锦囊入口/JSBridge路由，但此前E08原始摘要与`extensionWorkflowClassification20261103_2212`只记录智能面访通用二维码；公开结构化索引也没有列出该路由结论对应的静态资源文件/哈希。对项目私有目录下167个JS文件作了限于关键词存在性的扫描：7份匹配“E锦囊/eJinnang/EJinnang/JSBridge”之一；含“E锦囊”字样的唯一匹配JS为1,024字节，未见route/path字段或JSBridge标记；其他JSBridge匹配没有E锦囊字样。该扫描未定位或逐一复核原报告所指的六份静态资源，不能确认路由间关联，也不反证先前报告。没有输出代码片段或读取客户截图/表单/原始业务日志。保持“报告的静态线索、尚未独立验证”；激活页、当前资格、森林映射、奖励触发及周期仍UNKNOWN。结构化记录：`extensionEvidenceReconciliation20261104_0544`。
