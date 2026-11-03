@@ -3105,5 +3105,126 @@
     ],
     "interpretation": "Date-picker week ranges are display filters, not a reset or repeat schedule. The behavior-value HR settlement note does not define Forest reward settlement. The existing 09:00 automation schedule is not evidence of the product reset time.",
     "actions": "No customer content or personal state was copied; only rule text and source hash were reviewed."
+  },
+  "offlineCandidateVerificationRecordAudit20261103_235435": {
+    "recordedAt": "2026-11-03T23:54:35+08:00",
+    "source": "Read-only audit of the private candidate verification record; no test commands were rerun.",
+    "verificationCases": [
+      "normal navigation",
+      "delayed promotion",
+      "missing and empty login fields",
+      "accessor not invoked when the original gate would not read it",
+      "descriptor failure produces UNKNOWN while preserving the original path",
+      "unknown reason sanitization",
+      "duplicate nonce omitted and correlation marked PARTIAL_UNKNOWN",
+      "unknown, missing, or out-of-window evidence",
+      "overlapping or ambiguous segments",
+      "missing sources",
+      ".failure sentinel",
+      "stop before dispatch"
+    ],
+    "initialHarnessAttempt": {
+      "exitCode": 1,
+      "cause": "Synthetic joined-result expectation omitted the new fieldShapeStatus projection.",
+      "candidateRuntimeException": false
+    },
+    "correctedRerun": {
+      "exitCode": 0,
+      "result": "Fixed-window exact group/time joins, duplicate nonce omission, private data rejection, and fail-closed mismatch/overlap/unavailable-source paths passed."
+    },
+    "otherSuites": "Observer, monitor, assistant-gate, Python AST, and 14/14 manifest checks are recorded as PASS.",
+    "currentTurn": "No test rerun; this turn inspected the verification record and candidate hashes only.",
+    "interpretation": "Final synthetic result is PASS after correcting the harness expectation; retain the first failure in the record. This does not establish Android/AutoX runtime compatibility or device integration."
+  },
+  "googleDriveRulePhraseSearch20261103_235534": {
+    "recordedAt": "2026-11-03T23:55:34+08:00",
+    "performedWithin": "After the 2026-11-03 23:54:35 Asia/Shanghai clock read and before 23:55:34.",
+    "source": "Connected Google Drive metadata-only document search across all accessible documents.",
+    "queries": [
+      "一天最多可收集10阳光值",
+      "一天最多可收集20雨露值",
+      "阳光雨露明细"
+    ],
+    "itemType": "document",
+    "topn": 20,
+    "bestEffortFetch": false,
+    "results": [
+      0,
+      0,
+      0
+    ],
+    "contentFetched": false,
+    "interpretation": "Exact phrases from the E07 in-app popup did not surface matching Drive metadata. This bounded search does not establish that the original was never confirmed or is absent under other names/locations. E07 remains the locally recovered historical source."
+  },
+  "acceptanceGateStatus20261103_235644": {
+    "asOf": "2026-11-03T23:56:44+08:00",
+    "gates": [
+      {
+        "name": "Fresh preflight",
+        "status": "PASS (bounded read-only metadata scope)",
+        "evidence": [
+          "museReadonlyStatus20261103_233855",
+          "pixelReadonlyPreflight20261103_2342"
+        ],
+        "limit": "Pixel operation lock and monitor/private diagnostic state remain UNKNOWN."
+      },
+      {
+        "name": "Nov 3 failure-stage localization",
+        "status": "PASS (stage localization only)",
+        "evidence": [
+          "dailyTaskReconciliation20261103_2030",
+          "prepareTimeoutLayerAudit20261103_1902"
+        ],
+        "finding": "The reported segments stop in prepare Activity/readiness-marker polling before business stages; cleanup was reported PASS. The lower-level reason remains UNKNOWN; source is sanitized MUSE summary, not independently recovered raw files."
+      },
+      {
+        "name": "Complete same-run diagnostic matrix",
+        "status": "BLOCKED",
+        "missing": [
+          "screen/Keyguard and foreground Activity categories",
+          "individual auth trigger booleans and gesture/account-match booleans",
+          "presence/timestamp for each login field",
+          "verified non-root collector and current device operation lock"
+        ]
+      },
+      {
+        "name": "Repair and device integration",
+        "status": "BLOCKED",
+        "reason": "Root cause is unconfirmed; candidate exporters use su -c; operation lock and live monitor hash/state are UNKNOWN. No gate bypass or install/restart."
+      },
+      {
+        "name": "Five daily task acceptance",
+        "status": "BLOCKED",
+        "evidence": [
+          "dailyTaskReconciliation20261103_2030",
+          "liveRunnerDailyTaskMapping20261103_2228"
+        ],
+        "reason": "Oct 31 receipts are partial; Nov 1-3 have no business-stage completion; customer temperature/value has no independent receipt; assistant answer/reward is unconfirmed."
+      },
+      {
+        "name": "Five extension investigations",
+        "status": "BLOCKED (classified 仍待核实)",
+        "evidence": [
+          "extensionWorkflowClassification20261103_2212"
+        ],
+        "reason": "Observed workflows and user/dependency limits are recorded, but current eligibility, complete reward trigger and repeat cycle remain unresolved."
+      },
+      {
+        "name": "Historical rule-source recovery",
+        "status": "PARTIAL",
+        "evidence": [
+          "privateRulePopupRecheck20261103_235006",
+          "googleDriveRuleMetadataSearch20261103_2347",
+          "googleDriveRulePhraseSearch20261103_235534"
+        ],
+        "reason": "E07 supports historical daily caps and reward units; reset time, repeat cycle, exact trigger, posting delay, and current eligibility remain unknown."
+      },
+      {
+        "name": "Cross-day and long-term stability",
+        "status": "SUSPENDED",
+        "nextEvidencePoint": "Existing natural run scheduled for 2026-11-04 09:00 Asia/Shanghai; later days are required for cross-day evidence. These are not PASS."
+      }
+    ],
+    "overall": "P4 remains open. Full closure is not supported while repair/integration and daily/extension acceptance gates are incomplete. S1 and long-term stability are not accepted; P50, monthly planning, and 2U=2800 remain excluded."
   }
 }

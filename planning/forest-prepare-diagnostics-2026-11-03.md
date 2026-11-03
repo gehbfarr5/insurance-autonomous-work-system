@@ -8,6 +8,10 @@
 
 选型：复用固定的一次性prepare门禁与受限证据投影；仅在可验证的设备锁、monitor备份/哈希、非root读取与逐步回滚条件都成立后，才考虑将固定Activity类别和逐字段存在性观察接入自然运行。直接绕过/放宽门禁被拒绝，因为已定位到prepare等待层但未定位未就绪原因。当前采用离线候选保留 + 11月4日自然运行后优先读MUSE脱敏同轮结果；缺失的设备侧观测继续标UNKNOWN。结构化记录：`offlineCandidateIntegrityReview20261103_234515`。
 
+## 离线候选验证记录审阅｜2026-11-03 23:53—23:54 CST
+
+审阅既有私有测试记录的覆盖范围：正常导航、延迟ready、登录字段缺失/空值、访问器不被额外调用、属性描述异常保持UNKNOWN、未知reason、重复nonce、缺失/过期数据、段重叠、来源缺失、`.failure` sentinel与dispatch前停止均有合成检查。记录显示collector/joiner首次断言退出1，原因是期望结果未包含新增`fieldShapeStatus`投影；修正断言后复跑退出0，记录明确无collector运行时异常。保留首次失败及修正结果，不把它描述成一次全程PASS。本轮只审阅记录和候选hash，没有重跑测试；最终合成PASS不证明Android/AutoX运行兼容或设备集成。结构化证据：`offlineCandidateVerificationRecordAudit20261103_235435`。
+
 ## 2026-11-03 23:38—23:42 CST：刷新并发状态并完成有界Pixel只读预检
 
 23:38:55在既有Forest MUSE线程只读确认任务不活动，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无Forest进程。live `run.py` / `assistant.py` SHA-256为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该读数仅覆盖scheduler/deployment元数据，不代表Pixel操作锁。

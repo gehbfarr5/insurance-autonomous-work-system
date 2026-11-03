@@ -2,7 +2,7 @@
 
 ## 离线候选完整性复核｜2026-11-03 23:43—23:45 CST
 
-11月4日逐字段和固定Activity类别两份候选的哈希清单分别14/14、11/11匹配；已有离线合成测试记录为PASS，本轮未重跑。导出器静态使用`su -c`，当前约束下不可用；Pixel操作锁与live monitor状态/hash仍UNKNOWN，候选未安装/重启。复用严格门禁与白名单投影、采用证据后修复、拒绝绕过；维持自然调度。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及结构化键`offlineCandidateIntegrityReview20261103_234515`。
+11月4日逐字段和固定Activity类别两份候选的哈希清单分别14/14、11/11匹配；既有离线合成测试最终记录PASS；collector/joiner首次断言因期望结果漏列新增`fieldShapeStatus`而失败，修正断言后复跑PASS（无候选运行时异常）；本轮未重跑，亦不证明Android/AutoX兼容。导出器静态使用`su -c`，当前约束下不可用；Pixel操作锁与live monitor状态/hash仍UNKNOWN，候选未安装/重启。复用严格门禁与白名单投影、采用证据后修复、拒绝绕过；维持自然调度。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及结构化键`offlineCandidateIntegrityReview20261103_234515`。
 
 ## 2026-11-03 23:38—23:42 CST：刷新并发状态并完成有界Pixel只读预检
 

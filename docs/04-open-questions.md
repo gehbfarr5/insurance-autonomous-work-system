@@ -1,5 +1,11 @@
 # 缺失内容与 P4 按需核查
 
+> **验收关口状态｜2026-11-03 23:56 CST：** MUSE/Pixel有限预检PASS；11月3日故障仅定位到prepare等待层，底因UNKNOWN。完整同轮诊断、修复/集成、五项日常验收和五项扩展闭环仍BLOCKED；原规则恢复PARTIAL；跨日/长期样本SUSPENDED。P4不能收尾、S1未验收。详见[交接关口表](../planning/p4-next-session-handoff.md)及`acceptanceGateStatus20261103_235644`。
+
+## 官方规则短语定向检索｜2026-11-03 23:54—23:55 CST
+
+继续使用Google Drive metadata-only document搜索E07中的精确规则短语：“一天最多可收集10阳光值”“一天最多可收集20雨露值”“阳光雨露明细”，全部可访问文档搜索均0条，未抓取正文。该结果不改变E07历史原件证据，也不证明原确认不存在。证据键：`googleDriveRulePhraseSearch20261103_235534`。
+
 ## E07应用内原规则弹层复核｜2026-11-03 23:49—23:50 CST
 
 重新读取证据索引E07对应的私存原始应用内规则弹层JSON，重算SHA-256与索引值完全匹配。原件支持历史阳光/雨露每日上限10/20，以及签到、时光轴≥5秒、客温客价、智能助理和五项扩展的页面计量单位；页面周选项为1–7、8–14、15–21、22日至月底。该弹层没有说明日重置时刻、单项重复/领取周期、奖励触发步骤、森林奖励到账延迟或当前资格。周范围是展示过滤；行为值月底统计/人管结算说明不等于森林奖励周期。09:00是自动化schedule，不据此推导产品重置时点。完整脱敏结论与哈希见结构化键`privateRulePopupRecheck20261103_235006`及[证据索引](../planning/evidence-index-2026-10-29.json)中的E07。
@@ -8,7 +14,7 @@
 
 连接Google Drive进行metadata-only document搜索：对“阳光森林”“阳光雨露”“行为值”搜索已浏览文档均0条；对全部可访问范围再搜“阳光森林”“阳光雨露”“行为值”“森林任务规则”亦均0条。未打开正文、未抓取文件内容。此结果只限定搜索词与Drive可见元数据，不证明原件不存在或历史上从未确认；时点、重置/重复周期、奖励触发、到账时延与当前资格仍需原据。证据键：`googleDriveRuleMetadataSearch20261103_2347`。
 
-> **诊断候选复核｜2026-11-03 23:43—23:45 CST：** 两份离线候选的哈希清单分别14/14、11/11匹配；已有合成测试记录为PASS，本轮未重跑。导出器静态使用`su -c`，Pixel操作锁与live monitor状态/hash仍UNKNOWN，未安装/重启。保留严格门禁与白名单观测，拒绝绕过；详细记录见[诊断检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)。
+> **诊断候选复核｜2026-11-03 23:43—23:45 CST：** 两份离线候选的哈希清单分别14/14、11/11匹配；既有离线合成测试最终记录PASS；collector/joiner首次断言因期望结果漏列新增`fieldShapeStatus`而失败，修正断言后复跑PASS（无候选运行时异常）；本轮未重跑，亦不证明Android/AutoX兼容。导出器静态使用`su -c`，Pixel操作锁与live monitor状态/hash仍UNKNOWN，未安装/重启。保留严格门禁与白名单观测，拒绝绕过；详细记录见[诊断检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)。
 
 > **最新并发与设备只读预检｜2026-11-03 23:38—23:42 CST：** MUSE 23:38:55在既有Forest线程确认当时无活动/排队/在途任务（`0/0/false`）、MUSE runner lock `FREE`、无Forest进程；唯一Asia/Shanghai每日09:00调度下次11月4日09:00，live runner/assistant哈希及最近运行记录未变。随后经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、SecureView安装APK哈希匹配v0.19。Pixel操作锁、monitor私有状态/hash及屏幕/Keyguard/Activity仍UNKNOWN。没有业务状态/日志读取、任务执行、设备写入、部署或调度更改。保留自然运行；P4开放，S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
 
