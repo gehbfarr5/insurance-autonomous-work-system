@@ -1,5 +1,13 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 日常五项和扩展范围补记｜2026-11-03 20:33 CST
+
+对照10月31日可信回执和11月2—3日脱敏分段，五项日常最近可信业务动作分别为签到`SIGNED +0.5`、时光轴`VIEWED 6055ms`、客温客价无独立回执、智能助理`SENT / REVIEW`、一键领取`+6.5`。11月1—3日没有五项业务阶段完成。11月3日的三个runner段都停在prepare/就绪标记等待超时，两个助理段`NOT_SENT`，主流程无pending action/业务字段，cleanup均PASS。该对照不解释底层未就绪原因。
+
+约20:30 Drive四项文档metadata-only搜索均0结果；CPIC官方域四条搜索未得到五项扩展与当前森林映射、资格、提交、奖励或周期的直接规则。五项扩展仍全部“仍待核实”；保单芯管家按既有范围移出日常、不重放申请。搜索是有界补查，不证明历史原据不存在。证据键：`dailyTaskReconciliation20261103_2030`、`driveExpansionSearch20261103_2030`、`cpicOfficialSearch20261103_2030`。
+
+20:24后MUSE无法刷新：Mac锁定且Work设置禁用浏览器控制，当前MUSE并发UNKNOWN；Pixel锁与monitor状态UNKNOWN，未连接设备。现有collector需`su`，review包内未确认安全非root路径。自然运行结果待11月4日，P4开放、S1未验收。详见[交接](p4-next-session-handoff.md)和[运行手册](forest-diagnostics-operations-2026-11-04.md)。
+
 ## MUSE当前状态刷新门禁｜2026-11-03 20:24 CST
 
 只读CUA库存显示Mac锁定且无法自动解锁，Work设置禁用浏览器控制，故本轮未能回到目标Forest线程读取更新状态。最新可用MUSE回复仍是19:42:51、约20:11读到；当前并发UNKNOWN。Pixel操作锁/monitor状态UNKNOWN、未连接设备。没有发送新请求，也没有尝试替代主机或渠道。证据见`museRefreshGate20261103_2024`。
