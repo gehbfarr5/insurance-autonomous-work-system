@@ -322,6 +322,10 @@ python -m unittest discover -s tests -v
 - MUSE reports two branch fetches and six reads of the same structured result; reference reads, new sample/inventory/image reads, OCR, Baidu, iCloud/contact operations, production execution/writes, deployment, raw export, source-file modifications, MUSE commits, and pushes were all zero. The repeated structured-result reads are recorded as reported; no explanation was provided.
 - Sanitized machine-readable evidence: [`wp11n-muse-value-free-wp10-gate-diagnostic-result-20261103.json`](../../planning/wp11n-muse-value-free-wp10-gate-diagnostic-result-20261103.json). Overall release status remains `VALIDATION_PENDING`; no parser patch is justified by this diagnostic.
 
+### WP11-P next diagnostic: first-rejection reason histogram
+
+WP11-N reported total geometry rejection/ambiguity counts but no specific reason per candidate, so it does not identify a reproducible parser defect. A bounded, value-free MUSE handoff is prepared for exact branch commit `e08e7f7b2748cd3a3c60e2769063dc2d26e1112b` and parser SHA-256 `420a1b21d0df9d6f1f75460559d2fd8ee87cfec2805ca326928dd268b213d147`. It permits only the same previously authorized WP10 structured result, one read maximum if cached WP11-N state is insufficient, and no reference, image, OCR/provider, contact, production, or deployment operation. It returns first-terminal-gate counts and closed reason buckets only; no parser change is authorized. Task: [`WP11-P MUSE handoff`](../../planning/wp11p-muse-wp10-rejection-reason-histogram-20261103.md); result format: [`WP11-P template`](../../planning/wp11p-muse-wp10-rejection-reason-histogram-result-template-20261103.json). This task has not been executed by MUSE.
+
 ## WP11-O read-only production provenance audit (2026-11-03)
 
 - Result: **PARTIAL**. MUSE performed a static read-only audit on Ubuntu 24.04.5 at `2026-11-03T18:02:55+08:00`; it did not execute production code or call external services.

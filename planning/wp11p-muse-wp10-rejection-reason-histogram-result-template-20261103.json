@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11P-MUSE-WP10-FIRST-REJECTION-REASON-HISTOGRAM-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "commit": "e08e7f7b2748cd3a3c60e2769063dc2d26e1112b",
+    "package_version": "0.12.0",
+    "parser_path": "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/fields.py",
+    "parser_sha256": "420a1b21d0df9d6f1f75460559d2fd8ee87cfec2805ca326928dd268b213d147"
+  },
+  "diagnostic": {
+    "status": "PASS|PARTIAL|BLOCKED",
+    "timestamp": "",
+    "environment": "",
+    "method": "VALUE_FREE_FIRST_REJECTION_HISTOGRAM",
+    "exact_commit_verified": true,
+    "parser_hash_verified": true,
+    "isolated_worktree": true,
+    "isolated_virtualenv": true,
+    "import_path_isolated": true,
+    "structured_result_available": "YES|NO|UNKNOWN",
+    "result_reads": 0,
+    "reviewed_reference_used": false,
+    "parser_replay_performed": false,
+    "decision": "REVIEW_REQUIRED|READY|UNKNOWN",
+    "draft_mapping": "REJECTED|ACCEPTED|UNKNOWN",
+    "reason_codes": [],
+    "raw_values_returned": false
+  },
+  "first_rejection_reason_counts": [
+    {
+      "field": "name|mobile|identity_number|explicit_birthday|gender|address|other_phone",
+      "candidate_source": "direct_right|same_row_nonadjacent|next_visual_row|line_format|identity_fragment_join|address_same_row_rescue|unknown",
+      "terminal_gate": "GEOMETRY|FIELD_VALIDATION|UNIQUE_ASSIGNMENT|FINAL_CONFLICT|PASS|NOT_EVALUATED",
+      "reason": "NO_UNIQUE_COLUMN|LABEL_BOX_OVERLAP|CENTER_NEAR_TIE|DIRECT_RIGHT_GAP_EXCEEDED|MISSING_OR_INVALID_GEOMETRY|FIELD_FORMAT_OR_LENGTH|IDENTITY_CHECKSUM_OR_DATE|AMBIGUOUS_CHARACTER|MULTIPLE_DISTINCT_VALUES|FAMILY_BOUNDARY|OTHER_VERIFIED|NOT_INSTRUMENTED|NOT_EVALUATED|PASS",
+      "count": 0
+    }
+  ],
+  "gender_signals": {
+    "pure_label_count": 0,
+    "text_block_count": 0,
+    "structured_checked_state_signal_count": 0,
+    "selection_inferred": false
+  },
+  "reconciliation": {
+    "candidate_counts_reconciled_to_wp11n": "YES|NO|UNKNOWN",
+    "distinct_block_rule_applied": true,
+    "terminal_outcome_counts_reconciled": "YES|NO|UNKNOWN",
+    "unreconciled_count_reason": "NONE|NOT_INSTRUMENTED|UNKNOWN"
+  },
+  "operation_counts": {
+    "branch_fetches": 0,
+    "structured_result_reads": 0,
+    "reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_reads": 0,
+    "contact_creates": 0,
+    "contact_updates": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_files_modified": 0,
+    "muse_commits": 0,
+    "muse_pushes": 0
+  }
+}

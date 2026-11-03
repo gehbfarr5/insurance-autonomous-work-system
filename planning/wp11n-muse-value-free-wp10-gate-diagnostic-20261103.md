@@ -1,6 +1,6 @@
 # WP11-N MUSE value-free WP10 parser-gate diagnostic
 
-**State:** `IN_PROGRESS`. WP11-M replayed the previously authorized WP10 structured OCR result against package 0.12.0 at commit `6d5e7d4b8bbf29e8e5b4b1bc9bf43fa2d344cb6b`; the parser returned `REVIEW_REQUIRED`, draft mapping was rejected, and the reviewed reference was unavailable. This task requests aggregate stage counts to identify whether the current candidate has a specific, safe parser issue. It is diagnostic only and does not authorize a source change.
+**Task state:** `COMPLETE`. **Parser acceptance:** `FAIL`; **diagnostic status:** complete. MUSE counted value-free parser gates at exact commit `0c97938342d77ab23b5f061ad472529d3999918e` using the same authorized WP10 result. Name, mobile, and birthday had no geometry-passing candidate; address candidates failed field validation; gender had no structured checked-state signal. The reason histogram is too coarse to identify a specific geometry failure, so no parser change is justified yet. See [`wp11n-muse-value-free-wp10-gate-diagnostic-result-20261103.json`](wp11n-muse-value-free-wp10-gate-diagnostic-result-20261103.json) and [`TEST_REPORT.md`](../integrations/muse-customer-card-ocr/TEST_REPORT.md#wp11-n-value-free-wp10-parser-gate-diagnostic-2026-11-03). This diagnostic does not authorize a source change.
 
 ## Authorization and exact scope
 

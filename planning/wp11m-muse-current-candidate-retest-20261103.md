@@ -1,6 +1,6 @@
 # WP11-M MUSE isolated current-candidate replay
 
-**State:** `IN_PROGRESS`. WP11-B was executed and failed on package 0.7.0; its result and later 0.8–0.12 replay evidence are summarized in [`TEST_REPORT.md`](../integrations/muse-customer-card-ocr/TEST_REPORT.md). The current 0.12.0 candidate still has a recorded WP10 replay failure at commit `e9814eaee6b16d677ab06f0857fa2a5bd1f6a586`. This follow-up pins the current branch candidate, confirms whether the original authorized WP10 artifacts remain accessible, and records a fresh isolated replay without repeating OCR or touching contacts.
+**Task state:** `COMPLETE`. **Parser acceptance:** `FAIL`. MUSE replayed the same authorized WP10 structured result at exact commit `6d5e7d4b8bbf29e8e5b4b1bc9bf43fa2d344cb6b`, package 0.12.0, in an isolated environment. The offline suite passed 144/144, but parsing remained `REVIEW_REQUIRED` and mapping was rejected; the reviewed reference was unavailable. The sanitized result is [`wp11m-muse-current-candidate-result-20261103.json`](wp11m-muse-current-candidate-result-20261103.json), with details in [`TEST_REPORT.md`](../integrations/muse-customer-card-ocr/TEST_REPORT.md#wp11m-current-candidate-replay-2026-11-03). This records failed acceptance; it does not authorize a parser change.
 
 ## Authorization and exact scope
 
