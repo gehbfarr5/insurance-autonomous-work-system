@@ -238,7 +238,9 @@ P4仍开放、S1未验收。最新MUSE状态、Pixel非root预检及live runner�
 
 > 2026-10-24：P1、P2、P3 已经用户确认完成，进入 P4。此文维护阶段定义与关口，不是承诺日期、预算或 KPI 的排期。
 
-> **P4接续状态｜2026-11-03 20:08 CST：** 私有prepare字段observer v2及证据collector/joiner的离线回归通过，未部署。当前Forest MUSE并发状态与Pixel操作锁UNKNOWN；现有collector需要`su`，不符合当前无root设备访问约束，非root采集路径尚待核实。11月4日自然运行和同轮证据未完成。P4继续开放，S1未验收，P50/月度/2U=2800挂起。详情见[交接](p4-next-session-handoff.md)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[运行手册](forest-diagnostics-operations-2026-11-04.md)。
+> **P4接续状态｜2026-11-04 04:13 CST：** 今日09:00自然轮尚未来到。最近MUSE自然轮前快照为03:47:07，当时running/queued/in-flight `0/0/false`、runner lock `FREE`、唯一每日09:00调度待触发；该快照不是之后并发状态保证。03:50:29有限非root Pixel预检确认设备身份、启动及v0.19 APK hash；设备操作锁、monitor/hash、屏幕/Keyguard/Activity仍UNKNOWN，停止/回滚BLOCKED。04:10 Drive决策引用及历史账本/领取metadata-only查询均无匹配，不证明原据不存在或否定D-029。保留自然轮；运行后先刷新MUSE并读取同轮脱敏证据与独立收据，不重放。P4开放，S1未验收，P50/月度/2U=2800挂起。证据：`acceptanceGateStatus20261104_0352`、`googleDriveRuleSourcePointerSearch20261104_0410`及[运行手册](forest-diagnostics-operations-2026-11-04.md)。
+
+> **历史P4接续状态｜2026-11-03 20:08 CST：** 私有prepare字段observer v2及证据collector/joiner的离线回归通过，未部署。MUSE并发状态与Pixel操作锁UNKNOWN；现有collector需要`su`，不符合当前无root设备访问约束，非root采集路径尚待核实。11月4日自然运行和同轮证据未完成。P4继续开放，S1未验收，P50/月度/2U=2800挂起。详情见[交接](p4-next-session-handoff.md)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[运行手册](forest-diagnostics-operations-2026-11-04.md)。
 
 当前执行：P4-WP01已实施有限执行器、运行副本修复及证据恢复；本轮继续其余已授权项目的核查、候选实现与同步。跨日、月度规划/P50按用户要求挂起。旧版未实施叙述仅为历史。
 
