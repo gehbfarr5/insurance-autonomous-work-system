@@ -2,7 +2,9 @@
 
 > **iCloud MCP 项目归档（2026-11-02）：** 核心首尔 MCP 与现有 Agent 已进入可用阶段；Chat 和 Work Cloud 同一 Sites MCP 演示工具已分别验收，但 **ChatGPT 真实 iCloud 数据链路仍受 Site 源码工作区阻断，子项目暂缓**。完整部署、研究、验收、无效尝试及恢复条件见 [iCloud MCP 全阶段总归档](planning/icloud-mcp-master-handover-2026-11-02.md)，不要将 demo PASS 误称为生产 iCloud PASS。
 
-> **阳光森林与 Pixel 登录助手最新核查｜2026-11-02 21:37：** 11月2日自然运行与获准v0.19补跑均未进入五项业务，助理为REVIEW/NOT_SENT、主流程为登录态BLOCKED，两段cleanup PASS。完整日志/UsageStats未见`GestureActivity`，派发计数未增、输入审计无记录。MUSE只读取得安装后live v0.19 runner最小脱敏片段（live SHA-256 `de9bd83c…`；本机摘录SHA-256 `8cf4de84…`），确认启动顺序为写命令/使能标记→wake key→force-stop→启动；最多70秒轮询resumed Activity，只有精确`GestureActivity`出现才单次调用本地认证入口，没有解锁Keyguard步骤。因此已知入口未被调用，本次失败不支持归咎密码/手势输入动作；Keyguard、页面路由及登录字段当时状态仍未知。森林模块对登录态三字段只做一次门禁，缺项即阻断。下一步先取得有界脱敏的screen/Keyguard/Activity/派发阶段快照，再决定修复；不重放业务、不改每日调度，P50/月度规划继续挂起。详细证据见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。
+> **阳光森林 11月3日自然运行与五段对照｜2026-11-03：** 09:00调度的助理与主流程均在prepare超时，五项未进入业务、cleanup报告PASS；另有08:57误触助理同样超时。MUSE只读对照还覆盖11月2日11:14手动v0.19两段：只有手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity；五段均无认证入口调用证据。MUSE报告五段共用同一live v0.19 runner/模块哈希，版本差异不足以解释结果；启动/设备/应用上下文差异仍未知。`user`/`empNoAES`/`operateFlag`、`gesturePage`/`accountMatch`历史分项均缺失，不支持归因为密码/手势脚本故障。脱敏ZIP已下载；本机重算外层SHA-256 `56e7280e…`及7个内部文件哈希全部通过。原始结果/prepare文件未包含，源文件完整SHA-256由MUSE提供、无法在本机对原字节重算。五段细节和哈希见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。不连接Pixel、不重跑、不改state/cron/调度；每日任务仍按既有定义，P50/月度规划挂起。
+
+> **此前v0.19登录派发源码核验｜2026-11-02：** MUSE只读取得安装后live v0.19 runner最小脱敏片段（live SHA-256 `de9bd83c…`；本机摘录SHA-256 `8cf4de84…`），确认启动顺序为写命令/使能标记→wake key→force-stop→启动；最多70秒轮询resumed Activity，只有精确`GestureActivity`出现才单次调用本地认证入口，没有解锁Keyguard步骤。因此11月2日已知入口未被调用，该次失败不支持归咎密码/手势输入动作；Keyguard、页面路由及登录字段状态仍未知。详细历史见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。
 
 > **Keyguard根因观测候选｜2026-11-02 21:52：** 离线审查发现既有诊断候选只记录屏幕亮灭，无法区分Keyguard是否显示/系统是否仍要求认证。已准备review-only v2，在同一监控采样点只读采集`isKeyguardLocked()`与`isDeviceLocked()`布尔值，API失败显式记录`READ_FAILED`，不改变现有派发门禁或`monitor-status.json`；脱敏采集器改用schema v2并拒绝旧版/不一致字段。Node语法、七个门禁及单次派发行为对比、采集器schema/敏感样例/上限验证、Python语法均通过。候选未部署，Android/AutoX实机兼容仍待验证；Pixel安装或监控重启需单独授权。两API语义见[Android KeyguardManager官方文档](https://developer.android.com/reference/android/app/KeyguardManager#isKeyguardLocked())和[Context.KEYGUARD_SERVICE](https://developer.android.com/reference/android/content/Context#KEYGUARD_SERVICE)。
 
@@ -35,9 +37,9 @@
 
 阅读顺序：本页 → [整体审阅与内容地图](planning/project-review-2026-10-24.md) → [总体框架](docs/02-project-framework-v0.2.md) → [已确认决定](docs/03-confirmed-decisions.md) → [缺失与待验证内容](docs/04-open-questions.md)。需要落实时再进入 P4 交接和工作包。
 
-## 当前状态｜2026-11-02
+## 当前状态｜2026-11-03
 
-**P1—P3已完成，P4进行中，S1未整体验收。每日五项范围不变。10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1日五项未执行。11月2日两段均未进入业务、无业务回执、cleanup PASS；v0.19 runner/APK按授权安装读回一致，旧bundle超时消除，但助理调用门禁与主流程登录态检查仍未通过。21:37取得安装后live runner门禁源码片段：写命令/使能标记→wake key→force-stop→启动，最长70秒轮询resumed Activity，仅GestureActivity出现后调用认证入口；11月2日未见该Activity，入口未被调用，不能归咎手势输入动作。Keyguard和登录字段历史值仍未知；screen交互不等于解锁。三项脱敏候选已离线验证、均未部署；下一步先获取有界门禁快照，再决定是否改唤醒/登录就绪路径。runner与APK读回一致，state主文件、cron、每日Asia/Shanghai 09:00调度未改；P50/月度规划继续挂起，AI奖励、客温客价回执、完整恢复及扩展验收仍待补。**
+**P1—P3已完成，P4进行中，S1未整体验收。每日五项范围不变。10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日MUSE只读对照覆盖三段当日运行和两段11月2日手动运行：五段模块门禁均报告为同一v0.19工件，只有11月2日手动助理段到达BridgeWeb；11月3日误触及调度轮都在MainActivity准备超时。脱敏ZIP外层和7个内部成员哈希已在本机验证；原始result/prepare文件未包含，源文件完整哈希由MUSE提供但无法本机对原字节复算。失败根因仍UNKNOWN，不归咎认证输入脚本。五段无业务动作，脱敏记录报告cleanup PASS；历史登录布尔值缺失。每日Asia/Shanghai 09:00定义未改，下一次报告为11月4日09:00；不连接Pixel、不重跑、不改state/cron。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
 
 **[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。本轮恢复了扩展任务调查和历史服务申请回执；完整完成条件及奖励周期仍待核。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 

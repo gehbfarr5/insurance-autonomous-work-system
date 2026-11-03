@@ -2,14 +2,18 @@
 
 ## 最新接续状态｜2026-11-03
 
-### 2026-11-03 自然任务摘要与差异
+### 2026-11-03 五段运行只读对照
 
-以下依据今日09:15 MUSE既有旁聊报告；本机未找到11月3日原始脱敏结果包/哈希清单，故为旁聊摘要证据，未独立核对运行器或模块字节。未访问Pixel。
+MUSE既有旁聊已按当前授权读取11月3日08:57误触助理、09:00调度助理/主流程，并与11月2日11:14手动v0.19助理/主流程逐段比对；未连接Pixel、未运行业务、未改文件/state/cron/调度。五段脱敏证据ZIP已下载并验证外层SHA-256 `56e7280ee48f41cbad2d74e10d4a61c3d051a2e7831074d35a9e1de18e2cbe02`及7个内含成员哈希。源`result.json`和`prepare-events.json`不在ZIP内；其全长哈希由MUSE导出，不能在本机对原始源字节独立复算。包内operation-owner因包含owner token而扣留、未哈希。
 
-- 09:00自然调度的assistant（约09:01:55—09:03:53）与main（约09:04:16—09:06:17）prepare事件都只记录模块哈希事件与`.MainActivity`，终态均为`PREPARE_TIMEOUT_NO_FALLBACK`；未到BridgeWeb/业务，cleanup均报告PASS，五项均未执行。assistant维持`INTENT / NOT_SENT`，无待决意图。08:57另有一次摘要称误触的assistant尝试，分开记录，待原件核实。
-- 与11月2日11:14 v0.19手动补跑不同：当时assistant到达`BridgeWebActivity`后被固定方法匹配门禁挡下，main在登录态检查处`PREPARE_LOGIN_STATE_MISSING`；11月3日两段都停在MainActivity/prepare超时。
-- 缺11月3日runner、assistant源码及模块精确SHA-256，适配副本/工作目录/state目录标识和原始运行包；当前不能证明调度轮与11月2日手动轮使用了完全相同的运行字节或环境，也不能推断差异原因。
-- 下一步只恢复并核对既有脱敏运行/prepare/cleanup记录及对应哈希，不连接Pixel、不重跑、不改state/cron/调度。MUSE摘要显示下一次既有调度为11月4日09:00；自然跨日结果按原计划之后再核。
+- 11月3日误触助理08:57:05—08:59:01，prepare为模块→SplashActivity→MainActivity，`REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`，stages为空、70秒无marker、cleanup PASS。
+- 11月3日调度助理09:01:55—09:03:53，prepare为模块→MainActivity，`REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`，stages为空、无marker、cleanup PASS；主流程09:04:16—09:06:17同样只到MainActivity，`BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，结果无stages键、cleanup PASS。
+- 对照11月2日手动助理11:14:53—11:16:27，模块→MainActivity→BridgeWebActivity，`prepare_done`后因固定入口匹配失败`REVIEW / ONCLICKAPP_OR_MENU_NOT_UNIQUE_NO_CALL`；手动主流程11:16:47—11:17:57只到MainActivity，JS标记`BLOCKED / LOGIN_STATE_MISSING`，runner结果为`PREPARE_LOGIN_STATE_MISSING`。两段cleanup均PASS。
+- 五段脱敏JSON包含每段原始result及prepare-events的完整SHA-256指纹；完整值见[修复与补跑报告](forest-prepare-repair-2026-11-02.md)。本机确认ZIP内清单成员哈希匹配；原始源文件未随包交付，故MUSE给出的源文件哈希不能在本机复算，但可用作后续定位/对账指纹。
+- 五段prepare-events均无`login`事件；没有认证入口实际调用的留存证据。五段的登录态分项布尔值/采样时间、`gesturePage`与`accountMatch`均缺失；11月2日手动助理的`control.login`仅为路径标记。差异原因和Pixel实时状态仍UNKNOWN，不归因于手势输入脚本。
+- 脱敏包state快照记录待决为空、去重历史11条（末条10月31日）；assistant.json两日均`INTENT / NOT_SENT`且无`sentAt`。11月3日`startedAt`来自08:57误触，不是09:01调度段。状态快照JSON哈希已通过包内清单核验；其源state/assistant字节未导出。
+
+**接续动作：** 已完成五段脱敏包外层/包内哈希验证和只读差异记录；Issue #3已追加本轮摘要，本机README、路线图、进度、工作包、开放问题及交接已更新，当前待提交并推送main。无需访问Pixel；不重跑业务、不改state/cron/调度。既有下一次自然调度仍报告为11月4日09:00，等真实次日结果时只读核验；P50/月度规划继续挂起。
 
 P50与月度规划继续挂起。
 

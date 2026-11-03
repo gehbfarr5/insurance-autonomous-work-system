@@ -1,10 +1,12 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
-## 最新接续核查｜2026-11-02
+## 最新接续核查｜2026-11-03
 
 Pixel 登录助手 EXIT 组件状态恢复会杀掉 AutoX 引擎的根因已通过脚本与 Android 退出记录定位。现使用 Android 15 root-only 固定组件调用，以 `DONT_KILL_APP` 恢复组件并读回；手动冷启动、与显式入口并发及重复启动的实机回归通过。11月2日只读读数与10月30日部署快照同 PID/锁 inode、心跳新鲜、组件默认态，跨日守护存活读数通过。公开源码及方法见[认证助手说明](../tools/pixel-auth/README.md)，原始安装/设备证据仍私存。
 
 10月31日与11月1日的只读脱敏原始记录包已从既有MUSE旁聊下载并独立核对：外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7个文件，`HASHES.txt`中的6个成员哈希均匹配。包保存在本机忽略的 `.private/continuation-20261030/`，公开仓库只写摘要与哈希索引。
+
+**11月3日自然轮及五段只读对照：** 今日09:00调度的助理和主流程均在prepare阶段以`PREPARE_TIMEOUT_NO_FALLBACK`结束，五项未进入业务；08:57另有一次误触助理尝试，同样超时。MUSE随后将这三段与11月2日11:14手动v0.19两段对照：只有11月2日手动助理到达BridgeWeb并完成prepare，其余四段停在MainActivity。五段脱敏ZIP已下载，外层SHA-256 `56e7280ee48f41cbad2d74e10d4a61c3d051a2e7831074d35a9e1de18e2cbe02`及7个包内成员哈希本机重算通过。ZIP给出每个源result/prepare-events的完整SHA-256及最小脱敏字段；原始源文件和operation-owner内容未包含，因此源文件哈希只能按MUSE导出索引引用，无法在本机重算。逐项登录态值/采样时间、gesturePage/accountMatch缺失；Pixel实时状态和表现差异的具体原因仍UNKNOWN。MUSE导出称五段cleanup PASS、state无待决且去重历史11条、assistant两日均INTENT/NOT_SENT。此证据不支持将prepare失败归因于密码/手势输入器，也不表示五项完成；不连接设备、不重跑、不改调度/state。详见[修复与补跑记录](forest-prepare-repair-2026-11-02.md)。
 
 - **10月31日主流程：** `PASS`，09:13:20记录。`signPhase`先 `SIGNED +0.5`（余额544→544.5），之后主流程才 `SKIP_ALREADY_SIGNED`；领取 `COLLECTED +6.5`（余额544.5→551，最后快照待领0）。时光轴 `VIEWED` 6055ms、`awardAcknowledged=true`、未保存客户内容，状态完成时间09:11:04。**客温客价没有独立回执**，共享时光轴路径不可改标为该项完成。
 - **10月31日智能助理：** 09:04:18已有发送记录，`SENT / REVIEW`；回答对账超时0.080893秒，没有after回执，不重发、不判答案或奖励确认。较早一轮被信号终止且未发送；其结果缺cleanup字段。

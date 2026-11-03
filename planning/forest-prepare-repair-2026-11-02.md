@@ -242,14 +242,33 @@ v3私有review-only包SHA-256为`edb4e0425f6379fac41e53d45a781e028ca9597a6df8734
 
 为避免把已有带8秒等待的修复候选误当成纯观察，另从与安装APK内一致的`forest-prepare.js`（SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`）建立一个本地只读字段观察草案，草案只输出三个布尔值和采样时间，不输出字段值、不加等待/重试、不改原促销或路由动作。草案SHA-256 `6923c360bbeb41468594e60e6e002f1bd7f8b65968adc85f0debdc2cd6f86bb3`；Node语法及与原版逐场景的分支、属性读取顺序和动作调用对照测试通过。它尚未整合进签名APK、未装机、未实跑。若Keyguard v3自然运行仍留下`LOGIN_STATE_MISSING`的具体字段不明，完整根因验收还需对该观察草案做APK级审查、集成与单独授权；当前v3部署授权不覆盖APK替换。
 
-### 2026-11-03 自然运行对照｜旁聊摘要，原始包待核
+### 2026-11-03 五段运行只读对照｜MUSE脱敏包已下载并校验
 
-本机 `.private` 归档未找到11月3日原始脱敏结果包或逐文件哈希清单。以下只依据本日09:15在MUSE既有旁聊显示的摘要记录，尚未与原始JSON/运行器字节独立核对，也未访问Pixel：
+本机 `.private` 归档未找到11月3日原始结果包；MUSE在既有「阳光森林每日执行部署」旁聊只读取出脱敏证据包，覆盖11月2日手动两段、11月3日08:57误触助理及09:00调度两段。MUSE声明未重新运行任何代码/任务、未访问设备、未写state/cron/调度。包名`sunshine-forest-five-segments-20261102-1103-desensitized-evidence.zip`，下载到本机`Downloads`；外层SHA-256 `56e7280ee48f41cbad2d74e10d4a61c3d051a2e7831074d35a9e1de18e2cbe02`，7,844字节、8成员。本机重算外层哈希完全一致；`SHA256SUMS.txt`列出的7个成员逐项重算全部通过，五个JSON均可解析。包不含完整源码、原始日志、截图、绝对路径、端点、设备用户信息、凭据、账号、客户内容、余额或奖励标识。原始`operation-owner.json`虽存在，但因含owner token而不导出、不提供哈希；因此运行归属文件内容未独立核验。
 
-- 09:00自然任务按先assistant、后main顺序运行。assistant约09:01:55开始、09:03:53写结果；main约09:04:16开始、09:06:17写结果。两段prepare都只有模块哈希事件和`.MainActivity`，均以`PREPARE_TIMEOUT_NO_FALLBACK`结束；均未进入BridgeWeb或业务阶段，cleanup报告PASS。五项均未执行，assistant保持`INTENT / NOT_SENT`，无待决意图；不把签到写成SKIP。
-- 08:57另有一次摘要所称误触的assistant尝试，报告同为prepare超时/NOT_SENT；它与09:00调度轮分开，原始运行记录及误触来源尚未本机核实。
-- 对照11月2日11:14 v0.19手动补跑：当时assistant prepare曾记录`BridgeWebActivity`，再因固定入口方法匹配失败而`NOT_SENT`；main在合并登录态门禁处`PREPARE_LOGIN_STATE_MISSING`。11月3日两段均未记录BridgeWeb且停在prepare超时，运行阶段不同。
-- 当前可见材料只称11月3日模块版本门禁通过及发生模块哈希事件，未提供runner、assistant源码或模块的精确哈希、适配副本/工作目录/state目录标识、启动入口字节或逐项门禁值。因此无法证明11月3日实际运行文件与11月2日手动v0.19轮相同，也不能把失败差异归因于时段、设备锁、App登录态或调度环境。
-- 结果摘要称清理完成、设备锁释放，state无待决意图、assistant为`INTENT / NOT_SENT`、防重历史未刷新；这些仍是旁聊摘要陈述，待原始脱敏记录与哈希复核。公开记录不含余额数值、原始日志、绝对路径或私有配置。
+| 运行段 | 时间（Asia/Shanghai） | prepare事件（摘要） | 终态与阶段 | marker / cleanup |
+| --- | --- | --- | --- | --- |
+| 11-03误触助理 | 08:57:05→08:59:01 | 模块08:57:15；SplashActivity 08:57:37；MainActivity 08:57:51 | REVIEW / `PREPARE_TIMEOUT_NO_FALLBACK`；stages `[]` | 70秒截止无marker；cleanup PASS |
+| 11-03调度助理 | 09:01:55→09:03:53 | 模块09:02:04；MainActivity 09:02:26 | REVIEW / `PREPARE_TIMEOUT_NO_FALLBACK`；stages `[]` | 无marker；cleanup PASS |
+| 11-03调度主流程 | 09:04:16→09:06:17 | 模块09:04:26；MainActivity 09:04:47 | BLOCKED / `PREPARE_TIMEOUT_NO_FALLBACK`；结果无`stages`键 | 无marker；cleanup PASS |
+| 11-02手动助理 | 11:14:53→11:16:27 | 模块11:15:05；MainActivity 11:15:31；BridgeWebActivity 11:15:40 | REVIEW / `ONCLICKAPP_OR_MENU_NOT_UNIQUE_NO_CALL`；`prepare_done` | NAVIGATED由prepare_done与代码路径推得，prepare-events本身无marker字段；cleanup PASS |
+| 11-02手动主流程 | 11:16:47→11:17:57 | 模块11:16:59；MainActivity 11:17:26 | BLOCKED / `PREPARE_LOGIN_STATE_MISSING`；结果无`stages`键 | JS marker为`BLOCKED / LOGIN_STATE_MISSING`（runner加`PREPARE_`前缀）；cleanup PASS |
 
-下一步优先恢复11月3日两段及08:57记录的原始脱敏结果、prepare/cleanup清单和对应源码/制品哈希，再与11月2日11:14已核对的v0.19证据逐项对照。只读取已有文件，不连接Pixel、不重跑、不改state/cron/调度。现有每日任务报告下次为11月4日09:00；P50/月度规划继续挂起。
+**本轮核对结论与证据边界：** 五段模块事件值均为v0.19工件哈希，版本门禁均通过。MUSE在脱敏包内提供的live文件重算值为：`run.py` `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`、`assistant.py` `a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`、v0.19工件`dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`；调度定义`22658ddb697d94846e6b2f3c45339675acc4d353903626723dfa91d34fc0f7df`未变，下次仍报为11月4日09:00。MUSE ZIP外层和全部包内成员哈希在本机已验证；其中每段所列原始`result.json`和`prepare-events.json`不在ZIP内，故其完整SHA-256是MUSE提供的源文件指纹，本机无法对源文件字节重算。`operation-owner.json`因owner token扣留且未哈希。此前聊天摘要只显示结果哈希前16位，现以包内全长源指纹补齐。
+
+| 运行段 | 原始`result.json` SHA-256（MUSE计算） | 原始`prepare-events.json` SHA-256（MUSE计算） |
+| --- | --- | --- |
+| 11-02手动助理 | `5bd900bf14bcd1c4aff401625584eb48a1d977e5f41721798b829aee9160d7da` | `465e0309c2f539d0f7a964434b97d1221fcb1da248b1ea21a42c164b7e330f38` |
+| 11-02手动主流程 | `781c9953c2cd95156cacd08aee96906a9f2160e77d8552f74726a6736a2c26ee` | `0b294363a86a3b2aa743b8c8e02e5ea2f54509add1de56d88c96a7fefea037c3` |
+| 11-03误触助理 | `dd1427dda04e225028f913f35dd787fa799b70ad3bf63f2a5fd0081c452700ae` | `562dcc515572986f6fe1500dbe6f96da288f432e5d82b2c49b5dfc488a0706e3` |
+| 11-03调度助理 | `e44f5815ef7d77dbdcc00ef99c0b4118da49db8d13716d0a7fd0590e499dfbee` | `7c5ea5c493e5cc6361a9a5b7f6f28cd0ceb18bcd3d2517f8801c4f913999dd73` |
+| 11-03调度主流程 | `beda704f11ab50e1e7434c18522a0290a2bf12726273d608c3871aa005ccafca` | `2cb2b8e5182f7cdf8e8944b4432cb923cd79f143b4718e9980acc329cade6177` |
+
+脱敏包成员哈希清单也已在本机复核：`README.txt` `2673bbcb1246dd370aa8b712de85e7bab91c261ca951c2171252fa60645f2f12`；`segments/01-manual-assistant-1102.json` `7e27be8c3599faa0197c7580d2deb95181ef2dda5adb65891e14f3e9e5d68395`；`segments/02-manual-main-1102.json` `d6be87ed526769c2072c75c45e54dcb94c0e03042ac5bb4609a131a889ac769a`；`segments/03-accidental-assistant-1103.json` `fe2c6ec2cf89cd5e7b0dd406c0900b09f42e07be2175cd15f8af7127634a89dd`；`segments/04-scheduled-assistant-1103.json` `1a35bfb4bb0da9e459075a175384536ae1934a7f00eac2411d2d956528df0479`；`segments/05-scheduled-main-1103.json` `81bc6203034846f4adc2c722977b757f0905a01b7f6b87ada241be2a88ee04a4`；`state-snapshot.json` `4300b5947568e8b5e6180131f4ed32f1e25f69bfff627b40de01a48270119865`。
+
+- 只有11月2日手动助理段到达BridgeWeb并完成prepare；其余四段止于MainActivity（11月3日误触还经过Splash）。因此同版号/工件版本并不能解释运行差异；本次对照仍不能区分启动模式、设备/应用状态或其他运行上下文原因，不把相关性写成根因。
+- 五段prepare-events均无`login`类事件，没有实际`auth_start()`调用的留存证据。11月2日助理`control.login`只是路径标记，不能作为调用回执；11月3日两段未到手势页，登录入口脚本不在已观测执行路径内，现有材料不支持将今日prepare超时归因于密码/手势输入器。
+- `vueCheck`仅在11月2日手动助理结果中存在：`onClickAppMatches=false`、目标菜单数量1；其他助理段均止于prepare，缺`vueCheck`。五段均缺`user`、`empNoAES`、`operateFlag`各自存在性布尔值与精确采样时间；`gesturePage`、`accountMatch`也缺失。11月3日与11月2日手动运行差异的原因和Pixel实时状态均为UNKNOWN。
+- ZIP内五段结果均报告cleanup PASS；state快照的pending为空、防重历史11条（末条10月31日），assistant.json 11月2/3均为`INTENT / NOT_SENT`、无`sentAt`。11月3日`startedAt`为08:57误触段的时间，不是09:01调度助理段。包内JSON成员哈希已核；未包含源结果文件及operation-owner内容，故这些摘要字段虽有脱敏包承载，源文件身份仍仅由MUSE所列SHA-256锚定。
+
+每日五项仍全部未执行/未完成，今日余额与待领未刷新；不把签到记为SKIP或奖励记为已确认。脱敏包已校验，README、路线图、进度、工作包、交接与开放问题已更新，Issue #3已追加说明；仅本轮文档提交与main同步待完成。不连接Pixel、不重跑、不改state/cron/调度。P50/月度规划继续挂起。
