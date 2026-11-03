@@ -1,5 +1,24 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 最新接续事实｜2026-11-03 18:40 CST
+
+- 已完成有界云端assistant门禁诊断集成：18:40:26写前核验，18:40:41原子替换，18:40:48写后确认。仅更新Forest runner的`assistant.py`；live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份及单独回滚副本均保留基线SHA `a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。
+- 新记录只增加Vue存在、`onClickApp`存在、目标数、runGroup和门禁采样时间；固定方法pin、恰好一项门禁及失败关闭逻辑未变。无Python/业务代码运行、无设备访问、无state/cron/schedule/credentials/network/module/APK/WP1修改。已知代码树无严格record validator，树外消费者仍UNKNOWN。
+- 写后唯一Asia/Shanghai 09:00 schedule、下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、Forest进程未见，均未变；设备锁本次未读，最近Pixel读数18:22为FREE。11月3日自然任务业务结果没有重读，prepare超时根因仍UNKNOWN。
+- 下一步等11月4日既有自然调度结束；先从MUSE取脱敏assistant/main阶段与本次门禁记录，再在MUSE无在途任务且设备操作锁新鲜确认后，使用既有Pixel别名只读导出窗口sidecar/log。不要重放、补跑或提前检查设备；无论字段结果如何，不把观测当作业务PASS。P4开放，S1未验收，五项扩展仍待核实，P50/月度及2U=2800继续挂起。
+
+详见[操作手册](forest-diagnostics-operations-2026-11-04.md)、[prepare诊断](forest-prepare-diagnostics-2026-11-03.md)、[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+## 集成前接续事实｜2026-11-03 18:24 CST
+
+- MUSE Forest部署范围只读读数：18:15:56唯一每日Asia/Shanghai 09:00任务、下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、Forest进程未见；其他聊天未探测。Pixel于18:22:27通过既有`pixel3a-kjgx`非root通道只读确认设备操作锁FREE、AutoX进程不存在。不得把这些读数外推为后续时点状态。
+- Pixel屏幕/Keyguard/device locked/前台Activity及monitor脚本状态/hash均未知；APK SHA-256为既知v0.19工件值。没有运行任务或业务、写设备、改state/cron/调度或凭据。
+- 18:24:13 live `assistant.py`原字节哈希匹配。静态门禁要求Vue presence、onClickApp及固定pin匹配、唯一菜单项；持久记录缺Vue和onClickApp存在的独立布尔值、独立计数、门禁采样时间和run group。此事实不能定位11月3日prepare超时根因；此处未部署状态已由上方18:40接续项更新。
+- 五项扩展仍全部“仍待核实”。CPIC历史E锦囊资料不构成当前激活/资格/奖励规则；新增Drive检索有界且未读正文。
+- 下一步等待既有11月4日自然调度结束，再从MUSE刷新自然结果/并发状态；在新鲜门禁通过后才按既有授权范围只读复核Pixel并采集关联诊断。禁止补跑、重放业务、改时间或清状态。跨日可靠性、五项业务正例与回执仍未完成；P4开放，S1未验收，P50/月度/2U=2800保持挂起。
+
+详细记录：[操作手册](forest-diagnostics-operations-2026-11-04.md)、[prepare诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[扩展与来源核查](remaining-work-2026-10-29.md)、[结构化证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 回执候选静态修正｜2026-11-03 17:35 CST
 
 AI快照现在要求baseline中的每个`recordId`都是非空字符串；缺失或空值返回`REVIEW / RECORD_ID_UNKNOWN`，避免不完整基线支持“新记录”结论。新增合成回归后`test-collector.cjs`29/29 PASS。独立offline provides候选对遍历字段采用描述符读取，getter不执行；回归PASS，Proxy陷阱不在其保障范围。仅仓库候选发生变化，未安装/部署/实机验收；MUSE当前版本仍UNKNOWN。AI同次结束正例、成功空列表同周期响应与赋值证据继续待取；无业务动作、设备写入或调度变化。详情见[证据索引](remaining-work-evidence-2026-10-29.json)和[采集器说明](../tools/receipt-collector/README.md)。
@@ -22,7 +41,7 @@ CPIC官方2022年文章描述“态幸福”为NBS交互式客户需求分析/�
 
 11月4日review-only私有Activity类别候选已完成5项离线脚本验证，11/11文件哈希匹配。候选仅将前台Activity映射为固定枚举，未部署；prepare逐字段登录态和assistant gate观察器仍未集成live runner，所以仍缺一轮可关联的完整自然运行与真实业务回执。候选及清单SHA-256、离线验证记录见[证据索引](remaining-work-evidence-2026-10-29.json)。官方域追加检索仍未发现规则原据，且不证明历史原件不存在。证据索引：[`museUiSnapshot20261103`](remaining-work-evidence-2026-10-29.json)、[`activityClassObserverReview20261103`](remaining-work-evidence-2026-10-29.json)及[`rulesOfficialSearchBroad20261103`](remaining-work-evidence-2026-10-29.json)。
 
-## 当前接续状态｜2026-11-03 17:25 CST
+## 历史接续状态｜2026-11-03 17:25 CST
 
 截至17:25，CUA inventory显示Muse进程运行但浏览器清单为空、Work设置禁用浏览器控制；没有Forest状态读回或专用MUSE/Pixel connector。此前16:23并发读数已过时，当前仍UNKNOWN；按既有WP1边界未打开Muse界面，未连接Pixel。17:03本机SSH配置检查确认既有Pixel别名，但不提供设备锁/部署哈希。17:12完成11月4日review-only采集包字段审计并修正collector忽略`.failure`标记；17:22复核E07规则原件与索引哈希匹配，CPIC官方4条精确规则搜索未命中。其余字段限制和时间周期边界见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[剩余工作与证据边界](remaining-work-2026-10-29.md)。先取得新鲜MUSE状态确认无并发，再做Pixel只读核查。16:33 live runner静态读数未定位具体超时触发，精确源码尚未导出。无业务、设备、state/cron/调度或凭据变更。
 

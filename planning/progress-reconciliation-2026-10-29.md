@@ -1,5 +1,13 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 最新更新｜云端assistant gate遥测｜2026-11-03 18:40 CST
+
+已完成有界云端集成：18:40:41原子替换Forest runner的`assistant.py`，18:40:48哈希验证为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；原始备份和新回滚副本均保持原哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只增加五个脱敏门禁诊断字段，不放宽Vue/固定方法pin/唯一菜单项约束。写后唯一每日09:00 schedule、下一触发11月4日09:00、runner idle/unlocked、Forest进程未见；未执行代码/任务或访问设备，未改业务state/cron/凭据/module/APK。树内消费者兼容证据中等，树外未知。11月3日超时根因仍UNKNOWN，11月4日自然结果待观察；仅集成状态PASS，不代表P4或S1完成。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+## 集成前只读证据与状态｜2026-11-03 18:24 CST
+
+MUSE 18:15:56只读回读Forest范围内没有活跃任务、唯一Asia/Shanghai每日09:00调度下次11月4日、running/queued/in-flight `0/0/false`、runner lock FREE；其他聊天活动未探测。Pixel 18:22:27经既有`pixel3a-kjgx`非root通道只读确认设备操作锁FREE、AutoX进程不存在、v0.19 APK哈希匹配；监控状态/hash和系统屏幕/Keyguard/Activity接口不可读。18:24:13静态assistant gate审查发现门禁持久记录缺Vue存在性、独立目标数、采样时间和run group。未改设备、业务、state、cron、调度或凭据；11月3日超时根因仍未知，扩展任务、业务回执与跨日观察未完成。证据见[操作手册](forest-diagnostics-operations-2026-11-04.md)和[结构化索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 回执候选本机审计｜2026-11-03 17:35 CST
 
 `ai-snapshot.js`原先会省略空记录ID；现已改为缺失或空`recordId`直接返回`REVIEW / RECORD_ID_UNKNOWN`，完整基线的合成测试29/29 PASS。独立offline provides遍历候选改为描述符读取并阻断getter，测试PASS。未部署或实机验证；MUSE安装版本UNKNOWN。AI同次回答完成正例及成功空列表同周期响应/赋值仍未取得，P4和S1判定不变。证据及哈希见[剩余工作索引](remaining-work-evidence-2026-10-29.json)。

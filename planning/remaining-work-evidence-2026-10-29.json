@@ -1330,5 +1330,156 @@
     "result": "No directly relevant official source for Forest rules, reset time, repeat cycle, reward trigger, or settlement delay surfaced. Results were unrelated company directory and general insurance pages.",
     "classification": "Bounded no-hit only; this does not establish that original internal materials do not exist or were never confirmed.",
     "effect": "No change to rule conclusions or extension classifications."
+  },
+  "rulesDriveMetadataSearchFollowup20261103": {
+    "recordedAt": "2026-11-03T18:26:32+08:00",
+    "performedAt": "2026-11-03; exact search times were not captured.",
+    "source": "Connected Google Drive; bounded metadata-only searches.",
+    "ruleQueries": ["阳光日 雨露日", "森林 奖励触发", "森林 限额 重复", "阳光值 结算周期"],
+    "ruleSearchLimits": {"itemType": "document", "topn": 20, "requireViewedByUser": true},
+    "ruleResults": [0, 0, 0, 0],
+    "extensionQueries": [
+      "三节一生 贺卡 生日",
+      "保单芯管家 家庭成员 检视",
+      "态幸福 测算 报告",
+      "E锦囊 保险超市 激活 签单协同",
+      "保单芯管家",
+      "态幸福",
+      "三节一生",
+      "E锦囊",
+      "签单协同"
+    ],
+    "extensionSearchLimits": {"bestEffortFetch": false, "topn": 20, "requireViewedByUser": true},
+    "extensionResults": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "contentFetched": false,
+    "interpretation": "Bounded no-hit results only. They do not show that original materials do not exist or were never confirmed."
+  },
+  "extensionOfficialSearchFollowup20261103": {
+    "recordedAt": "2026-11-03T18:26:32+08:00",
+    "performedAt": "2026-11-03; exact search times were not captured.",
+    "source": "Targeted web search restricted to official CPIC domains; two historical pages were opened.",
+    "findings": [
+      {
+        "title": "关于中国太平洋保险（集团）科技个险plus项目二期方案征集公告",
+        "date": "2018-11-02",
+        "url": "https://www.cpic.com.cn/c/2018-11-02/1562542.shtml",
+        "finding": "Describes historical iteration of the E锦囊（保险超市） product page as project scope; it does not document the current activation workflow, eligibility, Forest mapping, or reward cycle."
+      },
+      {
+        "title": "中国太平洋保险2017年投资者日材料",
+        "date": "2017-12-22",
+        "url": "https://www.cpic.com.cn/upload/resources/file/2017/12/22/47047.pdf",
+        "finding": "Historical context presents E锦囊 and 保险超市 as sales-support/lead-generation tools shareable through WeChat; it does not establish a current activation workflow or reward conditions."
+      }
+    ],
+    "otherFindings": "No direct official workflows surfaced for the other four expansion items or current E锦囊 activation.",
+    "classificationChange": "None; all five extensions remain 仍待核实.",
+    "interpretation": "These historical product references do not establish current user eligibility, completion steps, Sunshine Forest task association, reward trigger, or repeat cycle."
+  },
+  "museReadonlyStatus20261103": {
+    "readAt": "2026-11-03T18:15:56+08:00",
+    "source": "Existing MUSE Forest conversation; read-only scheduler/runtime metadata response.",
+    "otherMUSEActivity": "No active task observed in the Forest deployment scope. Other chats were not probed and remain UNKNOWN.",
+    "schedule": {"enabledCount": 1, "timezone": "Asia/Shanghai", "dailyAt": "09:00:00", "nextTrigger": "2026-11-04T09:00:00+08:00"},
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "run.py": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistant.py": "a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229"
+    },
+    "installedModuleVersionAndHash": "UNKNOWN; not checked on-device or inferred from an earlier read.",
+    "latestSchedulerRecord": {"time": "2026-11-03T09:11:17+08:00", "status": "failed at scheduler layer"},
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "businessResults": "Carried forward from earlier reads, not re-read in this status request: 2026-11-03 assistant REVIEW and main BLOCKED at prepare timeout; cleanup reported PASS.",
+    "deviceOperationLock": "UNKNOWN at this MUSE-only read.",
+    "actions": "No device connection, business code/job, business-state read, schedule or file change, or interruption."
+  },
+  "pixelReadonlyPreflight20261103": {
+    "deviceReadAt": "2026-11-03T18:22:27+08:00",
+    "source": "Existing configured SSH alias pixel3a-kjgx; non-root remote user; read-only commands.",
+    "device": {"model": "Pixel 3a", "android": "15", "timezone": "Asia/Shanghai", "bootCompleted": true},
+    "deviceOperationLock": "FREE",
+    "autoxPackageProcess": "ABSENT",
+    "secureViewInstalledApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "secureViewRuntimeVersion": "UNKNOWN",
+    "monitorStatusAndHash": "UNKNOWN; private app data was not readable by the non-root channel.",
+    "screenState": "UNKNOWN_NO_MATCHING_FIELD",
+    "keyguardShowing": "UNKNOWN",
+    "deviceLocked": "UNKNOWN_NO_MATCHING_FIELD",
+    "foregroundActivity": "UNKNOWN",
+    "rootOrSuUsed": false,
+    "actions": "No file or state changes, app/process start or stop, schedule change, business run, or credential/network change."
+  },
+  "assistantGateStaticAudit20261103": {
+    "readAt": "2026-11-03T18:24:13+08:00",
+    "source": "Read-only static inspection of original current assistant.py bytes in the existing MUSE Forest environment.",
+    "sha256": "a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229",
+    "matchesExpected": true,
+    "gate": {
+      "vueObjectPresence": "A reachable Vue instance on the page root is required; absent means fail before call.",
+      "onClickAppPresence": "Looked up on page-object methods; presence is folded into the method-match boolean rather than stored separately.",
+      "fixedMethodSourcePin": "Method source must equal the fixed local pin; mismatch fails the gate.",
+      "targetMenuItemCount": "Must equal exactly 1.",
+      "finalCallGate": "Vue presence true AND method match true AND target count exactly 1. Failure raises before any invocation; success records the stage marker, then invokes the original page method with the one item."
+    },
+    "recordedDiagnostics": "The match boolean and sanitized filtered item list (code/name fields only) are persisted.",
+    "missingDiagnostics": ["Vue-presence boolean", "separate onClickApp-presence boolean (currently folded into method-match)", "separate target count", "gate-specific sample time", "run-group field"],
+    "timestampAndGroup": "Only a general record save timestamp and the pass-stage marker are available; no gate-specific sample time or group is recorded.",
+    "moduleSource": "MISSING from local adapted copy; only signed build artifacts are held locally.",
+    "installedModuleVersionAndHash": "UNKNOWN without device access.",
+    "actions": "No code or business execution, device access, file/state/schedule changes, or WP1 interaction."
+  },
+  "assistantGateIntegration20261103": {
+    "precheckAt": "2026-11-03T18:40:26+08:00",
+    "atomicReplaceAt": "2026-11-03T18:40:41+08:00",
+    "postcheckAt": "2026-11-03T18:40:48+08:00",
+    "source": "Existing MUSE Forest conversation; bounded cloud-side file replacement and read-only hash/runtime verification.",
+    "target": "The existing cloud-side assistant.py for the Forest runner; confirmed not device/APK/module-side.",
+    "preconditions": {
+      "liveAssistantSha256": "a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229",
+      "originalBackupSha256": "a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229",
+      "candidateSha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+      "schedule": {"enabledCount": 1, "timezone": "Asia/Shanghai", "dailyAt": "09:00:00", "nextTrigger": "2026-11-04T09:00:00+08:00"},
+      "running": 0,
+      "queued": 0,
+      "inFlight": false,
+      "runnerLock": "FREE",
+      "forestAgentProcess": "ABSENT"
+    },
+    "change": {
+      "addedSanitizedFields": ["Vue presence boolean", "onClickApp presence boolean", "filtered target item count", "fixed runGroup", "gate-specific sampledAt"],
+      "runGroup": "forest-20261104-0900",
+      "gateAndInvocation": "Existing Vue requirement, fixed onClickApp source pin, exactly-one target requirement, failure-before-call behavior, and original page-method invocation preserved; no diagnostic field adds a pass condition.",
+      "dataBoundary": "No raw method source, menu text, customer data, or credentials added."
+    },
+    "consumerAudit": {
+      "readAt": "2026-11-03T18:36:23+08:00",
+      "scope": "Full static sweep of the inspected adapted code tree, excluding run records.",
+      "findings": "No assistant-result readers, schema/validator modules, or exact-key-set enforcement found. Known reporting reads selected fields and previously tolerated a missing field; existing writers already use different record shapes.",
+      "evidenceStrength": "Moderate for inspected tree; strictness of future tooling or external parsers UNKNOWN."
+    },
+    "write": {
+      "method": "Exact candidate bytes copied verbatim via same-directory temporary file and atomic rename; prior file mode preserved.",
+      "rollbackCopyCreated": true,
+      "rollbackCopySha256": "a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229",
+      "originalBackupUnchanged": true,
+      "rollbackNeeded": false
+    },
+    "postcheck": {
+      "liveAssistantSha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+      "candidateSha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+      "originalBackupSha256": "a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229",
+      "rollbackCopyMatchesOriginal": true,
+      "scheduleAndNextTriggerUnchanged": true,
+      "runningQueuedInFlight": "0/0/false",
+      "runnerLock": "FREE",
+      "forestAgentProcess": "ABSENT",
+      "temporaryFileRemaining": false,
+      "deviceOperationLock": "UNKNOWN at this MUSE-only verification; no device access. Last Pixel read was 18:22:27 and reported FREE."
+    },
+    "actions": "No Python/code/syntax checks, business code, jobs, device access, schedule/cron/state/dedupe/history/credential/network changes, module/APK changes, or WP1 interaction. No business result was reread."
   }
 }
