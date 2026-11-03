@@ -1,5 +1,19 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 五项日常任务live runner映射补核｜2026-11-03 22:28 CST
+
+MUSE 22:26:24只读状态仍为空闲，唯一每日09:00 schedule下次11月4日，runner lock FREE；live `run.py`/`assistant.py` SHA与记录一致。用户私有Downloads中的历史精确runner附件以0600保存；本机重新复算19,082字节SHA与live一致。基于该精确版本作AST/静态审阅，没有执行、连接设备或读取业务状态。
+
+| 日常项 | runner实现映射 | 当前业务与回执状态 |
+| --- | --- | --- |
+| 签到 | `policy.run_workflow`经新鲜读取、日期/页面/pin/控件门禁后调用`Device.sign`；收到`CLICKED`时效果检查读回签名标志 | 最近可信为10月31日`SIGNED +0.5`；11月1—3日无业务完成 |
+| 时光轴 | run模式限定scope为只读、每日客户上限1，签名阶段PASS后调用`tasks.run_timeline` | 最近可信为10月31日`VIEWED 6055ms`；不等于保存/读取客户内容 |
+| 客温客价 | 精确`run.py`无该任务实现；已审`policy.py`/`tasks.py`也未映射 | 10月31日没有独立收据；其他未审路径和当前空结果收据仍待 |
+| 智能助理 | 单独live `assistant.py`，固定Vue/方法/菜单门禁；未放宽 | 10月31日`SENT / REVIEW`，答案/奖励未确认；11月3日`NOT_SENT` |
+| 一键领取 | `policy.run_workflow`调用`Device.collect`，效果检查待领ID消失且余额达到预期增量 | 最近可信为10月31日`+6.5`；11月1—3日无新回执 |
+
+此映射不把不完整证据写为PASS，也不把runner未包含的温价流程推断为系统绝对不存在。设备操作锁仍UNKNOWN。源码有特权设备路径和cleanup写入，不运行、不复用、不上传；跨日自然证据与温价独立回执继续待。结构化来源、哈希和限制见`liveRunnerDailyTaskMapping20261103_2228`。
+
 ## 官方规则原件Drive补充检索｜2026-11-03 22:20 CST
 
 连接Drive对“森林”“雨露”“阳光 结算”“签到 规则”“打卡积分”“日常任务”“积分规则”“雨露值”执行document metadata-only查询，每项topn 50、`best_effort_fetch=false`；“森林”返回一条标题无关的表格元数据，其余七项均为0。未打开或抓取任何正文，也未发现直接规则来源。该范围不证明原件不存在、历史从未确认或规则从未发布。官方时点、周期、触发、限额和资格原据仍待恢复；结构化结果见证据键`googleDriveBroaderRuleMetadataSearch20261103_2220`。

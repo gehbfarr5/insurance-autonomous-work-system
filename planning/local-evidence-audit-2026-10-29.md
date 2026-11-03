@@ -1,5 +1,21 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 五项日常任务的live runner调用链补核｜2026-11-03 22:28 CST
+
+MUSE在22:26:24只读回读Forest无活动任务，running/queued/in-flight为0/0/false、runner lock FREE、唯一Asia/Shanghai 09:00 schedule下次11月4日09:00；live `run.py`和`assistant.py` SHA仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。
+
+本机找到之前下载的私有`sunshine-forest-v0.19-live-run.py`（不在仓库，0600权限）；19,082字节、本机SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与22:26 live报告一致。使用Python AST解析和静态调用链核对，未执行代码：
+
+| 日常任务 | 已核验调用链 | 最近可信业务/独立回执边界 |
+| --- | --- | --- |
+| 签到 | `run.py`调用`policy.run_workflow`；若`sign`返回`CLICKED`，适配器轮询新鲜快照的签名标志 | 10月31日`SIGNED +0.5`；11月1—3日无业务stage |
+| 时光轴 | `run.py`在`run`模式、scope明确只读且每日客户上限为1、先行签名阶段PASS后调用`tasks.run_timeline` | 10月31日`VIEWED 6055ms`，未保存客户内容；跨日无人值守仍未验收 |
+| 客温客价 | 精确live `run.py`无温价/客户值函数、导入或调用；已审`policy.py`和`tasks.py`亦未发现该实现 | 10月31日无独立收据；未审运行时其他路径不能据此断言全系统绝对不存在 |
+| 智能助理 | 由独立live `assistant.py`处理，保留Vue、固定方法指纹和唯一菜单门禁 | 10月31日`SENT / REVIEW`，回答/奖励after回执缺；11月3日两段`NOT_SENT` |
+| 一键领取 | `run.py`仍由`policy.run_workflow`编排；`collect`动作后核对原待领ID消失且余额至少增加预期值 | 10月31日`+6.5`；11月1—3日无业务stage或新余额/待领回执 |
+
+该审阅补齐的是已验证live runner的调用链，不证明温价系统级实现或奖励机制不存在。源代码含特权设备路径和cleanup写入；不执行、不复用、不上传源码。无设备访问、业务状态读取、任务/业务运行、部署、state或调度更改。其余详细边界及旧运行证据见结构化键`liveRunnerDailyTaskMapping20261103_2228`。
+
 ## 五项扩展证据与当前分类补核｜2026-11-03 22:12 CST
 
 复核私有E08文字记录（未打开客户截图）与CPIC官网公开材料。历史保单芯管家申请成功不等同完成检视或奖励；态幸福仍止于新建客户入口；三节一生未触发可能提交任务的完成动作；E锦囊仅有通用入口线索；签单协同具体单据流程未建立。全部保持“仍待核实”，无充分证据认定外部阻碍。CPIC公开材料只描述态幸福/E锦囊历史功能背景；原规则周期/当前资格仍缺。详情见[五项复核](remaining-work-2026-10-29.md#五项扩展流程与分类复核2026-11-03-2212-cst)。

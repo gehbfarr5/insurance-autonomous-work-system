@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 22:28 CST：live runner日常任务调用链已补核
+
+MUSE 22:26:24 状态：Forest无活动任务，running/queued/in-flight 0/0/false、runner lock FREE；唯一schedule为Asia/Shanghai每日09:00、下次11月4日09:00。live `run.py`/`assistant.py` SHA仍分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。找到保存在用户私有Downloads、0600权限的`run.py`副本（文件名不同于MUSE附件名），本机复算19,082字节SHA与live hash相同。Python AST/静态调用链审阅、未执行：runner调用policy处理签到和领取，在条件满足时调用`tasks.run_timeline`；助理为独立`assistant.py`。`run.py`内无客温客价实现/调用，较宽系统路径和独立收据仍未定位。runner含特权设备路线，未运行或复用；设备操作锁未知。详见[实现审计](local-evidence-audit-2026-10-29.md#五项日常任务的live-runner调用链补核2026-11-03-2228-cst)和结构化证据`liveRunnerDailyTaskMapping20261103_2228`。
+
 ## 2026-11-03 22:20 CST：官方规则来源Drive补充检索
 
 八个document metadata-only关键词查询没有找到直接规则来源；“森林”仅返回无关表格元数据，未打开任何正文。没有证据可据此认定原件不存在或历史上从未确认。时点、任务周期、触发、限额和当前资格仍需原始依据；11月4日自然运行与同轮回执仍待。结构化查询及结果数：`googleDriveBroaderRuleMetadataSearch20261103_2220`。
