@@ -2,6 +2,8 @@
 
 > **P4运行状态｜2026-11-03 21:45—21:47 CST：** MUSE 21:45:36确认Forest当时无活动/排队/在途任务，唯一Asia/Shanghai每日09:00任务下次11月4日09:00，runner lock FREE、进程未见，live run.py/assistant.py哈希与已核值一致。约21:46本机经既有Pixel别名非root只读确认设备已启动、无AutoX/AutoJS进程、v0.19 APK哈希匹配；设备操作锁及monitor/Keyguard/Activity仍UNKNOWN。无设备写入、部署或业务执行。等11月4日自然运行；P4开放、S1未验收。
 
+> **诊断候选身份边界｜2026-11-03 21:53 CST：** 11月3日窗口的Keyguard v3已过期且未部署；另有monitor-only SHA-256 `2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`曾被报告用于11月4日窗口，最后历史读数为15:58 `watching`。21:46预检没有读取monitor私有状态/hash，当前状态UNKNOWN。Activity类别与prepare字段观察器仍仅离线、未部署；设备锁UNKNOWN，不安装候选或更改自然运行。证据键：`diagnosticCandidateSeparation20261103`。
+
 
 > **P4运行状态｜2026-11-03 21:30—21:32 CST：** MUSE精确Forest线程21:30:20只读回读为空闲，唯一Asia/Shanghai每日09:00任务下次11月4日09:00；running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程，live runner哈希与最近已知值相同。随后本机通过现有Pixel别名以非root只读确认设备启动、应用APK pin一致；设备操作锁及monitor/Keyguard/Activity仍UNKNOWN。11月3日旧诊断窗口不再适用，也没有部署。下步等待11月4日既有自然运行并按门禁读取同轮证据；P4开放、S1未验收。
 

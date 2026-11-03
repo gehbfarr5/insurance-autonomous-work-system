@@ -1,5 +1,10 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 21:53 CST：明确诊断候选身份，保留当前UNKNOWN
+
+用户禁止安装的Keyguard v3绑定11月3日08:55—09:55窗口，已过期且从未部署。历史资料另报告monitor-only工件SHA-256 2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a曾安装，用于11月4日08:55—09:55窗口；最后一次设备状态读数为11月3日15:58 watching。21:46非root预检没有读到monitor私有状态/hash，所以不能把历史安装状态当作当前。前台Activity类别候选和prepare字段观察器仍是私有离线审查材料，未部署。设备操作锁UNKNOWN，不重复安装任何monitor或候选，也不改变自然运行。
+
+
 ## 2026-11-03 21:47 CST：再核实MUSE空闲与Pixel非root只读状态
 
 21:45:36在既有Forest MUSE线程完成只读刷新：当时任务不活动；唯一启用schedule为Asia/Shanghai每日09:00，下一触发11月4日09:00；running/queued/in-flight 0/0/false；runner lock FREE；Forest进程未见。live run.py / assistant.py SHA-256为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 / 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c；最新失败11月3日09:11:17、最近成功10月31日09:15:50。未读业务结果/raw logs，未看其他聊天或改schedule。

@@ -1,5 +1,10 @@
 # 缺失内容与 P4 按需核查
 
+## 诊断候选版本边界｜2026-11-03 21:53 CST
+
+Keyguard v3的11月3日08:55—09:55版本已过期、未部署。另一个monitor-only候选哈希2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a曾按11月4日08:55—09:55窗口安装；最后历史读数为11月3日15:58 watching。21:46 Pixel非root预检没有读取monitor私有状态/hash，所以当前状态UNKNOWN，不能据历史值重装或宣称正常。前台Activity分类及prepare字段观察候选仍仅离线审查、未部署。当前设备锁UNKNOWN，任何设备写入继续关闭。
+
+
 ## P4最新状态与源码映射复核｜2026-11-03 21:45—21:47 CST
 
 MUSE 21:45:36只读回读：Forest当时无活动任务，唯一日程为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程，live run.py/assistant.py哈希仍为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 / 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。约21:46经既有Pixel别名非root只读确认Pixel 3a/Android 15/boot完成、v0.19 APK匹配；设备操作锁与monitor/Keyguard/Activity仍UNKNOWN，不进行设备写入。

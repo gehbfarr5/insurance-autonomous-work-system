@@ -2425,5 +2425,30 @@
       "avoid": "Privileged device transport, raw Activity/page/customer data, gate bypass, and production replay."
     },
     "actions": "No source execution, code edit, deployment, device write, business-state read, or task run."
+  },
+  "diagnosticCandidateSeparation20261103": {
+    "recordedAt": "2026-11-03T21:53:00+08:00",
+    "expiredKeyguardV3": {
+      "window": "2026-11-03 08:55–09:55 Asia/Shanghai",
+      "status": "EXPIRED; not deployed; do not install."
+    },
+    "historicalMonitorOnlyCandidate": {
+      "sha256": "2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a",
+      "reportedWindow": "2026-11-04 08:55–09:55 Asia/Shanghai",
+      "lastHistoricalDeviceRead": "2026-11-03T15:58:24+08:00",
+      "lastHistoricalStatus": "watching",
+      "currentDeploymentStatus": "UNKNOWN",
+      "currentRuntimeStatus": "UNKNOWN",
+      "currentHash": "UNKNOWN; private monitor state/hash not read in the 2026-11-03 21:46 preflight."
+    },
+    "offlineOnlyCandidates": {
+      "activityClassObserverSha256": "1310672261f2851465c756287e9d60882526f8f25a14fcc9585043a2f02944b1",
+      "prepareFieldObserverSha256": "a978d0857f6a847dd2d7f84f0adb76f7387b0183cc2f99284ab02599da3177a",
+      "status": "Private offline review only; neither candidate was installed or deployed."
+    },
+    "latestPixelReadonlyPreflightEvidenceKey": "pixelReadonlyPreflight20261103Latest",
+    "preflightBoundary": "Non-root process inventory and installed APK pin only; did not read monitor private status/hash, device operation lock, screen, Keyguard, or foreground Activity.",
+    "deviceOperationLock": "UNKNOWN; no device write or candidate deployment occurred.",
+    "nextStep": "Preserve the existing 2026-11-04 09:00 schedule; wait for natural execution and same-run evidence under a fresh, verified read-only gate. Do not replay business actions."
   }
 }

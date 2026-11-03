@@ -1,5 +1,10 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-03 21:53 CST：候选版本与设备状态边界
+
+运行手册的历史记录显示，monitor-only候选SHA-256 2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a曾针对11月4日窗口安装，15:58最后读到watching。本轮21:46非root预检未读取monitor状态/hash，故当前状态UNKNOWN。用户指明的Keyguard v3是另一条绑定11月3日窗口、已过期且未部署的候选，不安装。Activity类别和prepare字段观察器也仍为未部署离线候选。此区分防止把不同版本和窗口互相替代。
+
+
 ## 2026-11-03 21:47 CST：刷新运行门禁并校正源码映射
 
 MUSE 21:45:36只读状态仍为空闲，唯一Asia/Shanghai每日09:00任务下次11月4日，running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程，live哈希未变。约21:46 Pixel非root只读预检显示Android 15启动完成、无AutoX/AutoJS、APK hash匹配v0.19；设备操作锁及monitor/Keyguard/Activity仍UNKNOWN。没有设备/业务状态改动或部署。

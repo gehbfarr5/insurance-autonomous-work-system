@@ -5,6 +5,10 @@
 
 > **P4最新只读状态｜2026-11-03 21:30—21:32 CST：** 21:30:20在既有Forest线程只读确认当时无活动任务；唯一Asia/Shanghai每日09:00任务下次11月4日09:00，running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程；live run.py和assistant.py哈希分别为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562和7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。随后经现有pixel3a-kjgx别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS进程；SecureView已安装APK SHA匹配已知v0.19。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity均UNKNOWN；未用root/su、未读取业务state或安装/部署。11月3日08:55—09:55候选窗口已过期，不安装该版本。11月4日自然任务、同轮诊断及业务回执待观察；P4开放、S1未验收，P50/月度/2U=2800继续挂起。详见[交接](planning/p4-next-session-handoff.md)、[运行手册](planning/forest-diagnostics-operations-2026-11-04.md)和[结构化证据](planning/remaining-work-evidence-2026-10-29.json)。
 
+## 诊断候选边界｜2026-11-03
+
+11月3日窗口的Keyguard v3已过期且未部署。另有monitor-only工件曾被报告用于11月4日观察窗口，最后历史状态读于15:58；当前私有状态未知，不能据此重装或宣称健康。11月4日Activity类别与prepare字段候选仍仅离线审查，未部署。
+
 > **Forest并发状态刷新｜2026-11-03 20:42:10 CST：** 精确目标线程新鲜只读回读显示Forest当前无活动任务，唯一启用的Asia/Shanghai每日09:00任务下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live `run.py`/`assistant.py`哈希仍匹配已记录值。该读数不提供Pixel操作锁；安全非root读取路径未核实，因此未连接设备。自然运行结果仍待，P4开放、S1未验收。详见[交接](planning/p4-next-session-handoff.md)和[结构化证据](planning/remaining-work-evidence-2026-10-29.json)。
 
 > **五项日常与来源补查｜2026-11-03 20:33 CST：** 逐项对账确认11月1—3日五项均未进入业务阶段；11月3日三个runner段在prepare阶段超时（两段助理`NOT_SENT`，cleanup PASS），不是任务完成。10月31日最近可信结果与各项未结回执见[剩余工作记录](planning/remaining-work-2026-10-29.md)。五项扩展仍全部“仍待核实”；约20:30 Drive四项metadata-only搜索为0结果、CPIC官方域四项搜索未见当前森林任务规则直接命中，不推导资格或周期。MUSE当前状态及Pixel操作锁UNKNOWN，本轮未连接Pixel；P4开放，S1未验收。
