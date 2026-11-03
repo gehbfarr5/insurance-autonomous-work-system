@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 04:00—04:01 CST：运行交接历史状态校准
+
+已把诊断交接中“monitor当前已运行、exporter就绪”的旧段落标注为11月3日历史部署快照。最新Pixel非root预检并未读设备锁、monitor状态/hash或UI；本地私有文件exporter依赖`su`，没有运行。assistant遥测源码hash仍匹配，但不代表monitor或同轮观测已验证。自然轮仍PENDING；设备锁/monitor/UI仍UNKNOWN。证据：`handoffStatusClarification20261104_0401`。
+
 ## 2026-11-04 03:58—03:59 CST：CPIC官方域规则来源补查
 
 四条CPIC官方域定向查询返回历史科技个险/产品资料（2018项目公告、2019 E锦囊引用、2022态幸福NBS销售支持介绍），未找到当前阳光森林重置时点、任务周期、奖励触发/到账或当前资格依据。这些资料只说明历史产品背景，不证明当前Forest映射；D-029保持原记录。证据：`officialForestRuleSearch20261104_0359`。

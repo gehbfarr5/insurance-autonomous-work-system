@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:00—04:01 CST — historical monitor evidence clarified
+
+The earlier “monitor installed/watching” and “exporter ready” wording is now explicitly labeled as the 2026-11-03 deployment snapshot. MUSE 03:47 confirms the live assistant hash still matches its integrated telemetry candidate, but the 03:50 non-root Pixel read did not verify monitor state/hash, device lock, or UI. The local exporter was reviewed as using `su` for private files and was not run under the current non-root boundary. Keep same-run evidence PENDING and these device gates UNKNOWN; do not treat the historic monitor readback as current. Evidence: `handoffStatusClarification20261104_0401`.
+
 ## 2026-11-04 03:58—03:59 CST — CPIC official-domain rule-source follow-up
 
 A fresh four-query search restricted to CPIC domains surfaced historical technology-insurance/product context only (2018 project notice, 2019 E锦囊 reference, and 2022 态幸福/NBS description). No current Forest reset, cycle, reward-trigger/posting, eligibility, or direct-workflow source was found. This bounded search does not negate D-029. Evidence: `officialForestRuleSearch20261104_0359`.

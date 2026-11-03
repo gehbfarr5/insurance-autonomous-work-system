@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 04:00—04:01 CST：手册历史monitor状态澄清
+
+复核运行诊断文档时发现其“monitor已安装/运行、exporter已就绪”段落是11月3日部署快照，不是11月4日当前读数；已将标题和正文改为历史状态。MUSE 03:47只确认assistant live hash匹配已集成遥测版本；Pixel 03:50非root预检未读设备锁、monitor/hash或UI。旧exporter访问私有数据需要`su`，本轮按当前非root边界未运行。故同轮证据仍PENDING，设备锁/monitor/UI继续UNKNOWN，不以历史快照放行。结构化记录：`handoffStatusClarification20261104_0401`。
+
 ## 2026-11-04 03:47—03:52 CST：自然轮前证据、设备与规则来源
 
 03:47:07 MUSE只读报告无活动Forest任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、未观察到Forest进程；每日09:00 Asia/Shanghai schedule仍启用。随后非root Pixel预检确认UID 10249、Pixel 3a、Android 15、boot完成、设备时钟03:50:29及v0.19 SecureView APK hash匹配。首次远端进程过滤因引号失败，结果无效；修正窄名称过滤无匹配。整体Pixel锁、monitor/hash和UI依然UNKNOWN，停止/回滚BLOCKED。

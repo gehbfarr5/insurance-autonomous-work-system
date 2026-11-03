@@ -157,11 +157,11 @@ MUSE于15:54:29只读确认：唯一既有`Asia/Shanghai`每日09:00任务下次
 
 仓库外私有只读抄录`status-readback-20261103-1554-1558.json`已建立，SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`；它明确标记为操作员转录而非原始设备/MUSE输出。11月4日私有review包`auth-trigger-diagnostics-20261104-review-only`的SHA256SUMS于16:10 CST复算14/14匹配，随后`shasum -a 256 -c SHA256SUMS.txt`返回14/14 OK；monitor候选哈希与live值相同。私有校验记录SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。此校验只证明本地交付包未漂移，不证明窗口期兼容或同轮运行成功。
 
-## Outcome
+## Outcome at the 2026-11-03 deployment review (historical, not current device state)
 
-**Monitor-only diagnostics are installed for the 2026-11-04 natural window; assistant gate telemetry is now integrated cloud-side; same-run evidence is still pending.** The bounded monitor observer is live and a read-only exporter is ready. The prepare/login-field observer remains offline. No business run was requested or replayed, and no schedule, cron, credential, or business state was changed. P4 remains open; this is not an S1 or project completion claim.
+The 2026-11-03 deployment review recorded the monitor-only observer installed and watching for the 2026-11-04 window, assistant gate telemetry integrated cloud-side, and same-run evidence pending. This is historical deployment evidence, not a current monitor readback. At the latest 2026-11-04 checkpoint, MUSE's live assistant hash still matches the integrated candidate, but the non-root Pixel read verified only device identity, boot, APK pin, and a limited process-name filter; device lock, monitor state/hash, and UI remain UNKNOWN. The local exporter was reviewed as a candidate but accesses private files through `su`; it was not run under the current non-root boundary. The prepare/login-field observer remains offline. No business run was requested or replayed, and no schedule, cron, credential, or business state was changed. P4 remains open; this is not an S1 or project completion claim.
 
-## Current evidence
+## Historical evidence snapshot recorded on 2026-11-03
 
 - MUSE's local scheduler metadata snapshot at about 14:09 CST reported the existing daily job enabled for `Asia/Shanghai 09:00`, next at 2026-11-04 09:00, with running/queued/in-flight all zero. No schedule change was made.
 - MUSE's local records report the 2026-11-03 scheduled run started 08:55:35, finished 09:11:17, and failed. The assistant segment ran 09:01:55–09:03:53 and the main segment 09:04:16–09:06:17; both stopped at prepare timeout, with no task stages or receipts and cleanup reported PASS. The interval 09:06:17–09:11:17 has no detail; its cause is UNKNOWN. The reported consecutive scheduled failures are Nov 1–3; Oct 31 succeeded. The Nov 2 manual run and Nov 3 08:57 accidental invocation are separate runs, not scheduler retries.
