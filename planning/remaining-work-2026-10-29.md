@@ -1,5 +1,10 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 02:58—02:59 CST：五项扩展历史证据原件复核
+
+按仓库证据索引定位私有E08扩展核查记录，当前文件SHA-256及20,016字节与索引匹配。仅读取授权/范围、五项流程概述及证据指针（原记录1—38行）；未读取后续表单/提交段落或截图。历史记录显示五项均有未完成环节或奖励触发未核实，不证明当前资格、完整流程、重复周期或现实外部阻碍。五项继续保持“仍待核实”；未执行业务动作或处理客户数据。证据：e08ExtensionRecordRecheck20261104_0259。
+
+
 ## 2026-11-04 02:50—02:54 CST — fresh pre-run status and source-search boundary
 
 MUSE at 02:50:48 reported no active Forest work, 0/0/false, runner lock FREE, and no Forest process observed. The existing daily 09:00 Asia/Shanghai schedule remains pending. The later bounded Pixel preflight confirmed the expected non-root device identity, boot state, and v0.19 APK pin. The limited process filter had no matches and the exact documented marker was absent; overall device lock, monitor/hash, and UI state remain UNKNOWN. A CPIC-domain search for current Forest rules and extension names returned no results, which is limited to those public queries and does not establish source absence. Preserve the natural run and inspect sanitized same-run evidence after fresh MUSE completion status. Do not replay or loosen gates; P4 remains open.

@@ -4885,6 +4885,24 @@
     ],
     "result": "NO_RESULTS",
     "scopeLimit": "These two public index searches do not establish that an original source is absent, nor resolve reset timing, repeat cycles, reward triggers/posting, current eligibility, or extension workflows."
+  },
+  "e08ExtensionRecordRecheck20261104_0259": {
+    "recordedAt": "2026-11-04T02:59:21+08:00",
+    "source": "Private E08 extension record located by the repository evidence index; only its non-customer summary sections were read.",
+    "indexedRelativePath": "five-items-20261028/核查记录.md",
+    "sha256": "9ab59649627864bc07a18c326ac0fb6a72dbac3f0c8ff3440e46626243b4f611",
+    "bytes": 20016,
+    "matchesEvidenceIndex": true,
+    "reviewedScope": "Lines 1-38: authorization/scope, five-item workflow summary, and evidence pointers. Later form/submission sections and screenshots were not read.",
+    "historicalFindings": {
+      "保单芯管家": "本人邀请入口和资料表单曾被观察；后续授权、保单整理、检视报告和奖励未完成或核实。",
+      "态幸福": "新增客户入口曾被观察；测算和报告未实测，表单保存会建立真实分析客户。",
+      "三节一生": "生日服务中可见联系、贺卡和完成动作；真实联系及完成动作未执行，维护提示不是现实阻碍证明。",
+      "E锦囊激活": "智能面访中有通用二维码入口；未到实际激活页。",
+      "签单协同": "具体产品、单据和办理流程未确认。"
+    },
+    "classification": "All five remain unresolved. The historical record does not establish current eligibility, complete workflow, independent reward trigger, repeat period, or a real external blocker.",
+    "businessActionsOrCustomerData": "NONE_READ_OR_PERFORMED",
+    "scopeLimit": "This verifies the current archived file against its indexed hash and preserves historical notes; it does not establish current app state or rules."
   }
-
 }
