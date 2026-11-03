@@ -235,6 +235,18 @@ The same-input value-free diagnostic and its follow-up classification are comple
 
 MUSE then diagnosed the other fields on the same authorized WP10 result at exact commit `180f6333046b830010d60338edb580b23c03927c`. Name, mobile, explicit birthday, and other phone had zero candidates through the existing geometry uniqueness gate; none had an acceptable candidate under current rules. Gender had no explicit label or independent structured checked-state signal, so no gender value was inferred. The decision remained `REVIEW_REQUIRED`; no parser change is justified by this result. See the sanitized [WP11-H field diagnosis](../../planning/wp11h-field-diagnostic-20261103.md) and detailed [test report](TEST_REPORT.md). No reference, new sample, 30-card set, or production state was accessed.
 
+## WP11-I read-only create/recovery contract audit
+
+MUSE read-only audit used `tools/list` only; no login or contact CRUD occurred. Production was reported at package 0.5.0, commit `8336008d080387ab709d1e0ab9381683b1138e0f` (branch name was not rechecked this round); deployed MCP client/tool-server ref and hash remain UNKNOWN. The tool list contained 33 tools but no `outputSchema` or server version/ref fields. `contacts_create` requires `session_id` and `contact`; `address_book_id` is optional. Its stable response ID and server idempotency guarantee remain UNKNOWN, and no idempotency key is declared. The inspected deployed client may retry once after an error containing `session`, `404`, or `unknown`, including for create; it does not retry timeout errors or non-exception uncertain results.
+
+`contacts_read` requires `session_id` and `contact_id`, but has no declared output schema. The static client exposes no ETag/version token and discards HTTP response headers. `contacts_delete` accepts optional `expected_etag`, but the read path cannot supply a corresponding fresh token; the live contract does not establish a safe conditional rollback. MUSE also reported that its generic CLI prints tool results to stdout and has no protected contact-ID/version retention path. The local candidate therefore keeps rollback deletion disabled and stores a known create ID only in its mode-0600 pending journal. Do not substitute `updated_at` for an ETag.
+
+## WP11-J pending readback recovery candidate (0.12.0)
+
+After `contacts_create` returns an ID, the candidate now keeps that opaque ID only in the existing mode-0600 pending journal while the operation needs readback. It stores no customer values, OCR output, or MCP session. The new `--resume-pending` command requires the exact pending operation ID and a freshly confirmed, validated draft, then performs `apple_login` and `contacts_read` only. It never creates or deletes. A mismatch, transport error, old journal without an ID, or any uncertain result leaves the operation pending; only a complete matching readback clears it. This closes the local readback-resume gap while deletion rollback remains gated on MUSE schema evidence.
+
+Local synthetic tests cover successful resume without a second create, mismatched readback, wrong operation ID, and legacy pending state. The full local offline suite passes 133/133 on Python 3.14.7 / Pillow 12.2.0; MUSE exact-commit retest is pending. This is a local candidate, not production acceptance or v1.0 Stable. The `contacts_read` response contract and any conditional-delete rollback remain unverified.
+
 ## Rollback
 
 Remove the isolated venv and this branch checkout/package. No credentials or connector configuration are created by this code. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.

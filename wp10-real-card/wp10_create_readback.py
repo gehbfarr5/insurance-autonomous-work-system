@@ -3,8 +3,9 @@
 
 Input is one JSON object on stdin with extraction_status READY or
 MANUALLY_REVIEWED, review_status USER_CONFIRMED, and reviewed fields. An
-uncertain create/readback leaves a PII-free pending operation in protected
-local state. The next create is blocked until a person manually reconciles it.
+uncertain create/readback leaves a minimal pending operation in protected
+local state; a known contact ID is retained only until readback completes.
+The next create is blocked until readback or manual reconciliation completes.
 """
 from __future__ import annotations
 
@@ -99,6 +100,48 @@ def _resolve_pending(data: Any) -> int:
     return 0
 
 
+def _resume_pending_readback(data: Any) -> int:
+    if not isinstance(data, dict) or not isinstance(data.get("operation_id"), str):
+        raise RuntimeContractError("PENDING_OPERATION_ID_REQUIRED")
+    draft = parse_confirmed_draft(data)
+    operation_id = data["operation_id"]
+    with CreateAttemptJournal() as journal:
+        pending = journal.pending
+        if pending is None or pending["operation_id"] != operation_id:
+            raise RuntimeContractError("PENDING_OPERATION_NOT_FOUND")
+        if pending["phase"] != "CREATED_NEEDS_READBACK":
+            raise RuntimeContractError("PENDING_CREATE_OUTCOME_UNKNOWN")
+        contact_id = pending.get("contact_id")
+        if not isinstance(contact_id, str) or not contact_id:
+            raise RuntimeContractError("PENDING_CONTACT_ID_UNAVAILABLE")
+
+        login = mcp_call("apple_login", {}, 70)
+        session_id = login.get("session_id")
+        capabilities = login.get("capabilities")
+        if (
+            not isinstance(session_id, str)
+            or not session_id
+            or not isinstance(capabilities, dict)
+            or capabilities.get("contactsRead") is not True
+        ):
+            raise RuntimeContractError("CONTACT_READ_NOT_AVAILABLE")
+
+        readback = mcp_call(
+            "contacts_read",
+            {"session_id": session_id, "contact_id": contact_id},
+            75,
+        )
+        checks = verify_contact_readback(draft, readback)
+        for field, matches in checks.items():
+            print(f"READBACK_{field.upper()}_MATCH:", matches)
+        if all(checks.values()):
+            journal.complete(operation_id)
+            print("FINAL_RESULT: RECOVERED_READBACK_PASS")
+            return 0
+        print("FINAL_RESULT: RECOVERY_REMAINS_PENDING")
+        return 1
+
+
 def _run_create(data: Any) -> int:
     draft = parse_confirmed_draft(data)
     with CreateAttemptJournal() as journal:
@@ -167,7 +210,7 @@ def _run_create(data: Any) -> int:
             print("PENDING_OPERATION_ID:", operation_id)
             return 1
 
-        journal.mark_created(operation_id)
+        journal.mark_created(operation_id, contact_id)
         try:
             readback = mcp_call(
                 "contacts_read",
@@ -203,13 +246,16 @@ def _safe_code(error: Exception) -> str:
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     resolve_pending = arguments == ["--resolve-pending"]
-    if arguments and not resolve_pending:
-        print("USAGE: wp10_create_readback.py [--resolve-pending]")
+    resume_pending = arguments == ["--resume-pending"]
+    if arguments and not resolve_pending and not resume_pending:
+        print("USAGE: wp10_create_readback.py [--resolve-pending|--resume-pending]")
         return 2
     try:
         data = json.load(sys.stdin)
         if resolve_pending:
             return _resolve_pending(data)
+        if resume_pending:
+            return _resume_pending_readback(data)
         return _run_create(data)
     except Exception as exc:
         print("CREATE_STOP:", _safe_code(exc))

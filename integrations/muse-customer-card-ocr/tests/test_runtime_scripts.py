@@ -98,7 +98,7 @@ class RuntimeSourceTests(unittest.TestCase):
     def _run_main(module, value: dict[str, object], argv=None):
         output = io.StringIO()
         with mock.patch.object(sys, "stdin", io.StringIO(json.dumps(value))), contextlib.redirect_stdout(output):
-            status = module.main(argv or [])
+            status = module.main(argv if argv is not None else [])
         return status, output.getvalue()
 
     def test_create_requires_confirmation_without_any_mcp_call(self):
@@ -185,7 +185,7 @@ class RuntimeSourceTests(unittest.TestCase):
                             "name": {"full": expected["name"]},
                             "phones": [
                                 {"value": expected["mobile"], "primary": True},
-                                {"value": "05710000001", "primary": False},
+                                {"value": expected["other_phones"][0], "primary": False},
                             ],
                             "birthday": expected["birthday"],
                             "note": f"性别：女\n身份证号：{expected['identity_number']}",
@@ -208,6 +208,164 @@ class RuntimeSourceTests(unittest.TestCase):
         self.assertNotIn("13800138000", output)
         state = json.loads((Path(self.temporary.name) / "contact-create-state.json").read_text())
         self.assertIsNone(state["pending"])
+
+    def test_pending_readback_can_resume_by_operation_id_without_recreating(self):
+        calls = []
+        expected = confirmed_draft()
+        read_count = 0
+
+        def fake(method, params, msg_id):
+            nonlocal read_count
+            tool = params["name"]
+            calls.append((tool, params["arguments"]))
+            if tool == "apple_login":
+                return mcp_envelope(
+                    {"session_id": "synthetic-session", "capabilities": {"contactsRead": True, "contactsWrite": True}}
+                )
+            if tool == "contacts_search":
+                return mcp_envelope(complete_search([]))
+            if tool == "contacts_create":
+                return mcp_envelope({"contact_id": "synthetic-contact-id"})
+            if tool == "contacts_read":
+                read_count += 1
+                if read_count == 1:
+                    raise RuntimeError("Synthetic readback transport failure")
+                return mcp_envelope(
+                    {
+                        "contact": {
+                            "name": {"full": expected["name"]},
+                            "phones": [
+                                {"value": expected["mobile"], "primary": True},
+                                {"value": expected["other_phones"][0], "primary": False},
+                            ],
+                            "birthday": expected["birthday"],
+                            "note": f"性别：女\n身份证号：{expected['identity_number']}",
+                            "addresses": [{"street": expected["address"]}],
+                        }
+                    }
+                )
+            raise AssertionError("unexpected MCP tool")
+
+        self.mcp_client._mcp_call_resilient = fake
+        status, first_output = self._run_main(self.create, expected)
+        self.assertNotEqual(status, 0)
+        self.assertIn("READBACK_OUTCOME: UNKNOWN", first_output)
+        self.assertNotIn("Synthetic Person", first_output)
+        self.assertNotIn(expected["mobile"], first_output)
+        state_path = Path(self.temporary.name) / "contact-create-state.json"
+        stored = json.loads(state_path.read_text())
+        pending = stored["pending"]
+        self.assertEqual(pending["phase"], "CREATED_NEEDS_READBACK")
+        self.assertEqual(pending["contact_id"], "synthetic-contact-id")
+        operation_id = pending["operation_id"]
+
+        resume_input = confirmed_draft()
+        resume_input["operation_id"] = operation_id
+        status, resume_output = self._run_main(
+            self.create, resume_input, ["--resume-pending"]
+        )
+        self.assertEqual(status, 0, resume_output)
+        self.assertIn("FINAL_RESULT: RECOVERED_READBACK_PASS", resume_output)
+        self.assertNotIn("synthetic-contact-id", resume_output)
+        self.assertNotIn("Synthetic Person", resume_output)
+        self.assertNotIn(expected["mobile"], resume_output)
+        self.assertEqual(sum(tool == "contacts_create" for tool, _ in calls), 1)
+        self.assertEqual(sum(tool == "contacts_read" for tool, _ in calls), 2)
+        self.assertIsNone(json.loads(state_path.read_text())["pending"])
+
+    def test_pending_readback_mismatch_keeps_operation_pending(self):
+        expected = confirmed_draft()
+        calls = []
+
+        def fake(method, params, msg_id):
+            tool = params["name"]
+            calls.append(tool)
+            if tool == "apple_login":
+                return mcp_envelope(
+                    {"session_id": "synthetic-session", "capabilities": {"contactsRead": True, "contactsWrite": True}}
+                )
+            if tool == "contacts_search":
+                return mcp_envelope(complete_search([]))
+            if tool == "contacts_create":
+                return mcp_envelope({"contact_id": "synthetic-contact-id"})
+            if tool == "contacts_read":
+                if calls.count("contacts_read") == 1:
+                    raise RuntimeError("Synthetic readback transport failure")
+                return mcp_envelope({"contact": {"name": {"full": "Different Synthetic Person"}}})
+            raise AssertionError("unexpected MCP tool")
+
+        self.mcp_client._mcp_call_resilient = fake
+        status, _ = self._run_main(self.create, expected)
+        self.assertNotEqual(status, 0)
+        operation_id = json.loads(
+            (Path(self.temporary.name) / "contact-create-state.json").read_text()
+        )["pending"]["operation_id"]
+
+        resume_input = confirmed_draft()
+        resume_input["operation_id"] = operation_id
+        status, output = self._run_main(self.create, resume_input, ["--resume-pending"])
+        self.assertNotEqual(status, 0)
+        self.assertIn("FINAL_RESULT: RECOVERY_REMAINS_PENDING", output)
+        self.assertNotIn("Different Synthetic Person", output)
+        self.assertEqual(calls.count("contacts_create"), 1)
+        self.assertEqual(
+            json.loads((Path(self.temporary.name) / "contact-create-state.json").read_text())["pending"]["phase"],
+            "CREATED_NEEDS_READBACK",
+        )
+
+    def test_pending_readback_without_matching_operation_id_stops_before_mcp(self):
+        calls = []
+
+        def fake(method, params, msg_id):
+            tool = params["name"]
+            calls.append(tool)
+            if tool == "apple_login":
+                return mcp_envelope(
+                    {"session_id": "synthetic-session", "capabilities": {"contactsRead": True, "contactsWrite": True}}
+                )
+            if tool == "contacts_search":
+                return mcp_envelope(complete_search([]))
+            if tool == "contacts_create":
+                return mcp_envelope({"contact_id": "synthetic-contact-id"})
+            if tool == "contacts_read":
+                raise RuntimeError("Synthetic readback transport failure")
+            raise AssertionError("unexpected MCP tool")
+
+        self.mcp_client._mcp_call_resilient = fake
+        status, _ = self._run_main(self.create, confirmed_draft())
+        self.assertNotEqual(status, 0)
+        resume_input = confirmed_draft()
+        resume_input["operation_id"] = "not-the-pending-id"
+        count_before = len(calls)
+        status, output = self._run_main(self.create, resume_input, ["--resume-pending"])
+        self.assertNotEqual(status, 0)
+        self.assertIn("PENDING_OPERATION_NOT_FOUND", output)
+        self.assertEqual(calls[count_before:], [])
+
+    def test_legacy_pending_readback_without_contact_id_stops_before_mcp(self):
+        state_path = Path(self.temporary.name) / "contact-create-state.json"
+        state_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "pending": {
+                        "operation_id": "legacy-operation",
+                        "phase": "CREATED_NEEDS_READBACK",
+                        "started_at": "2026-11-03T00:00:00+00:00",
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.chmod(state_path, 0o600)
+        calls = []
+        self.mcp_client._mcp_call_resilient = lambda *args: calls.append(args)
+        resume_input = confirmed_draft()
+        resume_input["operation_id"] = "legacy-operation"
+        status, output = self._run_main(self.create, resume_input, ["--resume-pending"])
+        self.assertNotEqual(status, 0)
+        self.assertIn("PENDING_CONTACT_ID_UNAVAILABLE", output)
+        self.assertEqual(calls, [])
 
     def test_uncertain_create_persists_pending_state_and_blocks_next_create(self):
         calls = []

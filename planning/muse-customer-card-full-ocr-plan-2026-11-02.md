@@ -13,6 +13,7 @@
 - **操作员复核 UI：** 对候选 source-only snapshot 的静态检查显示，`wp8-seoul-ocr-service/muse_adapter.py` 调用字段映射后只输出状态、原因码、字段存在布尔值和草稿状态；没有字段值展示/编辑或把编辑后草稿送入确认流程的代码。后续对生产工作流的静态审计也未发现专用字段复核 UI 或代码级确认门禁；MUSE 报告存在聊天层面的手动修正/回复能力，但没有证明这些更改会被代码强制确认。受审生产 `wp10-real-card/wp10_create_readback.py` 在调用者提供字段且查重放行时，可从 `REVIEW_REQUIRED` 状态继续到创建。live MUSE 会话是否另有字段复核流程仍未端到端验收。
 - **控制风险：** 生产只读审计报告：姓名和手机号查重在创建前执行，失败会停止；生产 create 入口本身没有显式确认门禁，可绕过 `REVIEW_REQUIRED`；`contacts_create` 在未知/会话错误或 404 后会由生产客户端重试一次；创建后执行逐字段回读，失败不自动回滚。服务端幂等性、MUSE schema 版本和实际服务器对缺失/空字段的处理均未验证。当前候选要求 `READY`/`MANUALLY_REVIEWED` 与 `USER_CONFIRMED`，写操作不自动重试并以待处理 journal 阻止盲目重开；候选 `mcp_client.py` 的现有测试已覆盖 create 会话错误不重试。MCP 标准化服务端幂等能力未在目标 MUSE server 证实；本地 journal 只覆盖共享同一受保护状态目录的运行时。
 - **验收门禁：** 30 卡集合少于 30、授权未确认、参考标注不完整；当前不得宣布 `v1.0 Stable`。生产未部署新解析器。
+- **WP11-I/J 恢复候选：** MUSE 只读 `tools/list` 确认 `contacts_delete.expected_etag` 为 optional，但 `contacts_read` 未声明 output schema，客户端没有 ETag/version 暴露路径，无法将删除条件绑定到新鲜读取；稳定 create ID、服务端幂等与部署 MCP provenance 仍 UNKNOWN。生产 0.5.0 / commit `8336008d080387ab709d1e0ab9381683b1138e0f` 未改。未发布的本地 0.12.0 候选在受保护待处理账本保存“已知创建但尚未完成回读”的 opaque contact ID，并提供要求精确 operation ID 与重新确认草稿的 `--resume-pending` 只读回读路径；恢复中不会创建或删除。局部合成回归 18/18、完整离线套件 133/133 通过（Python 3.14.7 / Pillow 12.2.0），MUSE 精确提交复测待完成。旧待处理记录缺 ID 时仍转人工核对。条件删除/回滚未实现或执行。不得部署或称为 `v1.0 Stable`。
 
 ### 接续实施顺序
 
@@ -26,7 +27,7 @@
 8. **数据验收继续门禁：** 30 卡集合少于 30、授权未确认、参考标注不完整；不得访问或处理新样本。只有用户明确授权且标注完整后才能计算准确率与人工复核率。
 9. **部署及回滚最后执行：** 仅在生产源 provenance、MUSE schema/UI、真实数据门槛和隔离端到端验收通过后，建立固定版本 pin，做生产部署与回滚演练，并核对生产版本/提交/哈希。当前生产仍为 0.5.0；如 30 卡门槛未满足，最多报告 `VALIDATION_PENDING`，不得称为 `v1.0 Stable`。
 
-**Reuse / adapt / avoid：** reuse 首尔 OCR、Baidu block schema、`OcrBlock` 几何解析器和本仓库 atomic-JSON journal pattern；adapt 四个 source-only runtime caller、严格查重与 create gate；avoid改走 MUSE 直连百度、添加第二套图像模型或发送未经 server/schema 确认的幂等字段。当前分支修复不包含生产部署。
+**Reuse / adapt / avoid：** reuse 首尔 OCR、Baidu block schema、`OcrBlock` 几何解析器、本仓库 atomic-JSON journal、现有 confirmed-draft 校验和逐字段 readback verifier；adapt 四个 source-only runtime caller、严格查重与 create gate，以及 journal 对已知待回读 contact ID 的临时保存/恢复读取；avoid改走 MUSE 直连百度、添加第二套图像模型、发送未经 server/schema 确认的幂等字段，或在无法将 delete token 绑定到 fresh read 时实现删除回滚。当前分支修复不包含生产部署。
 
 ## 1. 业务决策
 

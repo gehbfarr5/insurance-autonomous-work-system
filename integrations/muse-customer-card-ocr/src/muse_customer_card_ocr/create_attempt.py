@@ -1,4 +1,4 @@
-"""A PII-free local journal for preventing blind retries of contact creation."""
+"""A minimal protected journal for preventing blind contact-create retries."""
 from __future__ import annotations
 
 import fcntl
@@ -36,8 +36,9 @@ def default_state_dir() -> Path:
 class CreateAttemptJournal(AbstractContextManager["CreateAttemptJournal"]):
     """Serialize create attempts and persist unknown outcomes outside the repo.
 
-    The journal stores only a random operation ID, phase, and timestamps. It
-    never stores contact values, OCR output, MCP sessions, or contact IDs.
+    The journal stores a random operation ID, phase, timestamps, and the
+    opaque contact ID only while a known create still needs readback. It never
+    stores contact fields, OCR output, or MCP sessions.
     """
 
     def __init__(self, folder: Path | str | None = None) -> None:
@@ -82,6 +83,14 @@ class CreateAttemptJournal(AbstractContextManager["CreateAttemptJournal"]):
             or not isinstance(pending.get("started_at"), str)
         ):
             raise CreateAttemptError("CREATE_JOURNAL_INVALID")
+        contact_id = pending.get("contact_id")
+        if contact_id is not None and (
+            not isinstance(contact_id, str)
+            or not contact_id.strip()
+            or any(ord(char) < 32 or ord(char) == 127 for char in contact_id)
+            or pending.get("phase") != "CREATED_NEEDS_READBACK"
+        ):
+            raise CreateAttemptError("CREATE_JOURNAL_INVALID")
         return pending
 
     def begin(self) -> str:
@@ -101,11 +110,18 @@ class CreateAttemptJournal(AbstractContextManager["CreateAttemptJournal"]):
         )
         return operation_id
 
-    def mark_created(self, operation_id: str) -> None:
+    def mark_created(self, operation_id: str, contact_id: str) -> None:
+        if (
+            not isinstance(contact_id, str)
+            or not contact_id.strip()
+            or any(ord(char) < 32 or ord(char) == 127 for char in contact_id)
+        ):
+            raise CreateAttemptError("CREATE_CONTACT_ID_INVALID")
         pending = self.pending
         if pending is None or pending["operation_id"] != operation_id:
             raise CreateAttemptError("CREATE_JOURNAL_STATE_MISMATCH")
         pending["phase"] = "CREATED_NEEDS_READBACK"
+        pending["contact_id"] = contact_id
         self._write({"version": 1, "pending": pending})
 
     def complete(self, operation_id: str) -> None:
