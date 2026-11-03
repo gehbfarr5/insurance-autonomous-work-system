@@ -20,6 +20,10 @@ MUSE仅查本Forest对话中已存在的脱敏运行摘要，读取时间19:02:1
 
 **定位结论：** 三段事件均止于MainActivity、未出现BridgeWebActivity，且在准备阶段以timeout终止。现有证据支持定位到runner的Activity/就绪标记轮询超时层。assistant页面门禁没有被执行（`vueCheck`未生成），不能称为该门禁失败；module登录态门禁没有登录类事件、逐字段存在性布尔值或采样时间，保持UNKNOWN。具体为何就绪标记未到达、屏幕/Keyguard状态、认证派发或输入原因仍UNKNOWN。没有比既有脱敏摘要更细的可读证据，本结论不等于完整根因定位。下一步仍等11月4日自然运行；仅在新鲜MUSE无在途且授权设备锁门禁满足后只读采集。证据索引对象：`prepareTimeoutLayerAudit20261103_1902`。
 
+## 精确live runner源码核对｜2026-11-03 19:22 CST
+
+已从本Forest旁聊的既有私有附件下载 `sunshine-forest-v0.19-live-run.py`，本机重算SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与部署报告完全相同；仅保存于权限0600的用户Downloads，未放入仓库。`Device.prepare()`的源码控制流确认70秒/1秒Activity及prepare-marker轮询、Activity字符串包含`GestureActivity`且本轮尚未尝试时调用一次认证入口、`BLOCKED`立即终止、`NAVIGATED`才进入ready读取、超时报`PREPARE_TIMEOUT_NO_FALLBACK`。`main()`在业务之前prepare并在finally执行 `Device.cleanup()`。该路径与三段已存脱敏摘要相符，故现在是live源码支持的失败层结论。它不能给出marker未到达的下层原因；设备显示/Keyguard/登录字段、11月3日09:06:17—09:11:17空档、业务状态都仍UNKNOWN/未读。没有运行代码或访问设备。
+
 ## 最新集成与只读状态｜2026-11-03 18:56 CST
 
 18:40:26写前核验、18:40:41原子替换、18:40:48写后复核：已将唯一云端Forest runner的`assistant.py`更新为已审查的门禁诊断候选，live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份SHA保持`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`；独立回滚副本字节匹配。只增加Vue存在、`onClickApp`存在、目标项数量、固定runGroup及门禁采样时间，原固定方法pin、唯一目标项、调用顺序和失败关闭行为未变。此次不执行代码/测试，不访问Pixel，不读写模块/APK/业务state；schedule、runner idle/lock、进程状态写后未变。树内消费者静态检查为中等兼容证据，外部消费者未知。11月3日prepare超时仍UNKNOWN，不能由这项诊断补改追溯；待11月4日自然运行结束后，再读取脱敏MUSE结果并按窗口规则采集关联证据。P4开放，S1未验收。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。

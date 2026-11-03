@@ -1,5 +1,7 @@
 # 工作阶段与能力路线图
 
+> **P4 live runner源码核验｜2026-11-03 19:22 CST：** 精确live `run.py` 已从现有MUSE私有附件下载并本机重算SHA-256，与部署报告完全匹配；源码仅存于权限0600的用户Downloads，未进入Git。静态控制流与11月3日三段prepare超时摘要一致，未能说明就绪标记未到达的下层原因。认证入口分支按Activity字符串是否包含`GestureActivity`判断，并在尚未尝试时调用一次live `Device.auth_start()`。与10月26日私有runner的AST比较确认 `Device.prepare()`、`Device.read_fresh()`、`main()`不同，旧版登录方法也不等同于live登录入口。无源码修改、设备访问或业务状态读取；五项业务映射、AI结果/奖励及自然跨日证据仍未完成。P4开放，S1未验收，P50/月度规划挂起。详见[本地核查](local-evidence-audit-2026-10-29.md)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[结构化证据](remaining-work-evidence-2026-10-29.json)。
+
 > **P4当前运行门禁｜2026-11-03 19:08—19:10 CST：** MUSE新鲜读数显示Forest唯一Asia/Shanghai每日09:00任务下次11月4日、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live哈希与已记录值一致。随后经配置别名`pixel3a-kjgx`非root只读得到UID 10249、Pixel 3a/Android 15/boot完成、AutoX进程未见；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，因此没有设备写入或部署。11月3日prepare失败层定位到runner Activity/就绪轮询超时，底层原因未定。P4开放，S1未验收；[操作手册](forest-diagnostics-operations-2026-11-04.md)记录后续门禁。
 
 > **P4 prepare超时层级定位｜2026-11-03 19:02 CST：** 既有Forest对话中的脱敏摘要确认11月3日误触助理、调度助理及主流程均停在runner Activity/就绪标记轮询超时；三段最后均为MainActivity，没有业务阶段，清理PASS。assistant页面门禁未执行（`vueCheck`缺失），module登录态门禁未知。故障层已定位，底层就绪标记未到达的具体原因仍UNKNOWN；未读原始日志/业务state，也未访问设备。11月4日自然运行仍待观察。P4开放，S1未验收；细节见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。
@@ -29,7 +31,7 @@
 
 > **前一时点状态｜2026-11-03 15:43 CST：** 11月3日自然调度assistant/main均prepare超时、无业务stage/receipt，cleanup由MUSE报告PASS；间隔缺失仍UNKNOWN。MUSE 14:09快照只证明当时下一次为11月4日09:00且队列为空；15:37 CUA仅确认MUSE应用进程运行，未打开界面，当前调度与队列仍UNKNOWN。因无法排除MUSE并发，本轮未复连Pixel；15:22 Pixel读数是最近历史读数，不是当前preflight。该读数当时显示monitor-only候选`watching`、guard清、heartbeat新鲜、requests=0；设备Dozing、Forest未在前台、操作锁与stop/blocked标记不存在，monitor自身锁存在；输入审计12条、最后写于10月31日。SecureView v0.19 APK哈希当时与runner pin一致，prepare observer离线。静态核对显示公开策略仅覆盖离线签到/领取；10月26日旧本地runner哈希不同于MUSE 11月3日报告的live `run.py`哈希，不能视作部署代码。固定窗口sidecar尚未到预期采集时段。未重跑或更改业务state、cron、调度。P4进行中，S1未验收，P50/月度规划挂起。详见[实现来源核查](local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[修复与补跑记录](forest-prepare-repair-2026-11-02.md)。
 
-> **此前live v0.19登录派发源码核验｜2026-11-02：** 已取得安装后runner最小脱敏源码片段并与安装时哈希匹配。启动顺序为写命令/使能标记→wake key→force-stop→启动；最长70秒轮询resumed Activity，仅精确`GestureActivity`出现才调用一次本地认证入口。没有Keyguard解锁步骤；11月2日手动补跑历史仍未显示Keyguard和门禁分项值。该结论用于运行路径，不可外推为11月3日的具体失败原因。
+> **此前live v0.19登录派发源码核验｜2026-11-02：** 已取得安装后runner最小脱敏源码片段并与安装时哈希匹配。启动顺序为写命令/使能标记→wake key→force-stop→启动；最长70秒轮询resumed Activity，当Activity字符串包含`GestureActivity`且本轮尚未尝试才调用一次本地认证入口。没有Keyguard解锁步骤；11月2日手动补跑历史仍未显示Keyguard和门禁分项值。11月3日取得的精确live字节确认runner检查的是字符串包含条件。该结论用于运行路径，不可外推为11月3日的具体失败原因。
 
 > **离线诊断候选｜2026-11-02（未部署）：** Keyguard v2已被有界v3 review-only候选取代；森林登录态与助理入口诊断候选也只在本机完成离线核查。均未部署到Pixel，AutoX运行时兼容未验收，须在未来另行授权后才能动设备。
 

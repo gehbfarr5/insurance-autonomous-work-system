@@ -1637,6 +1637,47 @@
     "interpretation": "The evidence localizes the stop to the runner Activity/readiness-marker polling timeout layer; it does not establish why readiness was not reached and is not a complete root-cause finding.",
     "actions": "No device access, raw-log or business-state read, code/job execution, file/deployment/schedule/cron change, or other-chat inspection."
   },
+  "liveRunnerLocalSourceAudit20261103_192258": {
+    "readAt": "2026-11-03T19:22:58+08:00",
+    "source": "Exact existing private attachment from the established Sunshine Forest MUSE conversation; downloaded locally for diagnosis.",
+    "filename": "sunshine-forest-v0.19-live-run.py",
+    "localSha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+    "reportedLiveSha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+    "byteMatch": true,
+    "lineCount": 301,
+    "localRetention": "User-private Downloads directory; file mode 0600; not added to the repository.",
+    "staticControlFlow": {
+      "activityLookup": "Device.activity",
+      "prepareEventRecorder": "Device.event",
+      "prepareFunction": "Device.prepare",
+      "activityPolling": {"deadlineSeconds": 70, "intervalSeconds": 1},
+      "authDispatchGate": "If the resumed Activity string contains GestureActivity and no attempt has occurred in this prepare call, call Device.auth_start once.",
+      "prepareMarkerBranches": {
+        "BLOCKED": "Raises a PREPARE-prefixed UnsafeState.",
+        "NAVIGATED": "Enters Device.wait_ready.",
+        "timeout": "PREPARE_TIMEOUT_NO_FALLBACK"
+      },
+      "mainOrder": "Device.prepare precedes business workflow; Device.cleanup is called from finally.",
+      "cleanupFunction": "Device.cleanup"
+    },
+    "existingFailureSummaryCrossCheck": "The three sanitized 2026-11-03 segments stop after MainActivity with PREPARE_TIMEOUT_NO_FALLBACK, no business stage, and cleanup PASS; exact source corroborates the runner prepare poll/readiness-marker timeout layer, not the lower-level reason the marker was absent.",
+    "comparisonToPrivate20261026LocalRunner": {
+      "localSha256": "1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5",
+      "localLineCount": 266,
+      "commonFunctionsOrMethods": 23,
+      "identicalAst": 20,
+      "differentAst": ["Device.prepare", "Device.read_fresh", "main"],
+      "removedFromLive": ["Device.login"],
+      "addedToLive": ["Device.auth_start", "_check_deadline", "_handle_term", "should_clean_stale_lock"],
+      "interpretation": "The private 2026-10-26 runner is not a byte- or behavior-equivalent live baseline and must not be treated as current deployed source."
+    },
+    "limitations": [
+      "The matching live tasks.py and exact current assistant.py source were not locally reconciled.",
+      "No business state or raw run logs were read; AI intent, answers/rewards, and independent business receipts remain unresolved.",
+      "The missing readiness marker's lower-level cause and the 09:06:17-09:11:17 scheduler interval remain UNKNOWN."
+    ],
+    "actions": "No source edits, code or job execution, device access, business-state read, schedule change, or public source upload."
+  },
   "museReadonlyStatus20261103_190809": {
     "readAt": "2026-11-03T19:08:09+08:00",
     "schedule": {

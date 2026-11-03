@@ -74,7 +74,7 @@ CUA只确认MUSE应用进程运行；当前任务、调度和队列没有可用�
 
 MUSE只读导出并确认安装后live `run.py`原始源码的最小脱敏片段，live哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与11:13安装读回候选相同。摘录文件`sunshine-forest-20261102-v019-runner-prepare-snippets.txt`（本机私有目录，SHA-256 `8cf4de8422a7203eae33308ed31c2aa15591ec22fb5816e87de4148c45cdc910`）不进公开仓库。
 
-live源码确认runner先写命令/使能标记、发wake key，再force-stop并启动应用；最长70秒每秒轮询resumed Activity，仅当精确`GestureActivity`出现才调用`pixel-auth-start`一次。11月2日完整系统记录没有该Activity，监控requests未增加且输入审计无本轮记录，故密码/手势入口未被调用；本次失败不是该入口执行手势错误的证据。唤醒键没有解锁步骤，不能从屏幕交互态推出Keyguard已隐藏。主流程另因森林内部`user`/`empNoAES`/`operateFlag`合并门禁一次采样失败而阻断，但历史没有逐项值。底层原因仍待未来运行观测；不改密码、不重放业务、不改变调度。
+live源码确认runner先写命令/使能标记、发wake key，再force-stop并启动应用；最长70秒每秒轮询resumed Activity，Activity字符串包含`GestureActivity`且本轮尚未尝试时调用`pixel-auth-start`一次。11月2日完整系统记录没有该Activity，监控requests未增加且输入审计无本轮记录，故密码/手势入口未被调用；本次失败不是该入口执行手势错误的证据。唤醒键没有解锁步骤，不能从屏幕交互态推出Keyguard已隐藏。主流程另因森林内部`user`/`empNoAES`/`operateFlag`合并门禁一次采样失败而阻断，但历史没有逐项值。底层原因仍待未来运行观测；不改密码、不重放业务、不改变调度。
 
 ### Keyguard只读观测候选v2｜2026-11-02 21:52
 

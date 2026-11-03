@@ -21,7 +21,7 @@ MUSE 15:54:29回读既有每日09:00、下次11月4日09:00，running/queued/in-
 - 11月2日自然轮在准备阶段阻断，五项均未进入业务。此前v0.18补跑仍以`PREPARE_TIMEOUT_NO_FALLBACK`结束、`NOT_SENT`、无stage/receipt，cleanup PASS。
 - 用户随后明确授权：门禁全过后安装自制v0.19并从原入口补跑一次。MUSE于11:13:41完成即时门禁；只备份并替换本次范围的runner和模块APK，未改assistant.py、tasks.py、cron、调度或清除状态。安装后runner候选哈希、APK候选哈希和versionName 0.19.0均读回一致。
 - 原入口仅运行一次，没有第二轮或重放。旧bundle准备超时已消除，但新暴露两个独立停止点：助理段准备成功并到达BridgeWebActivity，随后调用入口未唯一匹配，结果`REVIEW / ONCLICKAPP_OR_MENU_NOT_UNIQUE_NO_CALL / NOT_SENT`；主流程在登录态检查处`BLOCKED / PREPARE_LOGIN_STATE_MISSING`。两段均无业务回执，cleanup PASS，五项均未完成/未执行。
-- 21:37 MUSE只读导出了安装后 live v0.19 `run.py` 最小脱敏片段，重算 SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与11:13安装读回候选一致；来源不是v0.17副本或fixture。片段证实先写命令/使能标记，再发wake key、force-stop、启动应用；随后每秒检查resumed Activity、最长70秒，只有看到精确`GestureActivity`才单次调用Pixel本地认证入口。11月2日窗口没有该Activity，故入口脚本未被派发；根因进一步收敛到Activity派发门禁，仍不能由历史证据确定未出现手势页的物理/应用原因。
+- 21:37 MUSE只读导出了安装后 live v0.19 `run.py` 最小脱敏片段，重算 SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与11:13安装读回候选一致；来源不是v0.17副本或fixture。片段证实先写命令/使能标记，再发wake key、force-stop、启动应用；随后每秒检查resumed Activity、最长70秒，当Activity字符串包含`GestureActivity`且本轮尚未尝试时单次调用Pixel本地认证入口。11月2日窗口没有该Activity，故入口脚本未被派发；根因进一步收敛到Activity派发门禁，仍不能由历史证据确定未出现手势页的物理/应用原因。19:22本机取得的完整live runner原字节再次确认这是字符串包含判断，不是整串相等。
 - 最终结束时runner.lock与设备操作锁均FREE，无相关进程。state主文件、cron定义和调度定义未变；assistant.json当日`lastError`随本次运行更新，`phase/questionStatus/startedAt`未变、没有`sentAt`。每日Asia/Shanghai 09:00调度未改，下一次为11月3日09:00。
 - 本次结论是**v0.19安装与读回PASS、旧准备超时修复链路得到有限验证；每日业务执行仍未通过**。P4/S1不代表整体验收完成。跨日验证按用户要求等到真实次日；P50/月度规划继续挂起。
 
@@ -74,7 +74,7 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 
 对已从 Pixel 安装版 APK 提取的 `forest-prepare.js` 再做静态核对：文件1493字节，SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`。`step()` 只在启动时读取一次 `__r(584).default.user`；若 `user` 不存在、`empNoAES` 为空或 `operateFlag` 未定义，立即输出 `BLOCKED / LOGIN_STATE_MISSING` 并返回。该登录态门禁没有等待/重试；后续最多8次等待只用于促销弹窗关闭及 `HOME_NOT_READY`。这确定了直接阻断的代码路径是单次登录态快照，但没有逐项诊断信息，无法判断具体缺项。
 
-**结论（21:37更新）：** 直接阻断是森林内部三项登录态字段的合并门禁未通过；源码显示它只采样一次、不等待字段就绪。更新后的完整logcat显示runner唤醒并启动APP后没有进入`GestureActivity`；监控请求未增、输入审计无记录。随后取得并核对安装后live v0.19 runner原始源码片段（SHA-256 `de9bd83c…`），确认认证入口只在精确`GestureActivity`出现后调用；因此本次认证入口未派发，没有证据表明密码/手势输入器执行错误。仍缺screen/page/account/guard/episode逐项历史值，以及Keyguard和未出现手势页的底层原因。不要据此修改凭据、强制登出或重跑生产业务。
+**结论（21:37更新）：** 直接阻断是森林内部三项登录态字段的合并门禁未通过；源码显示它只采样一次、不等待字段就绪。更新后的完整logcat显示runner唤醒并启动APP后没有进入`GestureActivity`；监控请求未增、输入审计无记录。随后取得并核对安装后live v0.19 runner原始源码片段（SHA-256 `de9bd83c…`），确认runner在resumed Activity字符串包含`GestureActivity`且尚未尝试时才调用认证入口；因此本次认证入口未派发，没有证据表明密码/手势输入器执行错误。仍缺screen/page/account/guard/episode逐项历史值，以及Keyguard和未出现手势页的底层原因。不要据此修改凭据、强制登出或重跑生产业务。11月3日取得的完整live runner字节确认此门禁是字符串包含条件。
 
 ### Pixel AutoX 输入审计补核｜2026-11-02 17:12
 
@@ -179,17 +179,17 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 
 另一个与`LOGIN_STATE_MISSING`相符的机制是冷启动后内存登录对象为空：精确bundle的模块584以`user={}`初始化，已发现的`loginEmp`赋值在登录响应分支；截至19:00取得的v0.17源码及v0.19 fixture含`am force-stop`。21:37取得的live v0.19源码片段确认运行前确有该force-stop，因此它可能清空应用进程内用户对象，而本轮没有新的登录响应填充它。仍没有11月2日三个字段的运行时快照，不能证明force-stop就是唯一原因。
 
-**收尾诊断状态（21:37）：** 11月2日无派发、无输入、登录态一次性检查失败已由日志、哈希匹配源码和运行记录交叉确认；live v0.19片段确认runner先wake key、再force-stop并启动，只有精确`GestureActivity`出现后才调用认证入口。故认证器脚本并非本次已证故障点。剩余未知是唤醒后Keyguard、页面路由和三个登录字段当时状态，无法把“Keyguard挡住”或“登录响应未就绪”定为根因。无需为了证明旧输入器而重放业务。后续如要定位当前门禁，先取得有界脱敏观测；安装sidecar/重启监控仍需单独授权。
+**收尾诊断状态（21:37）：** 11月2日无派发、无输入、登录态一次性检查失败已由日志、哈希匹配源码和运行记录交叉确认；live v0.19片段确认runner先wake key、再force-stop并启动，runner源码的Activity字符串包含`GestureActivity`且本轮尚未尝试时才调用认证入口。故认证器脚本并非本次已证故障点。剩余未知是唤醒后Keyguard、页面路由和三个登录字段当时状态，无法把“Keyguard挡住”或“登录响应未就绪”定为根因。无需为了证明旧输入器而重放业务。后续如要定位当前门禁，先取得有界脱敏观测；安装sidecar/重启监控仍需单独授权。
 
 ### runner派发门禁与Pixel登录入口基线复核｜2026-11-02 19:10
 
 重新盘点本机私有 MUSE 导出：其中脱敏 `run.py` SHA-256 为 `93151ce3…`、文件时间为10:14:55，来源清单对应安装前 v0.17（原始文件哈希 `061f1878…`）；不是11:13后安装的 v0.19 live runner。v0.18红acted候选与v0.19 fixture均为301行，逐行差异只有三个模块版本/文件标记。v0.19转换脚本锁定安装前 live v0.18 runner 哈希`d63fbabe…`并仅做这三个替换；补跑证据记录安装后读取哈希`de9bd83c…`与候选相同。精确的安装后源文件仍未保存在本机，不能把脱敏fixture冒充live源码。
 
-不过，锁定版本的脱敏runner fixture把登录入口门禁写得很明确：准备时执行`input keyevent 224; am force-stop; monkey -p …`，随后最长70秒轮询前台Activity；只有匹配精确`GestureActivity`且此前尚未尝试时，才调用一次`auth_start()`，而`auth_start()`调用Pixel本地`~/bin/pixel-auth-start`。v0.17源码、v0.18红acted候选、v0.19 fixture三者的这段控制流相同；v0.19补丁自身也只改版本标记。因而11月2日完整系统日志里的Splash/Main/BridgeWeb序列、无`GestureActivity`，再结合requests不增和无输入审计，强烈支持runner没有越过手势页门禁、密码/手势入口脚本未被调用。准确live文件缺失使这仍是受哈希链与夹具支持的控制流结论，而非直接读回live v0.19源码。
+不过，锁定版本的脱敏runner fixture把登录入口门禁写得很明确：准备时执行`input keyevent 224; am force-stop; monkey -p …`，随后最长70秒轮询前台Activity；当Activity字符串包含`GestureActivity`且此前尚未尝试时，才调用一次`auth_start()`。19:22取得的精确live runner后续确认其实际条件是字符串包含判断，而不是整串相等；`auth_start()`调用Pixel本地认证入口。v0.17源码、v0.18脱敏候选、v0.19 fixture描述的这段触发意图相同；v0.19补丁自身也只改版本标记。因而11月2日完整系统日志里的Splash/Main/BridgeWeb序列、无`GestureActivity`，再结合requests不增和无输入审计，强烈支持runner没有越过手势页门禁、密码/手势入口脚本未被调用。该段是11月2日历史结论；当前live runner哈希匹配与本机旧副本差异见[本地核查](local-evidence-audit-2026-10-29.md#精确live-runner源码及本地旧副本对照2026-11-03-1922-cst)。
 
 只读SSH还确认Pixel上的`pixel-auth-start`当前哈希`8f228b7e…`、设备文件时间10月30日13:22，与本机已验证的10月30日组件生命周期修复版本哈希一致；它不是11月2日新改的脚本。该入口采用锁、在途检查和已有成功状态合并，历史测试覆盖并发去重；11月2日窗口没有它被调用的证据。本轮没有读取或输出私有手势配置，也没有触发输入。
 
-**原因边界更新：** 现已将“为什么没有自动输入”收敛到前置条件：预期手势Activity未出现/未被runner的精确Activity门禁观察到，故认证入口没有触发；不能归因于入口脚本输入错误。至于为什么应用启动后没有手势页，唤醒但未解锁、应用路由或内存登录态未就绪都仍需区分。当前Termux用户上下文的只读`dumpsys window policy`返回`Can't find service: window`，没有取得Keyguard快照；它不代表当时状态。后续优先取得安装后的精确runner源或一次有界运行时门禁快照，再决定是否修改唤醒/解锁/页面就绪主路径；不重放业务，不改密码或手势，不放宽Activity匹配条件。
+**原因边界更新：** 现已将“为什么没有自动输入”收敛到前置条件：预期手势Activity未出现/未被runner源码中的字符串包含条件观察到，故认证入口没有触发；不能归因于入口脚本输入错误。至于为什么应用启动后没有手势页，唤醒但未解锁、应用路由或内存登录态未就绪都仍需区分。当前Termux用户上下文的只读`dumpsys window policy`返回`Can't find service: window`，没有取得Keyguard快照；它不代表当时状态。后续优先取得安装后的精确runner源或一次有界运行时门禁快照，再决定是否修改唤醒/解锁/页面就绪主路径；不重放业务，不改密码或手势，不放宽Activity匹配条件。
 
 ### 安装版 APK 清单与 DEX 载荷核查｜2026-11-02 19:26 CST
 
@@ -218,11 +218,11 @@ MUSE 对脱敏结果和现有适配源码做了只读核查，没有访问设备
 脱敏摘录保存在本机仓库外的本机私有目录，文件名`sunshine-forest-20261102-v019-runner-prepare-snippets.txt`，SHA-256 `8cf4de8422a7203eae33308ed31c2aa15591ec22fb5816e87de4148c45cdc910`，5918字节；未将该文件或完整源码上传公开仓库。摘录保留的live源码控制流确认：
 
 - runner先写本轮命令和使能标记，再发`KEYCODE_WAKEUP`（224），随后force-stop并启动目标应用；该启动段没有解锁/隐藏Keyguard步骤。
-- runner每秒读取该应用当前resumed Activity，最长等待70秒；只有返回Activity含精确`GestureActivity`且本轮尚未尝试时，才单次调用`pixel-auth-start`，超时90秒，无重试/猜测。若始终只观察到Main/Bridge等页面，密码/手势入口不会被调用。
+- runner每秒读取该应用当前resumed Activity，最长等待70秒；Activity字符串包含`GestureActivity`且本轮尚未尝试时，才单次调用`pixel-auth-start`，超时90秒，无重试/猜测。若始终只观察到Main/Bridge等页面，密码/手势入口不会被调用。
 - 11月2日完整系统日志/UsageStats未见`GestureActivity`，监控派发计数未增、AutoX输入审计无本轮记录；这与live runner门禁相互印证，确认本次密码/手势入口未收到调用。10月30日入口自动检测正例仍有效，但不替代此次触发链。
 - 森林模块另在一次登录态快照中检查`user`、`empNoAES`、`operateFlag`；三项任一不满足即终局`LOGIN_STATE_MISSING`，没有等待登录响应的分支。历史结果没有三项逐项布尔值，也没有Keyguard状态，故不能判定当时是锁屏、登录响应未到、路由或其他应用态问题。
 
-**更新后的归因：** 已证直接原因是runner精确Activity门禁未满足，认证入口因此未派发；没有证据指向密码/手势输入动作错误。唤醒键只证明发起唤醒，不能证明设备已解锁；“Keyguard挡住登录页”仍是待证假设。下一步先只读核实后续运行所需的screen/Keyguard/resumed-Activity/派发阶段快照，再决定是否需要改runner唤醒与登录就绪主路径。现有部署和每日调度保持不变，不为诊断重放业务；任何新安装或监控重启仍需相应授权。
+**更新后的归因：** 已证直接原因是runner的Activity字符串包含条件未满足，认证入口因此未派发；没有证据指向密码/手势输入动作错误。唤醒键只证明发起唤醒，不能证明设备已解锁；“Keyguard挡住登录页”仍是待证假设。下一步先只读核实后续运行所需的screen/Keyguard/resumed-Activity/派发阶段快照，再决定是否需要改runner唤醒与登录就绪主路径。现有部署和每日调度保持不变，不为诊断重放业务；任何新安装或监控重启仍需相应授权。
 
 ### Keyguard只读观测候选v2｜2026-11-02 21:52
 

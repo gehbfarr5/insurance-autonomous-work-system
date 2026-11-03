@@ -10,6 +10,14 @@ MUSE 19:08:09只读状态：Forest唯一每日Asia/Shanghai 09:00任务下次11�
 
 MUSE只读复核Forest旁聊既有的11月3日三段脱敏摘要：误触助理、调度助理和主流程均在prepare事件止于MainActivity后结束，原因码`PREPARE_TIMEOUT_NO_FALLBACK`、没有业务阶段、cleanup PASS。两段助理`NOT_SENT`且`vueCheck`缺失；主流程`pendingAction`为空且业务字段未出现。可定位到runner Activity/就绪标记轮询超时层，assistant页面门禁未被求值；module登录态门禁与具体未就绪原因仍UNKNOWN。没有读取raw log、业务state或设备，也没有运行任务。该结论不等于完整根因定位；下一步是等待11月4日自然运行及新鲜只读证据。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[运行手册](forest-diagnostics-operations-2026-11-04.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。
 
+## 精确live runner源码本机核对｜2026-11-03 19:22 CST
+
+从既有阳光森林MUSE旁聊的私有附件下载 `sunshine-forest-v0.19-live-run.py`；本机重算SHA-256为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与19:08部署状态报告的live `run.py`完全相同。文件只保存在权限0600的本机用户Downloads，未复制进仓库；下载与静态比对没有连接Pixel、执行runner或读取业务state。
+
+静态源码确认：`Device.activity()`读取resumed Activity；`Device.event()`持久记录prepare事件；`Device.prepare()`先过模块版本/工件与设备锁门禁，再以70秒deadline、1秒间隔轮询Activity及nonce匹配的prepare marker；认证入口分支检查Activity字符串是否包含`GestureActivity`，且本轮尚未尝试时调用一次`auth_start()`；收到`BLOCKED`即阻断、收到`NAVIGATED`才进入`wait_ready()`，deadline到期报`PREPARE_TIMEOUT_NO_FALLBACK`。`main()`在业务workflow之前调用prepare，并在finally中调用`Device.cleanup()`；已有三段摘要均报告cleanup PASS。此源码分支与三段事件止于MainActivity、未见BridgeWebActivity并以timeout结束直接吻合，因此失败层定位得到精确live源码交叉核实；源码无法说明11月3日为什么没有ready marker，也无法解释09:06:17到09:11:17的调度层间隔。
+
+与10月26日私有旧`run.py`（SHA-256 `1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`，266行）作AST结构比较：当前live文件301行，23个共有函数/方法中20个AST相同，`Device.prepare()`、`Device.read_fresh()`、`main()`不同；旧`Device.login`不在live源码中，live改为`Device.auth_start()`，并增加deadline/终止及stale-lock函数。该差异进一步证明旧副本不得直接补丁或替代live基线。没有修改任何运行源码；本机缺少与此live runner整套匹配的 `tasks.py` 和当前 `assistant.py` 原字节，因此五项完整实现映射及代码修复仍待单独审查。业务结果、AI答案/奖励及11月4日自然运行仍待核验。结构化事实见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 最新更新：运行状态与规则原据续查｜2026-11-03 18:56 CST
 
 云端Forest runner的`assistant.py`已按已审查候选完成有界集成；live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，原备份及部署侧回滚副本为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只有五个脱敏诊断字段新增，固定调用门禁未变。写后schedule/runner状态不变；没有运行代码/业务或访问设备。树内消费者审计为中等证据，外部解析器未知。assistant gate诊断集成已验证，但11月4日自然运行字段、登录态observer、prepare根因和全部业务回执仍未完成；P4继续开放，S1未验收。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。

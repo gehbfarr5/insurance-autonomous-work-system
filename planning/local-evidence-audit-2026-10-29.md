@@ -1,5 +1,13 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 精确live runner源码及本地旧副本对照｜2026-11-03 19:22 CST
+
+从既有阳光森林MUSE旁聊的私有附件下载 `sunshine-forest-v0.19-live-run.py`，本机SHA-256重算为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与19:08 live部署元数据报告完全匹配。文件保存在用户私有Downloads、权限0600；未进入仓库，未导出其他源码/日志/state，也没有运行代码、连接设备或读取业务state。精确源码含内部路由/安装细节，因此公开仓库只记哈希与控制流结论。
+
+源码静态确认 `Device.prepare()` 对resumed Activity及nonce匹配的准备marker执行70秒、1秒间隔轮询；Activity变化由 `Device.event()`记录；认证入口条件检查Activity字符串是否包含`GestureActivity`，且本轮尚未尝试时调用一次 `auth_start()`；marker为`BLOCKED`时结束，`NAVIGATED`时进入 `wait_ready()`；超时抛出`PREPARE_TIMEOUT_NO_FALLBACK`。`main()`先prepare再进入业务workflow，并在finally调用 `Device.cleanup()`；11月3日三段脱敏摘要的MainActivity终止事件与该路径一致，cleanup均为PASS。因此失败层被live源码直接交叉核实为runner的Activity/就绪marker等待超时，底层为何未到ready及09:06:17—09:11:17间隔仍UNKNOWN。
+
+与10月26日私有旧runner（`1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`，266行）做AST比对：live为301行；23个共有函数/方法中20个结构相同，`Device.prepare()`、`Device.read_fresh()`、`main()`不同；旧 `Device.login`被live `Device.auth_start()`取代，另有deadline/终止处理和stale-lock决策函数。结论：live `run.py`现已取得并匹配，旧本地副本仍不适合作为live基线；本机未取得与live runner配套的 `tasks.py` 或当前 `assistant.py`原字节，五项逐项实现/结果映射仍不完整。无代码修复或部署。
+
 ## 当前访问门禁｜2026-11-03 18:56 CST
 
 18:54:37 MUSE确认Forest唯一Asia/Shanghai每日09:00任务仍空闲、下次11月4日、runner lock FREE、live run.py/assistant.py哈希未变。Pixel最近只读为18:48:55：Android 15、boot完成、AutoX进程未见、SecureView APK匹配v0.19；当前设备操作锁未读取，monitor私有状态/hash及屏幕/Keyguard/Activity仍UNKNOWN。不以18:22旧锁FREE代替。18:55—18:56 Drive与CPIC官方域规则补查无直接命中，不推断原件不存在。未用root/su，未写设备/业务state、未运行任务或改变调度。

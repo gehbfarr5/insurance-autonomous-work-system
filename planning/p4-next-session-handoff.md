@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 19:22 CST新增：live runner源码已匹配
+
+精确live `run.py`私有附件已下载到用户私有Downloads，权限0600；SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与19:08 MUSE live hash相同。静态控制流确认11月3日三段结果止于 `Device.prepare()`的Activity/ready-marker轮询超时，assistant页面门禁未运行，登录态层仍UNKNOWN。与10月26日旧本地 `run.py`（`1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`）比较，`Device.prepare()`、`Device.read_fresh()`、`main()`不同，且旧`Device.login`已被live `Device.auth_start()`替代；不对旧runner打补丁、不将其冒充live副本。live配套 `tasks.py`、当前`assistant.py`原字节及全量AI意图/业务结果未全部核验，故P4/S1不结项。
+
 ## 最新接续事实｜2026-11-03 19:08—19:10 CST
 
 - MUSE只读查阅既有Forest对话中的脱敏摘要，未读raw log或业务state、未访问设备、未运行代码/任务、未改任何文件或调度。
@@ -115,9 +119,9 @@ P50与月度规划继续挂起。
 
 **运行批次区分：** 08:55自然任务是v0.19替换前版本，助理与主流程prepare记录均只有`.MainActivity`，结束于`PREPARE_TIMEOUT_NO_FALLBACK`；后续版本/模块锚点比对定位为旧bundle失配，v0.19替换后该超时已消除。11:14获准补跑运行v0.19，暴露独立门禁：助理到BridgeWeb后固定Vue/方法/菜单匹配失败并`NOT_SENT`，主流程在`user`、`empNoAES`、`operateFlag`一次性登录态检查处`BLOCKED`。下文“完整系统Activity日志无`GestureActivity`、requests未增、无输入审计”特指11:14补跑，不能回写成08:55失败的原因。
 
-本轮目标是定位11月2日登录处理为何没有触发，并将已证事实同步到GitHub；不以重跑业务作为验收。完整系统日志没有`GestureActivity`，requests未增、输入审计缺席。21:37取得的安装后live v0.19源码片段（SHA-256 `de9bd83c…`）确认只有resumed Activity含精确`GestureActivity`时才调用`pixel-auth-start`，因此本次入口未被调用，现有证据不支持密码/手势输入器错误。源码也确认wake key→force-stop→启动的顺序以及无Keyguard解锁步骤；仍不能从历史证据确定Keyguard、登录字段或未到手势页的底层原因。
+本轮目标是定位11月2日登录处理为何没有触发，并将已证事实同步到GitHub；不以重跑业务作为验收。完整系统日志没有`GestureActivity`，requests未增、输入审计缺席。21:37取得的安装后live v0.19源码片段（SHA-256 `de9bd83c…`）确认resumed Activity字符串包含`GestureActivity`且本轮尚未尝试时才调用`pixel-auth-start`，因此本次入口未被调用，现有证据不支持密码/手势输入器错误。源码也确认wake key→force-stop→启动的顺序以及无Keyguard解锁步骤；仍不能从历史证据确定Keyguard、登录字段或未到手势页的底层原因。11月3日取得的完整live runner字节确认这里是字符串包含条件。
 
-**21:37只读更新（覆盖上段“live源缺失”状态）：** MUSE已导出安装后live v0.19 runner最小脱敏源码片段，本机核对导出SHA-256 `8cf4de8422a7203eae33308ed31c2aa15591ec22fb5816e87de4148c45cdc910`；片段声明的live `run.py` SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与安装时读回候选一致。源码确认顺序为写命令/使能标记→wake key→force-stop→启动；之后最多70秒轮询resumed Activity，只有精确`GestureActivity`出现才单次调用认证入口，90秒超时且无重试。11月2日未见该Activity且requests/输入审计均无新增，因此认证入口未被调用；这是明确的前置门禁停止点。wake key并不等于解锁，历史Keyguard状态、登录字段逐项值和未出现GestureActivity的底层原因仍未知。完整源码与脱敏摘录只保存在本机私有归档，公开仓库仅记录哈希与结论。
+**21:37只读更新（覆盖上段“live源缺失”状态）：** MUSE已导出安装后live v0.19 runner最小脱敏源码片段，本机核对导出SHA-256 `8cf4de8422a7203eae33308ed31c2aa15591ec22fb5816e87de4148c45cdc910`；片段声明的live `run.py` SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与安装时读回候选一致。源码确认顺序为写命令/使能标记→wake key→force-stop→启动；之后最多70秒轮询resumed Activity，当Activity字符串包含`GestureActivity`且本轮尚未尝试时单次调用认证入口，90秒超时且无重试。11月2日未见该Activity且requests/输入审计均无新增，因此认证入口未被调用；这是明确的前置门禁停止点。wake key并不等于解锁，历史Keyguard状态、登录字段逐项值和未出现GestureActivity的底层原因仍未知。11月3日取得的完整live runner字节进一步确认该字符串包含条件；完整源码与脱敏摘录只保存在本机私有归档，公开仓库仅记录哈希与结论。
 
 19:26本机进一步核对了安装版APK包装结构：清单声明`GestureActivity`，Application使用SecNeo包装器；普通DEX只定义7个包装类，目标Activity不在标准类定义表，包装器通过native bootstrap委托真实Application。JADX/apkanalyzer找不到该Activity是受保护载荷结构所致，不支持“应用升级删除了Activity”。清单没有`showWhenLocked`/`turnScreenOn`属性，但真实实现不可从普通DEX读取，Keyguard仍不是已证根因。当前Pixel入口脚本哈希仍与10月30日基线一致、应用进程停止。细节与制品哈希见[修复与补跑报告](forest-prepare-repair-2026-11-02.md)。
 
