@@ -204,7 +204,7 @@ The 0.10.0 candidate reuses the current OCR block schema, visual-row clustering,
 
 Synthetic regressions cover the same-row non-neighbor positive case, multiple complete ID candidates, invalid checksum, multiple ID labels, ambiguous OCR characters, and a short multi-row address guard. Targeted table-layout tests pass 24/24 and the full local offline suite passes 123/123 on Python 3.14.7 / Pillow 12.2.0. A GitHub search did not find a directly applicable maintained parser for these existing Baidu word boxes; the result was unrelated and is weak evidence, so the change stays local and dependency-free.
 
-The MUSE exact-commit replay is pending. Production remains 0.5.0 and unchanged; this candidate is not v1.0 Stable. The 30-card set remains separate and inaccessible until its authorization and reference-annotation gates are satisfied.
+MUSE retested the exact code commit `e129c80e2d8b35ed667a5b4f2335007543a2c4d0` in a fresh worktree/venv (Python 3.12.3, Pillow 10.2.0): 123/123 offline tests and the synthetic suite passed. The protected WP10 replay remained `REVIEW_REQUIRED` and draft mapping was rejected. Name, mobile, birthday, and gender were absent; the ID was present but was not compared with the reviewed reference; address MATCH reflects omission on both sides only. See the detailed evidence in [`TEST_REPORT.md`](TEST_REPORT.md). Production remains 0.5.0 and unchanged; this candidate is not v1.0 Stable. The 30-card set remains inaccessible until its authorization and reference-annotation gates are satisfied.
 
 ## Rollback
 
