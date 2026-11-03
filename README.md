@@ -1,5 +1,7 @@
 # 保险规划师自主工作系统
 
+> **P4最新只读状态｜2026-11-03 21:30—21:32 CST：** 21:30:20在既有Forest线程只读确认当时无活动任务；唯一Asia/Shanghai每日09:00任务下次11月4日09:00，running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程；live run.py和assistant.py哈希分别为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562和7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。随后经现有pixel3a-kjgx别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS进程；SecureView已安装APK SHA匹配已知v0.19。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity均UNKNOWN；未用root/su、未读取业务state或安装/部署。11月3日08:55—09:55候选窗口已过期，不安装该版本。11月4日自然任务、同轮诊断及业务回执待观察；P4开放、S1未验收，P50/月度/2U=2800继续挂起。详见[交接](planning/p4-next-session-handoff.md)、[运行手册](planning/forest-diagnostics-operations-2026-11-04.md)和[结构化证据](planning/remaining-work-evidence-2026-10-29.json)。
+
 > **Forest并发状态刷新｜2026-11-03 20:42:10 CST：** 精确目标线程新鲜只读回读显示Forest当前无活动任务，唯一启用的Asia/Shanghai每日09:00任务下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live `run.py`/`assistant.py`哈希仍匹配已记录值。该读数不提供Pixel操作锁；安全非root读取路径未核实，因此未连接设备。自然运行结果仍待，P4开放、S1未验收。详见[交接](planning/p4-next-session-handoff.md)和[结构化证据](planning/remaining-work-evidence-2026-10-29.json)。
 
 > **五项日常与来源补查｜2026-11-03 20:33 CST：** 逐项对账确认11月1—3日五项均未进入业务阶段；11月3日三个runner段在prepare阶段超时（两段助理`NOT_SENT`，cleanup PASS），不是任务完成。10月31日最近可信结果与各项未结回执见[剩余工作记录](planning/remaining-work-2026-10-29.md)。五项扩展仍全部“仍待核实”；约20:30 Drive四项metadata-only搜索为0结果、CPIC官方域四项搜索未见当前森林任务规则直接命中，不推导资格或周期。MUSE当前状态及Pixel操作锁UNKNOWN，本轮未连接Pixel；P4开放，S1未验收。
@@ -80,7 +82,7 @@
 
 ## 当前状态｜2026-11-03
 
-**P1—P3已完成，P4进行中，S1未整体验收。** 10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日三段运行停在MainActivity准备超时；故障层定位到runner Activity/就绪标记轮询，未就绪的底层原因及登录字段仍UNKNOWN，不归咎认证输入脚本。每日Asia/Shanghai 09:00定义未改，11月4日自然运行仍待观察。最后可用的Forest状态回复时间为19:42:51、约20:11从目标线程读到；20:24因Mac锁定且浏览器控制禁用无法刷新，当前并发UNKNOWN。Pixel操作锁仍UNKNOWN、未连接设备。私有prepare/login-state observer和证据投影器的离线回归通过，但observer未部署；现有collector使用`su`，不能用于当前无root约束，非root导出路径尚待核实。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
+**P1—P3已完成，P4进行中，S1未整体验收。** 五项日常最近可信结果仍为10月31日：签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立回执。11月1—3日没有五项业务阶段完成。11月3日三段停在runner Activity/就绪标记轮询超时；为何未到达仍UNKNOWN，不能归咎认证输入。MUSE 21:30:20只读状态显示11月4日09:00 schedule不变且当时无运行/排队/在途任务。Pixel随后仅做非root只读预检，设备锁和monitor状态UNKNOWN；没有设备写入或部署。五项扩展仍全部待核实，规则日限额/计量的历史证据不证明重置、重复周期或到账时延。11月4日自然观察及完整回执仍待补。P50/月度规划继续挂起，保留2U＝2800目标。
 
 **[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [五项扩展与规则来源核查](planning/remaining-work-2026-10-29.md) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。五项扩展的流程/本人资格/奖励周期仍按证据分类；完整官方时点原依据尚未恢复。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 

@@ -1,5 +1,13 @@
 # 缺失内容与 P4 按需核查
 
+## 最新P4状态与来源/扩展核对｜2026-11-03 21:30—21:35 CST
+
+MUSE 21:30:20在既有Forest线程报告当时无运行、排队或在途任务，唯一Asia/Shanghai每日09:00任务下次11月4日09:00；runner lock FREE，live run.py/assistant.py哈希仍为已记录值。约21:31经既有Pixel别名非root只读确认Android 15已启动、无AutoX/AutoJS进程，SecureView APK与v0.19 pin相符。设备操作锁和monitor私有状态、屏幕/Keyguard/前台Activity仍UNKNOWN，故没有设备写入或observer部署；11月3日08:55—09:55目标窗口已过期，不安装该候选。
+
+E07历史规则快照仅支持阳光日上限10、雨露日上限20及按人/次/单计量；展示分段和月末行为值结算说明不能推出森林重置时点、重复领取周期或到账延迟。E08复核确认五项扩展的入口/历史动作线索，但没有证明当前资格、完整流程、奖励触发或周期；保单芯管家按既有决定移出每日范围，不重放历史申请。五项均保持“仍待核实”，没有一项可归类为现实外部阻碍或稳定自动化。
+
+本轮Drive文档元数据查询与CPIC官方域定向查询均未找到当前森林规则原据；这是有界无命中，不代表原件不存在或历史上从未确认。11月4日自然运行、同轮诊断、日常结果/回执和S1验收仍待完成。详见[剩余工作记录](../planning/remaining-work-2026-10-29.md)、[交接](../planning/p4-next-session-handoff.md)及[结构化证据](../planning/remaining-work-evidence-2026-10-29.json)。
+
 ## MUSE并发状态最新回读｜2026-11-03 20:42:10 CST
 
 精确Forest线程新鲜回读显示当时无活动任务，唯一启用的Asia/Shanghai每日09:00任务下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live `run.py`/`assistant.py` SHA与最近已知值一致。此MUSE runner状态不代表Pixel设备操作锁；Pixel锁及monitor仍UNKNOWN，且现有collector需`su`，未发现已验证的安全非root读取路径，因此未连接设备。该状态只对20:42:10读回时刻有效，不替代自然运行及业务回执验收。证据键：`museReadonlyStatus20261103_204210`。

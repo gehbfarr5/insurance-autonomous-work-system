@@ -1507,23 +1507,25 @@
     "actions": "No device access, business-state read, job execution, schedule/code/file change, or interruption."
   },
   "pixelReadonlyPreflight20261103Latest": {
-    "deviceReadAt": "2026-11-03T18:48:55+08:00",
-    "source": "Only the existing configured SSH alias pixel3a-kjgx; non-root remote UID 10249; read-only shell commands.",
+    "recordedAt": "2026-11-03T21:39:23+08:00",
+    "deviceReadTime": "Approximately 2026-11-03 21:30–21:32 CST; individual remote commands were not timestamped.",
+    "transport": "Only the existing configured alias pixel3a-kjgx; non-root remote UID 10249; read-only shell commands.",
+    "remoteUid": 10249,
     "device": {
       "model": "Pixel 3a",
       "android": "15",
       "timezone": "Asia/Shanghai",
       "bootCompleted": true
     },
-    "autoxProcess": "ABSENT in filtered ps -A output",
+    "autoxOrAutojsProcess": "NOT_FOUND in filtered process inventory",
     "installedSecureViewPackage": "com.p4.secureview",
     "secureViewInstalledApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
     "secureViewHashMatchesKnownV019Artifact": true,
-    "deviceOperationLock": "UNKNOWN; not read in this session. Prior 18:22 FREE read is historical only.",
+    "deviceOperationLock": "UNKNOWN; no documented non-root reader was available in the checked repository/runbook.",
     "monitorStatusAndHash": "UNKNOWN; private app data not read.",
-    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read in this session.",
+    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
     "rootOrSuUsed": false,
-    "actions": "No app/process start or stop, file or state write, business run, schedule change, or credential/network change."
+    "actions": "No business-state read, app/process start or stop, install/deploy, device or state write, task/code execution, schedule change, or credential/network change."
   },
   "museReadonlyStatus20261103Latest": {
     "readAt": "2026-11-03T18:54:37+08:00",
@@ -2197,5 +2199,133 @@
     "deviceContacted": false,
     "businessStateRead": false,
     "result": "Private source matched the live runner references. No action was taken or code changed."
+  },
+  "museReadonlyStatus20261103_213020": {
+    "readAt": "2026-11-03T21:30:20+08:00",
+    "source": "Read-only status request and reply in the exact existing Forest MUSE thread.",
+    "forestScopeTaskActive": false,
+    "schedule": {
+      "enabledCount": 1,
+      "timezone": "Asia/Shanghai",
+      "dailyAt": "09:00:00",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "otherChats": "Not inspected.",
+    "businessResults": "Not reread.",
+    "actions": "No device connection, business-state or raw-log read, code/job execution, file/deployment/schedule/cron/credential change, or other-chat inspection."
+  },
+  "rulesDriveMetadataSearch20261103Late": {
+    "recordedAt": "2026-11-03T21:39:23+08:00",
+    "performedAt": "2026-11-03 evening, after the 21:30 MUSE refresh; per-query timestamps were not captured.",
+    "source": "Connected Google Drive search; metadata only; no document bodies fetched.",
+    "batches": [
+      {
+        "itemType": "document",
+        "topn": 50,
+        "bestEffortFetch": false,
+        "requireViewedByUser": true,
+        "queries": [
+          {
+            "query": "阳光森林 规则 任务",
+            "resultCount": 0
+          },
+          {
+            "query": "阳光雨露 结算 周期",
+            "resultCount": 0
+          },
+          {
+            "query": "时点计算 奖励触发",
+            "resultCount": 0
+          },
+          {
+            "query": "森林 日上限 领取",
+            "resultCount": 0
+          }
+        ]
+      },
+      {
+        "itemType": "all file types",
+        "topn": 50,
+        "bestEffortFetch": false,
+        "requireViewedByUser": false,
+        "queries": [
+          {
+            "query": "阳光森林",
+            "resultCount": 0
+          },
+          {
+            "query": "阳光雨露",
+            "resultCount": 0
+          },
+          {
+            "query": "森林任务周期",
+            "resultCount": 0
+          },
+          {
+            "query": "官方时点计算",
+            "resultCount": 0
+          }
+        ]
+      }
+    ],
+    "interpretation": "No matching metadata surfaced in these bounded searches. This does not establish that original material is absent or was never confirmed."
+  },
+  "rulesOfficialSearch20261103Late": {
+    "recordedAt": "2026-11-03T21:39:23+08:00",
+    "performedAt": "2026-11-03 evening, after the 21:30 MUSE refresh; exact per-query timestamps were not captured.",
+    "source": "Web search restricted to official CPIC domains cpic.com.cn and life.cpic.com.cn.",
+    "queries": [
+      "site:cpic.com.cn 阳光森林 阳光 雨露 规则",
+      "site:cpic.com.cn 阳光森林 时点",
+      "site:life.cpic.com.cn 阳光森林 规则",
+      "site:cpic.com.cn 阳光雨露 结算"
+    ],
+    "result": "No direct current Forest task, cap, reset, repeat-cycle, reward-trigger, or settlement-time rule surfaced; returned pages were unrelated general insurance or forest-tourism material and were not used.",
+    "interpretation": "Bounded no-hit only; it does not show that source material is absent or was never confirmed."
+  },
+  "privateForestEvidenceReview20261103": {
+    "recordedAt": "2026-11-03T21:39:23+08:00",
+    "source": "Targeted review of private historical evidence referenced by E07 and E08; private paths and source contents are not reproduced here.",
+    "scope": "Historical rules popup and five extension investigations; no customer data copied into this record.",
+    "e07Rules": {
+      "supported": [
+        "Historical daily cap of 10 阳光 and 20 雨露.",
+        "Historical reward units associated with listed actions."
+      ],
+      "notSupported": [
+        "Forest reset time.",
+        "Per-task repeat or claim cycle.",
+        "Reward posting delay.",
+        "Current eligibility or rule applicability."
+      ],
+      "displayBoundary": "Week ranges are display filters; month-end note concerns behavior-score statistics and HR settlement, not a Forest reset or task repeat cycle."
+    },
+    "extensionFindings": {
+      "保单芯管家": "Historical service application succeeded; this does not prove a completed policy review or Forest reward. Keep excluded from daily scope and do not replay the application.",
+      "态幸福": "Evidence reaches customer management/new-customer entry; required personal fields were not entered. Calculation, report, and reward trigger remain unknown.",
+      "三节一生": "Flow includes contact/card/inspection completion; finish can commit task state. No customer action was taken. A temporary maintenance message at one entry does not prove an external blocker.",
+      "E锦囊激活": "A general visit/QR entry exists, but activation details and reward mapping remain unverified.",
+      "签单协同业务": "No verified product/policy/contract route or Forest mapping was established."
+    },
+    "classificationEffect": "All five extensions remain 仍待核实. None is classified as a proven external blocker or admitted to stable automation.",
+    "actions": "No client data copied, customer contacted, submission made, task replayed, or business state changed."
+  },
+  "expiredCandidateWindow20261103": {
+    "recordedAt": "2026-11-03T21:39:23+08:00",
+    "candidateWindow": "2026-11-03 08:55–09:55 Asia/Shanghai",
+    "status": "EXPIRED; do not install or deploy that window-specific candidate.",
+    "deviceAction": "None. No candidate was installed or deployed in this turn.",
+    "nextStep": "Preserve the existing 2026-11-04 09:00 schedule and use only the natural run plus safe, verified read-only evidence collection."
   }
 }

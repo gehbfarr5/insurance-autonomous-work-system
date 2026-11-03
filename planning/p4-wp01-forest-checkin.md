@@ -1,5 +1,11 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 最新MUSE与Pixel只读预检｜2026-11-03 21:30—21:32 CST
+
+MUSE 21:30:20在准确的既有Forest线程只读确认当时无活动任务，唯一启用schedule为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程。live run.py/assistant.py SHA与已知值一致。随后仅经现有pixel3a-kjgx别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS，SecureView APK SHA匹配v0.19。
+
+设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；未读业务state、未用root/su、未部署候选或改设备/业务/调度。11月3日08:55—09:55窗口已经过期，该候选不安装。11月4日自然运行、同轮证据和P4验收仍待；P4开放，S1未验收。证据键：museReadonlyStatus20261103_213020、pixelReadonlyPreflight20261103Latest。
+
 ## 最新Forest并发状态回读｜2026-11-03 20:42:10 CST
 
 MUSE精确目标线程只读显示当时无活动Forest任务，唯一启用任务每日09:00 Asia/Shanghai、下次11月4日09:00；running/queued/in-flight `0/0/false`，runner lock FREE、Forest进程未见。live `run.py`/`assistant.py` SHA分别匹配已知值。读取未访问Pixel，故设备操作锁和monitor状态保持UNKNOWN；现有`su` collector不可运行，未有已验证非root路径，本次不连接。此新鲜MUSE读数不代表业务PASS或Pixel锁空闲。证据键：`museReadonlyStatus20261103_204210`。
