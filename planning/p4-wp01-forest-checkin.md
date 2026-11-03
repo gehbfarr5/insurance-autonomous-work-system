@@ -1,8 +1,8 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 当前访问门禁与来源审计｜2026-11-03 17:22 CST
+## 当前访问门禁与来源审计｜2026-11-03 17:25 CST
 
-CUA库存仅确认MUSE应用进程运行，浏览器控制不可用，未读到Forest任务/调度。最近并发证据仍为16:23 MUSE状态读数，当前并发UNKNOWN；本轮未连接Pixel。16:33静态读回确认live runner哈希与部署值一致及70秒Activity准备轮询，但没有定位具体超时触发；完整live runner未导出，不能建立精确补丁基线。17:03本机SSH配置复核未连接设备，也未读到设备锁或运行哈希。17:12对11月4日review-only包审计确认monitor只投影屏幕/Keyguard、目标app/gesture Activity匹配布尔值、触发门禁及worker请求/返回；不能识别其他前台Activity，worker返回不等于认证成功。登录字段与assistant gate观察器离线。修正了collector忽略`.failure`标记的缺陷，新增计数与`PARTIAL_UNKNOWN`降级；合成采集检查通过、包哈希14/14通过。17:22复核E07规则快照哈希匹配索引，明确周筛选与月末行为积分说明不等于森林重置/重复周期规则；完整时点和奖励延迟原据仍待恢复，CPIC官方精确短语查询未命中。只有在新鲜MUSE读数确认无其他任务在途后，才通过现有别名复核Pixel设备操作锁与部署哈希。没有业务动作、设备写入或state/cron/调度变更。诊断和窗口后采集停止条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+截至17:25，CUA inventory显示Muse进程运行，但浏览器清单为空、Work设置禁用浏览器控制；没有Forest任务/调度读回，也没有专用MUSE/Pixel connector。最近并发证据仍是16:23且已过时，当前UNKNOWN；遵守既有WP1边界未打开Muse窗口，本轮未连接Pixel。此前已完成17:12采集器审计/`.failure`修正及17:22 E07规则原件复核，具体限制见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。16:33 runner静态读回仍未定位具体prepare超时触发，精确源码未导出。取得新鲜MUSE无并发读数后才通过既有别名复核Pixel操作锁及哈希；没有业务动作、设备写入或state/cron/调度变更。
 
 ## 最后一次MUSE状态读数｜2026-11-03 16:23 CST（Pixel最近读取15:58 CST）
 
