@@ -14,12 +14,13 @@ Run in MUSE's terminal. Replace the worktree suffix if this task is repeated. St
 set -eu
 
 RETEST_BRANCH="codex/wp11-family-card-table-parser-20261103"
+RETEST_COMMIT="29771eb33b07bd43150dec0a236c2711b290c165"
 REPO_DIR="$HOME/workspace/wp11-ocr-checkout"
 RETEST_DIR="$HOME/workspace/wp11b-retest-20261103-0.7.0"
 RETEST_VENV="$HOME/workspace/.venvs/muse-family-card-wp11b-0.7.0"
 
 git -C "$REPO_DIR" fetch origin "$RETEST_BRANCH"
-git -C "$REPO_DIR" worktree add --detach "$RETEST_DIR" "origin/$RETEST_BRANCH"
+git -C "$REPO_DIR" worktree add --detach "$RETEST_DIR" "$RETEST_COMMIT"
 python3.12 -m venv --system-site-packages "$RETEST_VENV"
 source "$RETEST_VENV/bin/activate"
 
