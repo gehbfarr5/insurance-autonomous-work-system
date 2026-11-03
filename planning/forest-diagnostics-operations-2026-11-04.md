@@ -1,5 +1,10 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 03:04 CST：Android诊断权限边界
+
+Android 15 AOSP框架清单将android.permission.DUMP标为signature/privileged/development，并注明不供第三方应用使用；Android官方文档给出的dumpsys入口是adb shell。现有Pixel SSH UID的实际DUMP授权未核，未运行dumpsys或ADB探针。不能假定应用式SSH会话可以读取系统转储；屏幕、Keyguard和前台Activity继续记UNKNOWN，不切换访问通道或授予权限。这是诊断访问约束，不是森林故障根因。证据：androidDumpPermissionReview20261104_030429。[Android 15 AOSP清单](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934)；[Android dumpsys文档](https://developer.android.com/tools/dumpsys)。
+
+
 ## 2026-11-04 02:50—02:54 CST：刷新自然运行前门禁与规则来源搜索
 
 MUSE 02:50:48在既有Forest线程报告无活动任务、running/queued/in-flight 0/0/false、runner lock FREE、未观察到Forest进程；唯一启用的schedule为每日09:00 Asia/Shanghai、下次触发今日09:00。live run.py / assistant.py SHA-256为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 / 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。最新调度失败仍为11月3日09:11:17，最近成功为10月31日09:15:50。

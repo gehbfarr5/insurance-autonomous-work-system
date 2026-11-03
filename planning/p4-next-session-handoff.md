@@ -1,5 +1,10 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 03:04 CST — Android diagnostic permission boundary
+
+The Android 15 AOSP framework manifest marks android.permission.DUMP as signature/privileged/development and says it is not for third-party apps; Android’s developer docs show dumpsys invoked through adb shell. The existing Pixel SSH UID’s specific DUMP grant was not checked, and no dumpsys or ADB probe was run. Treating the SSH session as able to read system dumps would be an unsupported assumption. Keep screen, Keyguard, and foreground Activity UNKNOWN; do not switch access paths or grant permissions. This constrains diagnosis but does not identify the Forest failure cause. Evidence: androidDumpPermissionReview20261104_030429. [AOSP Android 15 manifest](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934); [Android dumpsys documentation](https://developer.android.com/tools/dumpsys).
+
+
 ## 2026-11-04 02:58—02:59 CST — indexed extension evidence rechecked
 
 The private E08 extension record was located through the repository evidence index. Its current SHA-256 and 20,016-byte size match indexed metadata. Only the non-customer summary sections (authorization/scope, five-item workflow notes, and evidence pointers) were read; later form/submission sections and screenshots were not accessed. The historical notes show incomplete steps or unconfirmed reward triggers for all five extensions. They do not establish current eligibility, a complete workflow, a repeat cycle, or a real external blocker. All five remain unresolved; no business action or customer-data handling occurred. Evidence: e08ExtensionRecordRecheck20261104_0259.

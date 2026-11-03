@@ -4904,5 +4904,24 @@
     "classification": "All five remain unresolved. The historical record does not establish current eligibility, complete workflow, independent reward trigger, repeat period, or a real external blocker.",
     "businessActionsOrCustomerData": "NONE_READ_OR_PERFORMED",
     "scopeLimit": "This verifies the current archived file against its indexed hash and preserves historical notes; it does not establish current app state or rules."
+  },
+  "androidDumpPermissionReview20261104_030429": {
+    "recordedAt": "2026-11-04T03:04:29+08:00",
+    "source": "Official Android 15 AOSP framework manifest and Android Developers dumpsys documentation.",
+    "androidRelease": "Android 15 platform tag android-platform-15.0.0_r1",
+    "androidManifestPath": "core/res/AndroidManifest.xml",
+    "androidManifestPermission": {
+      "permission": "android.permission.DUMP",
+      "protectionLevel": "signature|privileged|development",
+      "comment": "Not for use by third-party applications."
+    },
+    "developerDocs": "Android documents dumpsys through adb shell.",
+    "existingPixelSshUid": 10249,
+    "existingSshUidDumpPermission": "UNKNOWN_NOT_CHECKED",
+    "action": "Do not assume dumpsys is available through the existing app-based SSH context; do not switch to ADB or grant permissions. Keep screen/Keyguard/Activity fields UNKNOWN until an approved, verified read-only route exists or same-run sanitized evidence provides them.",
+    "probeExecuted": false,
+    "rootOrSuUsed": false,
+    "deviceWritten": false,
+    "interpretationLimit": "This is a source-based access constraint and does not prove the specific SSH UID lacks DUMP permission or identify the Forest prepare root cause."
   }
 }
