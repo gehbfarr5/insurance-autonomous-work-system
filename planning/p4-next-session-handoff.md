@@ -1,5 +1,11 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 02:30—02:31 CST — latest pre-run read
+
+MUSE's 02:30:46 read-only status remains idle with runner lock `FREE` and the existing daily 09:00 Asia/Shanghai schedule pending; runner/assistant hashes and latest scheduler records are unchanged. At Pixel device time 02:31:09, the existing non-root alias confirmed UID 10249, Pixel 3a, Android 15, Asia/Shanghai, boot complete, and APK hash matching the v0.19 pin. The limited process filter had no matches and the exact documented lock marker was absent; overall device lock and monitor status/hash remain UNKNOWN.
+
+Preserve the schedule. After the natural run, refresh MUSE, confirm it ended, then apply the sanitized per-segment matrix recorded below. No `su`, raw-log/business-state read, replay, device write, or gate relaxation. Evidence: `museReadonlyStatus20261104_023046`, `pixelReadonlyPreflight20261104_023109`, `pixelProcessFilter20261104_023109`, `pixelDeviceLockMarkerRead20261104_023109`, `acceptanceGateStatus20261104_023109`.
+
 ## 2026-11-04 02:24—02:25 CST — current pre-run read
 
 MUSE's 02:24:46 read-only status: no active Forest task; running/queued/in-flight `0/0/false`; runner lock `FREE`; one daily 09:00 Asia/Shanghai schedule remains pending; live runner/assistant hashes and latest result records are unchanged. At Pixel device time 02:25:22, the existing non-root alias confirmed UID 10249, Pixel 3a, Android 15, Asia/Shanghai, boot complete, and the installed APK matching the v0.19 pin. The narrow process-name filter had no matches and the exact documented lock marker was absent; overall device lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN.

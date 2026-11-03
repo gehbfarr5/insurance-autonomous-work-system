@@ -1,5 +1,11 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 02:30—02:31 CST — latest pre-run checkpoint
+
+MUSE at 02:30:46 is idle with runner lock `FREE` and the existing 09:00 Asia/Shanghai schedule pending. Pixel at device time 02:31:09 confirmed identity, timezone, boot completion, and the installed v0.19 APK pin through the existing non-root alias. The limited process filter returned no matches and the exact lock marker was absent; overall device lock and monitor state remain UNKNOWN. No root/`su`, business state/logs, code/job execution, or device write occurred. Preserve the natural run, then refresh MUSE and review sanitized same-run evidence. P4 remains open.
+
+Evidence: `museReadonlyStatus20261104_023046`, `pixelReadonlyPreflight20261104_023109`, `pixelProcessFilter20261104_023109`, `pixelDeviceLockMarkerRead20261104_023109`, `acceptanceGateStatus20261104_023109`.
+
 ## 2026-11-04 02:24—02:25 CST — current pre-run state
 
 MUSE at 02:24:46 remains idle with runner lock `FREE` and the existing 09:00 Asia/Shanghai schedule pending. Pixel at device time 02:25:22 confirmed the expected device identity, boot completion, Asia/Shanghai timezone, and v0.19 APK pin. The process filter returned no matches and the exact documented lock marker was absent; overall device lock and monitor state remain UNKNOWN. Preserve the natural run; afterward refresh MUSE and review same-run sanitized evidence first. Five daily receipts and five extension investigations remain open; P4 remains open.

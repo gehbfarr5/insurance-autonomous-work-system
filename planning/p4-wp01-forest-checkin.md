@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 02:30—02:31 CST：自然运行前签到门禁
+
+MUSE 02:30:46无Forest在途任务、runner lock `FREE`、原09:00 schedule待触发；live hashes及最近结果未变。Pixel 02:31:09非root预检确认设备时区/启动和v0.19 APK pin，窄进程过滤无匹配、精确操作锁marker缺失，但整体设备锁和monitor状态仍UNKNOWN。保留自然轮；之后先刷新MUSE并以独立回执验收签到及其他日常项，不重试/重放。证据：`museReadonlyStatus20261104_023046`、`pixelReadonlyPreflight20261104_023109`、`pixelProcessFilter20261104_023109`、`pixelDeviceLockMarkerRead20261104_023109`、`acceptanceGateStatus20261104_023109`。
+
 ## 2026-11-04 02:24—02:25 CST：签到自然轮待观察
 
 MUSE 02:24:46确认当前无Forest任务在途、runner lock `FREE`，原每日09:00 schedule仍待触发。Pixel于02:25:22以非root核实设备身份、boot和v0.19 APK pin；限定进程过滤无匹配，精确操作锁marker未发现，但整体设备锁/monitor/UI状态UNKNOWN。保留自然轮，结束后先读MUSE同轮脱敏结果；签到和其余日常任务仍需独立回执，不重试/重放。证据键：`museReadonlyStatus20261104_022446`、`pixelReadonlyPreflight20261104_022522`、`pixelProcessFilter20261104_022522`、`pixelDeviceLockMarkerRead20261104_022522`、`acceptanceGateStatus20261104_022522`。

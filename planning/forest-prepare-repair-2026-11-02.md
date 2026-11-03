@@ -1,5 +1,11 @@
 # 11月2日准备阻断修复与单次补跑记录｜2026-11-02
 
+## 2026-11-04 02:30—02:31 CST：修复门禁仍待自然证据
+
+MUSE 02:30:46确认当前无Forest任务、runner lock `FREE`，09:00 Asia/Shanghai schedule待触发；runner/assistant hashes和最新调度记录未变。Pixel 02:31:09以既有alias、非root确认Android 15、Asia/Shanghai、boot完成和APK v0.19 pin；窄进程过滤无匹配、精确操作锁marker缺失，但设备整体锁、monitor/hash及UI仍UNKNOWN。
+
+不绕过Activity/ready-marker/auth/method-pin门禁，不改密码输入器或添加重试。继续观察自然轮；依据同轮脱敏字段定位到具体层后再修主路径。设备字段未读前不部署候选、不重放。证据：`museReadonlyStatus20261104_023046`、`pixelReadonlyPreflight20261104_023109`、`pixelProcessFilter20261104_023109`、`pixelDeviceLockMarkerRead20261104_023109`、`acceptanceGateStatus20261104_023109`。
+
 ## 2026-11-04 02:24—02:25 CST：修复前的当前状态复核
 
 MUSE 02:24:46无Forest活动、runner lock `FREE`，每日09:00 schedule仍待触发，runner/assistant hashes及最近调度结果未变。Pixel 02:25:22非root预检确认Android 15、Asia/Shanghai、boot完成和v0.19 APK pin；窄进程过滤无匹配、精确操作锁marker缺失，但整体设备锁、monitor/hash、Activity仍UNKNOWN。
