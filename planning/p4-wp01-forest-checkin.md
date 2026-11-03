@@ -1,6 +1,8 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 最新状态｜2026-11-03 18:40 CST
+## 最新状态｜2026-11-03 18:48 CST
+
+18:47:11 MUSE只读确认Forest唯一每日Asia/Shanghai 09:00任务下次为11月4日，running/queued/in-flight `0/0/false`，runner lock FREE、未见Forest进程；`run.py`与已集成`assistant.py`哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。11月3日最新调度失败为09:11:17，业务阶段未重读。18:48:55经既有`pixel3a-kjgx`非root只读确认Pixel 3a/Android 15、boot completed、AutoX进程未见，SecureView APK哈希匹配已知v0.19工件。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity均UNKNOWN；不以旧18:22 FREE读数代表当前锁状态。未用root/su、未写设备或运行任务。prepare超时根因仍UNKNOWN；只读状态不构成业务验收。P4开放，S1未验收。
 
 18:40:26—18:40:48完成有界云端assistant gate遥测集成：唯一Forest runner的`assistant.py` live SHA-256为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。同目录原子替换；原始备份未动、部署侧回滚副本经哈希验证与旧版一致（`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`）。仅增加五个脱敏门禁观察值；原Vue存在/固定方法pin/恰好一项门禁及失败关闭不变。运行器未执行，业务与设备未运行/修改。
 
