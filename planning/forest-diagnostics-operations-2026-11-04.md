@@ -33,7 +33,7 @@ CUA inventory returned “Mac is locked”; MUSE UI was not read. The latest aut
    python3 collect-run-diagnostics.py --segments <sanitized-segments.json> --output <private-result.json>
    ```
 
-   在该私有包目录内运行。输入与输出均留在本机私有目录，不上传MUSE原始结果或Pixel日志。不要使用固定窗口已过期的`auth-trigger-diagnostics-keyguard-v3-bounded`部署包。
+   在该私有包目录内运行。输入与输出均留在本机私有目录，不上传MUSE原始结果或Pixel日志。不要使用固定窗口已过期的`auth-trigger-diagnostics-keyguard-v3-bounded`部署包；也不要执行私有归档`delivery-package-v4/INSTRUCTIONS.txt`中的2026-11-02单次补跑指令，该次已按授权完成。当前只允许自然调度与此处说明的只读采集。
 4. **缺失继续记 UNKNOWN。** 没有 sidecar、日志 marker 不在唯一分段内、MUSE 分段缺失/重叠、来源不可用时，不合成事件、不从空结果推出“未触发”，也不重试生产动作。`NOT_SENT`、`SENT`、`UNKNOWN`、页面完成和奖励确认分别保留。
 
 ## 异常停止与回滚
