@@ -2,7 +2,13 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 18:40 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 18:49 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### 最新只读状态复核｜2026-11-03 18:47—18:48 CST
+
+18:47:11 MUSE在既有Forest对话中报告：唯一启用的任务仍为`Asia/Shanghai`每日09:00、下次2026-11-04 09:00；running/queued/in-flight为`0/0/false`，runner lock `FREE`、无Forest进程。live `run.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，live `assistant.py` SHA为18:40集成候选`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该请求未重读业务结果；assistant/main阶段值沿用先前读数，其他聊天未探测。
+
+18:48:55经唯一既有SSH别名`pixel3a-kjgx`以非root UID 10249只读复核：Pixel 3a、Android 15、Asia/Shanghai、boot completed；`ps -A`未见AutoX/AutoJs进程；已安装`com.p4.secureview` APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`，与已知v0.19工件值匹配。当前设备操作锁未读，故记`UNKNOWN`（18:22历史FREE不作为当前值）；monitor私有状态/hash、屏幕、Keyguard、device locked及前台Activity同样UNKNOWN。未用root/su，未启动/停止进程、写设备或业务状态、运行任务、改变调度/凭据/网络。本次只读预检不证明monitor在运行，也不解释11月3日prepare超时。
 
 ### assistant门禁诊断遥测集成｜2026-11-03 18:40 CST
 

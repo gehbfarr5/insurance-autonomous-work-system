@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 最新运行与设备状态｜2026-11-03 18:47—18:48 CST
+
+MUSE Forest部署范围内回读唯一启用的Asia/Shanghai每日09:00任务、下次11月4日09:00；running/queued/in-flight `0/0/false`，runner lock FREE，无Forest进程。live `run.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，`assistant.py`为18:40集成后SHA `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。其他聊天未探测；业务状态未在该次状态请求重读。18:48:55经既有Pixel别名以非root只读确认Pixel 3a/Android 15/boot完成，AutoX进程未见，SecureView APK hash与v0.19 pin匹配。设备操作锁及monitor私有状态/hash、屏幕/Keyguard/前台Activity本次UNKNOWN；不使用此前18:22的锁读数作当前事实。没有root/su、设备写入、任务运行或业务state访问。11月3日prepare超时根因仍UNKNOWN；下一步等11月4日自然运行后按[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)采集匹配证据。P4开放，S1未验收。
+
 ## assistant门禁遥测已集成｜2026-11-03 18:40 CST
 
 MUSE在18:40:26写前核验后，仅原子更新云端Forest runner `assistant.py`；18:40:48写后哈希为候选SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份与单独部署侧回滚副本均保留原哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只加Vue、`onClickApp`存在布尔值、目标项数量、固定runGroup和采样时间；旧门禁及失败关闭未变。已知消费者静态核查不严格拒绝附加字段（证据对检查树中等，树外未知）。写后schedule、队列、runner lock和进程读数未变；无代码/业务运行或设备访问。11月3日prepare超时根因和11月4日业务结果仍未知；设备侧monitor和prepare观察仍需按既有窗口采集。P4开放，S1未验收。详情见[操作手册](../planning/forest-diagnostics-operations-2026-11-04.md)、[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)和[结构化证据](../planning/remaining-work-evidence-2026-10-29.json)。

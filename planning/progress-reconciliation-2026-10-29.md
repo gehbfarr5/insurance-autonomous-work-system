@@ -1,8 +1,10 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
-## 最新更新｜云端assistant gate遥测｜2026-11-03 18:40 CST
+## 最新更新｜assistant gate遥测与只读状态｜2026-11-03 18:48 CST
 
 已完成有界云端集成：18:40:41原子替换Forest runner的`assistant.py`，18:40:48哈希验证为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；原始备份和新回滚副本均保持原哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只增加五个脱敏门禁诊断字段，不放宽Vue/固定方法pin/唯一菜单项约束。写后唯一每日09:00 schedule、下一触发11月4日09:00、runner idle/unlocked、Forest进程未见；未执行代码/任务或访问设备，未改业务state/cron/凭据/module/APK。树内消费者兼容证据中等，树外未知。11月3日超时根因仍UNKNOWN，11月4日自然结果待观察；仅集成状态PASS，不代表P4或S1完成。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+18:47:11 MUSE状态复核仍显示唯一每日09:00任务下次11月4日、Forest running/queued/in-flight `0/0/false`、runner lock FREE；live `assistant.py`仍为集成版。18:48:55经既有非root Pixel别名确认Android 15、boot完成、AutoX进程未见、SecureView APK hash匹配；设备操作锁和monitor私有状态/hash仍UNKNOWN。业务结果未重读，未执行任务或设备写入。
 
 ## 集成前只读证据与状态｜2026-11-03 18:24 CST
 
