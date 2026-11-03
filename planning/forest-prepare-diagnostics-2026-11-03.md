@@ -4,6 +4,12 @@
 
 MUSE于15:54:29只读确认：唯一既有`Asia/Shanghai`每日09:00任务下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，前次成功10月31日09:15:50，连续失败3次。Pixel于15:58:24经原配置别名及既有`su`路径只读回读：`sargo`/Android 15/boot完成/Dozing，monitor `watching`、guard清、heartbeat新鲜、requests=0，monitor lock在，blocked/stop不存在；哈希为monitor `2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、trigger `0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、worker `f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。设备操作锁和前台Activity本次UNKNOWN；APK pin最后直接读取为15:22匹配。无设备写入、业务运行或state/cron/调度变更。此前15:43状态段以下所列MUSE/Pixel状态已由本节更新；其余历史证据限制不变。
 
+## CUA访问门禁补记｜2026-11-03 16:14 CST
+
+之后的CUA库存读取因Mac已锁而失败，未读到MUSE界面。故MUSE 15:54之后的当前任务、队列和在途状态UNKNOWN；未连接Pixel。私有错误记录`muse-access-gate-20261103-1614.json` SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`。后续先解锁并刷新MUSE状态，不以15:54快照放行设备访问。
+
+仓库外私有只读抄录`status-readback-20261103-1554-1558.json`已建立，SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`；它明确标记为操作员转录而非原始设备/MUSE输出。11月4日私有review包`auth-trigger-diagnostics-20261104-review-only`的SHA256SUMS于16:10 CST复算14/14匹配，随后`shasum -a 256 -c SHA256SUMS.txt`返回14/14 OK；monitor候选哈希与live值相同。私有校验记录SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。此校验只证明本地交付包未漂移，不证明窗口期兼容或同轮运行成功。
+
 ## Outcome
 
 **Monitor-only diagnostics are installed for the 2026-11-04 natural window; same-run evidence is still pending.** The bounded monitor observer is live and a read-only exporter is ready. The prepare observer and assistant gate expression remain offline. No business run was requested or replayed, and no schedule, cron, credential, or business state was changed. P4 remains open; this is not an S1 or project completion claim.
@@ -46,6 +52,10 @@ AutoX 7.0.4 launched the candidate and returned to `watching`; this verifies the
 
 ## Next authorized work
 
-For the 2026-11-04 natural run, preserve the one daily schedule and use only the existing Pixel alias. After the 08:55–09:55 window, pass sanitized MUSE assistant/main intervals to the private exporter; it reads the sidecar and timestamped prepare markers without writing to Pixel. Keep login-field booleans UNKNOWN because the v0.19 APK remains pinned and unchanged. Do not replay or duplicate any business action. The module prepare observer would change the v0.19 artifact hash and cause the current runner to fail closed; no connected MUSE control surface is available to update that pin in the same change.
+For the 2026-11-04 natural run, preserve the one daily schedule and use only the existing Pixel alias. After the 08:55–09:55 window, pass sanitized MUSE assistant/main intervals to the private exporter; it reads the sidecar and timestamped prepare markers without writing to Pixel. Keep login-field booleans UNKNOWN because the v0.19 APK remains pinned and unchanged. Do not replay or duplicate any business action. The module prepare observer would change the v0.19 artifact hash and cause the current runner to fail closed; a coordinated APK-plus-runner-pin change has no complete source bundle and verified rollback path yet.
+
+16:20 CST追加核对：仓库外11月2日MUSE脱敏runner副本/原始manifest哈希均不等于11月3日报告的live runner哈希；不能用它替代当前源码来做配套pin更新。比对记录SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`。Mac解锁后先只读导出并独立核验完整当前runner源码，再评估是否需要可逆诊断集成；现有窗口的monitor-only路径不因该离线结果改变。
+
+16:33 CST MUSE只读静态回读重新核验当前live `run.py` 哈希与`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`一致。其说明的控制流为：`Device.prepare()`查询resumed Activity并按70秒deadline、1秒间隔轮询、使用`_check_deadline()`；Activity变化写入`Device.event(kind, value)`；GestureActivity且尚未尝试时调用一次`auth_start()`；匹配nonce的`BLOCKED`分支返回带`PREPARE_`前缀的原因，`NAVIGATED`分支进入`wait_ready()`；循环超时为`PREPARE_TIMEOUT_NO_FALLBACK`。`Device.cleanup()`由`main()`调用，负责清marker、停应用、按owner释放设备锁；异常走FAIL fallback；信号由`_handle_term`处理。MUSE称静态源码与元数据可解释调度层`FAILED`（worker报告未完成，与两段业务结果不完整一致），但09:06:17至09:11:17约5分钟间隔无runner子步骤/调度元数据可解释，仍UNKNOWN；该静态读数也没有确定本次70秒超时的具体触发条件。MUSE说精确live源码可私有只读导出，但本次未导出，不能以旧脱敏副本为补丁基线。脱敏读回记录在仓库外私有文件`muse-runner-static-read-20261103-1633.json`，SHA-256 `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`。
 
 Still pending: a verified same-run live evidence export, Android/AutoX compatibility, AI answer/reward confirmation, independent temperature/price receipts, five expansion-item completion/period evidence, the complete official timing basis, and natural cross-day reliability. P50/monthly planning remains paused; preserve 2U=2800 as pending.

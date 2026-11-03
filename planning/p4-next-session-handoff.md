@@ -3,8 +3,17 @@
 ## 最新接续状态｜2026-11-03 16:04 CST
 
 - MUSE 15:54:29只读回读：唯一既有调度每日09:00 CST，下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。
+- CUA在16:14再次尝试读MUSE时报告Mac已锁、未获得任何MUSE界面；因此15:54之后队列/运行/在途状态UNKNOWN。本轮未连Pixel。下次必须先手动解锁，再读「阳光森林每日执行部署」并核实当前无并发；不可把15:54状态当自然运行前的设备门禁。受限私有记录SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`。
 - Pixel 15:58:24经原配置`pixel3a-kjgx`别名及原有`su`只读回读：Android 15、boot完成、Dozing；monitor `watching`、guard清、heartbeat新鲜、requests=0，monitor锁存在，blocked/stop不存在。设备操作锁、前台Activity UNKNOWN。monitor/trigger/worker哈希见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)；APK pin仅确认到15:22读数。
+- 15:54—15:58状态抄录已保存在本机仓库外私有文件`status-readback-20261103-1554-1558.json`（SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`）；这是注明来源和限制的转录，不是原始stdout。11月4日review包清单于16:10 CST复算14/14匹配，原生`shasum`命令也通过；对应私有校验记录SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。窗口后只用该包的`collect-run-diagnostics.py`与脱敏唯一分段输入；命令、停止门禁及“不要用过期11月3日部署包”见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 - 11月3日prepare超时和根因UNKNOWN不变；本次没有设备写入、业务执行或调度/state更改。登录字段与助理门禁观察器仍离线。只允许既有自然窗口；窗口后必须再次确认MUSE无在途任务，再用原collector只读导出。扩展五项仍全部“仍待核实”；官方重置/重复周期/到账时延原据未找到，不把有界搜索未命中写成从未确认。
+- 禁止复用两个历史包的动作说明：`auth-trigger-diagnostics-keyguard-v3-bounded`窗口已过期；`delivery-package-v4/INSTRUCTIONS.txt`中的11月2日单次补跑已执行完毕，不能再次执行。当前review-only包仅用于固定窗口后的只读导出。
+- 16:14 CST补查Drive“阳光值 结算”“雨露 统计 周期”“科技个险 行为值”“阳光雨露 计算 截止”均0结果，CPIC两官方域4条查询也未命中；受限私有查询摘要SHA-256 `0785f23a0c73283da62530f8bb8d2bfff09d123d46830a081ce1806aea47275d`。原时点依据缺口保持开放。
+- 16:19 CST另对五个扩展任务名称做Drive metadata检索，均0结果；未增加完整流程/周期证据，五项分类继续“仍待核实”。受限私有摘要SHA-256 `d59661049f8d630d5e49ee6925db12652fa225ce312326de51a0887867d0d8eb`。
+- 16:28 CST再对五项搜索检视、测算/报告、联系/贺卡、激活入口、人员/业务等相关词面；Google Drive仅查文档metadata、未读取正文，仍全0结果。五项结论不变；受限私有摘要SHA-256 `cfae0b81774db4168ef739765d01acbff68a05b3d25d17ee15875284da51cb17`。
+- 16:23:26 CST MUSE只读回读确认唯一每日09:00任务仍启用、下次11月4日09:00、running/queued/in-flight 0/0/false、runner lock FREE、无forest-agent进程；调度失败/成功与连续失败数无变化。本次查询被输入问题截短；业务段状态是沿用此前读数，未重读。MUSE确认没有访问Pixel、业务state或改动；因此Pixel当前状态仍UNKNOWN。私有脱敏记录SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`。
+- 16:33 CST MUSE静态核对live runner hash匹配，`Device.prepare()`为resumed Activity轮询，70秒deadline/1秒间隔；`Device.event()`记录prepare事件，`Device.cleanup()`负责cleanup并有失败分支。worker报告未完成可解释调度层FAILED，但09:06:17—09:11:17五分钟间隔仍UNKNOWN，具体prepare timeout触发分支也未证实。MUSE称精确live源码可在私有路径只读导出，但本次未导出；不以旧脱敏runner作补丁基线。私有读回SHA-256 `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`。
+- 11月2日MUSE脱敏源码导出重新核哈：`run.py`本地脱敏哈希`93151ce3…`、其manifest报原始哈希`061f1878…`，都不等于11月3日live报告哈希`de9bd83c…`；`assistant.py`脱敏副本`fa7723ce…`不等于live原始哈希`a3a7de23…`。因此不能用这份旧脱敏源码作当前runner补丁基线。Mac解锁后先从MUSE只读导出完整当前runner至私有目录并核哈；现阶段不部署prepare observer、不更新APK pin。比对记录SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`。
 - P4开放、S1未验收；P50/月度规划挂起。
 
 ## 前一接续状态｜2026-11-03 15:43 CST
