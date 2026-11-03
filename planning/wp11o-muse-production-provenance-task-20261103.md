@@ -1,6 +1,6 @@
 # WP11-O MUSE production source and deployment provenance audit
 
-**State:** `IN_PROGRESS`. WP11-M/N confirmed that the 0.12.0 parser candidate still returns `REVIEW_REQUIRED`. The local package README says the active MUSE runtime and deployment binding are unknown. WP11-K previously found a package 0.5.0 source checkout and four untracked workspace copies, but did not bind those copies to a running runtime. This task refreshes that evidence with a read-only source/provenance audit; it is not a deployment or production acceptance run.
+**State:** `PARTIAL` — MUSE completed the static read-only audit at `2026-11-03T18:02:55+08:00` on the task commit `8091c3fefcf566dff2f487520d204646990a9173`. The 0.5.0 package source checkout was confirmed, but no evidence bound it or the inspected components to the active MUSE runtime or Seoul deployment. Their versions, hashes, release digest, and OCR route remain `UNKNOWN`. The sanitized result is [`wp11o-muse-production-provenance-result-20261103.json`](wp11o-muse-production-provenance-result-20261103.json), and the detailed record is in [`TEST_REPORT.md`](../integrations/muse-customer-card-ocr/TEST_REPORT.md#wp11-o-read-only-production-provenance-audit-2026-11-03). This task did not execute production or constitute release acceptance.
 
 ## Scope and boundaries
 

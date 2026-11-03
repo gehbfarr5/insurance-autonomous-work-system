@@ -6,6 +6,8 @@
 
 本节只更新执行证据，不改变下方已确认的业务规则。
 
+GitHub 阶段与 release gate 跟踪：[Family Card OCR v1.0 Stable issue #18](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/18)。
+
 - **WP8-B / WP9：** MUSE 历史阶段报告称首尔 OCR 路径、Token 管理、合成查重/联系人创建、回读、幂等及清理通过。本轮未重新执行这些阶段。
 - **WP10：** MUSE 报告首张真实卡 OCR 成功，但自动解析为 `REVIEW_REQUIRED`；用户随后确认手工草稿并创建、回读一条真实联系人。这证明存在人工流程，不证明自动表格解析通过。
 - **WP11：** 0.7.0–0.11.0 isolated replay 均为 `REVIEW_REQUIRED`。0.11.0 exact commit `180f6333046b830010d60338edb580b23c03927c` 的本地与 MUSE offline tests 均为 127/127；同一 89-block WP10 structured result 仍回放为 `REVIEW_REQUIRED`，原因码为 `table_layout_uncertain`、`main_customer_identity_unclear`、`mobile_missing`、`address_conflict`、`address_uncertain`，草稿映射被拒。MUSE 的 WP11-H same-input diagnosis 进一步确认姓名、手机号、显式生日及其他电话没有候选通过既有几何唯一性门禁；性别没有纯标签或可判定勾选信号。地址与身份证的既有诊断见 WP11-G/WP11-F；本次未读 reference，身份证精确匹配仍未知。现有证据不支持放宽字段几何门禁，未改解析器。详细脱敏结果见 [WP11-H 字段诊断](wp11h-field-diagnostic-20261103.md)。输入、payload、worktree 和生产源码状态未变。
