@@ -2542,5 +2542,90 @@
       "result": "No direct current Forest task/reward rule evidence found. Existing 态幸福 product-context material does not establish Forest task mapping or reward conditions."
     },
     "limit": "Search results are bounded to the queries and metadata/domain scope above; they do not show that an original source never existed or was never historically confirmed, and do not establish reset, repeat, settlement timing, or current eligibility."
+  },
+  "extensionWorkflowClassification20261103_2212": {
+    "sources": [
+      "Private E08 five-item investigation notes, sanitized; customer images and real-form contents were not opened.",
+      "CPIC official website pages linked in planning/remaining-work-2026-10-29.md; historical function context only.",
+      "Historical private E07 in-app rules-popup summary; see privateForestEvidenceReview20261103."
+    ],
+    "items": [
+      {
+        "name": "保单芯管家",
+        "observedWorkflow": "A personal service application was submitted successfully; later policy-review/report completion and Forest reward were not verified.",
+        "abilityOrDependency": "The user completed the application. No evidence establishes an external blocker for later service steps.",
+        "historicalRewardUnit": "雨露 +2/人",
+        "triggerCycleAndCurrentEligibility": "UNKNOWN",
+        "classification": "仍待核实; excluded from daily scope by the user's prior decision; do not replay application."
+      },
+      {
+        "name": "态幸福",
+        "observedWorkflow": "Reached customer-management/new-customer entry; stopped before saving a record, calculating, or producing a report.",
+        "abilityOrDependency": "The flow requests personal/customer fields; no evidence proves an external blocker or current eligibility.",
+        "historicalRewardUnit": "雨露 +2/人",
+        "triggerCycleAndCurrentEligibility": "UNKNOWN",
+        "classification": "仍待核实."
+      },
+      {
+        "name": "三节一生",
+        "observedWorkflow": "Reached a birthday-inspection detail with contact/card/completion actions; no customer contact occurred; the finish method commits task state.",
+        "abilityOrDependency": "No real customer task was completed. A maintenance message at one entry does not establish an external blocker.",
+        "historicalRewardUnit": "阳光 +0.5/人",
+        "triggerCycleAndCurrentEligibility": "UNKNOWN",
+        "classification": "仍待核实; do not invoke finish while exploring."
+      },
+      {
+        "name": "E锦囊激活",
+        "observedWorkflow": "A generic QR entry from Smart Interview was observed; the activation page was not reached.",
+        "abilityOrDependency": "Eligibility, activation steps, and any other business requirement are UNKNOWN; QR access alone is not an external blocker.",
+        "historicalRewardUnit": "阳光 +0.5/人",
+        "triggerCycleAndCurrentEligibility": "UNKNOWN",
+        "classification": "仍待核实."
+      },
+      {
+        "name": "签单协同业务",
+        "observedWorkflow": "No specific product, document, or handling workflow was verified.",
+        "abilityOrDependency": "Valid-policy criteria, the user's handling scope, and any collaboration dependency are UNKNOWN.",
+        "historicalRewardUnit": "阳光 +1/单",
+        "triggerCycleAndCurrentEligibility": "UNKNOWN",
+        "classification": "仍待核实."
+      }
+    ],
+    "officialContextOnly": [
+      {
+        "title": "中国太保寿险加速队伍职业化、专业化、数字化转型",
+        "date": "2022-04-07",
+        "url": "https://cpic.com.cn/c/2022-04-07/1633278.shtml",
+        "supports": "Describes 态幸福 as an interactive protection-needs analysis tool within NBS sales support.",
+        "doesNotSupport": "Current in-app flow, eligibility, Forest mapping, reward trigger, or repeat cycle."
+      },
+      {
+        "title": "关于中国太平洋保险（集团）科技个险plus项目二期方案征集公告",
+        "date": "2018-11-02",
+        "url": "https://www.cpic.com.cn/c/2018-11-02/1562542.shtml",
+        "supports": "Historical mention of E锦囊 (保险超市) product-page iteration.",
+        "doesNotSupport": "Current user activation flow, eligibility, purchase requirement, Forest mapping, or reward cycle."
+      },
+      {
+        "title": "2019年资本市场开放日",
+        "date": "2019",
+        "url": "https://www.cpic.com.cn/upload/resources/file/2019/10/31/51054.pdf",
+        "supports": "Lists E锦囊 among intelligent sales-support tools.",
+        "doesNotSupport": "Current user workflow, eligibility, Forest mapping, reward trigger, or repeat cycle."
+      }
+    ],
+    "officialSearchQueriesNoDirectCurrentWorkflowHit": [
+      "site:cpic.com.cn \"保单芯管家\" 检视",
+      "site:cpic.com.cn \"态幸福\" 保障需求分析",
+      "site:cpic.com.cn \"三节一生\" 生日检视",
+      "site:cpic.com.cn \"E锦囊\" 面访",
+      "site:cpic.com.cn \"签单协同\"",
+      "site:cpic.com.cn \"三节一生\"",
+      "site:cpic.com.cn \"保单芯管家\""
+    ],
+    "interpretation": "All five remain 仍待核实. No item has evidence sufficient for stable automation or for classification as a proven real-world external blocker. Historical per-person/per-policy units do not establish trigger step, repeat frequency, settlement delay, or current eligibility.",
+    "actions": "No customer screenshots or private form contents opened; no customer contacted, form submitted, task completed, production action replayed, device/state changed, or automation deployed.",
+    "recordedDate": "2026-11-03",
+    "officialSearchApproximateLocalTime": "2026-11-03 about 22:12 Asia/Shanghai"
   }
 }
