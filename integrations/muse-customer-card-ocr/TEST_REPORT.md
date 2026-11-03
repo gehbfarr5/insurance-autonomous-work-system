@@ -132,7 +132,7 @@ MUSE staging and re-test steps are documented in `README.md`; they install the p
 - Complete offline regression: PASS — 90 tests, 0 failures, 0 errors (the previous 89 plus the WP11-B reproduction).
 - Test data: fictional table and values only. No real OCR payload, image, customer value, or credential was read or added.
 - External services and contacts: no MUSE runtime/deployment was changed, no Baidu call was made, and no iCloud read/write/delete call was made.
-- MUSE acceptance: PENDING. MUSE's earlier production status was reported as package 0.5.0; Codex has not independently inspected the live MUSE runtime. An isolated retest task pins commit `29771eb33b07bd43150dec0a236c2711b290c165`; the redacted JSON result template is in `../../planning/wp11b-muse-result-template-20261103.json`. The retest must report its actual runtime and production readback.
+- MUSE acceptance: FAIL. The isolated retest pinned code commit `29771eb33b07bd43150dec0a236c2711b290c165`, passed 90/90 offline tests and the synthetic candidate regression, but the protected WP10 replay remained `REVIEW_REQUIRED`; the extracted name mismatched the reviewed reference, required mobile, birthday, identity number, and gender were not correctly extracted, and draft mapping was rejected. MUSE reported no Baidu/iCloud operation or production change; production remained 0.5.0. The follow-up evidence is summarized under WP11-C and WP11-D below. The original protected payload remains in MUSE.
 
 Commands:
 
