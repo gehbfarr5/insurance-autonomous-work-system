@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 01:52 CST — precise official search for named extension tasks
+
+A targeted search across CPIC official domains for the five extension names and workflow/reward terms returned no direct Forest workflow instruction. The official 2022 CPIC article describes 态幸福 as an interactive customer-needs analysis system in NBS sales support ([source](https://m.cpic.com.cn/c/2022-04-07/1633278.shtml)); this establishes historical tool purpose only. It does not establish current Forest mapping, personal capability or eligibility, external dependency, reward trigger, or cycle. Keep all five at `仍待核实`. Search scope and limits: `officialExtensionSourceSearch20261104_0150`.
+
 ## 2026-11-04 01:14 CST — bounded rule-source follow-up
 
 Connected Google Drive viewed-document metadata-only searches for “阳光森林”“阳光雨露”“行为值”“E锦囊 态幸福” returned 0 matches each; no file content was fetched. Official CPIC pages found in this follow-up describe only historical E锦囊 product-page iteration and 态幸福 NBS customer-needs analysis. They do not establish current Forest workflow, eligibility, trigger, reset/repeat cycle, or reward posting. Keep E07 as historical evidence for its supported caps/action units only; all five extensions remain `仍待核实`. Structured records: `googleDriveRuleMetadataSearch20261104_0112`, `cpicOfficialExtensionSourceFollowup20261104`.
