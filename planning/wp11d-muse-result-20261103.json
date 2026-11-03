@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11D-MUSE-ISOLATED-RETEST-20261103",
+  "status": "FAIL",
+  "run_time_utc": "2026-11-03T06:22:54Z",
+  "repository": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "1aeb7cb7b04c4e4853d750b181800fbbacf71fab",
+    "package_version": "0.8.1"
+  },
+  "environment": {
+    "os_image": "Linux x86_64",
+    "python_version": "3.12.3",
+    "pillow_version": "10.2.0",
+    "isolated_worktree": true,
+    "isolated_virtualenv": true
+  },
+  "offline_suite": {
+    "status": "PASS",
+    "passed": 95,
+    "failed": 0,
+    "errors": 0,
+    "failure_test_ids": []
+  },
+  "synthetic_regressions": {
+    "near_tied_column_centers_require_review": "PASS",
+    "cross_column_neighbor_rejected": "PASS",
+    "overlapping_columns_require_review": "PASS",
+    "valid_identity_fragments_joined": "PASS",
+    "invalid_or_ambiguous_identity_fragments_require_review": "PASS",
+    "short_spatial_address_requires_review": "PASS",
+    "pure_draft_mapping": "PASS"
+  },
+  "wp10_existing_payload": {
+    "available_in_authorized_protected_workspace": "YES",
+    "replay": "FAIL",
+    "reason": "REVIEW_REQUIRED_WITH_FIELD_MISMATCH",
+    "parser_decision": "REVIEW_REQUIRED",
+    "field_match_reference": {
+      "name": "MISMATCH",
+      "mobile": "MISMATCH",
+      "identity_number": "MISMATCH",
+      "explicit_birthday": "MISMATCH",
+      "gender": "MISMATCH",
+      "address": "MATCH",
+      "other_phone": "NOT_CHECKED"
+    },
+    "review_reason_codes": [
+      "table_layout_uncertain",
+      "main_customer_identity_unclear",
+      "mobile_missing",
+      "address_uncertain",
+      "identity_number_uncertain"
+    ],
+    "customer_values_or_ocr_text_in_report": false
+  },
+  "external_operations": {
+    "baidu_calls": 0,
+    "icloud_reads": 0,
+    "icloud_writes": 0,
+    "production_configuration_changed": false,
+    "production_package_version_before": "0.5.0",
+    "production_package_version_after": "0.5.0"
+  },
+  "production_source_readback": {
+    "status": "PASS",
+    "revision_or_source_sha256": "186200379b12f7bdd95d93dd3dc80afc6429704dfa1c02e65b9fd05757968001",
+    "production_source_changed": false
+  },
+  "notes": [
+    "Compared with 0.8.0, 0.8.1 rejects the prior wrong name candidate; spatial name evidence is zero. This is stricter fail-closed behavior, not a match.",
+    "Address MATCH reflects the confirmed draft's intentional omission only and does not verify card-address extraction.",
+    "The task did not extend phone search or infer gender/checkmark state; mobile and gender remain unresolved in this replay.",
+    "The separate 30-card acceptance gate remains outstanding.",
+    "MUSE reported the production icloud_mapping.py source hash unchanged before and after: c5be5695ea3c390b112f2b094100e014164f1d8edce174c35f2472b7b2e4d1fc.",
+    "MUSE retained the isolated worktree and venv; the worktree was clean, the task template was unmodified, and no commit or push was made by MUSE."
+  ]
+}
