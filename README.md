@@ -1,10 +1,26 @@
 # 保险规划师自主工作系统
 
+> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** WP11-D 0.8.1 通过 95/95 离线测试和 7 项合成回归，但保护区真实回放仍为 `REVIEW_REQUIRED`。生产路径只把文本传给解析器，丢弃 OCR 坐标；0.5.0 解析器也不支持表格几何。四个实际 MUSE 运行脚本未纳入 Git，来源提交未知。30 卡验收门禁仍未满足，生产未改动或部署。详见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试报告](integrations/muse-customer-card-ocr/TEST_REPORT.md)、[WP11-E 生产路径审计](planning/wp11e-production-path-audit-20261103.md)和[WP11 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6597218292)。
+
 > **iCloud MCP 项目归档（2026-11-02）：** 核心首尔 MCP 与现有 Agent 已进入可用阶段；Chat 和 Work Cloud 同一 Sites MCP 演示工具已分别验收，但 **ChatGPT 真实 iCloud 数据链路仍受 Site 源码工作区阻断，子项目暂缓**。完整部署、研究、验收、无效尝试及恢复条件见 [iCloud MCP 全阶段总归档](planning/icloud-mcp-master-handover-2026-11-02.md)，不要将 demo PASS 误称为生产 iCloud PASS。
 
-> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** MUSE 的 0.7.0、0.8.0、0.8.1 受限 WP10 结构回放均为 `REVIEW_REQUIRED`。0.8.1 在独立环境通过 95/95 离线测试和 7 项合成回归；真实回放仍未匹配主客户姓名、手机号、身份证、显式生日和性别。生产路径审计确认两个 OCR 入口只把文本交给 `OcrBlock`，在字段解析前丢弃坐标；生产 0.5.0 解析器也不支持表格几何，因此仅升级包无法修复。四个实际 MUSE 脚本未纳入 Git，来源提交未知；未修改或部署。30 卡门禁仍未满足：样本少于 30、授权未确认且必要参考标注不完整。目标状态为 **VALIDATION_PENDING**。详见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试证据](integrations/muse-customer-card-ocr/TEST_REPORT.md)、[WP11-D MUSE 隔离复验任务](planning/wp11d-muse-retest-20261103.md)、[WP11-D 脱敏结果](planning/wp11d-muse-result-20261103.json)、[WP11-D 几何与样本集脱敏诊断](planning/wp11d-followup-diagnostic-20261103.md)、[WP11-E 生产路径与来源审计](planning/wp11e-production-path-audit-20261103.md)及[最新 P4 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6597218292)。
+> **阳光森林当前接续状态｜2026-11-03 14:40 CST：** MUSE 14:09 CST本地调度快照报告每日Asia/Shanghai 09:00、下一次11月4日，当时无运行/排队任务；11月3日调度轮助理与主流程均prepare超时，无业务stage/receipt，cleanup报告PASS，09:06:17—09:11:17原因UNKNOWN。允许的Pixel SSH别名14:40再次确认`sargo`/Android 15/启动完成；screen/Keyguard/focus/resumed Activity与app私有sidecar仍UNKNOWN，dumpsys过滤无可用输出。MUSE此前使用其他显式Termux SSH路线读取设备，超出规定范围；已要求停止且不得复用，其设备字段不用于preflight（MUSE称未写入/运行，未独立验证）。11月4日有界脱敏诊断包仅完成离线合成验证，未部署；当前没有经许可且无需root的sidecar读取路径。详见[诊断检查点](planning/forest-prepare-diagnostics-2026-11-03.md)。不重跑、不改state/cron/调度；P4仍开放，S1未结项，P50/月度规划挂起。
 
-> **阳光森林与 Pixel 登录助手最新核查｜2026-11-02：** Pixel 登录助手 Android 15 固定组件恢复及守护健康分支复核通过。阳光森林11月2日自然执行在准备阶段阻断；原 v0.18 桥接器的 bundle 指纹/旧模块锚点与当前运行包不匹配，模块已加载但补丁失败，五项业务未执行。已完成 v0.19 本机候选修复、离线构建、签名比对和保护分支验证；远端 staging、部署及本日一次补跑仍待 MUSE 界面恢复后完成。详细根因与证据等级见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。P50/月度规划继续挂起。
+> **阳光森林 11月3日自然运行与五段对照｜2026-11-03：** 09:00调度的助理与主流程均在prepare超时，五项未进入业务、cleanup报告PASS；另有08:57误触助理同样超时。MUSE只读对照还覆盖11月2日11:14手动v0.19两段：只有手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity；五段均无认证入口调用证据。MUSE报告五段共用同一live v0.19 runner/模块哈希，版本差异不足以解释结果；启动/设备/应用上下文差异仍未知。`user`/`empNoAES`/`operateFlag`、`gesturePage`/`accountMatch`历史分项均缺失，不支持归因为密码/手势脚本故障。脱敏ZIP已下载；本机重算外层SHA-256 `56e7280e…`及7个内部文件哈希全部通过。原始结果/prepare文件未包含，源文件完整SHA-256由MUSE提供、无法在本机对原字节重算。五段细节和哈希见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。不连接Pixel、不重跑、不改state/cron/调度；每日任务仍按既有定义，P50/月度规划挂起。
+
+> **此前v0.19登录派发源码核验｜2026-11-02：** MUSE只读取得安装后live v0.19 runner最小脱敏片段（live SHA-256 `de9bd83c…`；本机摘录SHA-256 `8cf4de84…`），确认启动顺序为写命令/使能标记→wake key→force-stop→启动；最多70秒轮询resumed Activity，只有精确`GestureActivity`出现才单次调用本地认证入口，没有解锁Keyguard步骤。因此11月2日已知入口未被调用，该次失败不支持归咎密码/手势输入动作；Keyguard、页面路由及登录字段状态仍未知。详细历史见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。
+
+> **Keyguard根因观测候选｜2026-11-02 21:52：** 离线审查发现既有诊断候选只记录屏幕亮灭，无法区分Keyguard是否显示/系统是否仍要求认证。已准备review-only v2，在同一监控采样点只读采集`isKeyguardLocked()`与`isDeviceLocked()`布尔值，API失败显式记录`READ_FAILED`，不改变现有派发门禁或`monitor-status.json`；脱敏采集器改用schema v2并拒绝旧版/不一致字段。Node语法、七个门禁及单次派发行为对比、采集器schema/敏感样例/上限验证、Python语法均通过。候选未部署，Android/AutoX实机兼容仍待验证；Pixel安装或监控重启需单独授权。两API语义见[Android KeyguardManager官方文档](https://developer.android.com/reference/android/app/KeyguardManager#isKeyguardLocked())和[Context.KEYGUARD_SERVICE](https://developer.android.com/reference/android/content/Context#KEYGUARD_SERVICE)。
+
+> **离线诊断候选更新｜2026-11-02：** 森林登录态被动等待候选最多重采样8秒，只记录三个字段各自的存在性布尔值、采样时间和等待时长；保持原有状态门禁，不触发认证或业务动作。触发监控候选与部署源码完成8场景行为对比；助理入口候选保持固定方法指纹和唯一菜单门禁。三项候选的集成、合成验证及只读采集器端到端检查已完成，私有审阅包含回滚说明并已核验；均未部署。安装后live v0.19 runner的静态解析/Activity门禁已由脱敏源码片段确认；AutoX运行时兼容及诊断候选上线仍待验证，sidecar替换/重启另需授权。
+
+> **助理入口诊断候选｜2026-11-02：** 另一项本地候选把 Vue 是否存在、`onClickApp` 方法是否存在、固定方法指纹是否匹配、目标菜单是否恰好一项分别写入脱敏结果，并记录采样时间；所有原有门禁仍需通过才可调用，不放宽指纹、不提前调用。合成检查及Python语法检查通过，未部署。当前已形成触发监控、森林登录态、助理入口三项离线诊断候选；森林准备字段已有静态透传证据，live runner门禁结构现已确认，但AutoX运行时兼容仍待补核；三项候选维持本机，不安装。
+
+> **版本对齐更正｜2026-11-02：** 本机哈希复核发现最初森林登录态候选误沿用了v0.18 staging的促销模块索引2559；该候选未安装。现已从SHA-256与v0.19 APK内脚本一致的源码（`d7873632…`）重建，使用模块索引2561，并在合成测试中固定此索引后复测通过。live runner相关门禁结构已只读导出；候选依旧未安装，AutoX兼容仍未验收。
+
+> **静态竞态依据｜2026-11-02：** 匹配v0.19适配器锁定的当前runtime bundle中，`__r(584).default`静态初始化含空的`user:{}`对象；这让“登录态检查过早”成为合理可能，但不能证明11月2日当时字段实际状态或认证器为何未派发。
+
+> **解析兼容与只读采集复核｜2026-11-02：** 本机v0.17 runner导出与脱敏v0.19 fixture的透传检查已完成，且21:37取得安装后live v0.19 runner门禁/解析片段，确认其Activity、marker和状态分支结构；AutoX对扩展输出的运行时兼容仍未核实。触发候选的worker原因码使用固定白名单，未知值归为OTHER；原因码覆盖、敏感样例和生产者到采集器端到端合成检查通过。约18:30经现有SSH只读确认Pixel 3a / Android 15、AutoX主/脚本进程运行、monitor为watching、guardBlocked=false、requests=6；采集器返回NO_DIAGNOSTIC_FILE，部署版监控哈希与本机源码一致。未部署候选的elapsedMs已修正为监控进程启动后的单调时长，离线断言和集成检查通过；设备与调度未变。
 
 > **当时的执行模式记录｜2026-10-30：** 本机主导开发、验证与证据判定；组件回执及成功空采集已在本机隔离接入，9项集成/29项回归/3组真实子进程恢复通过；MUSE有限安装证据已核对（16项），状态树43→43不变；本地认证已支持本人手势页自动输入；冷启动、再次重开、与显式入口重叠三项实机验证通过，每次仅输入一次；单实例锁/心跳正常，原凭据未改；刷新读数和组件基线仍待补证，真实业务正例未验收。MUSE保留既有每日执行及必要云端取证。需求目标不变，未迁移运行器/改调度。跨日已到自然次日，先读已有结果，不补跑；P50/月度规划继续挂起。[新方案与接续顺序](planning/execution-mode-2026-10-30.md)为当前入口，以下10月29日状态保留为历史。
 
@@ -25,9 +41,9 @@
 
 阅读顺序：本页 → [整体审阅与内容地图](planning/project-review-2026-10-24.md) → [总体框架](docs/02-project-framework-v0.2.md) → [已确认决定](docs/03-confirmed-decisions.md) → [缺失与待验证内容](docs/04-open-questions.md)。需要落实时再进入 P4 交接和工作包。
 
-## 当前状态｜2026-11-02
+## 当前状态｜2026-11-03
 
-**P1—P3已完成，P4进行中，S1未整体验收。每日五项范围不变。10月31日记录确认签到 SIGNED +0.5、时光轴 VIEWED 6055ms、一键领取 +6.5；智能助理 SENT 但答案与奖励未确认；客温客价无独立收据。11月1日五项未执行；11月2日自然运行及一次准备复跑均在准备阶段阻断，均无业务阶段，NOT_SENT、清理 PASS。现已定位原因为桥接器针对旧版运行 bundle 的锚点失效；v0.19 离线修复候选已通过本机检查，远端部署与11月2日一次补跑待完成。此前的“暂缓重复诊断/不手动重跑”是当时优先级记录，现由用户明确要求修复并补跑所更新。现有每日调度未改；AI奖励、客温客价独立回执、完整恢复及扩展缺口仍待验收。P50/月度规划继续挂起。**
+**P1—P3已完成，P4进行中，S1未整体验收。每日五项范围不变。10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日MUSE只读对照覆盖三段当日运行和两段11月2日手动运行：五段模块门禁均报告为同一v0.19工件，只有11月2日手动助理段到达BridgeWeb；11月3日误触及调度轮都在MainActivity准备超时。脱敏ZIP外层和7个内部成员哈希已在本机验证；原始result/prepare文件未包含，源文件完整哈希由MUSE提供但无法本机对原字节复算。失败根因仍UNKNOWN，不归咎认证输入脚本。五段无业务动作，脱敏记录报告cleanup PASS；历史登录布尔值缺失。每日Asia/Shanghai 09:00定义未改，下一次报告为11月4日09:00；不连接Pixel、不重跑、不改state/cron。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
 
 **[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。本轮恢复了扩展任务调查和历史服务申请回执；完整完成条件及奖励周期仍待核。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 
@@ -40,7 +56,6 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 用途 | 权威入口 |
 | --- | --- |
 | 当前阶段与下一步 | [P0—P4 路线图](planning/roadmap.md) |
-| 家庭卡 OCR → iCloud 联系人 | [模块架构与部署状态](integrations/muse-customer-card-ocr/README.md) · [WP11-D MUSE 隔离复验任务](planning/wp11d-muse-retest-20261103.md) · [P4 进度 Issue #3](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6597085081) |
 | iCloud MCP 多 Agent 接入（2026-11-01） | **[已接入 Agent 与验收台账](planning/icloud-mcp-agent-connection-status-2026-11-01.md)** · [持续跟踪 Issue #6](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6) |
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |

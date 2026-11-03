@@ -1,10 +1,38 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 最新运行与守护状态｜2026-11-02
+## 最新运行与守护状态｜2026-11-03
 
-09:38:47 Asia/Shanghai 经现有 SSH 别名连接 Pixel 3a（Android 15/API 35），执行已部署的 monitor-start helper。helper 的健康分支确认原 PID、锁 inode 与新鲜心跳一致并返回，不启动新实例；只向本地启动日志追加一条确认记录。未进入 App、未输入密码、未触发每日任务或其他业务。helper SHA-256：`6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，远端 `sh -n` 通过。私有副本与原始日志保留在 Git 忽略目录。
+### 11月3日自然失败与五段只读对照
 
-10月30日和10月31日的原始记录都确认：同轮先签到 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。10月31日领取 `+6.5`，但客温客价没有独立收据，AI虽发送问题仍因回答对账超时、无after回执而为REVIEW。11月1日原始记录包确认主流程在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未执行，cleanup PASS；不是签到被跳过。11月2日最终脱敏包身份及内部清单哈希已验证，最终主流程在prepare阻断、没有签到动作，五项未执行。10月31—11月1脱敏记录包外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7文件且 `HASHES.txt` 所列6项全部匹配；私有原包不进公开仓库。每日唯一任务及周期不变，无补跑或排程修改。
+11月3日08:57误触助理、09:00调度助理和主流程均在prepare阶段超时，五项没有进入业务；脱敏记录报告cleanup PASS、assistant `INTENT / NOT_SENT`。对照11月2日11:14的手动v0.19两段后，五段均过同一v0.19模块哈希门禁，但只有手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity。没有`login`类事件记录，故没有认证入口实际调用的留存证据；五段逐项登录态布尔值、采样时间、`gesturePage`与`accountMatch`均缺失。代码版本相同使“仅由版本漂移造成差异”不足以解释结果，但具体上下文根因仍UNKNOWN。脱敏ZIP外层与7个成员哈希已在本机验证；源result/prepare未随包交付，其完整哈希由MUSE提供、不能在本机重算；详见[五段对照与缺项](forest-prepare-repair-2026-11-02.md)。本轮不连Pixel、不重跑、不改state/cron/调度；下一次自然运行仍报告为11月4日09:00。
+
+### live v0.19 登录派发链只读核验｜2026-11-02 21:37
+
+MUSE只读导出并确认安装后live `run.py`原始源码的最小脱敏片段，live哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与11:13安装读回候选相同。摘录文件`sunshine-forest-20261102-v019-runner-prepare-snippets.txt`（本机私有目录，SHA-256 `8cf4de8422a7203eae33308ed31c2aa15591ec22fb5816e87de4148c45cdc910`）不进公开仓库。
+
+live源码确认runner先写命令/使能标记、发wake key，再force-stop并启动应用；最长70秒每秒轮询resumed Activity，仅当精确`GestureActivity`出现才调用`pixel-auth-start`一次。11月2日完整系统记录没有该Activity，监控requests未增加且输入审计无本轮记录，故密码/手势入口未被调用；本次失败不是该入口执行手势错误的证据。唤醒键没有解锁步骤，不能从屏幕交互态推出Keyguard已隐藏。主流程另因森林内部`user`/`empNoAES`/`operateFlag`合并门禁一次采样失败而阻断，但历史没有逐项值。底层原因仍待未来运行观测；不改密码、不重放业务、不改变调度。
+
+### Keyguard只读观测候选v2｜2026-11-02 21:52
+
+现有v1诊断只记录屏幕亮灭，不能还原Keyguard锁屏状态。私有review-only v2在monitor的同一采样点加入`keyguardShowing`（`isKeyguardLocked()`）与`deviceLocked`（`isDeviceLocked()`）布尔值和固定读取状态码，保留所有既有触发/输入门禁，读取失败时不改变业务分支但明确记`READ_FAILED`。官方说明`isKeyguardLocked()`可在屏幕熄灭时为true且不等同于要求认证；`isDeviceLocked()`才表示当前用户应用是否仍需认证。候选及采集器schema v2的离线集成/脱敏检查已通过，候选JS SHA-256 `c34801dcf6d06d3a48395e0ec927c83fd31e9c26a4595218f3357f7e2ca1d1bb`，review包SHA-256 `07008d505a301bcc5f044c69bb43abadfde33444df6ca3e50ea96778e6c838f9`；未安装、未运行于Pixel，AutoX实机兼容未知。安装或重启监控需单独授权及备份/回滚门禁。
+
+21:54通过既有SSH只读确认Pixel 3a / Android 15，当前部署版`monitor.js`哈希仍为`238d86a8ec06c5a92579ea54377956f282cbed824c32b2c56823a2924cb906fd`，`watching`、`guardBlocked=false`、`requests=6`，未发现v2诊断文件；设备保持原基线，本次未写设备或触发业务。该当前状态不回溯11月2日历史锁屏状态。
+
+09:38:47 Asia/Shanghai 经现有 SSH 别名连接 Pixel 3a（Android 15/API 35），执行已部署的 monitor-start helper。helper 的健康分支确认原 PID、锁 inode 与新鲜心跳一致并返回，不启动新实例；只向本地启动日志追加一条确认记录。未进入 App、未输入密码、未触发每日任务或其他业务。helper SHA-256：`6dd8179d89ccc76b6d6e5b2ab87b554df51764b01c186658444183a56c206c3f`，远端 `sh -n` 通过。私有副本与原始日志保留在仓库外本机私有目录。
+
+10月30日和10月31日的原始记录都确认：同轮先签到 `SIGNED +0.5`，后续主流程 `SKIP_ALREADY_SIGNED` 是防重复。10月31日领取 `+6.5`，但客温客价没有独立收据，AI虽发送问题仍因回答对账超时、无after回执而为REVIEW。11月1日原始记录包确认主流程在准备阶段 `PREPARE_TIMEOUT_NO_FALLBACK` 阻断，五项未执行，cleanup PASS；不是签到被跳过。11月2日自然运行最终主流程也在prepare阻断、没有签到动作，五项未执行。之后一次获准补跑安装了v0.19并完成准备链路修复尝试，详情见下段；本段此前“无补跑”状态已被该后续事件更新。10月31—11月1脱敏记录包外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7文件且 `HASHES.txt` 所列6项全部匹配；私有原包不进公开仓库。每日唯一任务及周期不变。
+
+### 2026-11-02 授权安装与一次补跑结果
+
+执行前只读门禁11:13:41通过；Pixel 3a / Android 15，runner.lock与设备操作锁FREE，无相关进程，assistant仍INTENT/NOT_SENT且无stage/receipt/部分动作。先备份原runner与模块；只替换run.py并安装v0.19 APK，安装后runner与候选哈希一致，APK与候选哈希一致、versionName 0.19.0。state主文件、cron及调度定义未变。
+
+原入口仅补跑一次，之后没有第二轮或重放：助理段准备成功，出现`.MainActivity`与`.web.BridgeWebActivity`，但调用入口无法唯一匹配，结果`REVIEW / ONCLICKAPP_OR_MENU_NOT_UNIQUE_NO_CALL / NOT_SENT`，只有`prepare_done`阶段、无回执，cleanup PASS。主流程在登录态检查处`BLOCKED / PREPARE_LOGIN_STATE_MISSING`，未进入业务阶段、无回执，cleanup PASS。签到、时光轴、客温客价、智能助理业务提交、一键领取均未完成/未执行；余额与待领未刷新，最近可信终态仍为10月31日旧记录。
+
+结束时双锁FREE且无相关进程；state主文件和调度定义未变，assistant.json当日`lastError`因本次运行更新，`phase/questionStatus/startedAt`未变且无`sentAt`。脱敏证据包`sunshine-forest-20261102-v019-final-desensitized.zip`已下载并独立重算外层SHA-256 `2e2abb95d64ced6fc4d16887fd7d8cc1ca3d03286c08e8600472c95ab3486579`，5个成员文件哈希全部通过。私有文件保留在仓库外本机私有目录，不上传原始日志或设备数据。
+
+11:26只读诊断显示助理目标菜单项恰好一项，但`onClickAppMatches=false`；结果未保留Vue对象状态或方法源码，不能判断是对象/方法不可用还是方法体不同于固定指纹。主流程登录态错误把三个字段合并，逐项状态及采样时点均UNKNOWN，不能断言已退出登录。后续先补只读的分项布尔诊断，继续fail-closed，不放宽方法指纹；新一次实机运行需另行授权。
+
+后续对登录自动触发路径的只读核查已将故障收敛到触发门禁：Pixel部署版监控、触发器、工作器、输入器哈希均与本机受控源码一致。17:20时同一监控进程持续运行约三天，派发计数为6；该数与进程启动后六条自动工作器结果吻合，末条为10月31日09:06:49。安装版监控在调用工作器前先递增计数，因此强证据表明11月2日补跑期间没有派发手势工作器；输入审计也无窗口记录。历史门禁分项仍未保存。约18:35重新汇总Pixel当前logcat保留窗口（11:15:00—11:17:55），其中目标Activity为Splash/Main/BridgeWeb，未出现`GestureActivity`；补跑开始后的前7秒已不在当前缓冲，故只能说明保留窗口未进入已知手势Activity，不能排除更早或未记录的短暂页面。森林应用随后在只采样一次的登录态门禁处阻断。结论是本次自动触发未派发，不是手势输入内容或坐标执行失败；本机脱敏门禁诊断候选已模拟通过但未部署；下一步与当前runner/适配器对齐后决定是否启用，不重跑业务；详见[认证器排查记录](forest-prepare-repair-2026-11-02.md)。
 
 Pixel 登录助手发现并修复组件退出生命周期：helper 原先在所有退出路径调用 `pm default-state`；Android shell 调用以 `flags=0` 更改组件状态，会结束所在 AutoX 引擎。新实现固定目标组件，root-only 精确调用 Android 15 `IPackageManager` 并用 `DONT_KILL_APP`，仅真实启动时保存/恢复原状态、读回校验；健康/已运行路径不更改组件，原子目录锁有 owner 校验。冷启动、自动与显式入口同时触发、重复启动均实机通过；同次总输入一次，未派发业务。11月2日守护 PID/锁 inode与部署快照一致、心跳新鲜、组件为默认态，跨日存活读数通过。整机重启、完整恢复、业务长期运行仍未通过验收。
 
@@ -121,29 +149,29 @@ avoid：不整体装载旧客户/课程自动化；当前磁盘 HookEntry 默认
 
 目前不安装、不提交、不重复点击任何签到动作。继续前需由本人完成公司 APP 手势验证；之后先验证页面可观察及当日状态判断，再按工作包的有限真实验证门槛推进。卸载仍保留数据与用途不明的应用、清理历史私密文件、验证独立恢复能力，均留待对应项目逐项审阅。
 
-## 执行优先级补记｜2026-11-02
+## 执行优先级补记｜2026-11-02（后续已更新）
 
-用户要求先让现有自动路径继续尝试，将重复的prepare超时诊断和即时验收后置。最后可见MUSE排程快照（11月2日08:59）显示唯一任务启用、Asia/Shanghai每日09:00、下一次11月3日09:00；此为快照值，不代表当前实时查询。11月2日自然轮最终 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，五项未执行、cleanup PASS。本轮保持原任务，不手动重跑、不改排程、不增加常驻任务；下次自然运行结果留待以后核对，不把自动触发预先记为成功。P50/月度规划继续挂起。
+当时用户要求先让现有自动路径继续尝试，将重复的prepare超时诊断和即时验收后置。此优先级随后被用户明确更新为“解决准备阻断并补跑本次任务”。11月2日自然轮最终 `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`，五项未执行、cleanup PASS；该历史结论不代表此后没有补跑尝试。
 
 ## 根因复核与11月2日补跑接续｜2026-11-02
 
-- 11月2日自然执行在准备阶段阻断，主流程没有启动；本轮MUSE复跑记录为 REVIEW / PREPARE_TIMEOUT_NO_FALLBACK，阶段列表为空，问题未发送，清理 PASS。签到、时光轴、客温客价、智能助理业务提交及领取均未执行。
-- 运行日志显示 LSPosed 已加载目标模块并进入 loader hook，随后 bundle patch 失败；没有脚本导航回执。静态核对证明：已安装应用的运行时 bundle 已变更，旧桥接器仍固定在旧 bundle 指纹和旧模块边界，旧锚点在当前包中不存在。根因是运行时版本/打包结构漂移，不是未部署或登录被阻断。
-- 已在本机完成 v0.19 修复候选与离线核验：按当前实测 bundle 指纹锁定 Metro 模块及唯一结构锚点，从该模块现有首页实例导出原弹窗关闭回调；保留未知弹窗阻断，不使用坐标点击，不修改业务范围。
-- APK 用现有项目签名重新签署，包名、版本号和签名证书均核对；离线构建、bundle 语法、补丁 dry-run/apply 和五种弹窗状态分支验证通过。候选包完整性校验通过。
-- 远端 v0.19 staging、安装及11月2日单次补跑尚未完成。MUSE 界面在本次续接时不可访问，故不把本机离线 PASS 写成设备端 PASS。此前 v0.18 复跑没有任何业务阶段或已发送意图，MUSE 快照中的 state / cron 未变，重试前仍会再检查这些条件。
+此处保留当时根因与执行时间线；最新安装与补跑事实见本文件开头“2026-11-02 授权安装与一次补跑结果”。
+
+- v0.18准备失败的直接原因是旧bundle指纹/模块锚点失配。v0.19通过隔离候选和安装后读回验证，旧bundle准备超时已消除。
+- 一次获准补跑中，助理准备到达BridgeWebActivity后因调用入口不唯一而`REVIEW / NOT_SENT`；主流程因登录态缺失而`BLOCKED`。两段均未进入业务、无回执、cleanup PASS；五项均未完成/未执行。
+- 安装前门禁11:13:41通过；备份后仅替换runner并安装v0.19，读回哈希与版本一致。state主文件、cron和每日调度定义未变；assistant.json仅当日lastError更新。补跑结束时双锁FREE、无相关进程。脱敏证据ZIP的SHA-256及分项见[修复记录](forest-prepare-repair-2026-11-02.md)。
 
 ## 证据边界
 
-自动化运行证据只表明模块 loader hook 已就绪、后续 bundle patch 抛出 IllegalStateException；不会把这条日志推断为业务动作。设备端没有 P4ForestAuto 导航回执、没有 WebView/CDP 业务阶段、没有奖励或账本变化证据。v0.19 目前是本机候选，尚未在 Pixel/MUSE 运行环境安装或实机加载。
+自动化运行证据表明：v0.18的bundle patch失败；v0.19助理准备到达BridgeWebActivity后因调用入口不唯一而未调用，主流程在登录态检查处阻断。两段均无业务动作、阶段回执、奖励或账本变化。v0.19已安装并读回哈希/版本一致，但这只验证部署及部分准备链路，不等于每日业务验收。
 
 本地私有目录保存运行 bundle、模块切片、MUSE 导出、源码候选、APK 和详细验证材料；这些原始文件及应用内部数据不进入公开仓库。公开记录只保留脱敏根因、状态和验证级别。
 
 ## 接续动作
 
-1. 在原 MUSE 旁聊提交 v0.19 脱敏交付包；由原环境从当前运行版建立隔离 staging，核对版本、签名、运行器版本替换和无漂移前置状态。
-2. 前置条件满足后，仅替换本次范围内的 runner 与桥接模块，不改 assistant、state、history、cron 或调度。
-3. 通过原入口对11月2日做一次补跑。若准备仍失败，本次即停止；若任何阶段为 SENT/UNKNOWN 或结果不确定，不清状态、不重放。
-4. 单独记录动作尝试、页面完成、奖励确认、重复检查及跨日验证；本轮不改任务时间、不新增常驻任务。P50/月度规划继续挂起。
+1. 三项脱敏诊断候选已完成本机集成、合成验证、只读采集器端到端检查及私有审阅包哈希/回退边界核验；森林候选按v0.19 APK匹配源码和模块索引2561构建，早期2559版未安装。约18:30 Pixel只读复核确认AutoX主/脚本进程在运行，monitor状态为watching、guardBlocked=false、requests=6；采集器返回NO_DIAGNOSTIC_FILE，诊断候选未安装。21:37已静态确认live v0.19 runner解析路径；触发sidecar不依赖runner解析，若替换监控脚本并重启仍需相应授权与备份门禁。森林登录态和助理入口候选的新增输出尚未通过Pixel AutoX实机兼容验证。当前不重跑业务、不改调度/state。详见[11月2日修复记录](forest-prepare-repair-2026-11-02.md)。
+2. 跨日验证等到真实次日，只读核对自然结果与设备/锁清理；没有新证据前不重放未发送或不确定动作。
+3. 后续需要实机验证时，先按既有门禁复核并明确仅一次的执行范围；分开记录动作尝试、页面完成、奖励确认、重复检查及长期运行结果。
+4. 五项扩展、官方时点原依据、AI奖励、客温客价独立回执、完整设备恢复仍待补；P50/月度规划继续挂起，不改任务时间、不新增常驻任务。
 
-状态标签：本地候选修复 PASS；远端部署与本日补跑 BLOCKED（MUSE 界面不可访问）；本日业务结果 NOT_EXECUTED；P4/S1 不代表整体验收完成。
+状态标签：v0.19安装及读回PASS；旧bundle准备超时修复链路有限通过；助理调用入口REVIEW、主流程登录态BLOCKED；五项业务NOT_EXECUTED/NOT_COMPLETED；两段cleanup PASS；跨日与奖励确认未验收；P4/S1不代表整体验收完成。
