@@ -1,5 +1,15 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## P4自然运行前只读续核与规则来源｜2026-11-03 23:13—23:21 CST
+
+MUSE在精确既有Forest线程23:13:43回报：无活动任务；唯一启用schedule为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程。live `run.py` / `assistant.py` SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该请求仅限运行/调度元数据，没有执行任务或读取业务状态、结果及日志。
+
+约23:14经既有`pixel3a-kjgx`以非root UID 10249只读确认Pixel 3a、Android 15、boot完成；SecureView安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；未使用root/su，未启动/停止应用、安装、运行任务、读取业务状态或改网络/调度。
+
+规则来源补查使用Drive document metadata-only查询“阳光森林”“阳光雨露”“森林 任务规则”：首项0结果，后续分别遇到Google Drive 403配额限制和MCP内部错误，随即停止，没有打开正文。定向CPIC官方域搜索未找到阳光森林当前任务或奖励规则；返回的官方森林相关材料与该任务规则无关，不作为规则证据。此类有界无命中不证明原件不存在或历史未确认；官方时点、重置周期、触发、限额及当前资格仍待原据。证据键`boundedRuleSourceSearch20261103LateTurn`。
+
+本轮再次对本机0600私有源码作AST静态审阅，`run.py`本机SHA仍与MUSE live anchor一致；确认`main`内按门禁导入`tasks.run_timeline`，并仅在签到PASS及只读scope/每日限额条件满足后调用，故与既有五项调用链记录一致。没有发现需要据此修改源码的已观察新故障；代码和任务均未执行。
+
 ## 当前live helper模块与五文件限定词检索｜2026-11-03 23:05 CST
 
 MUSE在既有Forest线程只读确认当前 `policy.py`（7,313 bytes，SHA-256 `6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e`）、`tasks.py`（4,886 bytes，`b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b`）和 `forest_cdp.py`（7,447 bytes，`a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148`）的live字节指纹和唯一身份；MUSE确认前两者由当前 `run.py` 导入，后者由 `run.py` 和 `tasks.py` 导入，`policy.py` 仅定义一次 `run_workflow`。`run.py` anchor为 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`。此前取得的五个本机私有源码副本SHA均与对应live值一致。

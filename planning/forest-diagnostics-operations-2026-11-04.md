@@ -1,5 +1,11 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 最新只读状态与来源复查｜2026-11-03 23:13—23:21 CST
+
+MUSE 23:13:43在精确既有Forest线程确认：无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；唯一schedule为Asia/Shanghai每日09:00，下一次11月4日09:00。live `run.py`/`assistant.py` SHA仍为已核值；最近失败11月3日09:11:17、最近成功10月31日09:15:50。约23:14 Pixel经既有SSH别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成及SecureView APK pin匹配；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，没有已验证的非root读取路径。无业务结果/state/log读取、任务执行或设备/调度写入。
+
+Drive document metadata-only“阳光森林”查询0结果，后续请求遇到配额限制和内部错误后停止；CPIC官方域定向查询未发现当前任务/奖励规则。规则原件未恢复，不能据此推断其不存在、历史未确认或结算周期。继续保留11月4日既有自然运行，运行后先取同轮MUSE脱敏结果；不重放业务、不放宽门禁、不安装候选。结构化证据：`museReadonlyStatus20261103_231343`、`pixelReadonlyPreflight20261103Late`、`boundedRuleSourceSearch20261103LateTurn`。
+
 ## 最新只读预检｜2026-11-03 22:51—22:57 CST
 
 Pixel 22:51:04经既有别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成和SecureView APK pin；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。MUSE 22:56:37在原Forest线程确认无活动/排队/在途任务、runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00任务下次11月4日，live hashes及最近结果未变。新一轮四项Drive document metadata-only规则检索均无结果且未读正文。未读业务state/raw logs，未运行任务/源码、写设备、部署或改schedule。保留既有自然任务；结束后先由MUSE读取同轮prepare事件、结果、stages、assistant状态及cleanup；只有存在精确已验证的非root设备路径时才读设备，否则字段继续UNKNOWN。证据键：`museReadonlyStatus20261103_225637`、`pixelReadonlyPreflight20261103_225104`、`googleDriveRuleMetadataSearch20261103_225425`。
