@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 04:51 CST：MUSE Reply引用与旧正文共用composer
+
+精确Forest线程中对03:47:07状态消息点击Reply后，UI仍保留旧的重复`READ`查询正文，仅新增了引用块；故不能发送该composer。已取消引用上下文，未发送或改写草稿。当前scheduler/queue/in-flight、runner lock及live哈希仍UNKNOWN；未连接Pixel。证据：`museReplyComposerNotClean20261104_0451`。
+
 ## 2026-11-04 04:44 CST：五项扩展精确Drive查询无匹配；MUSE仍不可刷新
 
 Google Drive对所有可访问文档按保单芯管家、态幸福、三节一生、E锦囊、签单协同五个名称逐项metadata-only检索，均0结果、未获取正文；不能据此断言来源不存在，五项仍“仍待核实”。约04:43对精确Forest MUSE线程复读后，最新回复仍是03:47:07，末尾重复`READ`的草稿仍在；未发送或改写。当前scheduler/queue/in-flight、runner lock、live哈希为UNKNOWN，未连接Pixel。证据：`googleDriveExtensionExactTitleSearch20261104_0444`、`museComposerRevalidation20261104_0443`。

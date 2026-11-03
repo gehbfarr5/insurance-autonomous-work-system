@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 04:51 CST：Reply路径沿用旧草稿，不能刷新状态
+
+对03:47状态回复点击Reply后，引用块出现在原composer上方，但旧的末尾重复`READ`查询仍留在消息正文中。该路径不满足安全发送新状态查询的条件；用Ignore quote取消引用后，未发送或改写草稿。调度/队列/在途、runner lock与live哈希仍UNKNOWN；无Pixel连接。证据：`museReplyComposerNotClean20261104_0451`。
+
 ## 2026-11-04 04:44 CST：扩展来源查询与MUSE门禁复核
 
 Drive对所有可访问文档分别检索五个扩展的精确名称，metadata-only结果均为0，未获取正文。该查询不证明来源不存在，也不改变五项全部“仍待核实”的分类。约04:43再次读取精确Forest线程，最新回复仍为03:47:07且composer仍有旧的重复`READ`草稿；没有发送、改写或连接Pixel。当前调度/队列/在途、runner lock与live哈希仍UNKNOWN，不能用旧快照放行设备。证据：`googleDriveExtensionExactTitleSearch20261104_0444`、`museComposerRevalidation20261104_0443`。

@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 04:51 CST：显式Reply仍未提供干净输入路径
+
+点击精确Forest线程03:47状态回复下的Reply，只在原composer上方加入引用块，旧的重复`READ`正文仍保留；因此该路径不能安全发送新查询。随后取消引用上下文，没有发送或改写草稿。当前调度、队列/在途、runner lock和live哈希仍UNKNOWN；未连接Pixel。证据：`museReplyComposerNotClean20261104_0451`。
+
 ## 2026-11-04 04:44 CST：五项扩展名称的Drive文档查询仍无匹配
 
 对所有可访问Drive文档分别按五个扩展任务精确名称做metadata-only查询，均无结果；未读取任何正文。此有界未命中不证明原据不存在。流程、本人能力、外部依赖、奖励触发与周期均未因此解决；五项继续“仍待核实”，不据此纳入自动化或排除。证据：`googleDriveExtensionExactTitleSearch20261104_0444`。

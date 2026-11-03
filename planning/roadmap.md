@@ -1,5 +1,9 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 04:51 CST：Reply按钮不能安全绕开旧composer正文
+
+对最新Forest状态回复点Reply后，旧的重复`READ`查询仍留在同一composer正文，只出现新增引用块。已取消引用上下文；无消息发送或草稿改动。当前状态仍UNKNOWN，不连接Pixel。后续需通过可验证的干净正文路径读取同轮状态，否则MUSE/设备证据继续挂起。证据：`museReplyComposerNotClean20261104_0451`。
+
 ## 2026-11-04 04:44 CST：五项扩展Drive精确检索无命中
 
 对所有可访问Drive文档按五项任务精确名称逐项metadata-only检索，均无结果，未获取文档内容。该有界未命中不证明原据不存在，也不改变“加入自动化／现实阻碍排除／仍待核实”的证据门槛；五项目前仍全部待核实。证据：`googleDriveExtensionExactTitleSearch20261104_0444`。

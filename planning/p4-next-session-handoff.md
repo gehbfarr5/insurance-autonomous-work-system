@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:51 CST — Reply action did not isolate the stale draft
+
+In the exact Forest thread, Reply under the 03:47:07 status inserted a quote block into the existing composer but left the malformed old status request ending in duplicate `READ` in the message body. This is not a clean composer path. The quote context was cancelled through Ignore quote; no content was sent or edited. Current scheduler/queue/in-flight, runner lock, and live hashes remain UNKNOWN; no Pixel connection. Do not use Reply to send until the body is demonstrably clean. Evidence: `museReplyComposerNotClean20261104_0451`.
+
 ## 2026-11-04 04:44 CST — exact Drive searches add no extension evidence
 
 Drive document-metadata-only searches for the five exact extension names—保单芯管家, 态幸福, 三节一生, E锦囊, 签单协同—returned no matches across accessible documents; no content was fetched. This does not establish source absence. All five remain “still needs verification.” A fresh UI read in the exact Forest thread around 04:43 still showed only the 03:47:07 reply and the malformed unsent composer. No status request was sent and no Pixel connection occurred; current scheduler/queue/lock/hash remain UNKNOWN. Evidence: `googleDriveExtensionExactTitleSearch20261104_0444`, `museComposerRevalidation20261104_0443`.

@@ -5262,5 +5262,14 @@
     "contentFetched": false,
     "scopeLimit": "No matching document metadata surfaced for the five exact names. This bounded miss does not establish source absence and does not supply workflow, personal capability, external-dependency, reward-trigger, or cycle evidence. All five extensions remain still needs verification.",
     "actions": "Read-only Drive metadata searches and local documentation update. No file content fetched; no MUSE, Pixel/device, business-state/raw-log, code/job, or schedule access or changes."
+  },
+  "museReplyComposerNotClean20261104_0451": {
+    "recordedAt": "2026-11-04T04:51:24+08:00",
+    "source": "CUA read-only UI inspection and reversible Reply-context toggle in muse.ai/thread/14eb81ad-d019-4acc-9b7f-7e6da8312187",
+    "reviewedAt": "Approximately 2026-11-04 04:50–04:51 Asia/Shanghai",
+    "finding": "Clicking Reply under the latest 03:47:07 Forest status inserted a quoted-reply block into the existing composer while leaving the prior malformed status query, including duplicate trailing READ, in the message body. This did not provide a clean input path.",
+    "cleanup": "The Ignore quote control cancelled only the reply context. The old draft body remained unchanged; no message was sent.",
+    "limit": "Current scheduler/queue/in-flight state, runner lock, and live hashes remain UNKNOWN. No Pixel connection was made. Do not use this Reply path until the message body can be visibly confirmed clean.",
+    "actions": "Same-thread UI inspection only; no other chat/resource access, device connection, business-state/raw-log read, code/job run, or schedule change."
   }
 }

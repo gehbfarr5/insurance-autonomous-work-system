@@ -1,5 +1,9 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 04:51 CST：MUSE Reply路径验证
+
+点击03:47:07状态回复下的Reply后，引用块出现在原composer上方，原有末尾重复`READ`的查询仍留在正文；未形成干净新消息。通过“忽略引用”取消Reply上下文，没有发送或改写草稿。当前MUSE scheduler/queue/in-flight、runner lock与live hashes仍UNKNOWN；没有连接Pixel。不得将该Reply路径当作安全刷新方法，除非先以可见正文验证旧文本已完全移除。证据：`museReplyComposerNotClean20261104_0451`。
+
 ## 2026-11-04 04:44 CST：MUSE状态复读与扩展来源边界
 
 约04:43在精确Forest线程重新读取当前UI：最新可见助手回复仍为03:47:07；原composer仍含末尾重复`READ`的旧查询。未尝试再次选择或发送草稿，没有新的scheduler/queue/runner-lock/deployment读数，因此这些当前字段保持UNKNOWN。没有访问其他聊天或MUSE资源，也未连接Pixel。不能以03:47的runner lock放行设备访问。
