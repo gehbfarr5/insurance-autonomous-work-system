@@ -1,12 +1,14 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 最新只读状态｜2026-11-03 15:58 CST
+## 最新状态读数｜2026-11-03 16:23 CST（MUSE）；Pixel最近读取15:58 CST
 
 MUSE 15:54:29回读唯一启用任务为`Asia/Shanghai`每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。随后经既有`pixel3a-kjgx`别名及原`su`路径，于15:58:24只读回读`sargo`/Android 15/boot完成/Dozing；monitor `watching`、guard清、heartbeat与设备时间一致、requests=0，monitor锁存在，blocked/stop不存在。monitor/trigger/worker哈希分别为`2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、`0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、`f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。设备操作锁及前台Activity本次无法确认；v0.19 APK pin最后一次直接读于15:22，当时匹配。无业务重跑、设备写入或调度/state变更。11月3日prepare根因未定，诊断候选只观测monitor，登录字段observer仍离线。
 
-### 16:14 CST CUA访问门禁
+16:23:26 MUSE再次确认唯一每日09:00任务、下次11月4日、running/queued/in-flight为0/0/false、runner lock FREE且无forest-agent进程；最新失败/上次成功/连续失败数无变化。该只读关键词查询被输入问题截短；MUSE确认未访问Pixel或business state、未修改任何内容。assistant/main业务段结果沿用此前读数、未重取。Pixel设备操作锁与前台Activity仍UNKNOWN，不能把15:58设备状态当作当前值。私有脱敏记录SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`。
 
-CUA报告Mac已锁，MUSE界面未读回；15:54之后当前任务与并发状态UNKNOWN。遵照运行手册，本轮没有连接Pixel。下次先解锁Mac，并从「阳光森林每日执行部署」既有对话刷新目标日程、队列、在途和runner锁；复核通过后才能做设备只读preflight。私有访问错误记录SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`。
+### 16:14 CST CUA访问门禁（之后MUSE状态于16:23刷新）
+
+CUA当时报告Mac已锁，MUSE界面未读回；遵照运行手册，本轮没有连接Pixel。16:23:26通过原MUSE对话刷新了调度与并发读数，但未读取设备；下次Pixel访问前仍须即时复核MUSE，并确认设备操作锁和目标任务状态。私有访问错误记录SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`。
 
 ## 最新运行与守护状态｜2026-11-03
 

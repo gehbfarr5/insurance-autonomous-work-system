@@ -2,11 +2,15 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 16:14 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 16:27 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
 
-### 访问门禁补记｜2026-11-03 16:14 CST
+### 访问门禁历史记录｜2026-11-03 16:14 CST
 
-CUA inventory returned “Mac is locked”; MUSE UI was not read. The latest authoritative MUSE queue/task status therefore remains 15:54:29 CST, and current status after that time is UNKNOWN. No Pixel connection followed. Manually unlock the Mac before next preflight; reread the existing MUSE conversation and establish a clear task/queue/runner-lock state immediately before any Pixel access. Private CUA error record: `muse-access-gate-20261103-1614.json`, SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`.
+CUA inventory returned “Mac is locked”; MUSE UI was not read at that time. The following 16:23 MUSE-only readback supersedes this unknown queue status. No Pixel connection followed. Private CUA error record: `muse-access-gate-20261103-1614.json`, SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`.
+
+### 最新MUSE只读回读｜2026-11-03 16:23 CST
+
+MUSE confirmed the single enabled Asia/Shanghai 09:00 schedule, next trigger Nov 4, running/queued/in-flight `0/0/false`, runner lock `FREE`, no `forest-agent` process, latest scheduler failure Nov 3 09:11:17, last success Oct 31 09:15:50, and three consecutive failures. The query was accidentally truncated to keywords; MUSE stated this read was read-only and did not access Pixel, read business state, or change anything. The assistant/main status remains carried forward from earlier and was not reread. Pixel device state, device-operation lock, and foreground Activity remain UNKNOWN. Private sanitized readback `muse-access-readback-20261103-1623.json`, SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`; it is not a raw UI export.
 
 ### 最新只读复核｜2026-11-03 15:54—15:58 CST
 
