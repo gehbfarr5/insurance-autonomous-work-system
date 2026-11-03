@@ -1,8 +1,12 @@
 # 缺失内容与 P4 按需核查
 
-## 最新运行与设备状态｜2026-11-03 18:47—18:48 CST
+## 规则来源追加检索｜2026-11-03 18:55—18:56 CST
 
-MUSE Forest部署范围内回读唯一启用的Asia/Shanghai每日09:00任务、下次11月4日09:00；running/queued/in-flight `0/0/false`，runner lock FREE，无Forest进程。live `run.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，`assistant.py`为18:40集成后SHA `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。其他聊天未探测；业务状态未在该次状态请求重读。18:48:55经既有Pixel别名以非root只读确认Pixel 3a/Android 15/boot完成，AutoX进程未见，SecureView APK hash与v0.19 pin匹配。设备操作锁及monitor私有状态/hash、屏幕/Keyguard/前台Activity本次UNKNOWN；不使用此前18:22的锁读数作当前事实。没有root/su、设备写入、任务运行或业务state访问。11月3日prepare超时根因仍UNKNOWN；下一步等11月4日自然运行后按[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)采集匹配证据。P4开放，S1未验收。
+Google Drive document metadata-only追加查询“森林 奖励说明”“阳光雨露 计量规则”“日上限 行为值”“CPIC 森林活动”均为0结果，未读取正文。仅限CPIC官方域的“阳光森林任务领取规则”“阳光雨露每日上限”“阳光值活动计分规则”检索未发现直接适用的森林规则；返回的保险购买介绍、机构目录等不作依据。此类有界无命中不表示原件不存在或历史上未确认。原始时点、重置/重复周期、限额与奖励触发依据仍待恢复；检索范围见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。
+
+## 最新运行与设备状态｜2026-11-03 18:54 CST（Pixel最近读数18:48）
+
+18:54:37 MUSE Forest部署范围内回读唯一启用的Asia/Shanghai每日09:00任务、下次11月4日09:00；running/queued/in-flight `0/0/false`，runner lock FREE，无Forest进程。live `run.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，`assistant.py`为18:40集成后SHA `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。其他聊天未探测；业务状态未重读。Pixel最近只读读数为18:48:55：Pixel 3a/Android 15/boot完成、AutoX进程未见、SecureView APK hash与v0.19 pin匹配。设备操作锁及monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；不使用此前18:22的锁读数作当前事实。没有root/su、设备写入、任务运行或业务state访问。11月3日prepare超时根因仍UNKNOWN；下一步等11月4日自然运行后按[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)采集匹配证据。P4开放，S1未验收。
 
 ## assistant门禁遥测已集成｜2026-11-03 18:40 CST
 
