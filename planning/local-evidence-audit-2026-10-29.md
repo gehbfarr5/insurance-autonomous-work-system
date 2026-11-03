@@ -1,8 +1,8 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
-## 2026-11-04 00:19—00:21 CST — no fresh MUSE status read obtained
+## 2026-11-04 00:29 CST — fresh MUSE status; device state remains gated
 
-The existing Forest thread was reread; its newest visible MUSE reply is timestamped 2026-11-03 23:38:55. Current MUSE task/queue/in-flight state, schedule, runner lock/process, and live hashes were not freshly confirmed. The reported 09:00 next trigger remains historical until refreshed. No status request was submitted. Local process inventory found no SSH process matching the existing Pixel alias and no active adb command; a local adb server alone does not establish Pixel connectivity or its operation lock. No Pixel/device command or connection occurred. Keep device operation lock, monitor state/hash, screen/Keyguard, and foreground Activity UNKNOWN; get a fresh MUSE no-in-flight read before any Pixel access. Evidence: `currentStatusReadAttempt20261104_0020`.
+At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
 
 
 ## 验收关口状态｜2026-11-03 23:56 CST
