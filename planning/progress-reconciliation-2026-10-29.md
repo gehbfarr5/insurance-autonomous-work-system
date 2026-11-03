@@ -1,6 +1,24 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 最新续接核查｜2026-11-03 16:04 CST
+
+MUSE 15:54:29在指定对话中回读既有每日09:00 CST任务、下次11月4日09:00、无运行/排队/在途任务、runner lock FREE；最近失败11月3日09:11:17、最近成功10月31日09:15:50，连续失败3次。Pixel 15:58:24经原配置别名及`su`路径只读回读monitor正常、guard清、requests=0；设备操作锁、前台Activity UNKNOWN，APK pin最近直接核验仍是15:22。未重跑业务、写设备或改变state/cron/调度。
+
+官方规则历史快照只支持阳光日限额10、雨露20和动作计量单位；当月UI分段/账务说明不提供森林任务reset/repeat/到账时延。新增Drive关键词与官方域定向搜索未命中，不能表述为历史上从未确认。五项扩展均依据可访问证据保持“仍待核实”，无一证实现实外部阻碍或准入自动化。详见[剩余工作核查](remaining-work-2026-10-29.md)。
+
 ## 最新接续核查｜2026-11-03
+
+### 最近Pixel读数与来源复核｜2026-11-03 15:37 CST
+
+15:22经既有Pixel SSH别名及已有`su`路径只读回读：Android 15、Dozing、Forest未在前台；monitor候选仍`watching`、guard清、heartbeat新鲜、requests=0；设备操作锁和stop/blocked标记不存在，monitor自身锁存在。触发器/worker哈希未变，v0.19 SecureView APK哈希仍匹配runner pin。输入审计仍12行、最后写于10月31日；`page_left`状态仍在，无新认证输入。11月4日固定窗口尚未开始，sidecar缺失符合当前时间。
+
+MUSE只读快照14:09 CST当时报告下一自然运行为11月4日09:00，且当时无运行/排队/在途任务；15:37仍未取得当前MUSE调度/task readback，因此当前队列/运行状态UNKNOWN。对Google Drive“保险”资料作定向时点/规则关键词复查及对CPIC官方域名检索，未找到可核验的完整官方时点依据；只更新“有界查找未命中”，不改写为从未确认。原始规则页索引哈希匹配，仍只支持已记录的上限/计量单位。日常五项当前逐项状态与扩展分类见[剩余工作与证据边界](remaining-work-2026-10-29.md)，自然窗口操作与恢复步骤见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
+15:37 CUA应用清单显示MUSE进程运行，但无可用MUSE连接器；为不碰此前WP1图片附件任务，本轮未打开MUSE界面。当前MUSE scheduler/queue/task仍UNKNOWN，且无法证明Pixel无并发，因此未新连Pixel；15:22 readback为最近历史数据，不作当前preflight。下一步的设备访问门禁和自然运行后采集前置条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
+### 五项日常实现来源复核｜2026-11-03 15:43 CST
+
+公开`forest_policy`仅是签到/收取离线策略。私有本地10月26日执行器 `run.py` 哈希与11月3日MUSE脱敏包报告的live `run.py` 哈希不同；live源文件未随包交付，不能本机复算。时光轴有旧本地`run_timeline`路径；温价和助理仍分别缺独立温价收据、AI答案/奖励回执；详细来源级别与最近结果见[本地证据核查](local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)。未把历史代码或合成测试写成当前部署验收。
 
 Pixel 登录助手 EXIT 组件状态恢复会杀掉 AutoX 引擎的根因已通过脚本与 Android 退出记录定位。现使用 Android 15 root-only 固定组件调用，以 `DONT_KILL_APP` 恢复组件并读回；手动冷启动、与显式入口并发及重复启动的实机回归通过。11月2日只读读数与10月30日部署快照同 PID/锁 inode、心跳新鲜、组件默认态，跨日守护存活读数通过。公开源码及方法见[认证助手说明](../tools/pixel-auth/README.md)，原始安装/设备证据仍私存。
 

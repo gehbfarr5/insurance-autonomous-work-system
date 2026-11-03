@@ -1,6 +1,24 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 最新只读状态｜2026-11-03 15:58 CST
+
+MUSE 15:54:29回读唯一启用任务为`Asia/Shanghai`每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。随后经既有`pixel3a-kjgx`别名及原`su`路径，于15:58:24只读回读`sargo`/Android 15/boot完成/Dozing；monitor `watching`、guard清、heartbeat与设备时间一致、requests=0，monitor锁存在，blocked/stop不存在。monitor/trigger/worker哈希分别为`2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、`0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、`f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。设备操作锁及前台Activity本次无法确认；v0.19 APK pin最后一次直接读于15:22，当时匹配。无业务重跑、设备写入或调度/state变更。11月3日prepare根因未定，诊断候选只观测monitor，登录字段observer仍离线。
+
 ## 最新运行与守护状态｜2026-11-03
+
+### 15:22 CST 当前只读状态复核
+
+通过现有`pixel3a-kjgx`别名及其既有`su`路径读取：设备`sargo`、Android 15、boot完成、Dozing；Forest未在前台。monitor `watching`、`guardBlocked=false`、heartbeat新鲜、`requests=0`；monitor锁存在，设备操作锁、`blocked`和`stop`标记不存在。live monitor候选、trigger、worker哈希与11月3日部署记录一致；SecureView v0.19 APK SHA-256仍为runner固定pin `dbada93c…`。输入审计12行且mtime未变，现存认证状态为`page_left`；没有新认证输入。固定窗口sidecar尚未出现。MUSE 14:09快照的队列读数不代表15:22现状；当前MUSE调度/并发状态仍UNKNOWN。
+
+本次只读复核未重启、未改文件、未触发业务。自然运行窗口、证据串联及回滚/停止操作见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
+### 15:37 CST 设备访问门禁复核
+
+CUA只确认MUSE应用进程运行；当前任务、调度和队列没有可用只读连接器，本轮未打开MUSE界面，也未连接Pixel。由于不能确认无并发，15:22读数仍是最近历史readback，不是当前设备状态。只有在MUSE确认无其他设备任务并明确目标自然运行为后，才继续Pixel只读复核；否则跳过设备访问并保持UNKNOWN。
+
+### 15:43 CST 五项实现来源复核
+
+公开离线`forest_policy`只实现签到/收取策略；本机10月26日私有旧执行器不等于MUSE报告的v0.19 live runner，哈希不同。五项每日任务的代码来源、真实回执及未决验收按来源等级分开列于[本地证据核查](local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)。此处静态复核未启动执行器、未触发手机或业务。
 
 ### 11月3日自然失败与五段只读对照
 
