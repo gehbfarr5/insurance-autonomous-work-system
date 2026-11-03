@@ -261,6 +261,28 @@
       ],
       "contentFetched": false,
       "scopeLimit": "Only these viewed-document metadata searches. No hit does not prove the original source absent or negate D-029."
+    },
+    {
+      "id": "X11",
+      "recordKey": "googleDriveRuleSourceSearchAllAccessible20261104_0404",
+      "source": "Connected Google Drive metadata-only document search across all accessible drives",
+      "searchedAt": "2026-11-04 04:03:28–04:04:13 Asia/Shanghai (exact query times not captured)",
+      "queries": [
+        "阳光雨露 日上限 10 20 行为值",
+        "阳光森林 每日积分 10 20 奖励规则"
+      ],
+      "limits": {
+        "itemType": "document",
+        "topN": 10,
+        "bestEffortFetch": false,
+        "requireViewedByUser": false
+      },
+      "resultCounts": [
+        0,
+        0
+      ],
+      "contentFetched": false,
+      "scopeLimit": "No matching document metadata surfaced for these terms across accessible drives. Does not establish that the original source is absent, filed under different terms or file types, or negate D-029."
     }
   ],
   "runtimeObservations": [

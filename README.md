@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 04:03—04:04 CST — Drive search widened to all accessible files
+
+The two targeted metadata-only queries for the 10/20 cap and daily Forest reward rules returned zero results across all accessible Drive files, not only viewed documents. No file contents were fetched. This wider bounded miss still does not establish source absence or negate D-029. Evidence: `googleDriveRuleSourceSearchAllAccessible20261104_0404`.
+
 ## 2026-11-04 04:02 CST — targeted Drive rule-source search
 
 Two viewed-document metadata searches for the historical 10/20 limit and daily Forest reward rules returned zero results; no document contents were fetched. This does not prove the source is absent or negate D-029. Exact scope: `googleDriveRuleSourceSearch20261104_0402` in the evidence index.
