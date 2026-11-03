@@ -2,7 +2,11 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 16:04 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 16:14 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### 访问门禁补记｜2026-11-03 16:14 CST
+
+CUA inventory returned “Mac is locked”; MUSE UI was not read. The latest authoritative MUSE queue/task status therefore remains 15:54:29 CST, and current status after that time is UNKNOWN. No Pixel connection followed. Manually unlock the Mac before next preflight; reread the existing MUSE conversation and establish a clear task/queue/runner-lock state immediately before any Pixel access. Private CUA error record: `muse-access-gate-20261103-1614.json`, SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`.
 
 ### 最新只读复核｜2026-11-03 15:54—15:58 CST
 
