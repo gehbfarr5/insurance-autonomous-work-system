@@ -1,5 +1,9 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 05:58 CST：自然轮仍待；验收快照已更新
+
+自然运行仍在09:00之后；最新P4关口状态见[交接表](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)与`acceptanceGateStatus20261104_0558`。CUA仍不能访问本地MUSE界面，故不得使用03:47读数作为当前并发/设备门禁。Pixel未查询/连接；设备操作与回滚仍BLOCKED，禁止重放或改动调度。
+
 ## 2026-11-04 05:51 CST：自然运行前CUA访问门禁仍关闭
 
 Fresh `cua.getState()` returned no available apps or browsers; it reports that the Mac is locked and automatic unlock failed, and local browser use is disabled in Work settings. No MUSE thread/request, Pixel query/connection, task/code run, or schedule change occurred. The existing 03:47 MUSE reply is stale; scheduler/task, queue/in-flight, runner lock, and live hashes remain UNKNOWN. The scheduled 09:00 Asia/Shanghai run is still ahead, not a result. Keep Pixel access and device writes blocked; after the run, refresh the exact Forest thread only if a clean authorized access path is available. Evidence: `museAccessGate20261104_0551`.

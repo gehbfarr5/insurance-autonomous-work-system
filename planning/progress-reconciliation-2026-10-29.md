@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 05:58 CST：P4关口状态重新聚合
+
+逐项验收状态见[当前交接表](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)与`acceptanceGateStatus20261104_0558`。自然轮尚未到时；MUSE/Pixel当前状态未知。故障定位只到prepare等待层，修复与诊断集成尚未通过；五项日常和五项扩展仍未验收；规则来源仅部分恢复。Issue #3 OPEN，main `8db9c83`已推送；PR #17无关、OPEN/DRAFT，05:57瞬时状态MERGEABLE/CLEAN且无checks。
+
 ## 2026-11-04 05:51 CST：自然运行前访问与GitHub状态复核
 
 Fresh CUA inventory reports the Mac locked (automatic unlock failed) and local browser use disabled; no MUSE or Pixel query was made. The latest MUSE status remains the stale 03:47 snapshot; current scheduler/task, queue/in-flight, runner lock, live hashes, and the 09:00 result are UNKNOWN. The natural run is still ahead. Issue #3 is OPEN. Unrelated WP11 PR #17 is OPEN/DRAFT with mergeability/merge-state UNKNOWN and no checks. Before this documentation update, local `main` was clean at `2f58f22` and matched GitHub `main`. Evidence: `museAccessGate20261104_0551`, `githubStateCheck20261104_0551`.

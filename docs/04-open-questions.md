@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 05:58 CST：验收关口状态汇总
+
+最新P4关口表见[交接快照](../planning/p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)及`acceptanceGateStatus20261104_0558`。MUSE/Pixel和自然轮结果仍UNKNOWN；09:00尚未到时。prepare失败层已定位但底因未定，修复集成、五项日常收据、五项扩展流程分类和规则时点原据均未闭环。P4仍开放，S1未验收。
+
 ## 2026-11-04 05:51 CST：自然运行前访问门禁仍未满足
 
 Fresh CUA inventory reports no available apps or browsers, the Mac locked with automatic unlock failed, and local browser use disabled in Work settings. No MUSE query or Pixel access occurred. The last 03:47 MUSE snapshot is stale; scheduler/task, queue/in-flight, runner lock, live hashes, and the later natural-run result remain UNKNOWN. The existing 09:00 Asia/Shanghai run is still ahead. Restore local access before refreshing the exact Forest thread; do not use the old snapshot as a device gate. Evidence: `museAccessGate20261104_0551`.

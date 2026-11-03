@@ -1,5 +1,22 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## P4验收关口快照｜2026-11-04 05:58 CST
+
+| 关口 | 当前状态 | 证据与限制 |
+| --- | --- | --- |
+| MUSE并发与自然轮 | BLOCKED / UNKNOWN | 05:58 CUA仍无可用apps/browsers，Mac锁定且自动解锁失败、本地浏览器禁用；03:47 MUSE读数过时。09:00运行仍未到时，当前任务/队列/在途、runner lock、live hashes及运行结果未知。 |
+| Pixel访问与设备门禁 | BLOCKED / UNKNOWN | 因未能刷新MUSE，本轮未查询/连接Pixel。Pixel连通性、设备操作锁、monitor/hash、屏幕/Keyguard/Activity仍未知；不部署、不停止、不回滚。 |
+| 故障定位 | PARTIAL | 11月3日三段失败定位到prepare Activity/ready-marker等待超时；未就绪底因及屏幕/Keyguard、认证门禁、gesture/accountMatch、逐字段登录样本仍未知。五段均无业务执行证据；既有清理结果按来源边界记录。 |
+| 修复与诊断集成 | BLOCKED | 根因未定，诊断候选未部署且AutoX兼容未实测。保留Activity/auth/assistant method-pin门禁，不绕过、不重放。 |
+| 五项日常任务 | INCOMPLETE | 10月31日有签到、时光轴、领取的单次可信记录；助理为SENT/REVIEW，答案/奖励未确认；客温客价无独立收据。11月1—3日未完成业务；跨日/长期观察未验收。 |
+| 五项扩展调查 | INCOMPLETE | 五项均“仍待核实”；当前流程、本人能力/资格、外部依赖、奖励触发与周期未形成足够证据分类。 |
+| 原规则与时点恢复 | PARTIAL | E07历史快照支持日上限10/20及按次/人/单计量；重置时点、周期、触发、到账时延及当前版本原据未恢复。D-029历史确认保持不变。 |
+| 运行恢复/停止/回滚说明 | PASS（条件式说明）/ 设备操作BLOCKED | 运行顺序、停止条件及历史备份回滚步骤已记录；当前设备锁与live monitor/hash未知，不能执行设备停止或回滚。 |
+| 跨日与长期运行验收 | SUSPENDED | 等自然运行和后续真实样本；不预先标PASS。 |
+
+05:57 GitHub读数：Issue #3 OPEN；`main`、`origin/main`与GitHub `main`一致于`8db9c83`，工作区干净。无关WP11 PR #17为OPEN/DRAFT，MERGEABLE/CLEAN，无checks；这是会波动的瞬时读数。证据：`acceptanceGateStatus20261104_0558`、`githubStateCheck20261104_0557`。P4仍开放；不宣称S1或项目完成。P50/月度/2U=2800排除。
+
+## 2026-11-04 05:51 CST — pre-run access gate still closed
 ## 2026-11-04 05:51 CST — pre-run access gate still closed
 
 Fresh CUA inventory returned no apps/browsers and reports the Mac locked (automatic unlock failed) and local browser use disabled. No MUSE request or Pixel query/connection was made. The 03:47 MUSE snapshot is stale; current scheduler/task, queue/in-flight, runner lock, live hashes, and the 09:00 run result remain UNKNOWN. The run is still ahead. Restore local browser access, refresh the exact Forest thread, and verify no in-flight work before any Pixel access. Evidence: `museAccessGate20261104_0551`.

@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 05:58 CST — consolidated P4 acceptance snapshot
+
+The current gate-by-gate status is recorded in the [P4 handoff](planning/p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst) and `acceptanceGateStatus20261104_0558`. MUSE/Pixel status remains UNKNOWN, the 09:00 run is still ahead, and the Nov 3 failure is localized only to the prepare wait. The runbook is conditionally usable; device stop/rollback remains blocked. At 05:57, Issue #3 was OPEN, `main` was `8db9c83`, and unrelated WP11 PR #17 was OPEN/DRAFT, MERGEABLE/CLEAN with no checks.
+
 ## 2026-11-04 05:51 CST — pre-run MUSE access gate remains closed
 
 Fresh CUA inventory reports the Mac locked (automatic unlock failed) and local browser use disabled, with no available apps/browsers. No MUSE request or Pixel query/connection occurred. The 03:47 MUSE status is stale; current scheduler/task, queue/in-flight, runner lock, live hashes, and the 09:00 natural-run result remain UNKNOWN. The natural run is still ahead. Issue #3 remains OPEN; unrelated WP11 PR #17 is OPEN/DRAFT with mergeability and merge state UNKNOWN and no checks listed. Local `main` was clean at `2f58f22`, matching remote `main` before this documentation update. Evidence: `museAccessGate20261104_0551`, `githubStateCheck20261104_0551`.

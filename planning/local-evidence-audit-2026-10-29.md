@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 05:58 CST：验收关口与GitHub状态快照
+
+已将P4每一关口按当前证据重新聚合，见[交接表](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)及`acceptanceGateStatus20261104_0558`。05:58 CUA仍报告Mac锁定且本地浏览器禁用；未查询MUSE或Pixel。03:47状态过时，09:00自然轮仍未到时。05:57 GitHub显示Issue #3 OPEN、main `8db9c83`；无关WP11 PR #17 OPEN/DRAFT、MERGEABLE/CLEAN、无checks。
+
 ## 2026-11-04 05:51 CST：新鲜CUA访问门禁与自然运行时序
 
 At approximately 05:51 CST, fresh `cua.getState()` returned no apps/browsers and reported the Mac locked (automatic unlock failed) and local browser use disabled in Work settings. No MUSE thread/request or Pixel query/connection occurred. The 03:47:07 MUSE status is stale; current scheduler/task, queue/in-flight, runner lock, live hashes, and natural-run result remain UNKNOWN. The existing 09:00 Asia/Shanghai run is still ahead. Do not use the historical MUSE runner lock to permit Pixel access. Evidence: `museAccessGate20261104_0551`.

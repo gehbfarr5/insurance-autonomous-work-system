@@ -1,5 +1,9 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 2026-11-04 05:58 CST — acceptance gate remains partial
+
+Current P4 gate reconciliation is in the [handoff table](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst) and `acceptanceGateStatus20261104_0558`. The Nov 3 failure is localized only to the prepare Activity/ready-marker wait; the lower-level cause remains UNKNOWN. No candidate is deployed, the 09:00 run is still pending, and no Pixel access occurred because fresh MUSE concurrency could not be verified.
+
 ## 2026-11-04 05:51 CST — natural run is still pending; MUSE access gate closed
 
 Fresh CUA inventory reports the Mac locked (automatic unlock failed) and local browser use disabled; no apps/browsers are available. No MUSE request or Pixel query/connection occurred. The 03:47 MUSE read is stale; current concurrency, runner lock, live hashes, and natural-run result remain UNKNOWN. The reported 09:00 Asia/Shanghai schedule is still ahead. Keep the fail-closed Activity/auth/method-pin gates and do not deploy a candidate or replay work. Evidence: `museAccessGate20261104_0551`.

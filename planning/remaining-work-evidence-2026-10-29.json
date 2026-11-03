@@ -5479,5 +5479,53 @@
       }
     ],
     "actions": "Read-only state check; no issue, pull request, branch, or merge state was changed."
+  },
+  "museAccessGate20261104_0558": {
+    "recordedAt": "2026-11-04T05:58:00+08:00",
+    "source": "Fresh read-only CUA surface inventory (`cua.getState()`).",
+    "finding": "No apps or browsers are available. The Mac is locked and automatic unlock failed; local browser use is disabled in Work settings.",
+    "actions": "No MUSE request/message, Pixel query/connection, task/code run, business action, device/state/log read, deployment, or schedule change occurred.",
+    "limit": "The 03:47:07 MUSE snapshot is stale. Current scheduler/task, queue/in-flight, runner lock, live hashes, and the 09:00 natural-run result remain UNKNOWN; the natural run is still ahead. Pixel connectivity and device lock/monitor/UI remain UNKNOWN."
+  },
+  "githubStateCheck20261104_0557": {
+    "recordedAt": "2026-11-04T05:57:28+08:00",
+    "source": "Read-only GitHub CLI checks of Issue #3, open pull requests, and GitHub main ref, plus local Git status.",
+    "repository": {
+      "branch": "main",
+      "head": "8db9c838a2a246e2a81af96fe59f4e4ed750ace5",
+      "originMain": "8db9c838a2a246e2a81af96fe59f4e4ed750ace5",
+      "workingTree": "clean at check time"
+    },
+    "issue3": "OPEN",
+    "openPullRequests": [
+      {
+        "number": 17,
+        "title": "Harden Family Card OCR table field mapping",
+        "state": "OPEN",
+        "draft": true,
+        "scope": "Unrelated WP11",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "statusChecks": []
+      }
+    ],
+    "actions": "Read-only state check; no issue, pull request, branch, or merge state was changed."
+  },
+  "acceptanceGateStatus20261104_0558": {
+    "recordedAt": "2026-11-04T05:58:00+08:00",
+    "source": "Current P4 gate reconciliation using the 05:58 CUA read, GitHub readback at 05:57, and existing sanitized business/diagnostic evidence.",
+    "gates": {
+      "museConcurrencyAndNaturalRun": "BLOCKED / UNKNOWN",
+      "pixelAccessAndDeviceState": "BLOCKED / UNKNOWN",
+      "failureLocalization": "PARTIAL: prepare Activity/ready-marker wait only; lower-level cause UNKNOWN",
+      "repairAndDiagnosticIntegration": "BLOCKED: root cause unknown; candidates not deployed; AutoX compatibility unverified",
+      "dailyTasks": "INCOMPLETE: limited Oct 31 outcomes only; assistant answer/reward and customer-temperature/value receipt missing; Nov 1-3 no business completion",
+      "fiveExtensions": "INCOMPLETE: all remain 仍待核实",
+      "historicalRuleEvidence": "PARTIAL: caps/units supported, timing/cycle/trigger/posting/current-version source unresolved",
+      "recoveryStopRollbackGuide": "PASS conditional documentation; current device operation BLOCKED",
+      "crossDayAndLongTerm": "SUSPENDED"
+    },
+    "invariants": "Daily 09:00 Asia/Shanghai schedule unchanged; no business replay; no device connection/write; P50/monthly/2U=2800 excluded; no S1/project completion claim.",
+    "evidence": ["museAccessGate20261104_0558", "githubStateCheck20261104_0557", "nov3SanitizedPackageRecheck20261104_0458", "e07RuleSnapshotRecheck20261104_0511", "acceptanceGateStatus20261104_0352"]
   }
 }
