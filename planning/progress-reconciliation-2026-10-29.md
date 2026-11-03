@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-03 22:33 CST：助理答案/奖励回执状态静态核对
+
+本机0600私有`assistant.py`副本 SHA-256与MUSE 22:26:24 live值一致。代码只在点击返回`clicked=true`后记`SENT`，并另行轮询答案回执；仅`ACCEPT`记`answer_confirmed`，未知/失败进入`REVIEW`并防重。回到森林后读取balance/pending，但显式写`rewardPromised=false`，所以这条读取不是奖励确认。10月31日仍`SENT / REVIEW`，11月3日`NOT_SENT`；本轮未运行源码或设备。详情见[本地证据审计](local-evidence-audit-2026-10-29.md#智能助理答案与奖励回执边界2026-11-03-2233-cst)。
+
 ## 2026-11-03 22:28 CST：五项日常任务实现与回执映射
 
 MUSE在22:26:24读回无活动/排队/在途任务、runner lock FREE，09:00 schedule下次11月4日；runner/assistant live哈希与本地记录一致。本机在Downloads以不同于附件标题的文件名找到0600私有`run.py`，19,082字节，SHA本机复算与live完全匹配；用AST解析和静态源审，未执行。该runner映射签到/领取和时光轴调用链；温价未在该runner实现，其他未审路径和独立收据仍待。助理为单独脚本，10月31日状态仍`SENT / REVIEW`，回答/奖励未证；11月3日两个助理段`NOT_SENT`。详情与限制见[本地证据审计](local-evidence-audit-2026-10-29.md#五项日常任务的live-runner调用链补核2026-11-03-2228-cst)。

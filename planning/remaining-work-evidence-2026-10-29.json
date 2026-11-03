@@ -2618,6 +2618,38 @@
       "interpretation": "This closes the static call-chain map for the hash-verified runner's check-in, timeline, and collect paths. The customer temperature/value path, independent receipts, cross-day and long-run acceptance remain incomplete."
     }
   },
+  "assistantReceiptPathReview20261103_2233": {
+    "recordedAt": "2026-11-03T22:33:07+08:00",
+    "source": {
+      "filename": "sunshine-forest-assistant-live-candidate-20261103.py",
+      "retention": "Existing user-private Downloads copy, mode 0600; not in repository.",
+      "bytes": 12700,
+      "localSha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+      "museLiveHashReadAt": "2026-11-03T22:26:24+08:00",
+      "matchesCurrentLiveReportedHash": true
+    },
+    "staticReview": {
+      "method": "Python ast.parse and static source-flow review; no code execution.",
+      "syntaxParse": "PASS",
+      "dispatchStates": "Starts INTENT/NOT_SENT; writes DISPATCHING/UNKNOWN before dispatch; only clicked=true transitions to SENT.",
+      "answerReceipt": "receipt_bridge.poll must return verdict ACCEPT before answer_confirmed is recorded. Otherwise REVIEW; SENT/UNKNOWN state is retained and the day is not replayed.",
+      "afterForestRead": "After answer acceptance, returns to Forest and reads balance, pendingIds, and pending only.",
+      "rewardProof": "Sets rewardPromised=false and contains no separate reward-confirmed field or reward-arrival assertion. A balance/pending snapshot alone does not prove the answer caused a reward.",
+      "fixedAssistantGates": "Existing Vue-presence, fixed onClickApp fingerprint, and exactly-one target menu gates remain in force.",
+      "privilegedDevicePath": true
+    },
+    "businessEvidence": {
+      "2026-10-31": "SENT / REVIEW; answer reconciliation timed out; no answer/reward after-receipt confirmed.",
+      "2026-11-03": "Assistant segments NOT_SENT; no replay authorized or performed."
+    },
+    "actions": {
+      "sourceExecuted": false,
+      "deviceConnected": false,
+      "businessStateRead": false,
+      "deploymentOrScheduleChanged": false
+    },
+    "interpretation": "Static flow distinguishes dispatch acknowledgement, answer receipt, and reward receipt. None may be inferred from the preceding stage; natural-run evidence remains pending."
+  },
   "extensionWorkflowClassification20261103_2212": {
     "sources": [
       "Private E08 five-item investigation notes, sanitized; customer images and real-form contents were not opened.",

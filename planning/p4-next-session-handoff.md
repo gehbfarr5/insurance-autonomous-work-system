@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 22:33 CST：助理点击、答案与奖励回执边界补核
+
+本机0600私有`assistant.py`副本12,700字节、SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，与MUSE 22:26:24 live值一致。AST/静态审阅、未执行：先写`DISPATCHING/UNKNOWN`防重，只有点击确认才转`SENT`；`receipt_bridge.poll`需要`ACCEPT`才追加`answer_confirmed`，失败则`REVIEW`且不重放。之后只回读Forest余额/待领项，`rewardPromised=false`，没有奖励确认字段。10月31日结果`SENT / REVIEW`、答案/奖励仍未证；11月3日`NOT_SENT`。代码含特权设备导航/清理路径，不运行或复用。证据键`assistantReceiptPathReview20261103_2233`。
+
 ## 2026-11-03 22:28 CST：live runner日常任务调用链已补核
 
 MUSE 22:26:24 状态：Forest无活动任务，running/queued/in-flight 0/0/false、runner lock FREE；唯一schedule为Asia/Shanghai每日09:00、下次11月4日09:00。live `run.py`/`assistant.py` SHA仍分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。找到保存在用户私有Downloads、0600权限的`run.py`副本（文件名不同于MUSE附件名），本机复算19,082字节SHA与live hash相同。Python AST/静态调用链审阅、未执行：runner调用policy处理签到和领取，在条件满足时调用`tasks.run_timeline`；助理为独立`assistant.py`。`run.py`内无客温客价实现/调用，较宽系统路径和独立收据仍未定位。runner含特权设备路线，未运行或复用；设备操作锁未知。详见[实现审计](local-evidence-audit-2026-10-29.md#五项日常任务的live-runner调用链补核2026-11-03-2228-cst)和结构化证据`liveRunnerDailyTaskMapping20261103_2228`。

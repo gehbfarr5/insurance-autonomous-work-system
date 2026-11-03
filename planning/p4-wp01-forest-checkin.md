@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 助理答案/奖励回执边界｜2026-11-03 22:33 CST
+
+匹配MUSE 22:26:24 live hash的私有`assistant.py`已只读静态审阅：`SENT`只表示点击确认；独立答案回执需`ACCEPT`才记`answer_confirmed`，否则保留防重并进入`REVIEW`。后续虽读取Forest余额和待领项，仍明确`rewardPromised=false`，没有奖励确认字段。10月31日`SENT / REVIEW`不等于回答或奖励完成；11月3日`NOT_SENT`。源码未执行，特权设备路线不复用。详见[回执审计](local-evidence-audit-2026-10-29.md#智能助理答案与奖励回执边界2026-11-03-2233-cst)及`assistantReceiptPathReview20261103_2233`。
+
 ## 五项日常任务live runner映射补核｜2026-11-03 22:28 CST
 
 MUSE 22:26:24 状态及live哈希新鲜复核后，用0600私有runner副本（19,082字节，SHA匹配）做AST/静态调用链审阅，未执行。签到/领取经policy策略和fresh-read效果核对；时光轴由`tasks.run_timeline`在限额条件下调用；智能助理走独立`assistant.py`。客温客价不在已核验`run.py`中，完整系统实现和独立收据仍待定位。近期可信结果仍为10月31日，11月1—3日无业务完成。设备操作锁UNKNOWN；runner含特权设备路线，不在当前约束下运行。详见[本地实现审计](local-evidence-audit-2026-10-29.md#五项日常任务的live-runner调用链补核2026-11-03-2228-cst)，证据键`liveRunnerDailyTaskMapping20261103_2228`。

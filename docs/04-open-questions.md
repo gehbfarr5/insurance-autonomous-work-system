@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 智能助理答案与奖励回执边界｜2026-11-03 22:33 CST
+
+与MUSE 22:26:24 live哈希一致的私有`assistant.py`（12,700字节，SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`）经静态审阅显示：只有点击返回`clicked=true`才记`SENT`；随后必须由`receipt_bridge.poll`得到`ACCEPT`才记`answer_confirmed`，否则进入`REVIEW`并保持不可重放。答案确认后仅回读森林余额/待领项，明确`rewardPromised=false`，没有奖励确认字段。故发送、答案确认和奖励确认是三件不同的事；10月31日仍为`SENT / REVIEW`且无答案/奖励回执，11月3日`NOT_SENT`。源码未运行；完整结构化证据`assistantReceiptPathReview20261103_2233`。
+
 ## 五项日常任务live runner映射补核｜2026-11-03 22:28 CST
 
 精确live `run.py`（19,082字节，SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`）的本机0600私有副本与MUSE 22:26:24状态报告哈希一致。AST/静态调用链核对仅确认签到/领取策略和时光轴helper；智能助理另由`assistant.py`处理。客温客价未见于这份runner，且缺独立查询收据；不能由此推断其他未审组件绝对没有实现。11月1—3日没有进入业务；11月4日自然运行、助理回执及成功空结果收据仍待。证据键`liveRunnerDailyTaskMapping20261103_2228`。

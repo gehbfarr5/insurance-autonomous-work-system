@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 智能助理答案与奖励回执边界｜2026-11-03 22:33 CST
+
+私有assistant源码静态调用链表明点击确认、答案确认和奖励确认互不等价：日状态先写`DISPATCHING/UNKNOWN`；只有点击ack才写`SENT`；答案回执`ACCEPT`才写`answer_confirmed`，否则`REVIEW`且防重。返回森林后只读balance/pending，并记录`rewardPromised=false`，没有奖励确认字段。因此10月31日`SENT / REVIEW`不能认定答案/奖励完成；现有结果显示答案回执超时，after回执缺失。11月3日`NOT_SENT`，不能当作完成或再次重放。私有来源哈希、回执路径和限制见`assistantReceiptPathReview20261103_2233`。
+
 ## 五项日常任务live runner映射补核｜2026-11-03 22:28 CST
 
 MUSE 22:26:24只读状态仍为空闲，唯一每日09:00 schedule下次11月4日，runner lock FREE；live `run.py`/`assistant.py` SHA与记录一致。用户私有Downloads中的历史精确runner附件以0600保存；本机重新复算19,082字节SHA与live一致。基于该精确版本作AST/静态审阅，没有执行、连接设备或读取业务状态。

@@ -1,5 +1,15 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 智能助理答案与奖励回执边界｜2026-11-03 22:33 CST
+
+本机用户私有Downloads副本`sunshine-forest-assistant-live-candidate-20261103.py`为12,700字节、0600权限；本机SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，匹配MUSE 22:26:24只读状态报告的live `assistant.py` hash。用Python AST与静态源码审阅，未执行：
+
+1. 日状态先有`INTENT/NOT_SENT`；点击前写`DISPATCHING/UNKNOWN`，点击返回确认后才转`SENT`。发送确认不等于收到回答。
+2. 后续`receipt_bridge.poll`的verdict必须为`ACCEPT`才记录`answer_confirmed`；否则状态为`REVIEW`，保留SENT/UNKNOWN防重状态，不会再次发送。
+3. 回答确认后脚本返回森林，只读取balance、pending IDs与pending列表，随后记`rewardPromised=false`。代码无独立奖励确认字段或奖励到账断言；after余额快照不能单独证明奖励由AI回答触发。
+
+因此10月31日`SENT / REVIEW`不能升级为答案或奖励PASS，已有对账记录显示答案回执超时且after回执缺失；11月3日两个assistant段均`NOT_SENT`。这个脚本的点击/答案流程是静态路径证据，不是业务成功证据。源码包含特权设备导航/cleanup路径；不执行、不复用、不上传。结构化证据`assistantReceiptPathReview20261103_2233`。
+
 ## 五项日常任务的live runner调用链补核｜2026-11-03 22:28 CST
 
 MUSE在22:26:24只读回读Forest无活动任务，running/queued/in-flight为0/0/false、runner lock FREE、唯一Asia/Shanghai 09:00 schedule下次11月4日09:00；live `run.py`和`assistant.py` SHA仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。
