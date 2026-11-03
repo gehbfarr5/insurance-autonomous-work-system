@@ -1482,7 +1482,7 @@
     },
     "actions": "No Python/code/syntax checks, business code, jobs, device access, schedule/cron/state/dedupe/history/credential/network changes, module/APK changes, or WP1 interaction. No business result was reread."
   },
-  "museReadonlyStatus20261103Latest": {
+  "museReadonlyStatus20261103_184711": {
     "readAt": "2026-11-03T18:47:11+08:00",
     "source": "Existing Forest conversation in MUSE; status-only read.",
     "schedule": {
@@ -1524,5 +1524,50 @@
     "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read in this session.",
     "rootOrSuUsed": false,
     "actions": "No app/process start or stop, file or state write, business run, schedule change, or credential/network change."
+  },
+  "museReadonlyStatus20261103Latest": {
+    "readAt": "2026-11-03T18:54:37+08:00",
+    "source": "Existing Forest conversation in MUSE; read-only current deployment metadata refresh.",
+    "schedule": {
+      "enabledCount": 1,
+      "timezone": "Asia/Shanghai",
+      "dailyAt": "09:00:00",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "otherChats": "UNKNOWN; not inspected.",
+    "businessResults": "Not reread.",
+    "actions": "No device connection, business-state read, job/code execution, file/deployment/schedule/cron change, or WP1 interaction."
+  },
+  "rulesDriveMetadataSearch20261103_1856": {
+    "recordedAt": "2026-11-03T18:56:21+08:00",
+    "performedAt": "2026-11-03 18:55-18:56 CST; exact per-query timestamps not captured.",
+    "source": "Connected Google Drive search with item_type=document and best_effort_fetch=false; metadata-only.",
+    "queries": ["森林 奖励说明", "阳光雨露 计量规则", "日上限 行为值", "CPIC 森林活动"],
+    "resultCounts": [0, 0, 0, 0],
+    "contentFetched": false,
+    "interpretation": "No matching document metadata surfaced in this bounded additional search. It does not establish that source material is absent or was never confirmed."
+  },
+  "rulesOfficialSearch20261103_1856": {
+    "recordedAt": "2026-11-03T18:56:21+08:00",
+    "performedAt": "2026-11-03 18:55-18:56 CST; exact per-query timestamps not captured.",
+    "source": "Targeted web search restricted to official CPIC domains.",
+    "queries": ["\"阳光森林\" 任务 领取规则", "\"阳光雨露\" 每日 上限", "\"阳光值\" 活动 计分 规则"],
+    "result": "No directly relevant official Forest task, cap, reset, repeat, reward-trigger, or settlement-time rule surfaced. Results were generic insurance or branch-directory pages and were excluded as irrelevant.",
+    "examplesNotUsed": [
+      "https://m.cpic.com.cn/c/2021-01-07/1616390.shtml",
+      "https://life.cpic.com.cn/xccbx/gygs/fzjg/index.shtml"
+    ],
+    "interpretation": "Bounded search no-hit only; it does not show the original source does not exist or was never confirmed."
   }
 }

@@ -1,10 +1,12 @@
 # 其余项目推进与证据边界｜2026-10-29
 
-## 最新更新：assistant gate集成及运行/设备状态｜2026-11-03 18:48 CST
+## 最新更新：运行状态与规则原据续查｜2026-11-03 18:56 CST
 
 云端Forest runner的`assistant.py`已按已审查候选完成有界集成；live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，原备份及部署侧回滚副本为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只有五个脱敏诊断字段新增，固定调用门禁未变。写后schedule/runner状态不变；没有运行代码/业务或访问设备。树内消费者审计为中等证据，外部解析器未知。assistant gate诊断集成已验证，但11月4日自然运行字段、登录态observer、prepare根因和全部业务回执仍未完成；P4继续开放，S1未验收。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
 
 18:47:11 MUSE只读回读Forest唯一每日09:00任务、下次11月4日，running/queued/in-flight `0/0/false`、runner lock FREE；`run.py`与`assistant.py` live SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和集成版`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。18:48:55非root Pixel只读确认Android 15、boot完成、AutoX进程未见、SecureView APK与v0.19 pin一致；设备操作锁、monitor私有状态/hash和显示状态均UNKNOWN。未读取业务state、未跑业务或写设备。此处只刷新状态与工件身份，不解释11月3日prepare超时。
+
+18:54:37 MUSE复核未见运行、排队或在途Forest任务，runner lock FREE；daily 09:00下次11月4日，run.py/assistant.py哈希和11月3日失败/10月31日成功记录未变，业务结果未读。Pixel最近只读仍是18:48:55，设备操作锁和monitor内部状态UNKNOWN。18:55—18:56追加四项Drive document-metadata查询及三项CPIC官方域规则查询均无直接命中；未读Drive正文。返回页为一般保险说明/机构目录，不作规则依据。该范围仍不能证明原件不存在或从未确认，完整结论见证据索引新条目。
 
 ## 回执候选静态复核｜2026-11-03 17:35 CST
 

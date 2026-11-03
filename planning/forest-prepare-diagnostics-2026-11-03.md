@@ -1,10 +1,12 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
-## 最新集成与只读状态｜2026-11-03 18:48 CST
+## 最新集成与只读状态｜2026-11-03 18:56 CST
 
 18:40:26写前核验、18:40:41原子替换、18:40:48写后复核：已将唯一云端Forest runner的`assistant.py`更新为已审查的门禁诊断候选，live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份SHA保持`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`；独立回滚副本字节匹配。只增加Vue存在、`onClickApp`存在、目标项数量、固定runGroup及门禁采样时间，原固定方法pin、唯一目标项、调用顺序和失败关闭行为未变。此次不执行代码/测试，不访问Pixel，不读写模块/APK/业务state；schedule、runner idle/lock、进程状态写后未变。树内消费者静态检查为中等兼容证据，外部消费者未知。11月3日prepare超时仍UNKNOWN，不能由这项诊断补改追溯；待11月4日自然运行结束后，再读取脱敏MUSE结果并按窗口规则采集关联证据。P4开放，S1未验收。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
 
 18:47:11 MUSE又确认唯一每日09:00任务下次11月4日、Forest运行/排队/在途为`0/0/false`、runner lock FREE、无Forest进程；`run.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，`assistant.py` SHA与集成版一致。业务结果未重读。18:48:55经既有Pixel别名非root只读确认Android 15、boot完成、AutoX进程未见、SecureView APK SHA匹配；设备操作锁与monitor私有状态/hash均UNKNOWN。屏幕/Keyguard/前台Activity也未能读到；未用root/su或写设备。此状态不改变prepare根因UNKNOWN或自然运行待观察结论。
+
+18:54:37 MUSE状态刷新确认上述调度/空闲状态、live哈希与最近失败/成功时间仍不变；没有业务结果、Pixel或其他聊天读取。18:55—18:56 Drive与CPIC官方域规则追加查找无直接命中；只记当前范围无命中，不据此推断来源不存在。11月3日prepare根因仍UNKNOWN，11月4日自然运行待观测。
 
 ## 集成前状态与assistant gate静态核对｜2026-11-03 18:24 CST
 
