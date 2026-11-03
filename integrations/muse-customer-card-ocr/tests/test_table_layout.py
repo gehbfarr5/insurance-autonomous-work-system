@@ -137,6 +137,87 @@ class TableLayoutExtractionTests(unittest.TestCase):
         self.assertEqual(extraction.fields.mobile, "19900000002")
         self.assertIsNone(extraction.fields.birthday)
 
+    def test_adjacent_block_from_another_column_is_not_used_as_name(self):
+        blocks = [
+            _block("姓名", 20, 20, 40),
+            # This is the immediate right neighbor, but its center is in the
+            # gender column, so the parser must not call it the customer's name.
+            _block("虚构错名", 70, 20, 80),
+            _block("性别", 130, 20, 40),
+            _block("女", 180, 20, 20),
+            _block("身份证号", 270, 20, 80),
+            _block("出生日期", 500, 20, 80),
+            _block("虚构客户甲", 20, 50, 100),
+            _block(_synthetic_identity_number(), 270, 50, 190),
+            _block("1990年2月2日", 500, 50, 110),
+            _block("家属亲友", 20, 100, 100),
+        ]
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.fields.name, "虚构客户甲")
+        self.assertEqual(extraction.fields.gender, "女")
+        self.assertEqual(extraction.fields.identity_number, _synthetic_identity_number())
+        self.assertEqual(extraction.fields.birthday, date(1990, 2, 2))
+
+    def test_reassembles_adjacent_identity_number_fragments_with_valid_checksum(self):
+        identity = _synthetic_identity_number()
+        blocks = [
+            _block("姓名", 20, 20, 40),
+            _block("虚构客户子", 75, 20, 100),
+            _block("身份证号", 350, 20, 80),
+            _block(identity[:8], 350, 50, 85),
+            _block(identity[8:15], 443, 50, 75),
+            _block(identity[15:], 526, 50, 30),
+            _block("家属亲友", 20, 110, 100),
+        ]
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.fields.identity_number, identity)
+        self.assertNotIn(
+            ReviewReason.IDENTITY_NUMBER_UNCERTAIN,
+            extraction.review_reasons,
+        )
+
+    def test_invalid_identity_fragments_require_review(self):
+        valid = _synthetic_identity_number()
+        invalid = valid[:-1] + ("0" if valid[-1] != "0" else "1")
+        blocks = [
+            _block("姓名", 20, 20, 40),
+            _block("虚构客户丑", 75, 20, 100),
+            _block("身份证号", 350, 20, 80),
+            _block(invalid[:8], 350, 50, 85),
+            _block(invalid[8:15], 443, 50, 75),
+            _block(invalid[15:], 526, 50, 30),
+            _block("家属亲友", 20, 110, 100),
+        ]
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.identity_number)
+        self.assertTrue(
+            {
+                ReviewReason.IDENTITY_NUMBER_UNCERTAIN,
+                ReviewReason.IDENTITY_NUMBER_CONFLICT,
+            }
+            & set(extraction.review_reasons)
+        )
+
+    def test_short_spatial_address_fragment_requires_review(self):
+        blocks = _complete_table()
+        address_index = next(
+            index for index, block in enumerate(blocks) if block.text == "虚构地址 A"
+        )
+        blocks[address_index] = _block("贵阳", 230, 120, 40)
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.address)
+        self.assertIn(ReviewReason.ADDRESS_UNCERTAIN, extraction.review_reasons)
+
     def test_blank_name_cell_is_not_filled_from_adjacent_phone_column(self):
         blocks = [
             _block("姓名", 20, 20, 40),

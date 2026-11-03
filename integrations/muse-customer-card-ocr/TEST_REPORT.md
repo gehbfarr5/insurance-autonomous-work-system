@@ -142,3 +142,16 @@ cd integrations/muse-customer-card-ocr
 python -m unittest discover -s tests -p 'test_wp11b*.py' -v
 python -m unittest discover -s tests -v
 ```
+
+## WP11-C conservative column matching
+
+- Date: 2026-11-03
+- Package version: 0.8.0
+- Development branch: `codex/wp11-family-card-table-parser-20261103`
+- MUSE 0.7.0 replay: FAIL — isolated environment used Python 3.12.3 / Pillow 10.2.0 and passed 90/90 offline tests, but the protected WP10 structured-result replay remained `REVIEW_REQUIRED`. Aggregate diagnosis found cross-column name/birthday pairing, a phone outside the immediate next-row window with non-unique column geometry, an identity number split across OCR blocks, partial address evidence, and no structured gender/checkbox signal. The raw payload and field values remain in MUSE and are not copied here.
+- Production and external-operation readback reported by MUSE: package remained 0.5.0 before/after; Baidu calls 0, iCloud reads/writes 0, production configuration unchanged.
+- Reuse/adapt/avoid decision: reuse the existing `OcrBlock`/`BoundingBox` schema, row clustering, checksum validator, and manual-review gate; adapt column assignment so same-row values must be nearest to one field label and tied/overlapping labels require review; reassemble adjacent identity-number blocks only when the complete value passes the existing checksum. Avoid a new image-model pipeline for this branch change. Public candidates reviewed: [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) (Apache-2.0; release v3.7.0, June 2026), [RapidTable](https://github.com/RapidAI/RapidTable) (Apache-2.0; v3.0.2, April 2026), and [Microsoft Table Transformer](https://github.com/microsoft/table-transformer) (MIT; v1.0.0 release, 2023). They process document images and do not directly replace parsing of the existing protected Baidu word boxes; adding one would create a second OCR/model route and heavier runtime/deployment work. No new dependency was added.
+- Local verification: Python 3.14.7, Pillow 12.2.0; targeted table-layout tests PASS — 17/17; full offline suite PASS — 94 tests, 0 failures, 0 errors.
+- Added synthetic coverage: a right-adjacent block in another field column is not accepted as the name; adjacent numeric fragments are joined only into a checksum-valid identity number; invalid fragments remain under review; a short address fragment is withheld and requires manual review. Existing overlapping-column and fail-closed tests remain passing.
+- Test data: synthetic fields, ID-shaped checksum values, and synthetic coordinates only. No real OCR payload, image, customer values, or credentials were read locally.
+- MUSE acceptance: pending for 0.8.0 in a separate worktree/venv. The task and redacted result template are in `../../planning/wp11c-muse-retest-20261103.md` and `../../planning/wp11c-muse-result-template-20261103.json`. No production deployment is part of this re-test.

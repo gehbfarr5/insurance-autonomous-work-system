@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
 
-from .models import OcrBlock, OcrResult
+from .models import BoundingBox, OcrBlock, OcrResult
 
 
 class ReviewReason(str, Enum):
@@ -18,6 +18,7 @@ class ReviewReason(str, Enum):
     BIRTHDAY_UNCERTAIN = "birthday_uncertain"
     BIRTHDAY_CONFLICT = "birthday_conflict"
     ADDRESS_CONFLICT = "address_conflict"
+    ADDRESS_UNCERTAIN = "address_uncertain"
     GENDER_UNCERTAIN = "gender_uncertain"
     IDENTITY_NUMBER_UNCERTAIN = "identity_number_uncertain"
     IDENTITY_NUMBER_CONFLICT = "identity_number_conflict"
@@ -102,6 +103,11 @@ class _SpatialBlock:
         assert self.block.location is not None
         return self.block.location.top + self.block.location.height / 2
 
+    @property
+    def center_x(self) -> float:
+        assert self.block.location is not None
+        return self.block.location.left + self.block.location.width / 2
+
 
 _FIELD_LABELS: dict[str, frozenset[str]] = {
     "name": frozenset({"主客户姓名", "客户姓名", "本人姓名", "被保险人姓名", "姓名"}),
@@ -133,9 +139,10 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
     Parsing stops at a recognized family/relative section heading. It never
     derives a birthday from an identity number, resolves OCR alternatives,
     infers gender, or chooses between conflicting values. Positioned Baidu
-    word blocks may pair a label with its immediate right-hand cell or the
-    uniquely aligned cell in the next visual row. Missing or ambiguous geometry
-    is surfaced for review rather than guessed.
+    word blocks may pair a label with a uniquely attributable right-hand cell
+    or uniquely aligned cell in the next visual row. A valid identity number
+    may be reassembled from adjacent numeric OCR blocks in one cell. Missing or
+    ambiguous geometry is surfaced for review rather than guessed.
     """
     evidence: dict[str, list[_Evidence]] = {key: [] for key in _FIELD_LABELS}
     in_family_section = False
@@ -220,16 +227,22 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
         reasons.append(ReviewReason.BIRTHDAY_CONFLICT)
 
     all_address_values = _unique(item.value for item in evidence["address"] if item.value)
-    address_values = _unique(
+    address_evidence_uncertain = any(
         item.value
+        and (
+            len(_clean(item.value)) < 4
+            or _has_ambiguous_character(item.block)
+        )
         for item in evidence["address"]
-        if item.value and not _has_ambiguous_character(item.block)
     )
-    if len(all_address_values) > 1:
+    if address_evidence_uncertain:
+        reasons.append(ReviewReason.ADDRESS_UNCERTAIN)
+        address = None
+    elif len(all_address_values) > 1:
         reasons.append(ReviewReason.ADDRESS_CONFLICT)
         address = None
     else:
-        address = address_values[0] if address_values else None
+        address = all_address_values[0] if all_address_values else None
 
     gender, gender_invalid = _extract_gender(evidence["gender"])
     if gender_invalid:
@@ -304,9 +317,8 @@ def _extract_spatial_evidence(
 
     Baidu's handwriting response exposes one location per ``words_result``
     block, not table cells. This routine reconstructs visual rows from those
-    boxes, then accepts only direct right-neighbours or uniquely aligned
-    values immediately below a label. It intentionally does not invent empty
-    cells or bridge arbitrary gaps/rows.
+    boxes, then accepts only direct right-neighbours or uniquely assigned
+    values immediately below a label. It does not bridge arbitrary rows.
     """
     evidence: dict[str, list[_Evidence]] = {key: [] for key in _FIELD_LABELS}
     uncertain_fields: set[str] = set()
@@ -362,33 +374,67 @@ def _extract_spatial_evidence(
                     right_neighbor.field_name is None
                     and gap <= max_gap
                 ):
-                    candidates.append(right_neighbor)
+                    matches_column, column_ambiguous = _matches_label_column(
+                        label, right_neighbor, row, same_row=True
+                    )
+                    if column_ambiguous:
+                        uncertain_fields.add(label.field_name)
+                    elif matches_column:
+                        candidates.append(right_neighbor)
 
             if row_index + 1 < len(rows):
                 below_row = rows[row_index + 1]
-                aligned = [
-                    candidate
-                    for candidate in below_row
-                    if candidate.field_name is None
-                    and _same_visual_column(label, candidate)
+                below_labels = [
+                    item
+                    for item in below_row
+                    if item.field_name is not None and not item.inline_value
                 ]
-                shared_candidates = [
-                    candidate
-                    for candidate in aligned
-                    if sum(
-                        1
-                        for other_label in row
-                        if other_label.field_name is not None
-                        and not other_label.inline_value
-                        and _same_visual_column(other_label, candidate)
+                for candidate in below_row:
+                    if candidate.field_name is not None:
+                        continue
+                    if any(
+                        _same_visual_column(label, below_label)
+                        for below_label in below_labels
+                    ):
+                        continue
+                    matches_column, column_ambiguous = _matches_label_column(
+                        label, candidate, row, same_row=False
                     )
-                    > 1
-                ]
-                if shared_candidates:
-                    uncertain_fields.add(label.field_name)
-                    for candidate in shared_candidates:
-                        aligned.remove(candidate)
-                candidates.extend(aligned)
+                    if column_ambiguous:
+                        uncertain_fields.add(label.field_name)
+                    elif matches_column:
+                        candidates.append(candidate)
+
+            if label.field_name == "identity_number":
+                fragment_rows = [(row_index, row)]
+                if row_index + 1 < len(rows):
+                    fragment_rows.append((row_index + 1, rows[row_index + 1]))
+                composites: list[_SpatialBlock] = []
+                consumed_indices: set[int] = set()
+                for candidate_row_index, candidate_row in fragment_rows:
+                    for composite, component_indices in _identity_fragment_candidates(
+                        candidate_row
+                    ):
+                        if candidate_row_index == row_index and composite.left < label.right:
+                            continue
+                        matches_column, column_ambiguous = _matches_label_column(
+                            label,
+                            composite,
+                            row,
+                            same_row=candidate_row_index == row_index,
+                        )
+                        if column_ambiguous:
+                            uncertain_fields.add(label.field_name)
+                        elif matches_column:
+                            composites.append(composite)
+                            consumed_indices.update(component_indices)
+                if composites:
+                    candidates = [
+                        candidate
+                        for candidate in candidates
+                        if candidate.index not in consumed_indices
+                    ]
+                    candidates.extend(composites)
 
             for candidate in candidates:
                 value = _clean(candidate.block.text)
@@ -398,6 +444,134 @@ def _extract_spatial_evidence(
                     )
 
     return evidence, uncertain_fields
+
+
+def _matches_label_column(
+    label: _SpatialBlock,
+    candidate: _SpatialBlock,
+    label_row: list[_SpatialBlock],
+    *,
+    same_row: bool,
+) -> tuple[bool, bool]:
+    """Return whether a value belongs uniquely to a label's horizontal column."""
+    labels = [
+        item
+        for item in label_row
+        if item.field_name is not None and not item.inline_value
+    ]
+    if len(labels) <= 1:
+        if same_row:
+            return True, False
+        return _same_visual_column(label, candidate), False
+
+    for other_label in labels:
+        if other_label is label:
+            continue
+        first_box = label.block.location
+        second_box = other_label.block.location
+        if first_box is None or second_box is None:
+            continue
+        overlap = min(
+            first_box.left + first_box.width,
+            second_box.left + second_box.width,
+        ) - max(first_box.left, second_box.left)
+        if overlap > 0:
+            return False, True
+
+    distances = sorted(
+        ((abs(candidate.center_x - item.center_x), item) for item in labels),
+        key=lambda item: item[0],
+    )
+    nearest_distance, nearest_label = distances[0]
+    second_distance = distances[1][0]
+    tie_margin = max(
+        4.0,
+        0.2
+        * max(
+            label.block.location.height if label.block.location else 0,
+            candidate.block.location.height if candidate.block.location else 0,
+        ),
+    )
+    if second_distance - nearest_distance <= tie_margin:
+        return False, True
+    return nearest_label is label, False
+
+
+def _identity_fragment_candidates(
+    row: list[_SpatialBlock],
+) -> list[tuple[_SpatialBlock, set[int]]]:
+    """Join adjacent numeric OCR blocks only when a full ID checksum validates."""
+    blocks = [
+        item
+        for item in row
+        if item.field_name is None
+        and re.fullmatch(r"[0-9Xx]+", _normalize_identity_number(item.block.text))
+    ]
+    blocks.sort(key=lambda item: (item.left, item.index))
+    candidates: list[tuple[_SpatialBlock, set[int]]] = []
+
+    for start in range(len(blocks)):
+        parts: list[_SpatialBlock] = []
+        joined = ""
+        for end in range(start, min(len(blocks), start + 18)):
+            current = blocks[end]
+            if parts:
+                previous = parts[-1]
+                gap = current.left - previous.right
+                max_gap = max(
+                    24,
+                    3
+                    * max(
+                        previous.block.location.height
+                        if previous.block.location
+                        else 0,
+                        current.block.location.height
+                        if current.block.location
+                        else 0,
+                    ),
+                )
+                label_between = any(
+                    item.field_name is not None
+                    and item.left < current.left
+                    and item.right > previous.right
+                    for item in row
+                )
+                if gap < 0 or gap > max_gap or label_between:
+                    break
+            parts.append(current)
+            joined += _normalize_identity_number(current.block.text)
+            if len(joined) > 18:
+                break
+            if len(parts) < 2 or len(joined) != 18:
+                continue
+            if not _is_checksum_valid_identity_number(joined):
+                continue
+
+            boxes = [part.block.location for part in parts]
+            if any(box is None for box in boxes):
+                continue
+            positioned_boxes = [box for box in boxes if box is not None]
+            left = min(box.left for box in positioned_boxes)
+            top = min(box.top for box in positioned_boxes)
+            right = max(box.left + box.width for box in positioned_boxes)
+            bottom = max(box.top + box.height for box in positioned_boxes)
+            combined = OcrBlock(
+                text=joined,
+                location=BoundingBox(left, top, right - left, bottom - top),
+                characters=tuple(
+                    character
+                    for part in parts
+                    for character in part.block.characters
+                ),
+            )
+            candidates.append(
+                (
+                    _SpatialBlock(min(part.index for part in parts), combined, None, ""),
+                    {part.index for part in parts},
+                )
+            )
+
+    return candidates
 
 
 def _family_boundary(result: OcrResult) -> tuple[int | None, int | None]:
