@@ -1,8 +1,13 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
-## 最新接续状态｜2026-11-03
+## 当前接续状态｜2026-11-03 14:22 CST
 
-### 2026-11-03 五段运行只读对照
+- 最新事实、来源与授权边界见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。MUSE本地调度快照为每日09:00、下一次11月4日、当前无运行/排队任务。11月3日scheduled assistant/main止于prepare timeout，无业务stage/receipt，cleanup报告PASS；间隔缺失仍UNKNOWN。
+- Pixel只经既有`pixel3a-kjgx`别名做基本只读复核；屏幕/Keyguard/前台Activity和app私有sidecar不可用。MUSE此前切换到非授权显式Termux SSH路由，已要求停止且不得复用；路线外设备字段作废，不作部署前置证据。
+- 11月4日有界诊断包仅在本机离线验证。当前没有经授权且无需root的sidecar收集路径，也没有Android/AutoX实机兼容证据。不得部署或重启候选。自然运行前只通过现有别名复查基本状态；若授权收集路径仍不可用，只读现有脱敏运行结果，设备字段继续标为UNKNOWN。
+- 不重跑/补跑，不修改state、cron或调度。P50/月度规划继续挂起，2U＝2800保留；P4/S1未整体验收。
+
+### 2026-11-03 五段运行只读对照（历史细节）
 
 MUSE既有旁聊已按当前授权读取11月3日08:57误触助理、09:00调度助理/主流程，并与11月2日11:14手动v0.19助理/主流程逐段比对；未连接Pixel、未运行业务、未改文件/state/cron/调度。五段脱敏证据ZIP已下载并验证外层SHA-256 `56e7280ee48f41cbad2d74e10d4a61c3d051a2e7831074d35a9e1de18e2cbe02`及7个内含成员哈希。源`result.json`和`prepare-events.json`不在ZIP内；其全长哈希由MUSE导出，不能在本机对原始源字节独立复算。包内operation-owner因包含owner token而扣留、未哈希。
 

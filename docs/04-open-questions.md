@@ -1,6 +1,9 @@
 # 缺失内容与 P4 按需核查
 
-## 当前缺口校正｜2026-11-03
+## 当前缺口校正｜2026-11-03 14:22 CST
+
+- **prepare根因与设备诊断采集仍UNKNOWN：** 11月3日scheduled assistant/main均prepare超时；MUSE本地运行记录缺少09:06:17—09:11:17细节。授权Pixel别名只返回基本设备字段，不能读取可用的screen/Keyguard/foreground Activity或app私有sidecar。MUSE使用另一显式Termux SSH路线做过非root设备读取，超出规定路径；已明确要求停止，路线外设备字段不接受为preflight。新的11月4日诊断候选只做离线合成验证；缺合法的非 root sidecar 导出路径，未部署。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)。
+
 
 - **11月3日prepare超时的运行差异尚无根因：** 五段脱敏ZIP已下载且外层及7个成员哈希本机验证通过；MUSE提供五组原始result/prepare-events完整SHA-256，但源文件未入包，故本机无法对源字节重算。五段均报告使用同一v0.19 live runner/模块哈希；只有11月2日手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity；五段都没有`login`类prepare事件或认证入口调用回执。逐项登录态、`gesturePage`/`accountMatch`和采样时间均缺。现有信息不能区分启动方式、设备/应用状态或其他上下文原因，也不支持归咎密码/手势输入器。摘要及哈希见[五段对照记录](../planning/forest-prepare-repair-2026-11-02.md)。
 
