@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:32 CST — limited historical E锦囊 source
+
+CPIC's 2018-11-02 Tech Individual Insurance Plus phase-two notice lists repeated iterations of the E锦囊 (insurance-supermarket) product page. This establishes only historical product-page presence. It does not document today's activation steps, user eligibility, Forest task mapping, reward trigger/cycle, or external requirements. The targeted search found no current workflow evidence for the other four extensions; do not treat “AI保单管家” as the distinct “保单芯管家” task. All five remain “still needs verification”; no task is added to automation or excluded. Evidence: `officialEJinnangHistoricalSourceReview20261104_0432`; [CPIC notice](https://www.cpic.com.cn/c/2018-11-02/1562542.shtml).
+
 ## 2026-11-04 04:28 CST — secondary public-search lead excluded
 
 Exact-term searches restricted to CPIC's official domain found no attributable Forest rule page. General search surfaced a WanyiWang repost of a training deck whose title refers to “蛮好的森林”; the result snippet mentions daily caps and task points, but the page could not be fetched (cache miss). This is a secondary source with an unverified name, product identity, version, and provenance, so it is excluded as rule or workflow evidence. It does not establish reset time, repeat cycle, reward trigger/posting, or current eligibility. D-029 and the source gap remain unchanged; no rule is inferred. Evidence: `cpicPublicRuleSourceSearch20261104_0428`; [secondary search result](https://www.wanyiwang.com/index.php/view/139759.html).

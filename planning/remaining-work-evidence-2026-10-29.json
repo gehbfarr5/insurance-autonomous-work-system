@@ -5212,5 +5212,22 @@
     },
     "scopeLimit": "The repost is not a primary source; its product identity, version, and provenance cannot be tied to this project. It supplies no verified reset time, repeat cycle, reward trigger/posting, or current eligibility. Exclude it as rule/workflow evidence. D-029 remains unchanged; no rule is inferred.",
     "actions": "Public read-only search and documentation/evidence-index update only. No MUSE, Pixel/device, business-state, raw-log, code/job, or schedule access or changes."
+  },
+  "officialEJinnangHistoricalSourceReview20261104_0432": {
+    "id": "X15",
+    "recordKey": "officialEJinnangHistoricalSourceReview20261104_0432",
+    "source": "Official China Pacific Insurance public procurement notice",
+    "sourceUrl": "https://www.cpic.com.cn/c/2018-11-02/1562542.shtml",
+    "sourcePublishedAt": "2018-11-02",
+    "reviewedAt": "2026-11-04T04:32:05+08:00",
+    "queries": [
+      "site:cpic.com.cn \"保单芯管家\"",
+      "site:cpic.com.cn \"三节一生\" 阳光",
+      "site:cpic.com.cn \"E锦囊\" 激活",
+      "site:cpic.com.cn \"签单协同\" OR \"签单协助\""
+    ],
+    "finding": "The official phase-two notice for the Tech Individual Insurance Plus project lists repeated iterations of the E锦囊 (insurance supermarket) product page.",
+    "scopeLimit": "Historical product-page presence only. It does not establish current activation steps, user eligibility, Forest task mapping, reward trigger/cycle, or external requirements. No direct current workflow evidence for the other four extension names surfaced in this bounded search. Do not conflate AI保单管家 with 保单芯管家. All five remain still needs verification.",
+    "actions": "Public read-only search and documentation/evidence-index update only. No MUSE, Pixel/device, business-state, raw-log, code/job, or schedule access or changes."
   }
 }
