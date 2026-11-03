@@ -103,7 +103,7 @@ def _resolve_pending(data: Any) -> int:
 def _resume_pending_readback(data: Any) -> int:
     if not isinstance(data, dict) or not isinstance(data.get("operation_id"), str):
         raise RuntimeContractError("PENDING_OPERATION_ID_REQUIRED")
-    draft = parse_confirmed_draft(data)
+    draft = parse_confirmed_draft(data, require_address_book=False)
     operation_id = data["operation_id"]
     with CreateAttemptJournal() as journal:
         pending = journal.pending

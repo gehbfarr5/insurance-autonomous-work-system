@@ -23,8 +23,10 @@ class RuntimeContractError(RuntimeError):
         super().__init__(code)
 
 
-def parse_confirmed_draft(value: Any) -> dict[str, Any]:
-    """Validate a ready or manually corrected draft after explicit confirmation."""
+def parse_confirmed_draft(
+    value: Any, *, require_address_book: bool = True
+) -> dict[str, Any]:
+    """Validate a confirmed draft; only create paths require an address book."""
     if not isinstance(value, Mapping):
         raise RuntimeContractError("DRAFT_INVALID")
     if value.get("extraction_status") not in {"READY", "MANUALLY_REVIEWED"}:
@@ -34,12 +36,13 @@ def parse_confirmed_draft(value: Any) -> dict[str, Any]:
     extraction_status = value["extraction_status"]
 
     address_book_id = value.get("address_book_id")
-    if (
-        not isinstance(address_book_id, str)
-        or not address_book_id.strip()
-        or _has_control(address_book_id)
-    ):
-        raise RuntimeContractError("ADDRESS_BOOK_ID_REQUIRED")
+    if require_address_book or address_book_id is not None:
+        if (
+            not isinstance(address_book_id, str)
+            or not address_book_id.strip()
+            or _has_control(address_book_id)
+        ):
+            raise RuntimeContractError("ADDRESS_BOOK_ID_REQUIRED")
 
     required = ("name", "mobile", "gender", "birthday", "identity_number")
     if any(key not in value for key in required):

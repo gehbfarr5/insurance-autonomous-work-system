@@ -272,7 +272,9 @@ class RuntimeSourceTests(unittest.TestCase):
         operation_id = pending["operation_id"]
 
         resume_input = confirmed_draft()
+        resume_input.pop("address_book_id")
         resume_input["operation_id"] = operation_id
+        self.assertNotIn("address_book_id", resume_input)
         status, resume_output = self._run_main(
             self.create, resume_input, ["--resume-pending"]
         )
