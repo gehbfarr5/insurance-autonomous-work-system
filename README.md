@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 04:05 CST — E11 APK index date corrected
+
+E11 is the v0.17 APK hash observed on 2026-10-29, not the current Pixel APK. Its index wording now identifies the dated historical version; the 2026-11-04 v0.19 hash stays separately recorded. This does not establish current module runtime or device gates. Evidence: `evidenceIndexE11HistoricalClarification20261104_0405`.
+
 ## 2026-11-04 04:05 CST — recovery-runbook history boundary clarified
 
 The runbook now labels its 2026-11-03 Pixel `watching`/monitor/sidecar notes as historical and superseded by the latest 03:47 MUSE and 03:50 bounded Pixel observations. Current device lock and monitor/UI state remain UNKNOWN. Evidence: `runbookHistoricalSnapshotClarification20261104_0405`.

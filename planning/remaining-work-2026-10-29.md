@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 04:05 CST：E11索引版本日期校准
+
+证据索引E11是10月29日读取的v0.17 APK哈希，不是当前Pixel安装版本。索引已标明其历史日期并保留原哈希；11月4日v0.19读数独立记录。APK身份不证明模块运行态或设备锁/monitor/UI。证据：`evidenceIndexE11HistoricalClarification20261104_0405`。
+
 ## 2026-11-04 04:05 CST：回滚runbook历史状态校准
 
 已给运行恢复说明中11月3日monitor部署快照加明确历史标注，并指向11月4日03:47/03:50当前门禁。旧`watching`/锁marker/sidecar读数不作为今天状态；当前设备锁、monitor/hash、UI仍UNKNOWN。结构化证据：`runbookHistoricalSnapshotClarification20261104_0405`。

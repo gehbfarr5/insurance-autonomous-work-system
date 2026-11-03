@@ -5147,5 +5147,23 @@
     ],
     "clarification": "The prior Pixel monitor watching/hash, operation-marker, and sidecar-before-window observations are dated 2026-11-03 historical evidence. They do not prove current 2026-11-04 device lock, monitor state/hash, Keyguard, Activity, or sidecar status. The runbook now marks these snapshots historical and explicitly defers to the newer UNKNOWN gates.",
     "actions": "Documentation only. No Pixel connection, root/su use, device write, code/task run, or schedule change."
+  },
+  "evidenceIndexE11HistoricalClarification20261104_0405": {
+    "recordedAt": "2026-11-04T04:05:53+08:00",
+    "source": "Read-only audit comparing evidence-index E11 with the dated original Pixel readback and the fresh 2026-11-04 APK observation.",
+    "historicalE11": {
+      "sha256": "62d0e048e03f86cb074d8af045cbd81c31dc385689f56f35b2d48488feea04f5",
+      "version": "0.17.0-forest-agent",
+      "observedAt": "2026-10-29T12:19:48+08:00"
+    },
+    "currentObservation": {
+      "recordKey": "pixelReadonlyPreflight20261104_035029",
+      "sha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+      "version": "v0.19 pinned SecureView APK",
+      "observedAt": "2026-11-04T03:50:29+08:00"
+    },
+    "change": "Evidence-index E11 description now identifies its v0.17 APK hash as historical from 2026-10-29, not the current installed version. Original artifact path, SHA-256, and byte count were preserved.",
+    "limit": "The fresh v0.19 APK hash does not establish module runtime state or device lock/monitor/UI; those remain separately UNKNOWN.",
+    "actions": "Documentation/index correction only; no device or app action, no tests run."
   }
 }

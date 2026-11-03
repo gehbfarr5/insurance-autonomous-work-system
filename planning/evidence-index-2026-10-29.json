@@ -76,7 +76,7 @@
       "privateRelativePath": "secureview-bridge/artifacts/p4-secureview-v0.17.0-forest-agent-signed.apk",
       "sha256": "62d0e048e03f86cb074d8af045cbd81c31dc385689f56f35b2d48488feea04f5",
       "bytes": 41722,
-      "description": "与当前Pixel已装APK哈希相同"
+      "description": "与2026-10-29 Pixel已装APK哈希相同（v0.17历史版本，非当前安装版本）"
     },
     {
       "id": "S01",
