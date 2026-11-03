@@ -1880,5 +1880,54 @@
     "messageSent": false,
     "observation": "Surface opened on a non-target conversation; no further interaction/navigation. This did not update Forest scheduler, queue, in-flight, or device-lock state.",
     "result": "Forest current state remains UNKNOWN; do not infer idle or proceed to Pixel."
+  },
+  "museReadonlyStatus20261103_194251": {
+    "readAtApprox": "2026-11-03 20:11 CST (approximate; turn-start clock, not a screenshot timestamp)",
+    "responseAt": "2026-11-03T19:42:51+08:00",
+    "source": "Screenshot of the completed reply in the exact existing Sunshine Forest thread, located by exact-title search.",
+    "scope": "Forest scheduler/runner metadata only; no business state was read. No other chat was intentionally inspected; the initial non-target surface was not read further.",
+    "schedule": {
+      "enabledCount": 1,
+      "time": "09:00:00",
+      "timezone": "Asia/Shanghai",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "pixelOperationLock": "UNKNOWN; not read.",
+    "monitorStatusAndHash": "UNKNOWN; not read.",
+    "businessResults": "Not reread.",
+    "messageSent": false,
+    "pixelConnected": false,
+    "otherChatHandling": "The initial CUA surface was a non-target conversation and was not read further. The target Forest thread was then found by exact-title search; no other chat was queried.",
+    "limitations": [
+      "The screenshot was read at approximately 20:11, while the MUSE reply reports a 19:42:51 snapshot; this is not a current-at-read or later concurrency guarantee.",
+      "MUSE runnerLock FREE does not establish the Pixel device-operation lock.",
+      "The 2026-11-04 natural run, same-run diagnostics, and business acceptance remain pending."
+    ],
+    "actions": "No new status message, Pixel connection, business-state read, task/business execution, device write, schedule/state change, deployment, or credential change."
+  },
+  "pixelLocalNonrootPathAudit20261103_2021": {
+    "readAtApprox": "2026-11-03 20:21 CST",
+    "scope": "Read-only static inventory of the isolated private v2 review package plus local process inventory; no Pixel connection.",
+    "textFilesScanned": 13,
+    "observations": {
+      "suInvocationFound": "Yes; the existing private collector is the matching file.",
+      "adbPullPathFound": false,
+      "runAsPathFound": false,
+      "nonrootReferences": "README and review record only; no executable export path identified.",
+      "localSshProcessMatchingPixelAlias": false
+    },
+    "result": "No safe non-root export or lock-reader path was identified within the reviewed package. This bounded scan does not prove that no such path exists elsewhere.",
+    "actions": "No remote command, SSH connection, root/su, file transfer, device read/write, or business action."
   }
 }

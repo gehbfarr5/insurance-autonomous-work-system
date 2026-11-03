@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 最新Forest线程状态回读｜2026-11-03 19:42:51 CST（20:11读取）
+
+在精确的既有阳光森林执行线程中读到19:42:51只读回复：唯一Asia/Shanghai每日09:00任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；`run.py`/`assistant.py`哈希与最近记录一致。20:11才查看该回复，因此这是截至19:42:51的快照，不是当前并发保证。未读业务结果或Pixel设备锁/monitor内部状态；Pixel未连接，设备锁保持UNKNOWN，没有发送新状态请求。11月4日自然运行、诊断关联、业务结果与奖励核对仍待。详情见[P4运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)及[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。
+
 ## live assistant.py附件本机核对｜2026-11-03 19:36 CST
 
 从既有Forest旁聊取得的`assistant.py`私有附件，本机SHA-256与MUSE 19:08最后一次live哈希完全一致；文件12,700字节、权限0600，仅在用户私有Downloads，未入仓库。本机仅做AST语法与结构检查、未执行代码；固定方法pin、Vue、唯一目标项门禁未变。19:36没有重新读取云端live状态。配套`tasks.py`和AI/业务state及回执仍待本机对齐；P4保持开放、S1未验收。见[本地核查](../planning/local-evidence-audit-2026-10-29.md)和[结构化证据](../planning/remaining-work-evidence-2026-10-29.json)。

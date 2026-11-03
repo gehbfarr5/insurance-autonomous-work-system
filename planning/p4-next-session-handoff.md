@@ -1,5 +1,11 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 20:11 CST新增：Forest目标线程已有状态回复，Pixel门禁仍关闭
+
+在20:02窗口先显示非目标会话后，我停止读取该面，随后按精确标题筛选并只读打开既有“阳光森林每日执行部署”线程。截图中可见一条时间为19:42:51 CST的完整状态回复：唯一启用的Asia/Shanghai每日09:00任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，最近调度失败11月3日09:11:17、最近成功10月31日09:15:50。20:11读取的是19:42:51报告，不代表读取时或现在的实时并发状态；没有发送新消息或状态请求。
+
+该MUSE回读不包含Pixel设备操作锁或monitor私有状态；Pixel未连接，相关锁/状态保持UNKNOWN。现有collector使用`su`，仍不可用；只有先找到本机已有且可验证的非root导出方式，才可在新鲜无在途门禁下考虑设备只读采集。11月4日自然运行、同轮诊断和业务结果仍待；不补跑、不改调度或状态。P4开放，S1未验收，P50/月度/2U=2800继续挂起。结构化事实见[证据索引](remaining-work-evidence-2026-10-29.json)中新记录`museReadonlyStatus20261103_194251`。
+
 ## 2026-11-03 20:08 CST新增：离线字段观察器复核通过，采集通道仍待非root路径
 
 在独立私有review副本中修正字段观察器：各登录前置字段的属性存在性独立记录；属性形状观察异常显式记为UNKNOWN，并继续原v0.19门禁路径。候选与原one-shot控制流、字段读取次序及放行/阻断结果的离线对照通过；collector/joiner与monitor/assistant observer合成回归通过，覆盖缺失/越界/重复marker、未知字段、分段歧义、缺失来源、`.failure`哨兵和stop-before-dispatch。候选没有部署、构建APK或改runner pin；所有原私有版本保持不变。

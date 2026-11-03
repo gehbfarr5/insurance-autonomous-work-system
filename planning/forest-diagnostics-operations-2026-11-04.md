@@ -2,7 +2,15 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 20:08 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 20:11 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### Forest目标线程现有状态回复回读｜2026-11-03 20:11 CST
+
+在精确目标线程中读到已完成的19:42:51 MUSE状态回复：唯一启用的Asia/Shanghai每日09:00 schedule，下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py` / `assistant.py`哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近调度失败11月3日09:11:17，最近成功10月31日09:15:50。20:11从截图读取该消息，数据时间为19:42:51；没有发送新状态请求。业务结果未重读。
+
+此状态不包含Pixel操作锁、monitor私有状态/hash或屏幕/Keyguard/前台Activity。Pixel未连接，设备操作锁和monitor状态仍UNKNOWN；不得以MUSE runner lock FREE替代设备锁。11月4日自然运行前不执行设备写入，运行后仍须先刷新无在途状态并确认安全、既有的非root读取路径；现有`su` collector不得执行。该快照仅更新最后已知MUSE状态，不改变其自然运行/采集门禁。结构化来源：[`museReadonlyStatus20261103_194251`](remaining-work-evidence-2026-10-29.json)。
+
+20:21对已知的独立私有v2 review包做了限定范围静态路径检查：13个文本文件中，既有collector包含`su`调用；未发现`adb pull`或`run-as`导出路径，README/审查记录提到non-root约束但未给可执行替代。Mac本机进程盘点未发现使用既有`pixel3a-kjgx`别名的SSH会话。此范围内没有可验证的非root collector或设备锁读取方式；结果不证明其他本机位置不存在该路径。没有建立连接或运行远端命令。结构化限制：[`pixelLocalNonrootPathAudit20261103_2021`](remaining-work-evidence-2026-10-29.json)。
 
 ### 最新接续与采集通道限制｜2026-11-03 20:08 CST
 

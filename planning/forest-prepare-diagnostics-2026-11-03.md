@@ -1,5 +1,9 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## Forest线程只读状态回读｜2026-11-03 19:42:51 CST（20:11查看）
+
+在精确Forest线程截图中读到完整的19:42:51状态回复：每日Asia/Shanghai 09:00唯一启用任务下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败为11月3日09:11:17、最近成功为10月31日09:15:50。该回复在20:11查看，数据时间仍是19:42:51；它不含Pixel设备操作锁、monitor私有状态或本次prepare诊断。没有发送状态请求、读业务结果或连接Pixel；Pixel锁仍UNKNOWN。11月4日自然轮诊断与业务验收待发生。JSON记录：`museReadonlyStatus20261103_194251`。
+
 ## 私有字段observer v2离线复核｜2026-11-03 20:08 CST
 
 在新的私有review副本中修正登录字段观察：各登录前置字段的属性存在性独立记录，属性形状观察异常映射为UNKNOWN，原业务读取与门禁继续执行。Node合成对照确认原v0.19 one-shot状态、阻断原因、属性读取与业务调用轨迹不变；覆盖正常、延迟弹层、字段缺失/空值、accessor不额外执行、属性描述异常、未知reason、导航失败与stop路径。collector/joiner/monitor/assistant observer离线回归亦通过，补测重复marker只保留一条并降为`PARTIAL_UNKNOWN`。
