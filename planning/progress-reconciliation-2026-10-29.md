@@ -16,9 +16,21 @@ CPIC 2022年文章佐证“态幸福”的历史客户需求分析和销售支�
 
 四组精确主题词的Drive文档metadata-only检索全部0结果，没有读取正文。检索范围仅限返回的单页、每词最多20项；无命中不等于历史原件不存在。森林重置/重复周期/到账延迟仍是证据缺口。详见[证据索引](remaining-work-evidence-2026-10-29.json)。
 
-## MUSE界面只读可用性复核｜2026-11-03 17:50 CST
+## MUSE只读复核与离线诊断候选｜2026-11-03 18:08 CST
 
-CUA约17:50只读打开MUSE窗口时，当前对话显示Assistant正在生成回复。没有切换到森林线程或读取scheduler/task/queue/lock/部署版本；没有发送消息、连接Pixel或改变业务/调度状态。因此Forest并发与设备访问门禁继续UNKNOWN，16:23快照不可作为当前放行依据。浏览器清单为空，Work浏览器控制被禁用。待该MUSE生成结束后，再通过既有森林线程读取最新状态。证据结构化记录在[索引](remaining-work-evidence-2026-10-29.json)。
+约18:05 WP11对话已结束生成；18:08只读打开既有森林线程，当前AX树显示发送框、未见生成中控件。森林线程没有本轮新的scheduler/task/queue/in-flight/runner-lock/部署状态读回，16:23调度状态仍过期；并发与Pixel门禁UNKNOWN。本轮没有连接Pixel。结构化记录见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+## 前台Activity类别离线候选｜2026-11-03 18:08 CST
+
+私有review-only候选新增固定前台Activity类别枚举，以避免保存原始类名；复用现有monitor/trigger/worker控制流、固定窗口日志投影与runGroup/时间关联，保留API异常fail-loud。5项离线合成脚本PASS（Node 26.0.0、Python 3.14.7），11/11文件哈希匹配；候选及清单SHA-256见[证据索引](remaining-work-evidence-2026-10-29.json)。候选未部署，Android/AutoX兼容性未验证；prepare逐字段登录态及assistant gate observer仍未接入live runner，不形成完整自然运行证据或根因结论。
+
+## 前一轮MUSE界面门禁｜2026-11-03 17:57 CST
+
+约17:50与17:54 MUSE另一对话仍显示生成，未切换线程或读取Forest并发/锁/部署；17:55本机未发现SSH别名进程。该历史门禁和16:23调度读数均不能替代本轮新鲜运行状态。
+
+## 森林规则官方域追加检索｜2026-11-03 17:57 CST
+
+追加CPIC官方域四组词面搜索，未发现可直接支持森林规则、重置/重复周期或奖励时点的官方原据；返回的公司目录与一般保险知识页面不作为证据。无命中不证明原件不存在。查询范围已记入[证据索引](remaining-work-evidence-2026-10-29.json)。
 
 ## 当前只读续接状态｜2026-11-03 17:25 CST
 
