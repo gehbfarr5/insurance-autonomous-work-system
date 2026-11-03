@@ -1,5 +1,7 @@
 # 保险规划师自主工作系统
 
+> **官方规则原件补充检索｜2026-11-03 22:20 CST：** 连接Drive对“森林、雨露、阳光结算、签到规则、打卡积分、日常任务、积分规则、雨露值”执行document metadata-only查询；“森林”只返回一条无关表格元数据，其余为0，未打开文件正文。没有找到直接规则来源；这不证明原件不存在或历史上从未确认。官方时点、任务周期、触发、限额和当前资格仍待原据。详见证据键`googleDriveBroaderRuleMetadataSearch20261103_2220`。
+
 > **五项扩展复核｜2026-11-03 22:12 CST：** 私有E08文字记录与CPIC官网历史功能材料仅支持功能背景和历史计量单位，不能证明当前流程、资格、奖励或周期。保单芯管家申请已提交但检视/奖励未证；态幸福停在新建客户入口；三节一生未联系客户且“完成”会提交任务；E锦囊未到激活页；签单协同实际单据流程未知。五项全部仍待核实，没有已证实的现实外部阻碍。详情见[逐项流程与分类](planning/remaining-work-2026-10-29.md#五项扩展流程与分类复核2026-11-03-2212-cst)。
 
 > **P4最新只读复核｜2026-11-03 21:58—22:03 CST：** MUSE 21:58:28报告既有09:00任务无在途/排队/运行，runner lock FREE、无Forest进程；live runner/assistant哈希未变，最近失败11月3日09:11:17。22:00:18经既有Pixel别名非root只读确认Pixel 3a/Android 15、APK匹配v0.19、无AutoX/AutoJS；设备操作锁与monitor/屏幕/Keyguard/Activity仍UNKNOWN。22:03:12在MUSE私有线程核对live `run.py`附件报告大小19,082、SHA与live pin一致；静态审阅支持三段失败停在70秒prepare Activity/marker等待，页面门禁未运行，module登录态及未就绪底因UNKNOWN。本机未保存附件副本；代码含特权设备路径，未执行或复用。保留09:00自然运行，不重放、不部署observer、不改设备/业务/调度。P4开放、S1未验收；11月4日自然回执待核。详见[运行交接](planning/p4-next-session-handoff.md)、[诊断运行手册](planning/forest-diagnostics-operations-2026-11-04.md)及[结构化证据](planning/remaining-work-evidence-2026-10-29.json)。

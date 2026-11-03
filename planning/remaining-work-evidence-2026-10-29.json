@@ -2543,6 +2543,32 @@
     },
     "limit": "Search results are bounded to the queries and metadata/domain scope above; they do not show that an original source never existed or was never historically confirmed, and do not establish reset, repeat, settlement timing, or current eligibility."
   },
+  "googleDriveBroaderRuleMetadataSearch20261103_2220": {
+    "recordedAt": "2026-11-03T22:20:51+08:00",
+    "source": "Connected Google Drive search.",
+    "limits": {
+      "itemType": "document",
+      "topn": 50,
+      "bestEffortFetch": false,
+      "contentFetched": false
+    },
+    "queries": [
+      {
+        "query": "森林",
+        "resultCount": 1,
+        "relevance": "One unrelated spreadsheet metadata item; body not opened."
+      },
+      {"query": "雨露", "resultCount": 0},
+      {"query": "阳光 结算", "resultCount": 0},
+      {"query": "签到 规则", "resultCount": 0},
+      {"query": "打卡积分", "resultCount": 0},
+      {"query": "日常任务", "resultCount": 0},
+      {"query": "积分规则", "resultCount": 0},
+      {"query": "雨露值", "resultCount": 0}
+    ],
+    "directRuleSourcesFound": 0,
+    "interpretation": "No directly relevant rule source surfaced in this bounded metadata search. The result does not establish that original material is absent or was never historically confirmed; timing, reset/repeat cycle, reward trigger, limits, and current eligibility remain unverified."
+  },
   "extensionWorkflowClassification20261103_2212": {
     "sources": [
       "Private E08 five-item investigation notes, sanitized; customer images and real-form contents were not opened.",
