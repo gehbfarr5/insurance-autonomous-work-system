@@ -1,5 +1,11 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 01:34—01:37 CST — refreshed runtime metadata; device lock still unknown
+
+The 01:27 UI limitation was resolved in the same existing Forest thread using its explicit Reply action and Return to submit a read-only request. MUSE's 01:34:49 reply confirms, at that timestamp only, no active task, `0/0/false` running/queued/in-flight, runner lock `FREE`, no Forest process observed, and one daily 09:00 Asia/Shanghai schedule with the next trigger at 09:00 today. The live runner/assistant hashes and latest failure/success records match the values captured in [structured evidence](../planning/remaining-work-evidence-2026-10-29.json) (`museReadonlyStatus20261104_013449`).
+
+After the MUSE idle read, the existing SSH alias returned non-root UID 10249, Pixel 3a, Android 15, and boot-complete at device time 01:36:02. The filtered process output had no AutoX/AutoJS lines, but the pipeline did not separately preserve the remote `ps` exit status. Device operation lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN. Keep device writes blocked and retain the natural 09:00 run; after it, obtain same-run sanitized MUSE evidence before any further step. No task was run, no business state/log was read, and no device/deployment/schedule change occurred. Evidence keys: `pixelReadonlyPreflight20261104_0136`, `pixelProcessFilter20261104_0137`.
+
 ## 2026-11-04 01:27 CST — MUSE status refresh unavailable
 
 The existing Forest thread still displays only the 00:47:37 status reply. At 01:27:36, CUA showed no settable composer text field; the generic composer button opened a file picker, which was canceled without selecting anything. No new request was sent. Current backend task/schedule/queue, runner lock, live hashes, and Pixel operation lock are UNKNOWN. Treat the 00:47 values as historical, keep device access blocked, and do not infer current idle status from the visible thread. Evidence and UI limitations: [structured record](../planning/remaining-work-evidence-2026-10-29.json) (`museUiAccessLimitation20261104_0127`).

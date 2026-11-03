@@ -1,5 +1,20 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 01:34—01:37 CST — fresh MUSE metadata; bounded non-root Pixel check
+
+The 01:27 composer issue was resolved in the same existing Forest conversation: the explicit Reply action opened a text composer and Return submitted the read-only query. No attachment was selected or sent, and no other conversation was opened. MUSE replied at 01:34:49 CST with no active Forest task; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed. Live `run.py` / `assistant.py` hashes are `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`; latest failure Nov 3 09:11:17, last success Oct 31 09:15:50. This is a point-in-time MUSE read.
+
+After the idle read, the existing `pixel3a-kjgx` SSH alias returned non-root UID 10249, Pixel 3a, Android 15, boot complete, device time 01:36:02 CST. The AutoX/AutoJS process filter produced no matching output; the pipeline did not separately capture the remote `ps` exit status. Pixel operation lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN. No root/`su`, business state/log reads, task/code execution, device writes, install/restart, schedule/deployment changes, or other-chat inspection occurred. Evidence: `museReplyComposerRecovery20261104_0134`, `museReadonlyStatus20261104_013449`, `pixelReadonlyPreflight20261104_0136`, `pixelProcessFilter20261104_0137`.
+
+### Next natural-run handoff
+
+1. Leave the existing 09:00 schedule unchanged; do not start, replay, retry, deploy, or change business state.
+2. After the natural window, refresh MUSE concurrency/deployment metadata and retrieve that run's sanitized prepare events, result, stages, assistant dispatch/status, and cleanup first.
+3. Keep Pixel operation lock and monitor/device fields UNKNOWN unless an exact, existing, verified non-root read method is available. Do not use `su` or guess a path.
+4. Compare same-run markers and outcome; localize only to the deepest evidenced stage. Unknown or mismatched state stops further action; preserve fail-closed Activity, auth, Vue/method-pin, and unique-menu gates.
+
+Current gates: MUSE metadata and bounded Pixel identity PASS only for observed fields; Nov 3 failure localization remains prepare waiting only; full device diagnosis and repair/integration BLOCKED; five daily tasks and five extensions BLOCKED; historical rule evidence PARTIAL; cross-day/long-term observation SUSPENDED. P4 remains open; no S1/overall-completion claim. P50, monthly planning, and 2U=2800 remain excluded.
+
 ## 2026-11-04 01:27 CST — MUSE composer unavailable; status is stale
 
 The existing Forest thread remains open, but the latest visible status reply is still 00:47:37. The CUA accessibility tree exposes the composer as a generic button rather than a settable text field; clicks opened the native file picker, which was canceled without selecting an attachment. No status request was sent. The latest UI was read at 01:27:36; the screenshot/tree was not retained as a local raw artifact. Evidence: `museUiAccessLimitation20261104_0127`.

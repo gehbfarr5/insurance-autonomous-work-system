@@ -1,5 +1,11 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 01:34—01:37 CST：恢复MUSE只读回读并同步当前门禁
+
+01:27发现的MUSE composer问题已在同一既有阳光森林会话解决：显式Reply打开文本输入框，Return提交只读查询；未发附件、未访问其他聊天。MUSE 01:34:49回报无活动任务、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；唯一每日09:00 Asia/Shanghai schedule下次今日09:00；live `run.py`/`assistant.py` hashes和最近成功/失败记录未变。随后现有Pixel SSH alias以UID 10249非root只读返回Pixel 3a、Android 15、boot完成，设备时间01:36:02 CST。AutoX/AutoJS过滤无匹配输出，但未独立捕获远端`ps`退出码。Pixel操作锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN；09:00自然运行仍待，之后先读同轮脱敏MUSE证据。未读业务state/log、未运行任务或代码、未写设备、未改部署/调度。证据键：`museReplyComposerRecovery20261104_0134`、`museReadonlyStatus20261104_013449`、`pixelReadonlyPreflight20261104_0136`、`pixelProcessFilter20261104_0137`。
+
+GitHub同步基线为提交`a8ccb03`（先前UI限制记录已push）；本轮文档与结构化证据将提交后更新Issue #3。
+
 ## 2026-11-04 01:27 CST：MUSE当前状态刷新未能发送
 
 既有阳光森林线程仍显示00:47:37的最后状态回复。01:27:36 CST的只读CUA快照没有显示新回复；composer仅表现为泛化按钮，尝试输入未进入文本，按钮打开原生文件选择器后已取消，未选择附件、未发送消息。CUA浏览器列表为空且提示Work设置禁用本地浏览器。后端任务/队列/runner lock/schedule/live哈希与Pixel设备操作锁当前均`UNKNOWN`；00:47读数仅为最后已知状态。未访问设备、业务state/log、未运行任务或代码、未更改部署或调度；随后仅更新本地项目记录。证据：`museUiAccessLimitation20261104_0127`。自然运行窗口后仍需优先取得同轮脱敏结果；设备操作继续受锁UNKNOWN阻断。

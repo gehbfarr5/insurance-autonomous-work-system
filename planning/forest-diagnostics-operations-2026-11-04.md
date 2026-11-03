@@ -1,5 +1,13 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 01:34—01:37 CST：更新当前MUSE门禁与Pixel只读身份
+
+01:27记录中的CUA composer限制已在同一既有阳光森林线程内解决：点击该助手回复的显式Reply后出现引用式文本输入框，Return成功提交只读状态查询；未选择或发送附件，未访问其他聊天。MUSE于01:34:49返回：无活动Forest任务；唯一启用schedule为每日09:00 Asia/Shanghai、下次触发今日09:00；running/queued/in-flight `0/0/false`，runner lock `FREE`，未观察到Forest进程；live `run.py` / `assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败为11月3日09:11:17，最近成功为10月31日09:15:50。该MUSE读数只代表01:34:49时点。
+
+其后仅经既有`pixel3a-kjgx` SSH alias进行非root身份/系统状态读取：UID 10249、Pixel 3a、Android 15、boot完成，设备时间01:36:02 CST。只读进程名过滤输出无AutoX/AutoJS匹配行；shell pipeline没有独立保留远端`ps`退出状态，按有限观察记录，不据此推断其他进程状态。Pixel操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。未使用root/`su`、未读业务state/raw logs、未运行代码/任务、未写设备/安装/重启、未更改schedule/deployment/网络/凭据。
+
+保留09:00自然运行，不重试、不重放、不清理状态。运行后先刷新MUSE并读取同轮脱敏prepare/结果/stages/assistant/cleanup；未知或不一致即停止。device-side collector仍因需`su`且无经验证非root锁/私有状态路径而不可用。证据：`museReplyComposerRecovery20261104_0134`、`museReadonlyStatus20261104_013449`、`pixelReadonlyPreflight20261104_0136`、`pixelProcessFilter20261104_0137`。
+
 ## 2026-11-04 01:27 CST：MUSE只读刷新通道不可用
 
 在既有阳光森林线程读取到的最新助手状态回复仍是00:47:37。当前CUA无可用浏览器；线程composer在可访问性树中只暴露为泛化按钮，文本未能输入；点击进入原生文件选择器后立即取消，未选择附件、未发送消息。01:27:36 CST重新读取的线程UI仍未显示新状态。结构化证据：`museUiAccessLimitation20261104_0127`。原始CUA截图/树未保存为本地任务文件，此处为当时观察的脱敏摘要。
