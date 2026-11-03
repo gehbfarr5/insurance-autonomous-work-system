@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 04:54 CST：MUSE状态刷新仍受旧草稿阻断
+
+04:53—04:54对精确Forest线程做只读截图复核，最新回复仍为03:47:07，composer仍保留末尾多出`READ`的旧请求，发送按钮可见。没有发送或改写草稿，因而不能取得当前scheduler/queue/in-flight、runner lock或live哈希；这些仍为UNKNOWN。09:00自然运行尚未到时。macOS本机可执行文件名筛查未发现`ssh`进程，但未查询设备，Pixel连接状态仍UNKNOWN。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
+
 ## 2026-11-04 04:51 CST：显式Reply仍未提供干净输入路径
 
 点击精确Forest线程03:47状态回复下的Reply，只在原composer上方加入引用块，旧的重复`READ`正文仍保留；因此该路径不能安全发送新查询。随后取消引用上下文，没有发送或改写草稿。当前调度、队列/在途、runner lock和live哈希仍UNKNOWN；未连接Pixel。证据：`museReplyComposerNotClean20261104_0451`。

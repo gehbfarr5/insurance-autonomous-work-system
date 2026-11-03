@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 04:54 CST：自然轮前状态无法安全刷新
+
+精确Forest线程的只读截图仍显示03:47:07为最新状态，composer中旧请求以额外`READ`结尾，发送按钮可见。没有发送或编辑。故当前scheduler/queue/in-flight、runner lock、live hashes仍UNKNOWN；09:00自然轮尚未发生。当前本机进程筛查无`ssh`可执行进程，但未查询Pixel，不能判定设备离线。不要连接设备或重放；只有干净输入路径可见后才刷新MUSE并复核同轮脱敏结果。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
+
 ## 2026-11-04 04:51 CST：Reply路径沿用旧草稿，不能刷新状态
 
 对03:47状态回复点击Reply后，引用块出现在原composer上方，但旧的末尾重复`READ`查询仍留在消息正文中。该路径不满足安全发送新状态查询的条件；用Ignore quote取消引用后，未发送或改写草稿。调度/队列/在途、runner lock与live哈希仍UNKNOWN；无Pixel连接。证据：`museReplyComposerNotClean20261104_0451`。

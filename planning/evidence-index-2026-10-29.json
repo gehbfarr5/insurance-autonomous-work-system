@@ -370,6 +370,20 @@
       "source": "Existing pixel3a-kjgx alias; corrected non-root ps -A name filter",
       "summary": "Initial remote awk-based process filter failed on quoting and produced no valid observation. Corrected ps -A output filtered for autox|autojs|secureview|org.autojs returned NO_MATCH and the SSH command ended normally. This is limited to those name patterns.",
       "scopeLimit": "No conclusion that all processes or the monitor are absent/stopped. No overall device-lock or monitor read; no private-data path verified. No root/su, business-state/raw-log read, task/code execution, app action, device write, install/restart, or schedule/deployment change."
+    },
+    {
+      "recordKey": "museComposerRevalidation20261104_0454",
+      "observedAt": "Approximately 2026-11-04 04:53–04:54 Asia/Shanghai",
+      "source": "CUA read-only AX/screenshot inspection of muse.ai/thread/14eb81ad-d019-4acc-9b7f-7e6da8312187",
+      "summary": "The latest visible assistant reply remains the 03:47:07 scheduler snapshot. The existing composer visibly retains the old malformed status request ending in an extra READ; a send control is visible, but no clean input path is available. No new request was sent and no draft content was edited.",
+      "scopeLimit": "This is not a scheduler/deployment refresh. Current task, schedule, queue/in-flight, runner lock, and live hashes remain UNKNOWN; the natural 09:00 run had not yet occurred. No other thread/resource, device, business state, raw log, code, or job was accessed; no file, schedule, deployment, or state was changed."
+    },
+    {
+      "recordKey": "pixelLocalAliasProcessCheck20261104_0454",
+      "observedAt": "Approximately 2026-11-04 04:53–04:54 Asia/Shanghai",
+      "source": "Local macOS process-name inventory only; no SSH or ADB device query",
+      "summary": "A filter for an executable named ssh returned no matching process. No command arguments were retained. This does not establish Pixel reachability or that the device is disconnected.",
+      "scopeLimit": "No SSH connection, alias command, ADB device-list query, or device read occurred. Pixel connectivity, operation lock, monitor, and UI remain UNKNOWN; no credentials or endpoints were recorded."
     }
   ]
 }

@@ -1,5 +1,9 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 04:54 CST：自然运行前刷新仍受旧composer阻断
+
+04:53—04:54只读查看精确Forest线程：最新可见回复仍是03:47:07；原composer仍含旧状态查询，末尾额外出现`READ`，发送箭头可见。没有发送、编辑或清除草稿。因此当前MUSE任务/调度/队列/锁/live hashes均UNKNOWN，不能用03:47读数放行设备连接。此时尚早于09:00。macOS本机进程名筛查未见`ssh`，但没有查询Pixel，不据此判断设备离线。保持不连接、不部署、不重放；仅在存在可验证的干净输入路径后才刷新同轮状态。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
+
 ## 2026-11-04 04:51 CST：MUSE Reply路径验证
 
 点击03:47:07状态回复下的Reply后，引用块出现在原composer上方，原有末尾重复`READ`的查询仍留在正文；未形成干净新消息。通过“忽略引用”取消Reply上下文，没有发送或改写草稿。当前MUSE scheduler/queue/in-flight、runner lock与live hashes仍UNKNOWN；没有连接Pixel。不得将该Reply路径当作安全刷新方法，除非先以可见正文验证旧文本已完全移除。证据：`museReplyComposerNotClean20261104_0451`。

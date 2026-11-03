@@ -5271,5 +5271,21 @@
     "cleanup": "The Ignore quote control cancelled only the reply context. The old draft body remained unchanged; no message was sent.",
     "limit": "Current scheduler/queue/in-flight state, runner lock, and live hashes remain UNKNOWN. No Pixel connection was made. Do not use this Reply path until the message body can be visibly confirmed clean.",
     "actions": "Same-thread UI inspection only; no other chat/resource access, device connection, business-state/raw-log read, code/job run, or schedule change."
+  },
+  "museComposerRevalidation20261104_0454": {
+    "recordedAt": "2026-11-04T04:54:44+08:00",
+    "source": "CUA read-only AX and screenshot inspection of muse.ai/thread/14eb81ad-d019-4acc-9b7f-7e6da8312187",
+    "reviewedAt": "Approximately 2026-11-04 04:53–04:54 Asia/Shanghai",
+    "finding": "The latest visible assistant reply remains the 03:47:07 status snapshot. The existing composer still visibly contains the old malformed status request ending with an extra READ, and the send control is visible. No clean input path is available.",
+    "actions": "No message was sent and no draft content was edited. No other thread/resource was inspected; no device, business state, raw log, code, or job was accessed; no file, schedule, deployment, or state was changed.",
+    "limit": "This did not refresh scheduler/task, queue/in-flight, runner lock, or live hashes; all remain UNKNOWN. The 09:00 natural run had not yet occurred. No Pixel connection was made."
+  },
+  "pixelLocalAliasProcessCheck20261104_0454": {
+    "recordedAt": "2026-11-04T04:54:44+08:00",
+    "source": "Local macOS process-name inventory; no SSH or ADB device query",
+    "reviewedAt": "Approximately 2026-11-04 04:53–04:54 Asia/Shanghai",
+    "finding": "A filter for an executable named ssh returned no matching process. No command arguments were retained.",
+    "limit": "This does not establish Pixel reachability or disconnection. No alias connection or device/ADB query occurred; Pixel connectivity, operation lock, monitor/hash, and UI remain UNKNOWN.",
+    "actions": "Local read-only process inventory only; no credentials or endpoints recorded."
   }
 }

@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:54 CST — MUSE remains unrefreshable before the natural run
+
+A read-only screenshot of the exact Forest thread at approximately 04:53–04:54 still shows the 03:47:07 status as the latest reply and the old malformed request, with an extra trailing `READ`, in the existing composer. The send control is visible, but no clean body is available; nothing was sent or edited. Current scheduler/task/queue, runner lock, and live hashes therefore remain UNKNOWN. The 09:00 Asia/Shanghai natural run is still ahead. A local process-name scan found no `ssh` executable, but there was no device query, so Pixel connectivity remains UNKNOWN. Keep the device gate closed and do not replay or change the schedule. Evidence: `museComposerRevalidation20261104_0454`, `pixelLocalAliasProcessCheck20261104_0454`.
+
 ## 2026-11-04 04:51 CST — Reply action did not isolate the stale draft
 
 In the exact Forest thread, Reply under the 03:47:07 status inserted a quote block into the existing composer but left the malformed old status request ending in duplicate `READ` in the message body. This is not a clean composer path. The quote context was cancelled through Ignore quote; no content was sent or edited. Current scheduler/queue/in-flight, runner lock, and live hashes remain UNKNOWN; no Pixel connection. Do not use Reply to send until the body is demonstrably clean. Evidence: `museReplyComposerNotClean20261104_0451`.
