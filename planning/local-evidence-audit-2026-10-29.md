@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 05:30 CST：CUA访问门禁复核
+
+05:29 CST `cua.getState()`列出无可用apps/browsers；错误状态为Mac已锁定且自动解锁无法完成，以及Work settings禁用local browser use。没有打开MUSE线程或发送消息，未查Pixel。故当前MUSE任务/队列/在途、runner lock、live hashes及自然运行结果无法验证，03:47读数保持历史且不可作门禁。用户解锁Mac并允许浏览器后，优先只读刷新精确Forest线程。记录：`museAccessBlocked20261104_0530`。
+
 ## 五项日常任务的动作、结果与验收边界｜2026-11-04 05:11 CST
 
 | 日常项 | 最近可信动作记录 | 结果/回执结论 | 重复/跨日观察 | 当前验收 |

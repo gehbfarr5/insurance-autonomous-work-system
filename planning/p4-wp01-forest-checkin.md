@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 05:30 CST：Mac锁定及Work浏览器禁用，MUSE状态未刷新
+
+CUA最新surface inventory报告Mac已锁定且自动解锁失败，Work settings同时禁用本地浏览器。没有发送MUSE请求；当前调度/任务、队列/在途、runner lock和live哈希仍UNKNOWN，03:47读数已过时。没有查询Pixel。自然运行同轮结果尚未取得；先解锁并恢复Work浏览器访问，再刷新精确Forest线程并确认无在途任务。证据：`museAccessBlocked20261104_0530`。
+
 ## 2026-11-04 05:11 CST：当前任务门禁与规则原件复核
 
 E07私有规则弹层快照按索引复核通过，支持阳光日上限10、雨露日上限20及按次/人/单计量；不提供重置时刻/时区、奖励周期、到账时延或当前规则版本。日常五项最近可信动作、NOT_SENT/SENT、结果与跨日验收拆分见[本地证据审计](local-evidence-audit-2026-10-29.md#五项日常任务的动作结果与验收边界2026-11-04-0511-cst)。CUA尝试只读打开唯一Forest线程时被Work settings拒绝；当前MUSE并发、Pixel连接/锁/monitor和live哈希均UNKNOWN。没有连接Pixel、部署、重放、改门禁或调度。记录：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`。

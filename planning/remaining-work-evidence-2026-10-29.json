@@ -5363,5 +5363,36 @@
       }
     ],
     "actions": "Read-only state check; no issue, pull request, branch, or merge state was changed."
+  },
+  "museAccessBlocked20261104_0530": {
+    "recordedAt": "2026-11-04T05:30:02+08:00",
+    "source": "Read-only CUA surface inventory (`cua.getState()`).",
+    "finding": "The inventory returned no apps or browsers. It reported that the Mac is locked and automatic unlock failed, and that local browser use is disabled in Work settings.",
+    "actions": "No MUSE thread was opened; no MUSE request/message was sent; no draft was edited; no Pixel query/connection, device access, business action, state/log read, code/job run, or schedule change occurred.",
+    "limit": "Current scheduler/task, queue/in-flight, runner lock, live hashes, and natural-run result remain UNKNOWN. The 03:47:07 MUSE snapshot is stale and is not a device-access gate. Pixel connectivity and device lock/monitor/UI remain UNKNOWN."
+  },
+  "githubStateCheck20261104_0529": {
+    "recordedAt": "2026-11-04T05:29:16+08:00",
+    "source": "Read-only GitHub CLI checks of Issue #3 and open pull requests, plus local Git status.",
+    "repository": {
+      "branch": "main",
+      "head": "7b0ee8fff4135339936463c6221c19973495aad9",
+      "originMain": "7b0ee8fff4135339936463c6221c19973495aad9",
+      "workingTree": "clean at check time"
+    },
+    "issue3": "OPEN",
+    "openPullRequests": [
+      {
+        "number": 17,
+        "title": "Harden Family Card OCR table field mapping",
+        "state": "OPEN",
+        "scope": "Unrelated WP11",
+        "mergeable": "UNKNOWN",
+        "mergeStateStatus": "UNKNOWN",
+        "statusChecks": []
+      }
+    ],
+    "changeSince0522": "At 05:22 GitHub reported PR #17 MERGEABLE/CLEAN; at 05:29 both mergeability fields returned UNKNOWN.",
+    "actions": "Read-only status check; no issue, pull request, branch, or merge state was changed."
   }
 }
