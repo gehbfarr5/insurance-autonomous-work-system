@@ -1,5 +1,11 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 01:42—01:47 CST — refreshed pre-run status; rule source still open
+
+MUSE's fresh 01:42:49 read confirmed no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and one daily 09:00 Asia/Shanghai schedule with the next trigger at 09:00 today. Live runner/assistant hashes and latest failure/success records are unchanged; see `museReadonlyStatus20261104_014249` in the [structured evidence](../planning/remaining-work-evidence-2026-10-29.json). Afterward, the existing Pixel SSH alias returned non-root UID 10249, Pixel 3a, Android 15, boot complete at device time 01:44:06. Pixel operation lock, monitor status/hash, screen/Keyguard, and foreground Activity were not read and remain UNKNOWN; do not substitute MUSE's runner lock for the device lock.
+
+A 01:46:58 targeted public search of CPIC's official domain for current Forest limits, task/reward rules, 09:00 timing, and the named workflows returned no directly relevant rule source. This bounded search does not prove the source is absent; the official reset time, repeat cycle, exact reward trigger, posting delay, and current eligibility remain unverified. Keep the existing natural run; after its window, refresh MUSE and read that same run's sanitized evidence first. No task was run, business state/log read, or device/deployment/schedule change made. Evidence: `pixelReadonlyPreflight20261104_0144`, `officialWebsiteRuleSearch20261104_0146`.
+
 ## 2026-11-04 01:34—01:37 CST — refreshed runtime metadata; device lock still unknown
 
 The 01:27 UI limitation was resolved in the same existing Forest thread using its explicit Reply action and Return to submit a read-only request. MUSE's 01:34:49 reply confirms, at that timestamp only, no active task, `0/0/false` running/queued/in-flight, runner lock `FREE`, no Forest process observed, and one daily 09:00 Asia/Shanghai schedule with the next trigger at 09:00 today. The live runner/assistant hashes and latest failure/success records match the values captured in [structured evidence](../planning/remaining-work-evidence-2026-10-29.json) (`museReadonlyStatus20261104_013449`).

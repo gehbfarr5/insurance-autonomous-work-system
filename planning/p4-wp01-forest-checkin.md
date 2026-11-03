@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 01:42—01:47 CST：更新自然运行前证据
+
+01:42:49 MUSE只读确认Forest当时无活动/排队/在途任务、runner lock `FREE`、无Forest进程，唯一schedule仍是Asia/Shanghai每日09:00、下一触发11月4日09:00；live哈希及最近运行记录未变。01:44:06设备时钟经既有Pixel alias以非root确认Pixel 3a、Android 15、boot完成、UID 10249。未读取设备操作锁、monitor或森林业务状态；不得把MUSE runner lock当作Pixel锁。自然任务仍待；之后先读同轮脱敏MUSE prepare、结果、stages、assistant状态和cleanup，不重试/重放。签到与其余日常任务须以独立业务回执验收。证据键：`museReadonlyStatus20261104_014249`、`pixelReadonlyPreflight20261104_0144`。
+
 ## 2026-11-04 01:14 CST：规则来源补查
 
 四组Google Drive已浏览文档metadata-only查询均0匹配、未取正文；CPIC官方页面只提供E锦囊与态幸福的历史背景，不证明当前森林流程/奖励规则。此补查未触及Pixel或业务状态，不改变WP01验收：等待既有09:00自然运行，之后先取该轮脱敏结果；签到与其他日常任务仍须凭业务回执验收。结构化记录见[证据索引](remaining-work-evidence-2026-10-29.json)。

@@ -1,5 +1,13 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 01:42—01:47 CST：新鲜MUSE元数据；Pixel只读身份核验
+
+MUSE于01:42:49在既有Forest线程只读回报：无活动Forest任务；唯一启用schedule为每日09:00 Asia/Shanghai、下次触发11月4日09:00；running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无Forest进程；live `run.py` / `assistant.py` SHA仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败/成功仍为11月3日09:11:17与10月31日09:15:50。此状态是01:42:49时点的MUSE元数据。
+
+之后仅经既有`pixel3a-kjgx`以非root做身份/启动状态读取：UID 10249、Pixel 3a、Android 15、boot完成，设备时钟01:44:06 CST。该命令没有读取设备操作锁、monitor、APK、屏幕/Keyguard或前台Activity；这些字段仍UNKNOWN。MUSE runner lock不证明Pixel操作锁。01:46:58的CPIC官方域搜索未找到当前森林规则直接来源；限定搜索不证明原件不存在。未用root/`su`、未读业务state/raw logs、未运行任务或代码、未写设备/安装/重启、未改部署/调度/网络/凭据。
+
+保留既有09:00自然运行；结束后先刷新MUSE并读取同轮脱敏prepare/结果/stages/assistant/cleanup。未知或不一致即停止，不重试、不重放、不清业务状态。device-side collector仍需`su`且无经验证非root锁/私有状态路径，因此不部署观察候选。证据：`museReadonlyStatus20261104_014249`、`pixelReadonlyPreflight20261104_0144`、`officialWebsiteRuleSearch20261104_0146`。
+
 ## 2026-11-04 01:34—01:37 CST：更新当前MUSE门禁与Pixel只读身份
 
 01:27记录中的CUA composer限制已在同一既有阳光森林线程内解决：点击该助手回复的显式Reply后出现引用式文本输入框，Return成功提交只读状态查询；未选择或发送附件，未访问其他聊天。MUSE于01:34:49返回：无活动Forest任务；唯一启用schedule为每日09:00 Asia/Shanghai、下次触发今日09:00；running/queued/in-flight `0/0/false`，runner lock `FREE`，未观察到Forest进程；live `run.py` / `assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败为11月3日09:11:17，最近成功为10月31日09:15:50。该MUSE读数只代表01:34:49时点。
