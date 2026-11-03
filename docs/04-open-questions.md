@@ -1,5 +1,13 @@
 # 缺失内容与 P4 按需核查
 
+## 最新接续核查｜2026-11-03 16:04 CST
+
+- **调度与设备只读状态：** MUSE 15:54:29回读每日09:00、下次11月4日09:00，running/queued/in-flight为0/0/false、runner lock FREE；最近失败11月3日09:11:17、最近成功10月31日09:15:50、连续失败3次。Pixel 15:58:24只读为Android 15、Dozing、monitor `watching`/guard清/requests=0；设备操作锁和前台Activity UNKNOWN。未更改设备或调度。此前prepare根因仍UNKNOWN。
+- **规则原据：** 历史`rules.json`（8079字节，SHA-256 `19dc81a6f4f4ababc5b572b05eec809a539246ed574cba3224786a9f2df91cc2`）只支持日上限阳光10、雨露20及动作单位；UI的1–7/8–14/15–21/22–月底分段和当月末行为值说明不能证明森林任务重置、单项重复周期或到账时延。针对Drive的阳光森林、阳光雨露结算周期、官方时点计算、月末统计及日上限等关键词查询未命中；公开CPIC域名也未找到可核验活动原文。这是有界查找未命中，不证明从未确认或原件不存在。
+- **五项扩展：** 保单芯管家申请成功不等于检视/奖励完成，且已移出每日范围；态幸福需要真实资料，保存/测算/报告奖励触发未证；三节一生含真实联系/贺卡/检视提交，资格与周期未证；E锦囊独立入口/JSBridge已证，激活条件与流程未证；签单协同仅有静态入口线索，与森林任务映射及本人业务范围未证。五项均保留“仍待核实”，无证据归为现实外部阻碍或加入自动化。
+
+详见[来源与扩展核查](../planning/remaining-work-2026-10-29.md)、[最新诊断状态](../planning/forest-prepare-diagnostics-2026-11-03.md)及[运行恢复说明](../planning/forest-diagnostics-operations-2026-11-04.md)。
+
 ## 当前缺口校正｜2026-11-03 15:37 CST
 
 - **prepare根因仍UNKNOWN，设备观测路径已打通：** 11月3日scheduled assistant/main均prepare超时；MUSE 14:09快照报告下一自然运行11月4日09:00。15:37 CUA只确认MUSE应用进程运行；没有可用MUSE连接器，本轮未打开界面，因此当前日程、运行、排队、在途状态均UNKNOWN。为避免撞车，未复连Pixel；15:22读数只作为最近一次历史状态，不能充当当前preflight。该次`requests=0`是重启后的真实进程计数，不回填旧值；当前计数未知。下次先确认MUSE无并发再读Pixel，不能确认则继续UNKNOWN。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)和[接续手册](../planning/forest-diagnostics-operations-2026-11-04.md)。
