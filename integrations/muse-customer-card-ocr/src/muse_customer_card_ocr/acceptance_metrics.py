@@ -227,6 +227,14 @@ def _validate_sample(value: Any, index: int) -> dict[str, Any]:
             raise AcceptanceInputError(
                 f"{path} must be either auto-usable or require manual review."
             )
+        if auto_usable and failure_codes:
+            raise AcceptanceInputError(
+                f"{path} auto-usable samples cannot include failure reasons."
+            )
+        if review_required and not failure_codes:
+            raise AcceptanceInputError(
+                f"{path} samples requiring manual review must include a failure reason."
+            )
         if released and not (auto_usable or review_required):
             raise AcceptanceInputError(f"{path}.released_for_confirmation is inconsistent.")
         if any(code in EXCLUSION_REASON_CODES for code in failure_codes):

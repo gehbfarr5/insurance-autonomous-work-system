@@ -219,6 +219,23 @@ class AcceptanceMetricsTests(unittest.TestCase):
         with self.assertRaises(AcceptanceInputError):
             aggregate_30_card_acceptance(candidate)
 
+    def test_auto_usable_sample_rejects_failure_reason_codes(self):
+        candidate = payload()
+        candidate["sample_results"][0]["failure_reason_codes"] = ["NAME_MISSING"]
+
+        with self.assertRaises(AcceptanceInputError):
+            aggregate_30_card_acceptance(candidate)
+
+    def test_manual_review_sample_requires_a_failure_reason_code(self):
+        candidate = payload()
+        sample_result = candidate["sample_results"][0]
+        sample_result["auto_usable_draft"] = False
+        sample_result["manual_review_required"] = True
+        sample_result["failure_reason_codes"] = []
+
+        with self.assertRaises(AcceptanceInputError):
+            aggregate_30_card_acceptance(candidate)
+
         candidate = payload()
         candidate["sample_results"][0]["clarity_code"] = "clear enough"
         with self.assertRaises(AcceptanceInputError):
