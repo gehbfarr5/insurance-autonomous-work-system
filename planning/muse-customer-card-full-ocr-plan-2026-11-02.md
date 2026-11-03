@@ -8,7 +8,7 @@
 
 - **WP8-B / WP9：** MUSE 历史阶段报告称首尔 OCR 路径、Token 管理、合成查重/联系人创建、回读、幂等及清理通过。本轮未重新执行这些阶段。
 - **WP10：** MUSE 报告首张真实卡 OCR 成功，但自动解析为 `REVIEW_REQUIRED`；用户随后确认手工草稿并创建、回读一条真实联系人。这证明存在人工流程，不证明自动表格解析通过。
-- **WP11：** 0.7.0–0.10.0 隔离保护区回放均为 `REVIEW_REQUIRED`。0.11.0 精确代码提交 `180f6333046b830010d60338edb580b23c03927c` 的本地与 MUSE 离线测试均为 127/127；同一 89 项 WP10 结构化结果仍回放为 `REVIEW_REQUIRED`，原因码为 `table_layout_uncertain`、`main_customer_identity_unclear`、`mobile_missing`、`address_conflict`、`address_uncertain`，草稿映射被拒。姓名、手机号、生日、性别、地址和其他电话字段缺失；身份证字段存在，但本轮没有读取 reference 或做值匹配。MUSE 报告地址进入内部 evidence，但没有返回地址字段，候选未通过当前门禁。针对 0.10.0 与 0.11.0 地址计数差异发起了同输入值安全诊断；MUSE UI 在 Mac 锁定后无法取回结果，状态为 **INTERRUPTED at readback**，具体过滤阶段仍未知。不得据此宣称地址修复在真实模板通过。
+- **WP11：** 0.7.0–0.10.0 隔离保护区回放均为 `REVIEW_REQUIRED`。0.11.0 精确代码提交 `180f6333046b830010d60338edb580b23c03927c` 的本地与 MUSE 离线测试均为 127/127；同一 89 项 WP10 结构化结果仍回放为 `REVIEW_REQUIRED`，原因码为 `table_layout_uncertain`、`main_customer_identity_unclear`、`mobile_missing`、`address_conflict`、`address_uncertain`，草稿映射被拒。姓名、手机号、生日、性别、地址和其他电话字段缺失；身份证字段存在，但本轮没有读取 reference 或做值匹配。MUSE 报告地址进入内部 evidence，但没有返回地址字段，候选未通过当前门禁。本地静态代码显示，只要行式解析已产生地址 evidence，同一行空间救援就会被前置条件关闭；这是否适用于 WP10 输入尚未知。针对 0.10.0 与 0.11.0 地址计数差异发起了同输入值安全诊断；MUSE UI 在 Mac 锁定后无法取回结果，状态为 **INTERRUPTED at readback**，具体过滤阶段仍未知。不得据此宣称地址修复在真实模板通过。
 - **生产：** MUSE 报告包版本 0.5.0、提交 `8336008d080387ab709d1e0ab9381683b1138e0f`、工作树干净。生产 `fields.py` SHA-256 已在 Git blob 上独立核对。四个 MUSE runtime 脚本已按 source-only 快照导入受控审阅分支，其中 MCP 客户端私有 host 值已在公开副本中脱敏；原始 owner 仓库/ref/commit 仍未知，快照不是可部署生产 checkout。详见 [WP11-E 审计](wp11e-production-path-audit-20261103.md)。
 - **操作员复核 UI：** 对公开 source-only snapshot 的静态检查显示，`wp8-seoul-ocr-service/muse_adapter.py` 调用字段映射后只输出状态、原因码、字段存在布尔值和草稿状态；没有字段值展示/编辑或把编辑后草稿送入确认流程的代码。`wp10-real-card/wp10_create_readback.py` 只从 stdin 接收已复核且已确认的 JSON。此结论仅针对脱敏审阅快照；它不证明 MUSE 生产会话是否另有 UI，但“字段级待确认草稿 → 用户修订 → 明确确认 → 写入”的 live 流程仍未验收。
 - **控制风险：** 快照静态审计确认旧 create 入口未强制确认状态、查重缺失结果可被当作空结果、MCP 通用重试覆盖写操作、结果/错误可打印原始内容；当前候选已加本地代码门禁。MCP 标准化服务端幂等能力未在目标 MUSE server 证实；本地 journal 仅阻止同一受保护状态目录下的盲重试。MUSE 首尔服务实际部署哈希仍未知。
@@ -19,7 +19,7 @@
 1. **已完成：** 导入四文件 source-only 快照并核对哈希/公开仓库敏感信息；原始 MUSE 源码仍无可验证 Git provenance，快照不得当作生产 source of truth。
 2. **已实现，尚未生产验收：** 两个 OCR 入口在本地候选中复用 Seoul response adapter，保留 `location`、`probability`、`chars`，对缺失/损坏响应 fail-closed；不增加第二套 OCR 模型。
 3. **已完成 WP11-B 至 WP11-G 隔离验证：** 0.11.0 本地与 MUSE 离线套件 127/127；同一 WP10 结果仍 `REVIEW_REQUIRED`。地址字段没有提取，草稿映射被拒。不得放宽并列/重叠门槛、扩大任意跨行搜索、凭 ID 校验单独选值或推断空白框性别。
-4. **当前第一依赖任务：** Mac 解锁后，检查同一 MUSE 旁聊中已发起的 WP11-G 值安全诊断是否已有最终回复；若有则补记解析阶段计数，若没有再决定是否在现有隔离 worktree/同一结果上重试。不得因 UI 锁定就新开另一轮或换数据。
+4. **当前第一依赖任务：** Mac 解锁后，检查同一 MUSE 旁聊中已发起的 WP11-G 值安全诊断是否已有最终回复；若有则补记解析阶段计数，特别确认行式地址 evidence 是否关闭了空间救援，以及首个未通过的固定 gate；若没有再决定是否在现有隔离 worktree/同一结果上重试。不得因 UI 锁定就新开另一轮或换数据。
 5. **根据诊断继续：** 只有找到可复现的具体过滤错误才修改解析器；增加合成回归、跑离线套件，并让 MUSE 在相同受保护输入上复验。若地址无安全候选，保持可选并要求人工复核，不宣称修复通过。
 6. **生产接入前：** 通过 MUSE 只读确认四个 runtime 文件的真实来源/ref/提交，确认 Seoul 服务部署哈希、MUSE 实际 `contacts_search/create/read` schema，以及操作员 UI 是否提供字段级编辑、复核与确认。当前公开快照 provenance 未知；静态候选源码没有字段级编辑 UI，live MUSE UI 和 search schema 尚未验收；不得部署候选覆盖未知来源。
 7. **端到端安全验收：** 以隔离环境证明不确定结果不可绕过复核、查重失败不会变成空结果、写入前要求用户明确确认、写入不自动重试、回读逐字段一致、待处理写入可人工对账；所有成功/失败路径的值不得进入普通日志。
