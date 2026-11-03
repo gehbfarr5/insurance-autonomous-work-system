@@ -113,5 +113,23 @@
       "bytes": 5939,
       "description": "历史验收说明，不能单独代替原始数据"
     }
+  ],
+  "externalLookups": [
+    {
+      "id": "X01",
+      "recordKey": "googleDriveRuleMetadataSearch20261104_0112",
+      "source": "Connected Google Drive viewed-document metadata-only search",
+      "summary": "Four queries returned zero matches; no document content fetched.",
+      "scopeLimit": "Applies only to these query terms and the viewed-document metadata scope; does not prove source material absent or never confirmed."
+    },
+    {
+      "id": "X02",
+      "recordKey": "cpicOfficialExtensionSourceFollowup20261104",
+      "sources": [
+        "https://www.cpic.com.cn/c/2018-11-02/1562542.shtml",
+        "https://m.cpic.com.cn/c/2022-04-07/1633278.shtml"
+      ],
+      "summary": "Historical E锦囊 product-page iteration and 态幸福 NBS customer-needs analysis references only; no current Forest workflow or reward rule verified."
+    }
   ]
 }

@@ -1,5 +1,11 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 01:14 CST：Drive元数据与CPIC历史来源补查
+
+Google Drive连接器以`require_viewed_by_user=true`、document metadata-only方式检索“阳光森林”“阳光雨露”“行为值”“E锦囊 态幸福”，四项均0匹配；未打开或读取正文。该结果限于查询词与已浏览文档范围，不证明原件不存在或历史上未确认。CPIC官方页面补充的仅为历史背景：[2018年E锦囊（保险超市）产品页迭代](https://www.cpic.com.cn/c/2018-11-02/1562542.shtml)及[2022年态幸福NBS客户需求分析工具介绍](https://m.cpic.com.cn/c/2022-04-07/1633278.shtml)，没有当前森林映射、资格、奖励触发或周期证据；五项扩展均保持“仍待核实”，E07历史上限/动作单位结论不变。未访问设备、业务state或日志，未运行任务、改动部署/调度。结构化记录键：`googleDriveRuleMetadataSearch20261104_0112`、`cpicOfficialExtensionSourceFollowup20261104`。
+
+本轮GitHub基线核对时，本地`main`干净且与`origin/main`同为`ed823f2254dd7d3b6f0102c9baddd09787758d40`；Issue #3仍开放，最新既有评论为`6610245246`。该基线用于记录本次文档同步前状态。
+
 ## 2026-11-04 00:47—00:49 CST：MUSE并发/版本与Pixel身份/APK只读复核
 
 在既有Forest MUSE线程00:47:37只读确认当时无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；唯一启用schedule为Asia/Shanghai每日09:00、下次11月4日09:00。live `run.py` / `assistant.py` SHA-256仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败/成功为11月3日09:11:17和10月31日09:15:50。

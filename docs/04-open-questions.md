@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 01:14 CST — rule-source follow-up
+
+Google Drive viewed-document metadata-only searches for “阳光森林”“阳光雨露”“行为值”“E锦囊 态幸福” each returned zero matches; no content was fetched. This only describes those queries and the viewed-document scope. Official CPIC material found in this follow-up is historical: the 2018 E锦囊 product-page iteration notice and the 2022 态幸福 NBS customer-needs tool description do not establish a current Forest workflow or reward rule. Current eligibility, task mapping, trigger, reset/repeat cycle, and posting time remain open; all five extensions remain `仍待核实`. See [structured evidence](../planning/remaining-work-evidence-2026-10-29.json) and [source review](../planning/remaining-work-2026-10-29.md).
+
 ## 2026-11-04 00:47—00:49 CST — refreshed current state
 
 本节更新当前状态；下方00:19—00:21的MUSE读取失败记录仍是历史事实，但其“当前状态未确认”结论已由00:47:37成功只读回读更新。当前唯一schedule为每日09:00 Asia/Shanghai、下次11月4日09:00；MUSE当时无活动/排队/在途任务，runner lock FREE、无Forest进程，live `run.py`/`assistant.py` hashes未变。Pixel既有别名非root只读检查确认Pixel 3a、Android 15、boot完成及SecureView APK pin；命令在00:49:31本地时钟采样前完成，但精确时刻未捕获。

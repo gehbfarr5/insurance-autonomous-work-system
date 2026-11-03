@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 01:14 CST：规则来源补查
+
+四组Google Drive已浏览文档metadata-only查询均0匹配、未取正文；CPIC官方页面只提供E锦囊与态幸福的历史背景，不证明当前森林流程/奖励规则。此补查未触及Pixel或业务状态，不改变WP01验收：等待既有09:00自然运行，之后先取该轮脱敏结果；签到与其他日常任务仍须凭业务回执验收。结构化记录见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 2026-11-04 00:47—00:49 CST：自然运行前状态复核
 
 00:47:37 CST在既有Forest MUSE线程完成只读并发/部署元数据复核：无活动任务；唯一schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；`run.py` / `assistant.py` live哈希未变，最近失败11月3日09:11:17、最近成功10月31日09:15:50。此读数不覆盖Pixel锁或monitor。

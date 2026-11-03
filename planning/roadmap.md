@@ -1,5 +1,9 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 01:14 CST：规则与扩展来源补查
+
+Drive四组已浏览文档metadata-only查询均无匹配，未取回正文；两篇CPIC官方页面仅补充历史背景（E锦囊产品页迭代、态幸福NBS需求分析），没有当前森林任务映射或奖励规则。原规则缺口仍开放，五项扩展继续“仍待核实”。本轮不改变验收范围；继续保留既有09:00自然运行，并在运行后先读取同轮脱敏证据。记录见[结构化证据](remaining-work-evidence-2026-10-29.json)及[来源核查](remaining-work-2026-10-29.md)。
+
 ## 2026-11-04 00:47—00:49 CST：刷新MUSE与Pixel只读预检，保留自然运行
 
 MUSE在既有阳光森林线程00:47:37只读确认：Forest无活动任务；唯一启用schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight为`0/0/false`，runner lock `FREE`，无Forest进程。live `run.py` / `assistant.py` SHA-256仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新失败与最近成功仍分别为11月3日09:11:17和10月31日09:15:50。该读数只证明MUSE元数据。
