@@ -231,6 +231,10 @@ MUSE reported one narrow fetch of the authorized target branch to obtain the exa
 
 The same-input value-free diagnostic and its follow-up classification are complete. It confirmed that line-format address evidence was absent, `allow_address_rescue` was true, and the unique address label triggered the same-row rescue. Of the expanded candidates, one distinct value passed column assignment and address checks. A second distinct value also passed the address length and character checks, but its column center was near-tied and it was closer to another field label; existing geometry still could not assign it uniquely to that field. This kept the rescue uncertain, so it did not append the otherwise valid representative. The direct/next-row evidence contained two distinct values and remained in conflict; the final address stayed absent with `address_conflict` and `address_uncertain`. Payload, isolated worktree, and production state were reported unchanged; no reference was read. The rejection is supported by the current geometry, not by the line-evidence precondition. No safe parser change is justified; keep the result under manual review.
 
+## WP11-H follow-up: same-input field diagnosis
+
+MUSE then diagnosed the other fields on the same authorized WP10 result at exact commit `180f6333046b830010d60338edb580b23c03927c`. Name, mobile, explicit birthday, and other phone had zero candidates through the existing geometry uniqueness gate; none had an acceptable candidate under current rules. Gender had no explicit label or independent structured checked-state signal, so no gender value was inferred. The decision remained `REVIEW_REQUIRED`; no parser change is justified by this result. See the sanitized [WP11-H field diagnosis](../../planning/wp11h-field-diagnostic-20261103.md) and detailed [test report](TEST_REPORT.md). No reference, new sample, 30-card set, or production state was accessed.
+
 ## Rollback
 
 Remove the isolated venv and this branch checkout/package. No credentials or connector configuration are created by this code. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.
