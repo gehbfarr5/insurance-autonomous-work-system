@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 05:44 CST：E锦囊静态路由结论限制
+
+后续本地报告称独立E锦囊入口/JSBridge路由曾在静态包中发现；本轮窄JS词项扫描未关联E锦囊字样与JSBridge路由，也未定位原报告所指六份资源集。把它保留为既有报告线索，当前激活流程与资格仍UNKNOWN；五项分类不变，全部仍待核实。证据：`extensionEvidenceReconciliation20261104_0544`。
+
 ## 2026-11-04 05:34 CST：PR #17 mergeability再次变化
 
 Issue #3仍OPEN。05:34 GitHub读回PR #17为OPEN / MERGEABLE / CLEAN、无checks；05:29同字段为UNKNOWN，05:22则为MERGEABLE/CLEAN。该无关WP11 PR的mergeability视为波动的瞬时读数。`main`与`origin/main`此时均为`7f75200`，工作区干净。证据：`githubStateCheck20261104_0534`。

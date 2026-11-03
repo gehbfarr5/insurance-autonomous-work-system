@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 05:44 CST：E锦囊静态入口证据边界复核
+
+此前本地报告称静态包发现独立E锦囊入口/JSBridge路由。本轮有限关键词扫描未将E锦囊字样与JSBridge路由关联，也未定位精确六份资源集；故保留为报告的静态线索，不升级为当前用户流程或本人可激活结论。实际激活、资格、森林映射及奖励触发/周期仍UNKNOWN。五项扩展仍待核实。记录：`extensionEvidenceReconciliation20261104_0544`。
+
 ## 2026-11-04 05:30 CST：Mac锁定及Work浏览器禁用，MUSE状态未刷新
 
 CUA最新surface inventory报告Mac已锁定且自动解锁失败，Work settings同时禁用本地浏览器。没有发送MUSE请求；当前调度/任务、队列/在途、runner lock和live哈希仍UNKNOWN，03:47读数已过时。没有查询Pixel。自然运行同轮结果尚未取得；先解锁并恢复Work浏览器访问，再刷新精确Forest线程并确认无在途任务。证据：`museAccessBlocked20261104_0530`。

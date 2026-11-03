@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 05:44 CST — E锦囊路由结论按已报告线索处理
+
+Earlier local notes report a separate E锦囊 static entry/JSBridge route. This turn's bounded JS token scan did not correlate the E锦囊 label with a JSBridge route and did not identify the exact six source files referenced by that report. Keep the route as a reported static clue only; account activation, eligibility, Forest mapping, reward trigger, and repeat cycle remain UNKNOWN. All five extensions remain `仍待核实`. Evidence: `extensionEvidenceReconciliation20261104_0544`.
+
 ## 2026-11-04 05:34 CST — latest GitHub readback
 
 Issue #3 remains OPEN. GitHub again reports unrelated WP11 PR #17 as `MERGEABLE` / `CLEAN`, with no checks listed. This follows an `UNKNOWN` readback at 05:29 and `MERGEABLE` / `CLEAN` at 05:22; treat mergeability as a fluctuating point-in-time value. Local `main` is clean and matches `origin/main` at `7f75200`. Evidence: `githubStateCheck20261104_0534`.

@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 05:44 CST — E锦囊静态入口证据边界
+
+Earlier local notes report an independent E锦囊 entry/JSBridge route. A bounded keyword scan of local private JS sources did not correlate an E锦囊 label with a JSBridge route or identify the precise six-resource set described by that report. Treat it as a reported static clue; current activation, eligibility, Forest mapping, reward trigger, and cycle remain unverified. All five extension items remain `仍待核实`. Evidence: `extensionEvidenceReconciliation20261104_0544`.
+
 ## 2026-11-04 05:34 CST — PR #17 mergeability readback changed again
 
 At 05:34, GitHub again reported the unrelated open WP11 PR #17 as `MERGEABLE` / `CLEAN`, with no status checks listed; at 05:29 both fields were `UNKNOWN`. Treat these as point-in-time API readings, not a stable PR result. Issue #3 remains OPEN. Local `main` is clean at `7f75200`, matching `origin/main`. Evidence: `githubStateCheck20261104_0534`.

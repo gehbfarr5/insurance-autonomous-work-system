@@ -96,7 +96,7 @@
     "保单芯管家": "仍待核实；用户先前移出每日范围，申请成功非检视/奖励完成",
     "态幸福": "仍待核实；现有证据止于真实建档/测算前",
     "三节一生": "仍待核实；完成方法产生任务提交，不能当只读浏览",
-    "E锦囊激活": "仍待核实；已恢复独立原生入口线索，未证明激活流程/资格",
+    "E锦囊激活": "仍待核实；本地报告称有独立原生入口/JSBridge静态线索，但本轮窄搜索未关联E锦囊字样与路由，也未定位原报告所指资源集；激活流程/资格未证",
     "签单协同业务": "仍待核实；有其他协同入口线索，未证明与目标规则映射"
   },
   "receivedPackages": [
@@ -5425,9 +5425,28 @@
   },
   "extensionEvidenceReconciliation20261104_0538": {
     "recordedAt": "2026-11-04T05:38:00+08:00",
-    "source": "Read-only reconciliation of the local evidence audit's earlier extension summary with the later sanitized static-bundle classification recorded as extensionWorkflowClassification20261103_2212.",
-    "finding": "The earlier note records a generic Smart Interview QR entry. Later static-bundle review confirms an independent E锦囊 entry and JSBridge route, while the account-specific activation page, eligibility, Forest mapping, reward trigger, and cycle remain unverified.",
-    "interpretation": "The observations are compatible: the generic QR was not activation proof, and the independent static route does not prove the user's account can activate. All five extension items remain 仍待核实; no classification changed.",
-    "actions": "Documentation consistency correction only. No MUSE/Pixel access, customer-data read, business action, code run, device change, or schedule change."
+    "source": "Read-only reconciliation of the older E08 summary, the later local report at planning/remaining-work-2026-10-29.md#五项扩展逐项结论, and the public structured evidence index.",
+    "finding": "The earlier E08 summary and extensionWorkflowClassification20261103_2212 record a generic Smart Interview QR entry. A later local report states that static-bundle review found an independent E锦囊 entry and JSBridge route, but the public structured index does not identify the supporting static resource file/hash. This turn did not reopen the private source bytes.",
+    "interpretation": "Treat the independent route as a previously reported static clue, not as independently reverified current runtime or account capability. The generic QR was not activation proof. Eligibility, actual activation, Forest mapping, reward trigger, and cycle remain unknown; all five items remain 仍待核实.",
+    "actions": "Documentation and index consistency correction only. See the 05:44 follow-up for a narrow local JS token scan; no MUSE/Pixel, customer screenshots/forms, business action, device, state, or schedule was accessed or changed."
+  },
+  "extensionEvidenceReconciliation20261104_0544": {
+    "recordedAt": "2026-11-04T05:44:30+08:00",
+    "source": "Read-only comparison of E08 summary, local extension report, structured index, and a narrow keyword-presence scan of local private .js files.",
+    "scan": {
+      "jsFiles": 167,
+      "filesMatchingAnyOf": ["E锦囊", "eJinnang", "EJinnang", "JSBridge"],
+      "matchingFileCount": 7,
+      "onlyFileWithEJinnangLiteral": {
+        "bytes": 1024,
+        "hasRouteOrPathField": false,
+        "hasJSBridgeMarker": false
+      },
+      "jsBridgeMatchesWithEJinnangLiteral": 0,
+      "exactSixResourceSetIdentified": false
+    },
+    "finding": "The prior local report states that a static bundle showed an independent E锦囊 entry and JSBridge route. The E08 summary and extensionWorkflowClassification20261103_2212 record only a generic Smart Interview QR. The bounded scan did not correlate an E锦囊 label with a JSBridge route and did not identify the precise six-resource set; it neither confirms nor refutes the earlier report.",
+    "interpretation": "Keep the independent route as a previously reported static clue, not as independently verified or current runtime behavior. Eligibility, actual activation, Forest mapping, reward trigger, and cycle remain UNKNOWN; all five items stay 仍待核实.",
+    "actions": "Read-only keyword-presence scan of JS files; no code snippets emitted, customer records/screenshots/forms/raw business logs read, MUSE/Pixel access, business action, device/state/schedule change, or deployment."
   }
 }
