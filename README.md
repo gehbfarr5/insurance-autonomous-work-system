@@ -1,6 +1,6 @@
 # 保险规划师自主工作系统
 
-> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** 0.10.0 候选增加身份证专用的同视觉行唯一候选门禁；MUSE 精确提交隔离复验的 123/123 离线及合成测试通过，但同一 WP10 结构化回放仍为 `REVIEW_REQUIRED`，草稿映射被拒。身份证存在但未核对参考值；生产仍为 0.5.0，未部署；30 卡授权未确认，继续暂停访问。详见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试报告](integrations/muse-customer-card-ocr/TEST_REPORT.md)、[WP11-E 生产路径审计](planning/wp11e-production-path-audit-20261103.md)和[WP11 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3)。
+> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** 0.11.0 本地候选增加地址专用的同行唯一有效候选路径；合成回归通过，MUSE 精确提交隔离复验待安排。0.10.0 的 MUSE 回放仍为 `REVIEW_REQUIRED`，草稿映射被拒；姓名、手机、生日、性别缺失，身份证存在但参考精确匹配未知。生产仍为 0.5.0，未部署；30 卡授权未确认，继续暂停访问。详见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试报告](integrations/muse-customer-card-ocr/TEST_REPORT.md)、[WP11-E 生产路径审计](planning/wp11e-production-path-audit-20261103.md)和[WP11 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3)。
 
 > **iCloud MCP 项目归档（2026-11-02）：** 核心首尔 MCP 与现有 Agent 已进入可用阶段；Chat 和 Work Cloud 同一 Sites MCP 演示工具已分别验收，但 **ChatGPT 真实 iCloud 数据链路仍受 Site 源码工作区阻断，子项目暂缓**。完整部署、研究、验收、无效尝试及恢复条件见 [iCloud MCP 全阶段总归档](planning/icloud-mcp-master-handover-2026-11-02.md)，不要将 demo PASS 误称为生产 iCloud PASS。
 

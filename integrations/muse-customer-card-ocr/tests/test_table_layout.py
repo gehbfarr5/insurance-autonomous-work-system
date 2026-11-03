@@ -103,6 +103,46 @@ def _same_row_identity_table(
     return blocks
 
 
+def _same_row_address_table(
+    *,
+    extra_address_value: str | None = None,
+    address_characters: tuple[OcrCharacter, ...] = (),
+    other_label_left: int = 1100,
+    address_value_left: int = 360,
+) -> list[OcrBlock]:
+    removed = {
+        "联系地址",
+        "虚构地址 A",
+        "宅电",
+        "其他联系电话",
+        "010-0000-0000",
+        "021-0000-0000",
+    }
+    blocks = [block for block in _complete_table() if block.text not in removed]
+    blocks.extend(
+        [
+            _block("联系地址", 230, 90, 80),
+            _block("甲区", 310, 90, 30),
+            _block(
+                "虚构详细地址甲",
+                address_value_left,
+                90,
+                150,
+                characters=address_characters,
+            ),
+        ]
+    )
+    if extra_address_value is not None:
+        blocks.append(_block(extra_address_value, 540, 90, 120))
+    blocks.extend(
+        [
+            _block("其他联系电话", other_label_left, 90, 100),
+            _block("010-0000-0000", other_label_left + 105, 90, 120),
+        ]
+    )
+    return blocks
+
+
 class TableLayoutExtractionTests(unittest.TestCase):
     def test_public_decision_is_fail_closed_for_pending_or_reviewed_result(self):
         pending = FieldExtractionResult(
@@ -341,6 +381,61 @@ class TableLayoutExtractionTests(unittest.TestCase):
         self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
         self.assertIsNone(extraction.fields.address)
         self.assertIn(ReviewReason.ADDRESS_UNCERTAIN, extraction.review_reasons)
+
+    def test_unique_valid_same_row_address_beyond_immediate_block_is_rescued(self):
+        extraction = extract_primary_customer(
+            _result(*_same_row_address_table())
+        )
+
+        self.assertEqual(extraction.decision, "READY")
+        self.assertEqual(extraction.fields.address, "虚构详细地址甲")
+
+    def test_distinct_valid_same_row_addresses_remain_under_review(self):
+        extraction = extract_primary_customer(
+            _result(
+                *_same_row_address_table(
+                    extra_address_value="虚构详细地址乙",
+                )
+            )
+        )
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.address)
+        self.assertIn(ReviewReason.ADDRESS_CONFLICT, extraction.review_reasons)
+        self.assertIn(ReviewReason.ADDRESS_UNCERTAIN, extraction.review_reasons)
+
+    def test_ambiguous_same_row_address_candidate_is_not_rescued(self):
+        characters = (
+            OcrCharacter(
+                text="详",
+                candidates=(
+                    CharacterCandidate(text="祥"),
+                    CharacterCandidate(text="详"),
+                ),
+            ),
+        )
+        extraction = extract_primary_customer(
+            _result(
+                *_same_row_address_table(address_characters=characters)
+            )
+        )
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.address)
+        self.assertIn(ReviewReason.ADDRESS_UNCERTAIN, extraction.review_reasons)
+
+    def test_non_address_column_value_is_not_rescued_as_address(self):
+        extraction = extract_primary_customer(
+            _result(
+                *_same_row_address_table(
+                    other_label_left=350,
+                    address_value_left=600,
+                )
+            )
+        )
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.address)
 
     def test_blank_name_cell_is_not_filled_from_adjacent_phone_column(self):
         blocks = [

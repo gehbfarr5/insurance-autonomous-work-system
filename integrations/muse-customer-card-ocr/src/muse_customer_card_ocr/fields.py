@@ -140,9 +140,12 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
     derives a birthday from an identity number, resolves OCR alternatives,
     infers gender, or chooses between conflicting values. Positioned Baidu
     word blocks may pair a label with a uniquely attributable right-hand cell
-    or uniquely aligned cell in the next visual row. A valid identity number
-    may be reassembled from adjacent numeric OCR blocks in one cell. Missing or
-    ambiguous geometry is surfaced for review rather than guessed.
+    or uniquely aligned cell in the next visual row. The identity-number and
+    address paths have narrower, field-specific same-row rescues that still
+    require a unique candidate and the field's existing validation. A valid
+    identity number may be reassembled from adjacent numeric OCR blocks in one
+    cell. Missing or ambiguous geometry is surfaced for review rather than
+    guessed.
     """
     evidence: dict[str, list[_Evidence]] = {key: [] for key in _FIELD_LABELS}
     in_family_section = False
@@ -181,6 +184,7 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
     spatial_evidence, spatial_uncertain_fields = _extract_spatial_evidence(
         result,
         allow_identity_rescue=not evidence["identity_number"],
+        allow_address_rescue=not evidence["address"],
     )
     for field_name, items in spatial_evidence.items():
         evidence[field_name].extend(items)
@@ -238,11 +242,12 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
         )
         for item in evidence["address"]
     )
-    if address_evidence_uncertain:
+    if len(all_address_values) > 1:
+        reasons.append(ReviewReason.ADDRESS_CONFLICT)
+    if "address" in spatial_uncertain_fields or address_evidence_uncertain:
         reasons.append(ReviewReason.ADDRESS_UNCERTAIN)
         address = None
     elif len(all_address_values) > 1:
-        reasons.append(ReviewReason.ADDRESS_CONFLICT)
         address = None
     else:
         address = all_address_values[0] if all_address_values else None
@@ -332,13 +337,17 @@ def _extract_spatial_evidence(
     result: OcrResult,
     *,
     allow_identity_rescue: bool = True,
+    allow_address_rescue: bool = True,
 ) -> tuple[dict[str, list[_Evidence]], set[str]]:
     """Read label/value adjacency from Baidu word-block coordinates.
 
     Baidu's handwriting response exposes one location per ``words_result``
     block, not table cells. This routine reconstructs visual rows from those
-    boxes, then accepts only direct right-neighbours or uniquely assigned
-    values immediately below a label. It does not bridge arbitrary rows.
+    boxes, then accepts direct right-neighbours or uniquely assigned values
+    immediately below a label. A sole, unambiguous address label may also use
+    one validated, uniquely assigned same-row value beyond its immediate
+    neighbour. Identity numbers have a separate checksum-gated same-row rule.
+    Neither exception bridges arbitrary rows.
     """
     evidence: dict[str, list[_Evidence]] = {key: [] for key in _FIELD_LABELS}
     uncertain_fields: set[str] = set()
@@ -484,6 +493,30 @@ def _extract_spatial_evidence(
                 # field label makes generic center-based column matching tie.
                 candidates.append(identity_rescue[1])
 
+            if label.field_name == "address" and allow_address_rescue:
+                address_candidates, address_candidate_uncertain = (
+                    _same_row_address_candidates(label, row, item_index, rows)
+                )
+                if address_candidate_uncertain:
+                    uncertain_fields.add("address")
+                if len(address_candidates) > 1:
+                    # Preserve every distinct valid value so the normal
+                    # conflict check also rejects multiple same-row matches.
+                    uncertain_fields.add("address")
+                    candidates.extend(address_candidates)
+                elif address_candidates and not address_candidate_uncertain:
+                    # Short, unambiguous blocks are not complete addresses.
+                    # A sole same-row value passing both column and address
+                    # checks may replace those fragments; retain all valid or
+                    # OCR-ambiguous candidates so conflicts still fail closed.
+                    candidates = [
+                        candidate
+                        for candidate in candidates
+                        if len(_clean(candidate.block.text)) >= 4
+                        or _has_ambiguous_character(candidate.block)
+                    ]
+                    candidates.extend(address_candidates)
+
             for candidate in candidates:
                 value = _clean(candidate.block.text)
                 if value:
@@ -544,6 +577,60 @@ def _matches_label_column(
     if second_distance - nearest_distance <= tie_margin:
         return False, True
     return nearest_label is label, False
+
+
+def _same_row_address_candidates(
+    label: _SpatialBlock,
+    row: list[_SpatialBlock],
+    label_position: int,
+    rows: list[list[_SpatialBlock]],
+) -> tuple[list[_SpatialBlock], bool]:
+    """Find distinct, valid address values beyond the immediate right block.
+
+    This narrow rescue reuses the existing same-row column assignment and
+    address checks. It does not search another visual row or affect other
+    fields. Ambiguous geometry or OCR characters prevent a rescue.
+    """
+    address_labels = [
+        item
+        for candidate_row in rows
+        for item in candidate_row
+        if item.field_name == "address"
+    ]
+    if len(address_labels) != 1 or address_labels[0] is not label:
+        return [], False
+
+    candidates: list[_SpatialBlock] = []
+    uncertain = False
+    for candidate in row[label_position + 2 :]:
+        if candidate.field_name is not None:
+            continue
+        value = _clean(candidate.block.text)
+        if (
+            not value
+            or len(value) < 4
+            or _is_identity_number_shape(value)
+            or _MOBILE_RE.fullmatch(value) is not None
+        ):
+            continue
+        matches_column, column_ambiguous = _matches_label_column(
+            label, candidate, row, same_row=True
+        )
+        if column_ambiguous:
+            uncertain = True
+        elif matches_column and _has_ambiguous_character(candidate.block):
+            uncertain = True
+        elif matches_column:
+            candidates.append(candidate)
+
+    representatives: list[_SpatialBlock] = []
+    seen_values: set[str] = set()
+    for candidate in candidates:
+        value = _clean(candidate.block.text)
+        if value not in seen_values:
+            seen_values.add(value)
+            representatives.append(candidate)
+    return representatives, uncertain
 
 
 def _identity_fragment_candidates(
