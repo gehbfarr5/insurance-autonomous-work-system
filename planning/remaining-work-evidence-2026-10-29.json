@@ -2085,5 +2085,117 @@
       "MUSE runner lock FREE does not establish the Pixel device-operation lock.",
       "No verified safe non-root device-lock read/export path was available; Pixel remains untouched."
     ]
+  },
+  "tasksSourceReview20261103": {
+    "recordedAt": "2026-11-03T20:46:06+08:00",
+    "source": "Exact private attachment in the existing Sunshine Forest MUSE thread; MUSE confirmed unique live runner module identity and byte match.",
+    "filename": "tasks.py",
+    "sha256": "b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b",
+    "privateAttachment": "Verified in-thread only; no public link.",
+    "localCopy": {
+      "sha256Match": true,
+      "mode": "0600"
+    },
+    "staticReview": {
+      "method": "Python AST parse only; source was not executed.",
+      "syntax": "PASS",
+      "topLevelFunctions": [
+        "wait_read",
+        "date_guard",
+        "return_to_forest",
+        "run_timeline"
+      ],
+      "taskFunctions": [
+        "run_timeline"
+      ],
+      "scope": "A bounded read-only timeline/customer-navigation helper; it does not define the other four daily task implementations.",
+      "rootDependentReturnNavigation": true,
+      "trackedRepositoryCopy": false
+    },
+    "result": "No evidenced fix for the 2026-11-03 prepare timeout. The return-navigation helper contains a privileged device operation and must not be executed under the current constraints."
+  },
+  "policySourceReview20261103": {
+    "recordedAt": "2026-11-03T20:56:26+08:00",
+    "source": "Exact private attachment in the existing Sunshine Forest MUSE thread; MUSE confirmed unique live module identity, imported by the hash-verified live run.py.",
+    "filename": "policy.py",
+    "sha256": "6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e",
+    "liveRunPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+    "privateAttachment": "Verified in-thread only; no public link.",
+    "localCopy": {
+      "sha256Match": true,
+      "mode": "0600"
+    },
+    "staticReview": {
+      "method": "Python AST parse only; source was not executed.",
+      "syntax": "PASS",
+      "topLevelFunctions": [
+        "amount",
+        "snapshot",
+        "reconcile",
+        "run_workflow"
+      ],
+      "workflowAdapterMethods": [
+        "read_fresh",
+        "sign",
+        "collect"
+      ],
+      "scope": "Sign-in and collection control. Snapshot checks include ready/foreground, expected date, method pins, overlay absence, and fresh server-read markers; pending actions are reconciled before new actions without replay; each sent action requires fresh readback.",
+      "noReplayOnUncertainty": true,
+      "temperatureValueImplementationInModule": false,
+      "assistantImplementationInModule": false,
+      "adapterImplementationReviewed": false
+    },
+    "result": "No evidenced fix for the 2026-11-03 prepare timeout because business workflow was not reached in the recorded segments."
+  },
+  "forestCdpSourceExport20261103": {
+    "reviewRecordedAt": "2026-11-03T21:22:03+08:00",
+    "source": "Exact private attachment in the existing Sunshine Forest MUSE thread; MUSE confirmed the unique live module imported by run.py/tasks.py.",
+    "filename": "forest_cdp.py",
+    "sha256": "a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148",
+    "privateAttachment": "Verified in-thread only; no public link.",
+    "localCopy": {
+      "sha256Match": true,
+      "mode": "0600"
+    },
+    "staticReview": {
+      "method": "Read-only static source inspection; source was not executed.",
+      "scope": "Provides CDP primitives used by the Forest runner.",
+      "transportFinding": "Requires a privileged shell route that conflicts with current no-root and no-alternate-route constraints; route details omitted.",
+      "adapterMethods": "MUSE confirmed read_fresh/sign/collect are defined in run.py and backed by these primitives; their exact local method bodies were not independently reviewed.",
+      "deviceContacted": false
+    },
+    "result": "No safe use under current constraints; no device connection or code execution, and no fix for the prepare timeout."
+  },
+  "pageScriptsSourceReview20261103": {
+    "reviewRecordedAt": "2026-11-03T21:22:03+08:00",
+    "museReplyAt": "2026-11-03T21:11:41+08:00",
+    "source": "Exact private attachments; MUSE confirmed all three SHA-256 values match the hash-verified live run.py references, with one copy of each in the runner directory.",
+    "privateAttachments": "Verified in-thread only; no public links or pasted source.",
+    "localCopies": {
+      "snapshot.js": {
+        "sha256": "ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d",
+        "sha256Match": true,
+        "mode": "0600"
+      },
+      "refresh.js": {
+        "sha256": "9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5",
+        "sha256Match": true,
+        "mode": "0600"
+      },
+      "action.js": {
+        "sha256": "6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e",
+        "sha256Match": true,
+        "mode": "0600"
+      }
+    },
+    "staticReview": {
+      "method": "Read-only source inspection; no execution, normalization, modification, deployment, or tests.",
+      "snapshot.js": "Reads selected page state and method-source pins.",
+      "refresh.js": "Calls the existing sign/energy read methods and validates fresh responses; temporarily wraps page observers and restores them on completion.",
+      "action.js": "Has guarded sign/collect button-click logic; it checks page/date/pins and current action state, but the script itself does not establish completion."
+    },
+    "deviceContacted": false,
+    "businessStateRead": false,
+    "result": "Private source matched the live runner references. No action was taken or code changed."
   }
 }

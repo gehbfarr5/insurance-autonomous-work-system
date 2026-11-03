@@ -6,6 +6,16 @@ MUSE在精确Forest线程新鲜回读：当时无活动任务，唯一启用sche
 
 该只读读取未连接设备或读取业务state/raw logs；Pixel锁与monitor状态仍UNKNOWN。现有private collector走`su`，非root读锁方式未验证，因此不连接Pixel。11月4日自然运行及其业务和诊断回执仍待；P4开放、S1未验收，P50/月度/2U=2800继续挂起。证据键：`museReadonlyStatus20261103_204210`。
 
+## 2026-11-03 21:22 CST更新：恢复精确runner与页面脚本并静态核对范围
+
+MUSE于20:46:06在同一Forest线程提供了私有附件`tasks.py`，报告为runner唯一导入的live模块，SHA-256 `b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b`，线程内私有附件、无公开链接。本地私有副本复算一致且权限为`0600`；仅做AST静态解析，未执行。文件仅定义`run_timeline`及三个辅助函数，是时光轴只读客户导航helper，不含签到、客温客价、智能助理或一键领取实现；现有tracked repo没有旧`tasks.py`副本可对照。该模块的返回导航helper包含特权设备调用，按当前约束不得执行或复用。
+
+MUSE于20:56:26又提供精确live `policy.py` 私有附件，SHA-256 `6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e`；MUSE确认它是唯一live模块且由`run.py`导入其唯一`run_workflow`。本地复算匹配并设为`0600`。仅AST静态解析显示它负责签到及一键领取的控制层：读新鲜快照、校验日期/前台/方法pin/控件一致性、先协调未决journal而不重放、按`execute`区分inspect与执行，并在动作后回读核验。动作细节委托给adapter；MUSE确认`read_fresh`、`sign`、`collect`方法定义在`run.py`。`policy.py`不含客温客价或智能助理实现；时光轴在`tasks.py`，assistant在分开的runner文件。11月3日的prepare失败发生于业务阶段之前，因此这些业务模块没有运行；没有依据改动它们来修复prepare超时。
+
+同一线程私有提供`forest_cdp.py`（SHA-256 `a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148`），本地副本复算匹配、权限`0600`。它提供runner使用的CDP原语，但静态检查发现其传输依赖特权shell路线，违反当前禁用root和备用路线的约束；没有连接设备或运行源码。因此Pixel操作锁仍UNKNOWN，不连接设备，也没有可安全执行的设备读取路径。
+
+MUSE于21:11:41私有附上三份live runner引用的页面脚本：`snapshot.js`（`ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d`）、`refresh.js`（`9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5`）、`action.js`（`6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e`）；MUSE与本地复算哈希匹配，权限均为`0600`。静态检查表明snapshot读取页面状态，refresh调用签到/能量查询并核对新鲜响应，action在日期、方法、页面和控件状态校验后可点击签到或领取按钮；action本身不证明动作完成。源码未执行、规范化、修改、部署或测试，均保留在仓库外私有位置。没有补丁依据。证据键：`tasksSourceReview20261103`、`policySourceReview20261103`、`forestCdpSourceExport20261103`、`pageScriptsSourceReview20261103`。
+
 ## 2026-11-03 20:33 CST更新：五项日常与扩展逐项对账，当前状态保留UNKNOWN
 
 ### 每日五项（逐项记业务执行，不把prepare尝试算完成）

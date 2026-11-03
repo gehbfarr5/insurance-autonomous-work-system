@@ -120,4 +120,14 @@ For the 2026-11-04 natural run, preserve the one daily schedule and use only the
 
 16:33 CST MUSE只读静态回读重新核验当前live `run.py` 哈希与`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`一致。其说明的控制流为：`Device.prepare()`查询resumed Activity并按70秒deadline、1秒间隔轮询、使用`_check_deadline()`；Activity变化写入`Device.event(kind, value)`；GestureActivity且尚未尝试时调用一次`auth_start()`；匹配nonce的`BLOCKED`分支返回带`PREPARE_`前缀的原因，`NAVIGATED`分支进入`wait_ready()`；循环超时为`PREPARE_TIMEOUT_NO_FALLBACK`。`Device.cleanup()`由`main()`调用，负责清marker、停应用、按owner释放设备锁；异常走FAIL fallback；信号由`_handle_term`处理。MUSE称静态源码与元数据可解释调度层`FAILED`（worker报告未完成，与两段业务结果不完整一致），但09:06:17至09:11:17约5分钟间隔无runner子步骤/调度元数据可解释，仍UNKNOWN；该静态读数也没有确定本次70秒超时的具体触发条件。MUSE说精确live源码可私有只读导出，但本次未导出，不能以旧脱敏副本为补丁基线。脱敏读回记录在仓库外私有文件`muse-runner-static-read-20261103-1633.json`，SHA-256 `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`。
 
+## 精确runner与页面脚本私有恢复、静态范围｜2026-11-03 21:22 CST
+
+MUSE于20:46:06确认附件`tasks.py`为runner唯一导入的live模块，字节级哈希`b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b`，仅附在本Forest线程、无公开链接。私有本地副本复算匹配且权限为`0600`。静态AST解析发现源文件仅包含一个任务函数`run_timeline`及三个辅助函数，属于单项只读时光轴导航helper；五项每日互动实现不在该文件。它无法解释prepare超时；且返回导航helper调用特权设备操作，不可在当前约束下执行。没有补丁或运行。live `run.py`另从`policy`导入`run_workflow`；其精确依赖已私有导出并在下文记录。原始代码保持在仓库外私有位置，不写入本仓库。
+
+MUSE于20:56:26补充私有附件`policy.py`，SHA-256 `6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e`，并确认它是live runner唯一该模块、唯一实现`run_workflow`。本地复算匹配且权限`0600`。静态AST显示`run_workflow`编排签到和一键领取，带fresh-read/日期/前台/pin/控件一致性校验、未决journal先核对不重放、`execute=false`只检查、动作后fresh-read；实际页面动作由adapter实现。该文件没有温度/价值查询或智能助理代码。故没有足以修复11月3日prepare超时的改动；业务阶段为空的分段未进入此workflow。只审查了本地脱敏摘要与源码结构，没有运行源码或业务、读取state/raw日志或连接设备。
+
+MUSE随后私有提供`forest_cdp.py`，SHA-256 `a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148`，确认是`run.py`/`tasks.py`导入的唯一live模块。本地副本哈希匹配、权限`0600`。静态审阅发现该模块依赖特权shell传输方式，与当前禁用root及备用路线的约束冲突；没有连接设备或执行源码。MUSE说明`read_fresh`、`sign`、`collect`实际定义在`run.py`并使用这些CDP原语，因此adapter方法体仍未单独按精确本地源码审阅，也没有可安全使用的设备读取路径。
+
+MUSE于21:11:41私有附上live runner引用的`snapshot.js`、`refresh.js`、`action.js`，三者SHA-256分别为`ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d`、`9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5`、`6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e`，本地复算匹配且权限均为`0600`。静态检查显示snapshot读取页面状态，refresh触发已有签到/能量查询并验证fresh-read，action在页面/日期/pin/控件和当前状态校验后可点击签到或领取按钮；action本身不证明完成。三份代码均未执行、规范化、修改、部署或测试。没有补丁依据，Pixel保持未连接。
+
 Still pending: a verified same-run live evidence export, Android/AutoX compatibility, AI answer/reward confirmation, independent temperature/price receipts, five expansion-item completion/period evidence, the complete official timing basis, and natural cross-day reliability. P50/monthly planning remains paused; preserve 2U=2800 as pending.

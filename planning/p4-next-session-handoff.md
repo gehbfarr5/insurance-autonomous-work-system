@@ -336,3 +336,9 @@ v2候选的每5秒sidecar重写及写失败会退出主循环的问题已在部�
 ### 登录态字段补充｜2026-11-02 22:20
 
 Keyguard v3覆盖设备锁定、应用/手势页、认证触发及工作器返回，但不读取森林App内部三个登录字段。live runner把解析后的完整`P4ForestAuto`事件保存为`self.preparation`，无严格字段白名单，故字段观察可通过扩展事件上报。已基于安装APK一致的v0.19源准备本机草案（`6923c360…`），只发`userPresent`、`empNoAESPresent`、`operateFlagDefined`和采样时间；原始值不发，单次即时检查、门禁及动作顺序保持。Node分支/访问顺序合成对照通过。**该草案未构建签名APK、未部署或实机验证；若v3不能单独定位原因，APK集成/替换需单独审查与授权。**
+
+### 续接后补充｜2026-11-03 21:22 CST
+
+已从既有Forest MUSE线程私有恢复当前live `tasks.py`（SHA-256 `b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b`）和`policy.py`（SHA-256 `6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e`），本地复算匹配、权限均为`0600`。静态解析显示前者只有时光轴只读导航helper；后者编排签到和一键领取，含新鲜回读、日期/前台/pin/控件校验及未决动作不重放。MUSE确认实际`read_fresh`、`sign`、`collect`方法定义在`run.py`；`forest_cdp.py`（SHA-256 `a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148`）是其使用的底层CDP模块，但静态检查发现它依赖特权shell路线，与当前约束冲突，不可执行。温度/价值查询不在`policy.py`，智能助理由分开的assistant runner处理。三个模块均不解释11月3日prepare阶段失败，因为当天业务阶段为空。`tasks.py`的返回导航helper有特权设备调用，当前约束下不得执行。
+
+MUSE另私有提供runner引用的`snapshot.js`、`refresh.js`、`action.js`，本地哈希均与MUSE所报一致且权限为`0600`。静态检查显示snapshot读取页面状态，refresh调用现有签到/能量查询并验证新鲜响应，action经页面、日期、方法和控件状态校验后可点击签到或领取按钮，但其自身不证明完成。页面脚本及Python源码均未执行、规范化、修改、部署或测试，原始源码均不进入仓库。没有充分证据支持代码修改；Pixel未连接，既有每日schedule未更改。
