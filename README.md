@@ -1,6 +1,6 @@
 # 保险规划师自主工作系统
 
-> **阳光森林当前访问门禁｜2026-11-03 17:25 CST：** 最新CUA清单显示Muse进程仍运行，但浏览器清单为空，Work设置报告浏览器控制已禁用；未取得Forest scheduler/task/queue读数。此前16:23 MUSE并发快照已过时，当前仍为UNKNOWN。遵守既有边界，未打开不相关WP1上下文，也未连接Pixel；没有MUSE/Pixel专用connector。设备锁及部署哈希仍UNKNOWN。11月4日review-only collector的`.failure`标记修正、目标Activity观测边界和E07规则来源审计见[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)。没有设备、业务state、调度或凭据变更。需要先从正确MUSE线程取得新鲜并发/锁读数，再按手册决定Pixel只读访问。
+> **阳光森林当前访问门禁｜2026-11-03 17:50 CST：** CUA只读打开MUSE时，当前界面显示另一个对话正在生成回复；没有切换到森林线程，也未打断该任务。浏览器清单为空、Work浏览器控制被禁用；未取得Forest scheduler/task/queue/lock或当前部署版本读数，故并发状态与设备门禁仍UNKNOWN。未连接Pixel；没有MUSE/Pixel专用connector。证据及边界见[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)。没有设备、业务state、调度或凭据变更。待当前MUSE工作结束后，先从正确线程刷新并发/锁读数，再按手册决定Pixel只读访问。
 
 > **回执候选离线修正｜2026-11-03 17:35 CST：** 静态审查发现AI快照会把空`recordId`从基线hash中省略，可能使新旧记录比较缺少完整基线；现改为`REVIEW / RECORD_ID_UNKNOWN`，并以合成回归复核，采集器测试29/29 PASS。独立offline provides候选现用描述符读取并阻断访问器getter，测试PASS。两处都未部署或实机验证；MUSE安装版本仍UNKNOWN，真实问答结束正例和成功空列表同周期回执仍缺。无设备、业务或调度操作。证据见[剩余工作证据索引](planning/remaining-work-evidence-2026-10-29.json)。
 
