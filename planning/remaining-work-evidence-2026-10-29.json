@@ -3998,5 +3998,19 @@
     "taskOrBusinessCodeExecuted": false,
     "businessStateOrLogsRead": false,
     "evidenceLimit": "Public search only; no internal workflow artifact, authenticated task screen, or reward receipt was inspected. Historical sources about a product or tool do not establish its current Forest task mapping or reward cycle."
+  },
+  "officialForestRuleSearch20261104_0153": {
+    "completedBy": "2026-11-04T01:53:36+08:00",
+    "sourceScope": "Bounded public web search targeting CPIC official and service domains.",
+    "queries": [
+      "site:service.cpic.com.cn 阳光森林",
+      "site:cpic.com.cn 阳光森林 阳光 雨露 规则",
+      "site:cpic.com.cn 一天最多可收集 阳光 雨露",
+      "site:cpic.com.cn 森林任务 太保 营销员 奖励"
+    ],
+    "directlyRelevantCurrentForestRulePageReturned": false,
+    "contentPageOpened": false,
+    "interpretation": "The official-domain index search returned no directly relevant current Forest rule page. This does not establish that an internal original is absent or was never confirmed. Keep E07 only for the historical caps and action-unit details it directly supports; reset time, repeat cycle, exact reward trigger, posting delay, and current eligibility remain unresolved.",
+    "evidenceLimit": "Public search-engine index only; no authenticated app rule screen, internal original, or result-page body was read."
   }
 }

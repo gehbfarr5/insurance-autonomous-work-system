@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 01:53 CST — rule-source search remains open
+
+A bounded public search on CPIC's official and service domains using the exact Forest, sun/dew, daily-cap, and task-rule phrases returned no direct current rule page. No result body was opened. This cannot establish that an internal original is absent or was never confirmed; retain E07's historical support and leave reset/repeat timing and reward evidence open. Evidence: `officialForestRuleSearch20261104_0153`.
+
 ## 2026-11-04 01:50 CST — extension research checkpoint
 
 A targeted search on CPIC official domains for the five extension names and workflow terms returned no directly relevant Forest workflow instructions. A 2022 CPIC article describes 态幸福 as an interactive NBS customer-needs analysis system, which is historical product context rather than current Forest mapping or reward evidence ([article](https://m.cpic.com.cn/c/2022-04-07/1633278.shtml)). Keep 保单芯管家、态幸福、三节一生、E锦囊激活、签单协同 at `仍待核实`; personal capability, external dependencies, reward trigger, and repeat cycle remain unsupported. Do not classify an inaccessible page or failed search as an external blocker. Evidence: `officialExtensionSourceSearch20261104_0150`.
