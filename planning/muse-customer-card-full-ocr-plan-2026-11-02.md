@@ -35,7 +35,7 @@
 - 方案比较：全局操作员声明录入成本低，但不可从数据中复核；逐卡封闭类别码增加少量受保护输入，但能计算可审计的类别分布。选逐卡类别码；继续复用 Python 标准库聚合器和现有 unittest/CLI，不引入依赖。
 - MVP：schema 1.1 加 `handwriting_code` H1–H5、`clarity_code` CLEAR/MODERATE/LOW、`table_layout_code` L1–L5；三个维度各至少两个类别。类别定义、映射和逐卡分配仅留在 MUSE 受保护工作区；被排除样本使用 `NOT_APPLICABLE` 且不计入多样性。只输出汇总类别计数和不同类别数。任何样本数或多样性门禁失败都会阻断 OCR 验收指标。
 - 验证顺序：合成多样/同类输入的单元回归、完整离线套件、空模板 CLI，再在精确 pushed commit 上由 MUSE 隔离环境重复离线检查；不读取真实卡或标签。回滚路径为整体 revert schema、模板、测试和文档的同一提交；尚未创建或导出填充后的 1.1 数据。
-- 本机验证已完成：11 个验收指标单测及 144/144 完整离线测试通过（Python 3.14.7 / Pillow 12.2.0），空模板返回预期 `BLOCKED`。当前 schema 的 MUSE 独立复验待精确提交推送后进行；旧 143/143 结果只验证 schema 1.0。真实卡授权仍未确认，状态保持 `VALIDATION_PENDING`。
+- 本机验证已完成：11 个验收指标单测及 144/144 完整离线测试通过（Python 3.14.7 / Pillow 12.2.0），空模板返回预期 `BLOCKED`。MUSE 在精确提交 `1d6b8302eef102aa71f34a4b70f67f73b856eb5a` 的隔离 worktree/venv 上独立通过 144/144，空模板 CLI smoke PASS；真实数据/图片/reference、OCR/Baidu、iCloud/contact、生产、部署、raw export 均为 0，详见[schema 1.1 脱敏复验结果](wp11-30-card-muse-result-20261103-schema-1.1.json)。旧 143/143 结果只验证 schema 1.0。真实卡授权仍未确认，状态保持 `VALIDATION_PENDING`。
 
 ## 1. 业务决策
 

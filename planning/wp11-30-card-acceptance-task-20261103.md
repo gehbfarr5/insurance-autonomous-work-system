@@ -1,6 +1,6 @@
 # WP11-L MUSE handoff: 30-card OCR acceptance
 
-**Current state:** `VALIDATION_PENDING`. The evaluator input/output schema is now 1.1 and adds closed diversity codes for handwriting, clarity, and table layout. MUSE's earlier data-free check on commit `376e0d251db3d93e111c973b9f0957c52a356e96` passed 143/143 tests, before this schema change; it is historical evidence only. Re-run the data-free checks on the exact branch HEAD when executing this handoff. The real-card authorization remains unanswered, and no sample inventory, image, or reference label was accessed.
+**Current state:** `VALIDATION_PENDING`. The evaluator schema is 1.1 with closed diversity codes for handwriting, clarity, and table layout. MUSE completed the data-free isolated check on exact commit `1d6b8302eef102aa71f34a4b70f67f73b856eb5a`: 144/144 tests passed and the blank-template CLI returned expected `BLOCKED`; see the [schema 1.1 sanitized result](wp11-30-card-muse-result-20261103-schema-1.1.json). The earlier 143/143 check on commit `376e0d251db3d93e111c973b9f0957c52a356e96` tested schema 1.0. The real-card authorization remains unanswered, and no sample inventory, image, or reference label was accessed.
 
 The data-free section may be rerun if code changes. The real-card section may be executed only after the user explicitly authorizes that work; without authorization, MUSE must stop before inspecting any real-data inventory.
 
