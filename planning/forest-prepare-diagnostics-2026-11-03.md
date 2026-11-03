@@ -1,5 +1,9 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 当前MUSE访问门禁｜2026-11-03 17:00 CST
+
+CUA库存再次只确认MUSE应用进程运行；浏览器控制不可用，没有Forest任务或调度读回。最近并发读数16:23已过时，当前为UNKNOWN；本轮未连接Pixel。16:33静态读取确认live runner hash与部署记录相同，但具体prepare超时触发条件和09:06:17—09:11:17间隔仍UNKNOWN；完整当前runner源码尚未导出。先取得新鲜MUSE并发读数；只有确认无其他任务在途后才通过既有别名核对Pixel锁和哈希。没有设备、业务state、cron或调度修改。窗口后采集继续遵循[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
 ## 既有只读记录（补充至16:33 CST）｜2026-11-03
 
 MUSE于15:54:29只读确认：唯一既有`Asia/Shanghai`每日09:00任务下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，前次成功10月31日09:15:50，连续失败3次。Pixel于15:58:24经原配置别名及既有`su`路径只读回读：`sargo`/Android 15/boot完成/Dozing，monitor `watching`、guard清、heartbeat新鲜、requests=0，monitor lock在，blocked/stop不存在；哈希为monitor `2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、trigger `0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、worker `f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。设备操作锁和前台Activity本次UNKNOWN；APK pin最后直接读取为15:22匹配。无设备写入、业务运行或state/cron/调度变更。此前15:43状态段以下所列MUSE/Pixel状态已由本节更新；其余历史证据限制不变。

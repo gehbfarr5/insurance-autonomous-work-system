@@ -1,6 +1,10 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 最新状态读数｜2026-11-03 16:23 CST（MUSE）；Pixel最近读取15:58 CST
+## 当前访问门禁｜2026-11-03 17:00 CST
+
+CUA库存再次确认MUSE应用进程运行，但没有Forest任务/调度读回且浏览器控制不可用。最近并发证据仍为16:23 MUSE状态读数，当前并发UNKNOWN；本轮未连接Pixel。16:33静态读回确认live runner哈希与部署值一致及70秒Activity准备轮询，但没有定位具体超时触发；完整live runner未导出，不能建立精确补丁基线。17:03本机只读配置检查确认既有SSH别名存在、ControlMaster未启用、无控制socket或带该别名的SSH进程；这不提供设备锁/运行哈希读数。只有在新鲜MUSE读数确认无其他任务在途后，才通过现有别名复核Pixel设备操作锁与部署哈希。没有业务动作、设备写入或state/cron/调度变更。诊断和窗口后采集停止条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
+## 最后一次MUSE状态读数｜2026-11-03 16:23 CST（Pixel最近读取15:58 CST）
 
 MUSE 15:54:29回读唯一启用任务为`Asia/Shanghai`每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。随后经既有`pixel3a-kjgx`别名及原`su`路径，于15:58:24只读回读`sargo`/Android 15/boot完成/Dozing；monitor `watching`、guard清、heartbeat与设备时间一致、requests=0，monitor锁存在，blocked/stop不存在。monitor/trigger/worker哈希分别为`2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、`0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、`f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。设备操作锁及前台Activity本次无法确认；v0.19 APK pin最后一次直接读于15:22，当时匹配。无业务重跑、设备写入或调度/state变更。11月3日prepare根因未定，诊断候选只观测monitor，登录字段observer仍离线。
 

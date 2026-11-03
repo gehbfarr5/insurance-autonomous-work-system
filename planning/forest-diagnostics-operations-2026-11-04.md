@@ -33,7 +33,15 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 
 ## 自然运行顺序
 
-### 当前访问门禁｜2026-11-03 16:52 CST
+### 当前MUSE访问门禁｜2026-11-03 17:00 CST
+
+CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；浏览器控制不可用。最近并发读数仍为16:23，已过时，当前为UNKNOWN。未连接Pixel；不将16:23的0/0/false和runner lock FREE用作当前门禁。
+
+### Pixel SSH连接只读复核｜2026-11-03 17:03 CST
+
+本机只读确认既有SSH别名已配置、ControlMaster未启用、无对应控制socket或带别名的SSH进程；本轮未建立Pixel连接。该项不是设备锁/monitor/hash读数，仍须先满足MUSE并发门禁。
+
+### 前次访问门禁｜2026-11-03 16:52 CST
 
 本轮CUA库存只确认MUSE进程运行，未提供Forest任务/调度读回；浏览器控制不可用。16:23的MUSE状态读数仍是最近一次Forest并发证据，当前并发状态UNKNOWN。未连接Pixel。不得使用旧的0/0/false与runner lock FREE读数作为当前设备门禁；先获取新鲜MUSE状态，确认目标任务结束、没有其他任务在途，再通过既有别名读设备锁和哈希。既有别名在本机配置中存在，但本轮未建立SSH连接。16:33静态源码读回只解释prepare轮询控制流，尚未定位触发超时的具体分支，也未导出完整live runner。后续步骤和窗口限制仍按本节 runbook 执行。
 
