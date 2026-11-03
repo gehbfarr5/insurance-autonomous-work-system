@@ -1,0 +1,239 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11N-MUSE-VALUE-FREE-WP10-GATE-DIAGNOSTIC-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "0c97938342d77ab23b5f061ad472529d3999918e",
+    "package_version": "0.12.0"
+  },
+  "environment": {
+    "os_image": "Ubuntu 24.04.5 LTS (Linux x86_64)",
+    "python_version": "3.12.3",
+    "pillow_version": "12.3.0",
+    "isolated_worktree": true,
+    "isolated_virtualenv": true
+  },
+  "wp10_source": {
+    "structured_result_available": "YES",
+    "same_wp11m_result_reused": false,
+    "parser_replay_status": "FAIL",
+    "decision": "REVIEW_REQUIRED",
+    "draft_mapping": "REJECTED",
+    "reason_codes": [
+      "table_layout_uncertain",
+      "main_customer_identity_unclear",
+      "mobile_missing",
+      "address_conflict",
+      "address_uncertain"
+    ],
+    "field_presence": {
+      "name": "ABSENT",
+      "mobile": "ABSENT",
+      "identity_number": "PRESENT",
+      "explicit_birthday": "ABSENT",
+      "gender": "ABSENT",
+      "address": "ABSENT",
+      "other_phone": "ABSENT"
+    },
+    "reviewed_reference_used": false
+  },
+  "count_semantics": {
+    "status": "COMPLETE",
+    "null_count_reason": "NONE",
+    "candidate_counts_are_distinct_blocks_per_field_and_stage": true,
+    "raw_values_returned": false
+  },
+  "fields": {
+    "name": {
+      "pure_labels": 1,
+      "candidate_sources": {
+        "direct_right": 1,
+        "same_row_nonadjacent": 0,
+        "next_visual_row": 0
+      },
+      "geometry_gate": {
+        "evaluated": 1,
+        "passed": 0,
+        "rejected_or_ambiguous": 1
+      },
+      "field_validation_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "rejected": 0
+      },
+      "unique_assignment_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    },
+    "mobile": {
+      "pure_labels": 1,
+      "candidate_sources": {
+        "direct_right": 0,
+        "same_row_nonadjacent": 0,
+        "next_visual_row": 2
+      },
+      "geometry_gate": {
+        "evaluated": 2,
+        "passed": 0,
+        "rejected_or_ambiguous": 2
+      },
+      "field_validation_gate": {
+        "evaluated": 1,
+        "passed": 0,
+        "rejected": 1
+      },
+      "unique_assignment_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    },
+    "identity_number": {
+      "pure_labels": 1,
+      "candidate_sources": {
+        "direct_right": 0,
+        "same_row_nonadjacent": 1,
+        "next_visual_row": 6
+      },
+      "geometry_gate": {
+        "evaluated": 7,
+        "passed": 1,
+        "rejected_or_ambiguous": 6
+      },
+      "field_validation_gate": {
+        "evaluated": 1,
+        "passed": 1,
+        "rejected": 0
+      },
+      "unique_assignment_gate": {
+        "evaluated": 1,
+        "passed": 1,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    },
+    "explicit_birthday": {
+      "pure_labels": 2,
+      "candidate_sources": {
+        "direct_right": 0,
+        "same_row_nonadjacent": 0,
+        "next_visual_row": 6
+      },
+      "geometry_gate": {
+        "evaluated": 6,
+        "passed": 0,
+        "rejected_or_ambiguous": 6
+      },
+      "field_validation_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "rejected": 0
+      },
+      "unique_assignment_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    },
+    "gender": {
+      "pure_labels": 0,
+      "text_blocks": 2,
+      "structured_checked_state_signals": 0,
+      "candidate_sources": {
+        "direct_right": 0,
+        "same_row_nonadjacent": 0,
+        "next_visual_row": 0
+      },
+      "geometry_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "rejected_or_ambiguous": 0
+      },
+      "field_validation_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "rejected": 0
+      },
+      "unique_assignment_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    },
+    "address": {
+      "pure_labels": 1,
+      "candidate_sources": {
+        "direct_right": 1,
+        "same_row_nonadjacent": 1,
+        "next_visual_row": 2
+      },
+      "geometry_gate": {
+        "evaluated": 4,
+        "passed": 2,
+        "rejected_or_ambiguous": 2
+      },
+      "field_validation_gate": {
+        "evaluated": 2,
+        "passed": 0,
+        "rejected": 2
+      },
+      "unique_assignment_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    },
+    "other_phone": {
+      "pure_labels": 1,
+      "candidate_sources": {
+        "direct_right": 1,
+        "same_row_nonadjacent": 0,
+        "next_visual_row": 2
+      },
+      "geometry_gate": {
+        "evaluated": 3,
+        "passed": 0,
+        "rejected_or_ambiguous": 3
+      },
+      "field_validation_gate": {
+        "evaluated": 1,
+        "passed": 0,
+        "rejected": 1
+      },
+      "unique_assignment_gate": {
+        "evaluated": 0,
+        "passed": 0,
+        "blocked_by_ambiguity_or_conflict": 0
+      },
+      "family_boundary_exclusions": 0
+    }
+  },
+  "operation_counts": {
+    "branch_fetches": 2,
+    "wp10_structured_result_reads": 6,
+    "wp10_reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_creates": 0,
+    "contact_reads": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_files_modified": 0,
+    "muse_commits": 0,
+    "muse_pushes": 0
+  }
+}
