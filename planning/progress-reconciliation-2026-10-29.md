@@ -8,6 +8,10 @@
 
 弱或缺失的sourcePin/salt现在在任何CDP调用前被拒绝；salt要求至少32字符，sourcePin保持非空字符串但格式不猜。`test_empty_observer.py` 5/5 PASS。仅本机候选代码变化，MUSE安装版本与真实同周期空列表正例仍UNKNOWN/缺失。
 
+## 原规则材料Drive检索｜2026-11-03 17:43 CST
+
+四组精确主题词的Drive文档metadata-only检索全部0结果，没有读取正文。检索范围仅限返回的单页、每词最多20项；无命中不等于历史原件不存在。森林重置/重复周期/到账延迟仍是证据缺口。详见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 当前只读续接状态｜2026-11-03 17:25 CST
 
 截至17:25，CUA仅显示Muse进程运行；浏览器清单为空且Work设置禁用浏览器控制，没有Forest状态读回或专用MUSE/Pixel connector。16:23 MUSE并发快照已过时，当前UNKNOWN；本轮未打开无关WP1上下文或连接Pixel。prepare故障仍未定位，精确live runner未导出；11月4日窗口的monitor-only证据待自然运行。17:12 collector字段审计及`.failure`修正通过合成路径、包清单14/14；17:22 E07规则源哈希匹配，未提供森林重置或奖励周期规则。上述为本机静态/合成与源文件核查，不是设备/窗口验收。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)和[剩余工作记录](remaining-work-2026-10-29.md)。P4开放，S1未验收，P50/月度规划挂起。
