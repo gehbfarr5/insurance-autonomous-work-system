@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11O-MUSE-PRODUCTION-SOURCE-DEPLOYMENT-PROVENANCE-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "task_commit": "",
+    "package_version": "0.12.0"
+  },
+  "audit": {
+    "status": "PASS|PARTIAL|BLOCKED",
+    "timestamp": "",
+    "environment": "",
+    "method": "READ_ONLY_STATIC"
+  },
+  "package_source_checkout": {
+    "found": "YES|NO|UNKNOWN",
+    "package_version": "UNKNOWN",
+    "branch": "UNKNOWN",
+    "commit": "UNKNOWN",
+    "worktree_state": "CLEAN|DIRTY|UNKNOWN",
+    "source_to_active_runtime_binding": "VERIFIED|NOT_VERIFIED|UNKNOWN"
+  },
+  "active_runtime": {
+    "found": "YES|NO|UNKNOWN",
+    "package_version": "UNKNOWN",
+    "source_commit_or_hash": "UNKNOWN",
+    "release_or_image_digest": "UNKNOWN",
+    "binding_evidence_kind": "MANIFEST|RUNTIME_METADATA|NONE|UNKNOWN",
+    "seoul_service_version_or_hash": "UNKNOWN",
+    "ocr_route": "SEOUL_SERVICE|DIRECT_BAIDU|MUSE_VAULT|UNKNOWN"
+  },
+  "components": {
+    "muse_upload_orchestration": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""},
+    "seoul_ocr_caller_and_response_adapter": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "preserves_text_location_probability_chars": "YES|NO|UNKNOWN", "finding_code": ""},
+    "table_and_line_parser_binding": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "package_pin": "UNKNOWN", "finding_code": ""},
+    "primary_customer_and_family_boundary": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""},
+    "icloud_duplicate_search": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "fail_closed_on_incomplete_search": "YES|NO|UNKNOWN", "finding_code": ""},
+    "field_level_review_and_edit_ui": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""},
+    "explicit_precreate_user_confirmation": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""},
+    "contact_create_retry_and_idempotency": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "write_retry_policy": "UNKNOWN", "server_idempotency": "UNKNOWN", "finding_code": ""},
+    "postcreate_readback": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""},
+    "uncertain_write_recovery_and_rollback": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""},
+    "pii_safe_logging": {"status": "VERIFIED_IN_ACTIVE_RUNTIME|PRESENT_UNBOUND|NOT_FOUND_IN_INSPECTED_SOURCE|UNKNOWN", "relative_paths": [], "sha256": [], "finding_code": ""}
+  },
+  "operation_counts": {
+    "package_metadata_reads": 0,
+    "git_provenance_reads": 0,
+    "source_files_read": 0,
+    "deployment_manifest_or_metadata_reads": 0,
+    "process_metadata_reads": 0,
+    "configuration_secret_values_read": 0,
+    "logs_read": 0,
+    "production_code_executions": 0,
+    "ocr_calls": 0,
+    "baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_reads": 0,
+    "contact_creates": 0,
+    "contact_updates": 0,
+    "contact_deletes": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_code_exports": 0,
+    "commits": 0,
+    "pushes": 0
+  }
+}
