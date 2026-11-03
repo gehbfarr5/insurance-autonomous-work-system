@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11C-MUSE-ISOLATED-RETEST-20261103",
+  "status": "PASS|FAIL|BLOCKED",
+  "run_time_utc": "YYYY-MM-DDTHH:MM:SSZ",
+  "repository": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "",
+    "package_version": "0.8.0"
+  },
+  "environment": {
+    "os_image": "",
+    "python_version": "",
+    "pillow_version": "",
+    "isolated_worktree": true,
+    "isolated_virtualenv": true
+  },
+  "offline_suite": {
+    "status": "PASS|FAIL|NOT_RUN",
+    "passed": 0,
+    "failed": 0,
+    "errors": 0,
+    "failure_test_ids": []
+  },
+  "synthetic_regressions": {
+    "cross_column_neighbor_rejected": "PASS|FAIL|NOT_CHECKED",
+    "overlapping_columns_require_review": "PASS|FAIL|NOT_CHECKED",
+    "valid_identity_fragments_joined": "PASS|FAIL|NOT_CHECKED",
+    "invalid_or_ambiguous_identity_fragments_require_review": "PASS|FAIL|NOT_CHECKED",
+    "pure_draft_mapping": "PASS|FAIL|NOT_RUN"
+  },
+  "wp10_existing_payload": {
+    "available_in_authorized_protected_workspace": "YES|NO|NOT_CHECKED",
+    "replay": "PASS|FAIL|SKIPPED",
+    "reason": "",
+    "parser_decision": "READY|REVIEW_REQUIRED|UNKNOWN",
+    "field_match_reference": {
+      "name": "MATCH|MISMATCH|NOT_CHECKED",
+      "mobile": "MATCH|MISMATCH|NOT_CHECKED",
+      "identity_number": "MATCH|MISMATCH|NOT_CHECKED",
+      "explicit_birthday": "MATCH|MISMATCH|NOT_CHECKED",
+      "gender": "MATCH|MISMATCH|NOT_CHECKED",
+      "address": "MATCH|MISMATCH|NOT_CHECKED",
+      "other_phone": "MATCH|MISMATCH|NOT_CHECKED"
+    },
+    "review_reason_codes": [],
+    "customer_values_or_ocr_text_in_report": false
+  },
+  "external_operations": {
+    "baidu_calls": 0,
+    "icloud_reads": 0,
+    "icloud_writes": 0,
+    "production_configuration_changed": false,
+    "production_package_version_before": "0.5.0",
+    "production_package_version_after": "0.5.0"
+  },
+  "production_source_readback": {
+    "status": "PASS|UNKNOWN",
+    "revision_or_source_sha256": "",
+    "production_source_changed": false
+  },
+  "notes": []
+}
