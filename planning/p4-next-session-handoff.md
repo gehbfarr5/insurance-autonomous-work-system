@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:44 CST — exact Drive searches add no extension evidence
+
+Drive document-metadata-only searches for the five exact extension names—保单芯管家, 态幸福, 三节一生, E锦囊, 签单协同—returned no matches across accessible documents; no content was fetched. This does not establish source absence. All five remain “still needs verification.” A fresh UI read in the exact Forest thread around 04:43 still showed only the 03:47:07 reply and the malformed unsent composer. No status request was sent and no Pixel connection occurred; current scheduler/queue/lock/hash remain UNKNOWN. Evidence: `googleDriveExtensionExactTitleSearch20261104_0444`, `museComposerRevalidation20261104_0443`.
+
 ## 2026-11-04 04:40 CST — MUSE composer blocker before natural run
 
 In the exact Sunshine Forest thread, the latest visible assistant reply remains the 03:47:07 point-in-time status. The composer contains an older malformed status query with a duplicate trailing `READ`. `selectText` is unsupported for this field, a coordinate drag did not select the text, and native Edit > Select All was disabled. No message was sent, no draft was changed, and no other thread/resource was opened. Therefore current scheduler/queue/in-flight status, runner lock, and live hashes are UNKNOWN; do not use the 03:47 snapshot as a current concurrency gate. No Pixel connection occurred. Leave the draft unsent; do not send it or use another thread/interface. After 09:00, refresh only if a clean, verified composer path becomes available; otherwise record the same-run result as unavailable and do not connect to Pixel. P4 remains open; S1 is not accepted. Evidence: `museComposerBlocked20261104_0440`.
