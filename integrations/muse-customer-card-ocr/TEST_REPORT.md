@@ -373,3 +373,9 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 - Local regression: PASS — 148 tests, 0 failures, 0 errors on Python 3.14.7 / Pillow 12.2.0 using `PYTHONPATH=src python -m unittest discover -s tests -v`; exact code commit `0b162686fe6a8cfa29cda7dfcd224976339746f4`. `acceptance_metrics.py` SHA-256: `45d7b265858acd67f15a32f25414f8b1d2f391808db4b48563418cbb3f0fc2ba`.
 - Blank-template CLI smoke result: `real_card_ocr_result=BLOCKED`; authorization, distinct-reference, and study-reference gates false; sample and diversity counts null/`NOT_TESTED`; contact-safety gates `NOT_TESTED`.
 - This is local synthetic/mock evidence only. MUSE exact-commit retest, active runtime binding, live UI wiring, and production behavior remain unverified. No real-card data, OCR/provider call, contact operation, production execution/write, deployment, or raw export was used.
+
+### Local Python 3.12 environment availability check (2026-11-03)
+
+- The local `python3.12` interpreter is 3.12.14, but importing Pillow fails with `ModuleNotFoundError: No module named 'PIL'`. `python3.12 -m pip cache list Pillow` reported no locally built Pillow wheels.
+- Attempted `PYTHONPATH=src python3.12 -m unittest tests.test_acceptance_metrics -v`; package import stopped before test discovery because `muse_customer_card_ocr.__init__` imports the image module. No test assertions ran. Classify this local environment check as `BLOCKED` by the missing dependency, not as a code regression or a MUSE result.
+- No package index was contacted and no dependency was installed. The exact-candidate MUSE task still expects its isolated Python 3.12.3 / Pillow 12.3.0 environment; that run remains unobserved.
