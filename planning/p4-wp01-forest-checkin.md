@@ -1,5 +1,12 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 02:07—02:09 CST：更新签到验收前证据
+
+MUSE 02:07:50只读确认每日09:00自然schedule仍启用、下次触发为今天09:00，running/queued/in-flight `0/0/false`，runner lock `FREE`。live runner/assistant哈希未变。其后Pixel经既有alias以非root确认UID 10249、Pixel 3a、Android 15及boot完成，设备时钟02:09:05；限定AutoX/AutoJS进程名过滤无匹配，但不能据此判断一般进程或monitor状态。Pixel操作锁、monitor/hash、屏幕/Keyguard/Activity仍UNKNOWN。MUSE的静态workspace检查未找到两份请求collector；扫描时刻、文件名和大小未知，且没有附件，结论仅限所检查目录。
+
+保留09:00自然任务；结束后先取同轮脱敏MUSE证据，不重试/重放，不运行`su` collector。签到和其余日常任务仍须独立业务回执验收。P4开放，S1未验收。证据键：`museCollectorSourceAvailability20261104_0209`、`museReadonlyStatus20261104_020750`、`pixelReadonlyPreflight20261104_020905`、`pixelProcessFilter20261104_0209`、`acceptanceGateStatus20261104_0209`。
+
+
 ## 2026-11-04 01:42—01:47 CST：更新自然运行前证据
 
 01:42:49 MUSE只读确认Forest当时无活动/排队/在途任务、runner lock `FREE`、无Forest进程，唯一schedule仍是Asia/Shanghai每日09:00、下一触发11月4日09:00；live哈希及最近运行记录未变。01:44:06设备时钟经既有Pixel alias以非root确认Pixel 3a、Android 15、boot完成、UID 10249。未读取设备操作锁、monitor或森林业务状态；不得把MUSE runner lock当作Pixel锁。自然任务仍待；之后先读同轮脱敏MUSE prepare、结果、stages、assistant状态和cleanup，不重试/重放。签到与其余日常任务须以独立业务回执验收。证据键：`museReadonlyStatus20261104_014249`、`pixelReadonlyPreflight20261104_0144`。

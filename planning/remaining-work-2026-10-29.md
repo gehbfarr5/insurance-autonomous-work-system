@@ -1,5 +1,14 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 02:07—02:09 CST — refreshed pre-run evidence and collector inventory
+
+MUSE's 02:07:50 read-only response reports no active Forest task; running/queued/in-flight `0/0/false`; runner lock `FREE`; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 09:00 today; unchanged live runner/assistant hashes; latest failure Nov 3 09:11:17 and last success Oct 31 09:15:50. After this read, the existing Pixel alias confirmed UID 10249, Pixel 3a, Android 15, and boot complete at device time 02:09:05. A limited AutoX/AutoJS process-name filter returned no matches (exit 1); it does not establish general process absence. Pixel operation lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN; APK hash was not read.
+
+MUSE's static workspace check reports both requested collectors unavailable in the checked goal-workspace live adapted copy, staging, handoff, candidate, bridge artifacts, and evidence hash manifest. The source scan time was not supplied; filenames and byte sizes are UNKNOWN; no artifacts were attached. Absence is established only within those checked locations. Keep both extension workflows and the five daily task receipts open. Preserve the 09:00 natural run; after it, refresh MUSE first and read that same run's sanitized prepare/result/stages/assistant/cleanup. No root/`su`, business-state/log access, task/code execution, device write, schedule change, or replay.
+
+Current gates: fresh MUSE metadata and bounded Pixel identity PASS only for observed fields; Nov 3 failure localized to prepare waiting only; complete device diagnosis and repair/integration BLOCKED; five daily tasks and five extension investigations BLOCKED; historical rule recovery PARTIAL; cross-day/long-term observation SUSPENDED. P4 remains open; no S1/overall-completion claim. Evidence: `museCollectorSourceAvailability20261104_0209`, `museReadonlyStatus20261104_020750`, `pixelReadonlyPreflight20261104_020905`, `pixelProcessFilter20261104_0209`, `acceptanceGateStatus20261104_0209`.
+
+
 ## 2026-11-04 01:53 CST — exact official rule-term search
 
 A bounded public search across CPIC's official/service domains for 阳光森林、阳光雨露、the historical daily-cap wording, and 森林任务规则 returned no directly relevant current rule page. No result body was opened; the search cannot establish absence of internal originals or prior confirmation. E07 remains limited to its verified historical caps/action units; reset time, repeat cycle, reward trigger/posting, and current eligibility stay open. Evidence: `officialForestRuleSearch20261104_0153`.

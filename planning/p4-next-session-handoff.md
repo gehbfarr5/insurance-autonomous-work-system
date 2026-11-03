@@ -1,5 +1,23 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 02:07—02:09 CST — latest read and source availability
+
+MUSE's 02:07:50 read-only response reports no active Forest task; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; live `run.py` / `assistant.py` SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`; latest failure Nov 3 09:11:17, last success Oct 31 09:15:50.
+
+Afterward, the existing `pixel3a-kjgx` alias confirmed non-root UID 10249, Pixel 3a, Android 15, boot complete at device time 02:09:05. The narrow `autox|autojs|org.autojs` process-name filter returned no lines (exit 1); it does not establish general process absence. Pixel operation lock, monitor status/hash, APK hash, screen/Keyguard, and foreground Activity remain UNKNOWN or NOT_READ.
+
+MUSE reports that neither requested static collector was found in its checked goal-workspace live/staging/handoff/candidate/bridge/evidence-manifest locations: `fieldPresenceV2` SHA-256 `9dda0b75cc2375c892a5ac3214debb5c6951205613d3ccbbab434e6c66d709ae` and `activityCategoryV4` SHA-256 `fd01997ea87e6f6d14ff1a7eb60ebe62d57c98fb28121096dc64736b1644827e`. MUSE did not provide its source-scan time, filenames, or byte sizes, and attached nothing. This is scoped to that workspace.
+
+### Next natural-run handoff
+
+1. Leave the existing 09:00 schedule unchanged; do not start, replay, retry, deploy, or change business state.
+2. After the natural window, refresh MUSE concurrency/deployment metadata, then retrieve that run's sanitized prepare events, result, stages, assistant dispatch/status, and cleanup.
+3. Keep Pixel operation lock and monitor/device fields UNKNOWN unless an exact, existing, verified non-root read method is available. Do not use `su` or guess a path.
+4. Compare same-run markers and outcome; unknown or mismatched state stops further action. Preserve fail-closed Activity, auth, Vue/method-pin, and unique-menu gates.
+
+Current gates: bounded MUSE metadata and Pixel identity PASS only for observed fields; Nov 3 failure localized to prepare waiting only; complete device diagnosis and repair/integration BLOCKED; five daily tasks and five extensions BLOCKED; historical rule recovery PARTIAL; cross-day/long-term observation SUSPENDED. P4 remains open; no S1 or overall-completion claim. P50, monthly planning, and 2U=2800 remain excluded. Evidence keys: `museCollectorSourceAvailability20261104_0209`, `museReadonlyStatus20261104_020750`, `pixelReadonlyPreflight20261104_020905`, `pixelProcessFilter20261104_0209`, `acceptanceGateStatus20261104_0209`.
+
+
 ## 2026-11-04 01:53 CST — rule-source search remains open
 
 A bounded public search on CPIC's official and service domains using the exact Forest, sun/dew, daily-cap, and task-rule phrases returned no direct current rule page. No result body was opened. This cannot establish that an internal original is absent or was never confirmed; retain E07's historical support and leave reset/repeat timing and reward evidence open. Evidence: `officialForestRuleSearch20261104_0153`.
