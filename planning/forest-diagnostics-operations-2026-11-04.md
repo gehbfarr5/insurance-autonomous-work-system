@@ -2,7 +2,13 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 20:24 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 20:42 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### Forest MUSE新鲜状态回读｜2026-11-03 20:42:10 CST
+
+精确目标线程报告当时无活动Forest任务、唯一Asia/Shanghai每日09:00调度下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py` / `assistant.py`哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，最近scheduler失败11月3日09:11:17、上次成功10月31日09:15:50。只读请求没有访问设备、业务state或日志，也没有改文件/调度/凭据或检查其他聊天。
+
+此回读满足20:42:10时点的MUSE无在途确认，但不包含Pixel锁、monitor、屏幕/Keyguard/Activity。设备锁仍UNKNOWN，且此前有界review范围内未找到安全、已验证的非root读出路径。**不得据runner lock FREE连接Pixel或运行`su` collector。** 只有新鲜MUSE无在途状态与已验证的安全非root设备锁读取方式同时具备，才继续设备侧只读采集。结构化记录：[`museReadonlyStatus20261103_204210`](remaining-work-evidence-2026-10-29.json)。
 
 ### MUSE线程刷新门禁｜2026-11-03 20:24 CST
 

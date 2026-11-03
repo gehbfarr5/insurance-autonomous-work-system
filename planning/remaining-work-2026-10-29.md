@@ -1,5 +1,11 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-03 20:42:10 CST更新：Forest并发门禁刷新；设备只读仍被阻断
+
+MUSE在精确Forest线程新鲜回读：当时无活动任务，唯一启用schedule为Asia/Shanghai每日09:00、下一触发11月4日09:00；running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程。live `run.py`与`assistant.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新scheduler结果11月3日09:11:17 failed，最近成功10月31日09:15:50。状态采样时间为20:42:10，不延伸到之后。
+
+该只读读取未连接设备或读取业务state/raw logs；Pixel锁与monitor状态仍UNKNOWN。现有private collector走`su`，非root读锁方式未验证，因此不连接Pixel。11月4日自然运行及其业务和诊断回执仍待；P4开放、S1未验收，P50/月度/2U=2800继续挂起。证据键：`museReadonlyStatus20261103_204210`。
+
 ## 2026-11-03 20:33 CST更新：五项日常与扩展逐项对账，当前状态保留UNKNOWN
 
 ### 每日五项（逐项记业务执行，不把prepare尝试算完成）

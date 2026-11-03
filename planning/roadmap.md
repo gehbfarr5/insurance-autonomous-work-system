@@ -1,5 +1,7 @@
 # 工作阶段与能力路线图
 
+> **P4运行状态回读｜2026-11-03 20:42:10 CST：** 精确Forest线程新鲜只读状态：无活动Forest任务；唯一Asia/Shanghai每日09:00，下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、进程未见，run.py/assistant.py哈希匹配最近报告。Pixel设备锁仍UNKNOWN，缺少已验证的安全非root读取路径，未连设备。下一步等既有自然运行并补同轮证据；P4开放，S1未验收。详见[P4交接](p4-next-session-handoff.md)及[运行说明](forest-diagnostics-operations-2026-11-04.md)。
+
 > **P4逐项核对｜2026-11-03 20:33 CST：** 日常五项逐项维持最近可信10月31日结果；11月1—3日均未进业务阶段，11月3日三段prepare超时不算任务完成。五项扩展仍待核实；Drive四项metadata-only查询及CPIC官方域四项定向查询未补到现行森林任务映射/奖励周期。MUSE当前并发和Pixel锁UNKNOWN，未连接设备。等既有11月4日自然运行和MUSE可读后按新鲜无在途门禁续取同轮证据；P4开放、S1未验收，P50/月度/2U=2800挂起。详见[剩余工作记录](remaining-work-2026-10-29.md)与[交接](p4-next-session-handoff.md)。
 
 > **P4接续刷新门禁｜2026-11-03 20:24 CST：** CUA只读库存显示Mac锁定且无法自动解锁，Work设置禁用浏览器控制；未能再读Forest线程。故当前运行/队列/在途UNKNOWN，最后可用快照为19:42:51（约20:11读到），不作当前并发证明。Pixel操作锁与monitor状态UNKNOWN，本轮未连接设备。P4继续开放、S1未验收；11月4日自然运行及同轮证据待完成。详见[P4交接](p4-next-session-handoff.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
