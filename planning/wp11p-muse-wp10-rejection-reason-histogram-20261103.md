@@ -1,6 +1,8 @@
 # WP11-P MUSE value-free first-rejection reason histogram
 
-**State:** `READY_FOR_MUSE_HANDOFF`. WP11-N completed aggregate gate counts but grouped all geometry failures as `rejected_or_ambiguous`; it did not identify whether they came from column mismatch, overlap/tie, invalid geometry, or another verified condition. No parser change is supported without this distinction.
+**State:** `READY_FOR_USER_TRANSFER`. WP11-N completed aggregate gate counts but grouped all geometry failures as `rejected_or_ambiguous`; it did not identify whether they came from column mismatch, overlap/tie, invalid geometry, or another verified condition. No parser change is supported without this distinction.
+
+**Handoff status (2026-11-03):** A desktop UI attempt posted the task text and blank schema to an unrelated MUSE conversation. Generation was stopped and a cancellation note was posted; no WP11-P result or diagnostic action is evidenced. No card values or references were included. This does not count as MUSE execution. Transfer this task only into the correct Family Card MUSE workspace.
 
 ## Candidate and evidence
 
