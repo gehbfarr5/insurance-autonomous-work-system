@@ -2,6 +2,12 @@
 
 ## 最新运行与守护状态｜2026-11-03
 
+### 15:22 CST 当前只读状态复核
+
+通过现有`pixel3a-kjgx`别名及其既有`su`路径读取：设备`sargo`、Android 15、boot完成、Dozing；Forest未在前台。monitor `watching`、`guardBlocked=false`、heartbeat新鲜、`requests=0`；monitor锁存在，设备操作锁、`blocked`和`stop`标记不存在。live monitor候选、trigger、worker哈希与11月3日部署记录一致；SecureView v0.19 APK SHA-256仍为runner固定pin `dbada93c…`。输入审计12行且mtime未变，现存认证状态为`page_left`；没有新认证输入。固定窗口sidecar尚未出现。MUSE 14:09快照的队列读数不代表15:22现状；当前MUSE调度/并发状态仍UNKNOWN。
+
+本次只读复核未重启、未改文件、未触发业务。自然运行窗口、证据串联及回滚/停止操作见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
 ### 11月3日自然失败与五段只读对照
 
 11月3日08:57误触助理、09:00调度助理和主流程均在prepare阶段超时，五项没有进入业务；脱敏记录报告cleanup PASS、assistant `INTENT / NOT_SENT`。对照11月2日11:14的手动v0.19两段后，五段均过同一v0.19模块哈希门禁，但只有手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity。没有`login`类事件记录，故没有认证入口实际调用的留存证据；五段逐项登录态布尔值、采样时间、`gesturePage`与`accountMatch`均缺失。代码版本相同使“仅由版本漂移造成差异”不足以解释结果，但具体上下文根因仍UNKNOWN。脱敏ZIP外层与7个成员哈希已在本机验证；源result/prepare未随包交付，其完整哈希由MUSE提供、不能在本机重算；详见[五段对照与缺项](forest-prepare-repair-2026-11-02.md)。本轮不连Pixel、不重跑、不改state/cron/调度；下一次自然运行仍报告为11月4日09:00。

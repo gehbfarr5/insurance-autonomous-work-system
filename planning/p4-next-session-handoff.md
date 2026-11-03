@@ -1,12 +1,12 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
-## 当前接续状态｜2026-11-03 15:08 CST
+## 当前接续状态｜2026-11-03 15:27 CST
 
-- 最新事实、来源与授权边界见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。MUSE 14:09 CST快照报告每日09:00、下一次11月4日，当时无运行/排队任务。11月3日scheduled assistant/main止于prepare timeout，无业务stage/receipt，cleanup报告PASS；间隔缺失仍UNKNOWN。
-- 既有`pixel3a-kjgx`别名的`su`路径可读Pixel app-private状态；rootless `dumpsys`因缺Android `DUMP`权限失败。15:08 root read显示设备Dozing、Forest/gesture页未恢复。MUSE此前使用另一显式Termux路线的字段仍排除，不复用该路线。
-- Monitor-only固定窗口候选已安装，live SHA-256 `2b611ca1…`，状态`watching`、guard清、heartbeat新鲜、requests=0。重启使进程内计数从6重置为0；输入审计12条未变，最后写入10月31日。baseline SHA-256 `238d86a8…`有本地/设备备份，且回滚已实际验证。sidecar窗口外不存在。
-- Forest prepare observer和assistant gate expression仍离线。Pixel v0.19 APK hash与MUSE runner精确pin `dbada93c…`一致；改APK会使runner fail closed。私有exporter已准备并通过合成检查，11月4日自然运行后用脱敏MUSE segment intervals按logcat epoch/sidecar时间做唯一区间匹配。
-- 不重跑/补跑，不修改业务state、cron或调度。P50/月度规划继续挂起，2U＝2800保留；P4/S1未整体验收。
+- 最新事实与来源见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。MUSE 14:09快照曾报告每日09:00、下一次11月4日，且当时无运行/排队/在途任务；15:27的当前MUSE调度状态未读回，必须保留UNKNOWN。
+- 15:22通过既有`pixel3a-kjgx`别名及其`su`路径读到Pixel Dozing、Forest未在前台、monitor `watching`、guard清、heartbeat新鲜、requests=0；设备操作锁/stop/blocked标记不存在，monitor自身锁存在。SecureView v0.19 APK完整哈希仍匹配runner pin；原触发器/worker哈希未变。
+- 输入审计12条、最后写于10月31日；状态记录为`page_left`，未见新增认证输入。Sidecar尚未到11月4日固定窗口；当前不据此判断prepare根因。monitor基线备份与实际回滚验证仍有效；重启将requests从6归零，不回填。
+- Forest prepare observer与assistant gate expression仍离线；自然运行后只用脱敏的MUSE assistant/main区间交给私有exporter。未知、缺失和不匹配继续UNKNOWN，不重放业务。
+- 不改变09:00调度、业务state、防重历史或凭据。P50/月度规划继续挂起，2U＝2800保留；P4/S1未整体验收。
 
 ### 2026-11-03 五段运行只读对照（历史细节）
 

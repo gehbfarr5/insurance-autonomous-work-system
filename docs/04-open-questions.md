@@ -1,10 +1,12 @@
 # 缺失内容与 P4 按需核查
 
-## 当前缺口校正｜2026-11-03 15:08 CST
+## 当前缺口校正｜2026-11-03 15:27 CST
 
-- **prepare根因仍UNKNOWN，设备观测路径已打通：** 11月3日scheduled assistant/main均prepare超时；MUSE本地运行记录缺少09:06:17—09:11:17细节。rootless Pixel shell读Android `DUMP`保护服务被拒；15:08通过既有`pixel3a-kjgx` SSH别名的`su`路径读到Dozing、Forest/gesture页未恢复及AutoX monitor健康。固定窗口monitor-only候选已安装，backup与实际回滚验证通过；当前requests=0是重启后真实进程计数，不回填旧值。Keyguard细项与sidecar事件须等11月4日窗口。MUSE使用另一显式Termux SSH路线的历史字段仍排除，不复用该路径。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)。
+- **prepare根因仍UNKNOWN，设备观测路径已打通：** 11月3日scheduled assistant/main均prepare超时；MUSE 14:09快照报告下一自然运行11月4日09:00，但15:27未复读MUSE当前调度/运行/队列状态，均记UNKNOWN。15:22通过既有`pixel3a-kjgx`别名及其既有`su`路径读到Dozing、Forest未在前台、AutoX monitor健康，目标页未恢复；固定窗口monitor-only候选仍为部署哈希，backup与实际回滚验证已记录。当前requests=0是重启后的真实进程计数，不回填旧值。Keyguard细项与sidecar事件须等自然窗口。MUSE使用另一显式Termux SSH路线的历史字段仍排除，不复用该路径。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)。
 
 - **同轮prepare登录态细项仍不可用：** 当前Pixel v0.19 APK SHA-256与MUSE runner精确工件pin一致；替换APK安装prepare观察器会触发runner哈希门禁。故`user`、`empNoAES`、`operateFlag`仍标为UNKNOWN。私有只读exporter会在自然运行后通过同一alias读取monitor sidecar与带epoch时间的模块marker，仅在唯一assistant/main区间匹配时关联；其采集与joiner合成验证通过。
+
+- **官方规则/时点原据：** 本机`rules.json` SHA-256与公开索引一致，原页面只证明阳光/雨露日上限10/20及“每人/次/单”计量，不证明重置时点、单项重复周期或到账时延。15:27前对Drive“保险”资料作了定向关键词复查，并对CPIC官方域名作公开检索，未命中可核验的完整时点原据；这只是本次有界查找未命中，不表示历史确认未发生或原件不存在。五项扩展仍按已核证据保持“仍待核实”，没有证据归为现实外部阻碍。详见[来源与扩展核查](../planning/remaining-work-2026-10-29.md)。
 
 
 - **11月3日prepare超时的运行差异尚无根因：** 五段脱敏ZIP已下载且外层及7个成员哈希本机验证通过；MUSE提供五组原始result/prepare-events完整SHA-256，但源文件未入包，故本机无法对源字节重算。五段均报告使用同一v0.19 live runner/模块哈希；只有11月2日手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity；五段都没有`login`类prepare事件或认证入口调用回执。逐项登录态、`gesturePage`/`accountMatch`和采样时间均缺。现有信息不能区分启动方式、设备/应用状态或其他上下文原因，也不支持归咎密码/手势输入器。摘要及哈希见[五段对照记录](../planning/forest-prepare-repair-2026-11-02.md)。

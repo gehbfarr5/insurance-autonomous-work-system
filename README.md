@@ -2,7 +2,7 @@
 
 > **iCloud MCP 项目归档（2026-11-02）：** 核心首尔 MCP 与现有 Agent 已进入可用阶段；Chat 和 Work Cloud 同一 Sites MCP 演示工具已分别验收，但 **ChatGPT 真实 iCloud 数据链路仍受 Site 源码工作区阻断，子项目暂缓**。完整部署、研究、验收、无效尝试及恢复条件见 [iCloud MCP 全阶段总归档](planning/icloud-mcp-master-handover-2026-11-02.md)，不要将 demo PASS 误称为生产 iCloud PASS。
 
-> **阳光森林当前接续状态｜2026-11-03 15:08 CST：** MUSE 14:09 CST快照报告既有Asia/Shanghai每日09:00、下一次11月4日，当时无运行/排队任务；11月3日scheduled assistant/main均prepare超时，无业务stage/receipt，cleanup报告PASS，09:06:17—09:11:17原因UNKNOWN。通过现有`pixel3a-kjgx`别名及其既有`su`路径，15:08读到Pixel Dozing、target/gesture页未恢复、AutoX monitor `watching`、guard清、heartbeat新鲜、requests=0；固定窗口侧车在窗口外尚不存在。只读权限下`dumpsys`因缺`android.permission.DUMP`不可用，已确认同一别名root路径可读；不是根因判断。Monitor-only诊断候选已安装，SHA-256 `2b611ca1…`；原件备份SHA-256 `238d86a8…`并完成回滚验证。重启将进程内requests计数从6归零，输入审计仍12条且最后写于10月31日，未见认证输入。v0.19模块APK仍保持MUSE runner精确pin `dbada93c…`；更换APK会触发runner哈希门禁，所以prepare登录态observer仍离线。私有只读exporter将在11月4日自然运行后通过同一别名取证，不重跑/改业务state、cron或调度。详见[诊断检查点](planning/forest-prepare-diagnostics-2026-11-03.md)。P4仍开放，S1未结项，P50/月度规划挂起。
+> **阳光森林当前接续状态｜2026-11-03 15:27 CST：** MUSE 14:09 CST快照当时报告既有Asia/Shanghai每日09:00、下一次11月4日且无运行/排队/在途任务；15:27未复读当前MUSE调度，当前运行/排队状态为UNKNOWN。15:22经既有`pixel3a-kjgx`别名及原有`su`路径读到Pixel `sargo`/Android 15/boot完成、Dozing、Forest未在前台；monitor `watching`、guard清、heartbeat新鲜、requests=0，设备操作锁及stop/blocked标记不存在，monitor自身锁存在。live monitor SHA-256 `2b611ca1…`、trigger/worker未变，v0.19 SecureView APK SHA-256 `dbada93c…`仍匹配runner精确pin。输入审计12条、最后写于10月31日；状态记录为`page_left`，未见新认证输入；11月4日固定窗口尚未开始，sidecar缺失属预期。prepare/login字段observer仍离线；不重跑/改业务state、cron或调度。详细步骤见[诊断检查点](planning/forest-prepare-diagnostics-2026-11-03.md)和[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)。P4仍开放，S1未结项，P50/月度规划挂起。
 
 > **阳光森林 11月3日自然运行与五段对照｜2026-11-03：** 09:00调度的助理与主流程均在prepare超时，五项未进入业务、cleanup报告PASS；另有08:57误触助理同样超时。MUSE只读对照还覆盖11月2日11:14手动v0.19两段：只有手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity；五段均无认证入口调用证据。MUSE报告五段共用同一live v0.19 runner/模块哈希，版本差异不足以解释结果；启动/设备/应用上下文差异仍未知。`user`/`empNoAES`/`operateFlag`、`gesturePage`/`accountMatch`历史分项均缺失，不支持归因为密码/手势脚本故障。脱敏ZIP已下载；本机重算外层SHA-256 `56e7280e…`及7个内部文件哈希全部通过。原始结果/prepare文件未包含，源文件完整SHA-256由MUSE提供、无法在本机对原字节重算。五段细节和哈希见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。不连接Pixel、不重跑、不改state/cron/调度；每日任务仍按既有定义，P50/月度规划挂起。
 
@@ -41,9 +41,9 @@
 
 ## 当前状态｜2026-11-03
 
-**P1—P3已完成，P4进行中，S1未整体验收。每日五项范围不变。10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日MUSE只读对照覆盖三段当日运行和两段11月2日手动运行：五段模块门禁均报告为同一v0.19工件，只有11月2日手动助理段到达BridgeWeb；11月3日误触及调度轮都在MainActivity准备超时。脱敏ZIP外层和7个内部成员哈希已在本机验证；原始result/prepare文件未包含，源文件完整哈希由MUSE提供但无法本机对原字节复算。失败根因仍UNKNOWN，不归咎认证输入脚本。五段无业务动作，脱敏记录报告cleanup PASS；历史登录布尔值缺失。每日Asia/Shanghai 09:00定义未改，下一次报告为11月4日09:00；不连接Pixel、不重跑、不改state/cron。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
+**P1—P3已完成，P4进行中，S1未整体验收。每日五项范围不变。10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日MUSE只读对照覆盖三段当日运行和两段11月2日手动运行：五段模块门禁均报告为同一v0.19工件，只有11月2日手动助理段到达BridgeWeb；11月3日误触及调度轮都在MainActivity准备超时。脱敏ZIP外层和7个内部成员哈希已在本机验证；原始result/prepare文件未包含，源文件完整哈希由MUSE提供但无法本机对原字节复算。失败根因仍UNKNOWN，不归咎认证输入脚本。五段无业务动作，脱敏记录报告cleanup PASS；历史登录布尔值缺失。每日Asia/Shanghai 09:00定义未改；MUSE 14:09快照曾报告下一次为11月4日09:00，但当前调度未复读、状态仍UNKNOWN；不连接Pixel、不重跑、不改state/cron。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
 
-**[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。本轮恢复了扩展任务调查和历史服务申请回执；完整完成条件及奖励周期仍待核。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
+**[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [五项扩展与规则来源核查](planning/remaining-work-2026-10-29.md) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。五项扩展的流程/本人资格/奖励周期仍按证据分类；完整官方时点原依据尚未恢复。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 
 S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；每日互动为首项切入。C 包含互动、培训、答题、特定活动、客户筛选报送、月度收入计划等，不限定为两个 APP 板块，也不表示所有任务同批实施。
 
