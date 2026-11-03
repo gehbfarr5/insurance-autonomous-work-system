@@ -180,3 +180,17 @@ python -m unittest discover -s tests -v
 - The production checkout was reported clean and unchanged; MUSE reported unchanged hashes and zero OCR, Baidu, iCloud, or contact operations. The Seoul service deployment hash remains unverified.
 - Result: production-path acceptance FAIL. Obtain a hashed, read-only source snapshot or tracked source commit before implementing caller changes. The 30-card data gate remains BLOCKED (fewer than 30 samples, authorization unconfirmed, incomplete references). No deployment was performed.
 - Full redacted audit and evidence boundaries: [`wp11e-production-path-audit-20261103.md`](../../planning/wp11e-production-path-audit-20261103.md).
+
+## WP11-E source snapshot and runtime repair candidate
+
+- Date: 2026-11-03
+- Package candidate: 0.9.0
+- Branch: `codex/wp11-family-card-table-parser-20261103`
+- Source snapshot: MUSE branch `muse/wp11-runtime-source-snapshot-20261103`, commit `9b7feede68775b36b81ecf7336380fb80819a852`, merged into this review branch at `36f7c5b`. Its original MUSE owner repository/ref/commit remain unknown. The MCP private host value was redacted in the public snapshot; MUSE reported its post-redaction scan passed, and local hashes matched all four snapshot files.
+- Change: both OCR callers now use the strict Seoul response adapter and retain geometry, probability, and character candidates. Create requires explicit confirmation and validated required fields; name/mobile searches require explicit `truncated: false` and an empty `partial_failures` list before being treated as complete; writes are not retried; uncertain create/readback outcomes persist a PII-free pending operation outside the repository; readback verifies primary phone, birthday, note, and optional address/other phones. MCP OAuth state now uses a protected config directory, and raw result/error output is suppressed. Live MUSE search-result schema remains unverified and must match this contract before create can proceed.
+- Local runtime: macOS, Python 3.14.7, Pillow 12.2.0.
+- Full offline suite: PASS — 117 tests, 0 failures, 0 errors. This includes 22 new synthetic/mocked tests for Seoul response metadata, runtime contract validation, strict search/create/readback behavior, retry suppression, and protected journal/OAuth state.
+- Data boundary: tests use synthetic OCR/contact data and Mock MCP calls only. No real image or customer payload was read; no OCR, Baidu, iCloud, or contact operation was performed locally.
+- MUSE isolated replay of the already-authorized WP10 structured result: pending. The task must use a separate worktree and venv, with no OCR rerun, Baidu call, iCloud call, production execution, or repository write.
+- 30-card acceptance: BLOCKED; fewer than 30 samples, authorization remains unconfirmed, and reference annotations are incomplete. Do not access new samples.
+- Production: MUSE reported package 0.5.0; no package pin, production file, or configuration was changed. This 0.9.0 candidate is not v1.0 Stable and is not approved for deployment.

@@ -4,8 +4,10 @@
 Stdlib only. This speaks MCP JSON-RPC + OAuth DCR/PKCE only; it does NOT
 reimplement Apple CardDAV and does NOT build a second CardDAV service.
 
-State (client_id, PKCE verifier, tokens) lives in .muse-personal-oauth.json
-(mode 0600, same directory). Secrets are never printed by this script.
+State (client_id, PKCE verifier, tokens) lives under the user's protected
+configuration directory, outside the source repository (directory 0700,
+file 0600). Set MUSE_PERSONAL_MCP_ORIGIN to the private HTTPS origin through
+protected runtime configuration. Secrets and tool results are never printed.
 
 Usage:
   python3 mcp_client.py register         # dynamic client registration (DCR)
@@ -20,28 +22,77 @@ import base64
 import hashlib
 import json
 import os
+import pathlib
 import secrets
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 
-ORIGIN = "https://__REDACTED_PRIVATE_HOST__"
-MCP_URL = ORIGIN + "/mcp"
-HERE = os.path.dirname(os.path.abspath(__file__))
-STATE = os.path.join(HERE, ".muse-personal-oauth.json")
+CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") or os.path.join(pathlib.Path.home(), ".config")
+STATE_DIR = os.path.join(CONFIG_HOME, "muse-personal")
+STATE = os.path.join(STATE_DIR, "oauth.json")
 REDIRECT_URI = "http://127.0.0.1:8765/callback"
 CLIENT_NAME = "muse-personal"
 SCOPE = "mcp"
 
 
+class McpSessionError(RuntimeError):
+    """A session rejection safe to use for bounded read-only reconnection."""
+
+
+def _configured_origin():
+    raw = os.environ.get("MUSE_PERSONAL_MCP_ORIGIN")
+    if not raw:
+        raise RuntimeError("MCP_ORIGIN_NOT_CONFIGURED")
+    try:
+        parsed = urllib.parse.urlsplit(raw)
+        port = parsed.port
+        valid = (
+            parsed.scheme == "https"
+            and bool(parsed.hostname)
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.path in ("", "/")
+            and not parsed.query
+            and not parsed.fragment
+            and (port is None or 1 <= port <= 65535)
+        )
+    except ValueError as exc:
+        raise RuntimeError("MCP_ORIGIN_INVALID") from exc
+    if not valid:
+        raise RuntimeError("MCP_ORIGIN_INVALID")
+    return "https://" + parsed.netloc
+
+
+def _check_state_location():
+    state_dir = pathlib.Path(STATE_DIR).expanduser().resolve()
+    for candidate in pathlib.Path(__file__).resolve().parents:
+        if (candidate / ".git").exists() and (
+            state_dir == candidate or candidate in state_dir.parents
+        ):
+            raise RuntimeError("OAUTH_STATE_MUST_BE_OUTSIDE_REPOSITORY")
+
+
 def _save_state(d):
-    fd = os.open(STATE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    _check_state_location()
+    os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+    os.chmod(STATE_DIR, 0o700)
+    if os.path.islink(STATE):
+        raise RuntimeError("OAUTH_STATE_PERMISSIONS_INVALID")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(STATE, flags, 0o600)
     with os.fdopen(fd, "w") as f:
         json.dump(d, f, indent=2)
+    os.chmod(STATE, 0o600)
 
 
 def _load_state():
+    _check_state_location()
+    if os.path.islink(STATE) or os.stat(STATE).st_mode & 0o077:
+        raise RuntimeError("OAUTH_STATE_PERMISSIONS_INVALID")
     with open(STATE) as f:
         return json.load(f)
 
@@ -114,7 +165,7 @@ def _post_json(url, payload, headers=None, timeout=60):
                     k, v = line.split(":", 1)
                     out_headers[k.strip()] = v.strip()
     if proc.returncode != 0 and not body and status == 0:
-        raise RuntimeError("curl MCP POST failed: " + proc.stderr.decode("utf-8", "replace")[:300])
+        raise RuntimeError("MCP_TRANSPORT_FAILED")
     return status, out_headers, body
 
 
@@ -133,7 +184,10 @@ def _post_form(url, fields, timeout=30):
 def _rpc_message(body):
     body = body.strip()
     if body.startswith("{"):
-        return json.loads(body)
+        message = json.loads(body)
+        if not isinstance(message, dict):
+            raise ValueError("MCP_RESPONSE_INVALID")
+        return message
     msgs = []
     for line in body.splitlines():
         line = line.strip()
@@ -142,8 +196,20 @@ def _rpc_message(body):
             if txt and txt != "[DONE]":
                 msgs.append(json.loads(txt))
     if not msgs:
-        raise ValueError("no JSON-RPC message in response: " + body[:300])
+        raise ValueError("MCP_RESPONSE_INVALID")
+    if not isinstance(msgs[-1], dict):
+        raise ValueError("MCP_RESPONSE_INVALID")
     return msgs[-1]
+
+
+def _is_session_error(error):
+    if not isinstance(error, dict):
+        return False
+    # Inspect the server message only inside this process. Never include it in
+    # an exception or log, because an unexpected server response can contain
+    # customer data.
+    marker = json.dumps(error, ensure_ascii=False).lower()
+    return any(token in marker for token in ("session", "unknown session", "session not found"))
 
 
 def _mcp_call(method, params, token, session_id=None, msg_id=1):
@@ -151,17 +217,23 @@ def _mcp_call(method, params, token, session_id=None, msg_id=1):
     if session_id:
         headers["Mcp-Session-Id"] = session_id
     status, hdrs, body = _post_json(
-        MCP_URL,
+        _configured_origin() + "/mcp",
         {"jsonrpc": "2.0", "id": msg_id, "method": method, "params": params},
         headers,
     )
     lower = {k.lower(): v for k, v in hdrs.items()}
     new_session = lower.get("mcp-session-id", session_id)
     if status != 200:
-        raise RuntimeError("MCP %s HTTP %s: %s" % (method, status, body[:500]))
+        if status == 404:
+            raise McpSessionError("MCP_SESSION_REJECTED")
+        raise RuntimeError("MCP_HTTP_ERROR_%s" % status)
     msg = _rpc_message(body)
     if "error" in msg:
-        raise RuntimeError("MCP %s error: %s" % (method, json.dumps(msg["error"])[:500]))
+        if _is_session_error(msg["error"]):
+            raise McpSessionError("MCP_SESSION_REJECTED")
+        raise RuntimeError("MCP_RPC_ERROR")
+    if "result" not in msg:
+        raise ValueError("MCP_RESULT_MISSING")
     return msg.get("result"), new_session
 
 
@@ -174,13 +246,18 @@ def cmd_register():
         "token_endpoint_auth_method": "none",
         "scope": SCOPE,
     }
-    status, _hdrs, body = _post_json(ORIGIN + "/register", payload)
-    print("register HTTP:", status)
-    print("register body:", body[:1000])
+    status, _hdrs, body = _post_json(_configured_origin() + "/register", payload)
     if status not in (200, 201):
         print("REGISTER_FAILED")
         return 1
-    reg = json.loads(body)
+    try:
+        reg = json.loads(body)
+    except (TypeError, ValueError):
+        print("REGISTER_RESPONSE_INVALID")
+        return 1
+    if not isinstance(reg, dict) or not isinstance(reg.get("client_id"), str):
+        print("REGISTER_RESPONSE_INVALID")
+        return 1
     verifier = secrets.token_urlsafe(64)
     challenge = (
         base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
@@ -198,9 +275,8 @@ def cmd_register():
     if reg.get("client_secret"):
         st["client_secret"] = reg["client_secret"]
     _save_state(st)
-    print("client_id:", reg.get("client_id"))
     print("client_secret issued:", bool(reg.get("client_secret")), "(stored only, never printed)")
-    print("state saved (0600):", STATE)
+    print("OAUTH_STATE_SAVED: True")
     return 0
 
 
@@ -222,13 +298,19 @@ def cmd_refresh():
     }
     if st.get("client_secret"):
         fields["client_secret"] = st["client_secret"]
-    status, _hdrs, body = _post_form(ORIGIN + "/token", fields)
+    status, _hdrs, body = _post_form(_configured_origin() + "/token", fields)
     print("refresh token HTTP:", status)
     if status != 200:
-        print("refresh body:", body[:500])
         print("REFRESH_FAILED (stored tokens untouched)")
         return 1
-    tok = json.loads(body)
+    try:
+        tok = json.loads(body)
+    except (TypeError, ValueError):
+        print("REFRESH_RESPONSE_INVALID (stored tokens untouched)")
+        return 1
+    if not isinstance(tok, dict) or not isinstance(tok.get("access_token"), str):
+        print("REFRESH_RESPONSE_INVALID (stored tokens untouched)")
+        return 1
     st["access_token"] = tok.get("access_token")
     if tok.get("refresh_token"):
         st["refresh_token"] = tok["refresh_token"]
@@ -236,7 +318,7 @@ def cmd_refresh():
     st["scope_granted"] = tok.get("scope")
     st["mcp_session_id"] = None
     _save_state(st)
-    print("refresh ok; new access_token stored (0600), length:", len(st["access_token"] or ""))
+    print("REFRESH_OK: True")
     print("refresh_token stored:", bool(st.get("refresh_token")))
     print("scope granted:", st.get("scope_granted"))
     return 0
@@ -255,7 +337,7 @@ def cmd_authorize_url():
             "code_challenge_method": "S256",
         }
     )
-    print(ORIGIN + "/authorize?" + q)
+    print(_configured_origin() + "/authorize?" + q)
     return 0
 
 
@@ -270,13 +352,19 @@ def cmd_exchange(code):
     }
     if st.get("client_secret"):
         fields["client_secret"] = st["client_secret"]
-    status, _hdrs, body = _post_form(ORIGIN + "/token", fields)
+    status, _hdrs, body = _post_form(_configured_origin() + "/token", fields)
     print("token HTTP:", status)
     if status != 200:
-        print("token body:", body[:1000])
         print("EXCHANGE_FAILED")
         return 1
-    tok = json.loads(body)
+    try:
+        tok = json.loads(body)
+    except (TypeError, ValueError):
+        print("TOKEN_RESPONSE_INVALID")
+        return 1
+    if not isinstance(tok, dict) or not isinstance(tok.get("access_token"), str):
+        print("TOKEN_RESPONSE_INVALID")
+        return 1
     st["access_token"] = tok.get("access_token")
     if tok.get("refresh_token"):
         st["refresh_token"] = tok["refresh_token"]
@@ -284,7 +372,7 @@ def cmd_exchange(code):
     st["expires_in"] = tok.get("expires_in")
     st["scope_granted"] = tok.get("scope")
     _save_state(st)
-    print("token ok; access_token stored (0600), length:", len(st["access_token"] or ""))
+    print("TOKEN_EXCHANGE_OK: True")
     print("refresh_token stored:", bool(st.get("refresh_token")))
     print("scope granted:", st.get("scope_granted"))
     return 0
@@ -323,18 +411,19 @@ def _session():
     # notifications/initialized (no id, no response expected)
     try:
         _post_json(
-            MCP_URL,
+        _configured_origin() + "/mcp",
             {"jsonrpc": "2.0", "method": "notifications/initialized"},
             {"Authorization": "Bearer " + token, "Mcp-Session-Id": session} if session else {"Authorization": "Bearer " + token},
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        # The session ID has been durably stored. Report only the exception
+        # type; never suppress protocol failure or echo its response body.
+        raise RuntimeError("MCP_INITIALIZED_NOTIFICATION_FAILED") from None
     return st, session, True
 
 
 def _mcp_call_resilient(method, params, msg_id):
-    """Call on the stored session; if the server rejects it as unknown,
-    drop the session, initialize fresh once, and retry once."""
+    """Retry a rejected session once only for read-only MCP operations."""
     st = _load_state()
     token = st.get("access_token")
     if not token:
@@ -348,9 +437,14 @@ def _mcp_call_resilient(method, params, msg_id):
     try:
         result, _s = _mcp_call(method, params, token, session, msg_id)
         return result
-    except RuntimeError as e:
-        msg = str(e).lower()
-        if "session" in msg or "404" in msg or "unknown" in msg:
+    except McpSessionError:
+        tool_name = params.get("name") if method == "tools/call" and isinstance(params, dict) else None
+        safe_to_retry = method != "tools/call" or tool_name in {
+            "apple_login",
+            "contacts_search",
+            "contacts_read",
+        }
+        if safe_to_retry:
             st["mcp_session_id"] = None
             _save_state(st)
             st, session, _fresh = _session()
@@ -400,7 +494,7 @@ def cmd_call(tool, args_json="{}"):
     result = _mcp_call_resilient("tools/call", {"name": tool, "arguments": args}, 3)
     if result is None:
         return 1
-    print(json.dumps(result, ensure_ascii=False, indent=2)[:4000])
+    print("CALL_COMPLETE: True")
     return 0
 
 
@@ -430,4 +524,8 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except Exception as exc:
+        print("MCP_CLIENT_FAILED:", type(exc).__name__)
+        sys.exit(1)

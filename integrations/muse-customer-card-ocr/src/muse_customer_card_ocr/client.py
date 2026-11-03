@@ -260,6 +260,34 @@ def _parse_ocr_payload(
     return tuple(blocks), _safe_service_log_id(payload.get("log_id"))
 
 
+def parse_seoul_ocr_response(
+    payload: Any,
+    *,
+    request_id: str = "seoul-runtime",
+) -> tuple[OcrBlock, ...]:
+    """Parse the existing Seoul service envelope without dropping word metadata.
+
+    The runtime callers receive this envelope after the Seoul service has
+    already made the authorized OCR request. This adapter applies the same
+    strict block parser as :class:`BaiduOcrClient` and preserves coordinates,
+    confidence values, and character candidates. It does not call a provider.
+    """
+    if not isinstance(payload, dict) or payload.get("ok") is not True:
+        raise InvalidResponseError(request_id=request_id)
+    words_result = payload.get("words_result")
+    if not isinstance(words_result, list):
+        raise InvalidResponseError(request_id=request_id)
+    count = payload.get("words_result_num")
+    if count is not None and (
+        isinstance(count, bool)
+        or not isinstance(count, int)
+        or count != len(words_result)
+    ):
+        raise InvalidResponseError(request_id=request_id)
+    blocks, _service_log_id = _parse_ocr_payload(payload, request_id=request_id)
+    return blocks
+
+
 def _parse_location(value: Any) -> BoundingBox | None:
     if not isinstance(value, dict):
         return None

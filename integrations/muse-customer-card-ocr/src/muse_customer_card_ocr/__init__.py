@@ -1,6 +1,11 @@
 """MUSE customer-card OCR client, deterministic extraction, and field mapping."""
 
-from .client import BAIDU_HANDWRITING_URL, BaiduOcrClient, recognize_customer_card
+from .client import (
+    BAIDU_HANDWRITING_URL,
+    BaiduOcrClient,
+    parse_seoul_ocr_response,
+    recognize_customer_card,
+)
 from .access_token_connector import (
     QueryParamAccessTokenOcrRequest,
     QueryParamAccessTokenOcrResponse,
@@ -30,6 +35,8 @@ from .fields import (
     FieldExtractionResult,
     ReviewReason,
     extract_primary_customer,
+    is_valid_identity_number,
+    normalize_mobile_number,
 )
 from .icloud_mapping import ICloudContactDraft, map_to_icloud_fields
 from .contacts_create_adapter import (
@@ -71,6 +78,7 @@ from .muse_secure_connector import (
     SubprocessStdioHelperInvoker,
 )
 from .muse_token_query_connector import SecureQueryParamAccessTokenConnectorAdapter
+from .runtime_seoul import SeoulCliError, run_seoul_ocr
 from .models import (
     BoundingBox,
     CharacterCandidate,
@@ -83,6 +91,18 @@ from .secure_connector import (
     BearerOcrRequest,
     BearerOcrResponse,
     SecureBearerConnector,
+)
+from .create_attempt import CreateAttemptError, CreateAttemptJournal, default_state_dir
+from .runtime_safety import (
+    RuntimeContractError,
+    contact_dedup_key,
+    contact_name,
+    contact_phones,
+    decide_contact_duplicate,
+    decode_mcp_tool_result,
+    parse_confirmed_draft,
+    validate_contacts_search_result,
+    verify_contact_readback,
 )
 
 __all__ = [
@@ -101,6 +121,8 @@ __all__ = [
     "BoundingBox",
     "CharacterCandidate",
     "ContactsCreateArgumentsError",
+    "CreateAttemptError",
+    "CreateAttemptJournal",
     "CustomerCardFields",
     "FieldExtractionResult",
     "FullImageOcrNotAuthorizedError",
@@ -134,12 +156,14 @@ __all__ = [
     "RateLimitError",
     "RequestTimeoutError",
     "ReviewReason",
+    "RuntimeContractError",
     "SecureBearerConnector",
     "StdioHelperInvoker",
     "SubprocessStdioHelperInvoker",
     "SecureBearerConnectorAdapter",
     "SecureConnectorFailure",
     "SecureConnectorTimeout",
+    "SeoulCliError",
     "SecureQueryParamAccessTokenConnector",
     "SecureQueryParamAccessTokenConnectorAdapter",
     "TokenHelperHttpResponse",
@@ -150,9 +174,22 @@ __all__ = [
     "TokenHelperTimeoutError",
     "build_contacts_create_arguments",
     "call_contacts_create",
+    "contact_dedup_key",
+    "contact_name",
+    "contact_phones",
+    "decide_contact_duplicate",
+    "decode_mcp_tool_result",
+    "default_state_dir",
     "extract_primary_customer",
     "map_to_icloud_fields",
+    "is_valid_identity_number",
+    "normalize_mobile_number",
+    "parse_seoul_ocr_response",
+    "parse_confirmed_draft",
     "serve_one_stdio_request",
     "serve_one_stdio_token_request",
+    "validate_contacts_search_result",
+    "verify_contact_readback",
     "recognize_customer_card",
+    "run_seoul_ocr",
 ]

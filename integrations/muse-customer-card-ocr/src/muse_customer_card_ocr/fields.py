@@ -291,6 +291,21 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
     return FieldExtractionResult(status, fields, tuple(reasons))
 
 
+def normalize_mobile_number(value: str) -> str | None:
+    """Return a normalized mainland China mobile number, or ``None``."""
+    if not isinstance(value, str):
+        return None
+    return _normalize_mobile(value)
+
+
+def is_valid_identity_number(value: str) -> bool:
+    """Check the normalized 18-character PRC identity-number checksum/date."""
+    if not isinstance(value, str):
+        return False
+    normalized = _normalize_identity_number(value)
+    return _is_checksum_valid_identity_number(normalized)
+
+
 def _extract_identity_number(
     items: list[_Evidence],
 ) -> tuple[str | None, bool, bool]:

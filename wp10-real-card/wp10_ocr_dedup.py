@@ -1,144 +1,163 @@
 #!/usr/bin/env python3
-"""WP10 real card: Seoul OCR -> field parsing -> iCloud dedup search only.
-No iCloud create/update/delete. No draft file. Prints only status, counts,
-decisions, review reasons, and presence booleans. Never prints name, mobile,
-ID, address values, session_id, contact_id, Token, AK, or SK, or full OCR text.
+"""Seoul OCR -> field parsing -> complete iCloud duplicate search only.
+
+This entry point never creates, updates, or deletes a contact. It requires an
+explicit full-image authorization attestation and keeps OCR/contact values out
+of stdout. A search response that is absent, malformed, or possibly truncated
+stops before any create decision.
 """
-import sys, json, re, subprocess, uuid
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+import uuid
 from pathlib import Path
-sys.path.insert(0, "/home/hatch/workspace/wp7b-ocr-checkout/integrations/muse-customer-card-ocr/src")
-sys.path.insert(0, "/home/hatch/workspace/carddav-mcp-client")
-from muse_customer_card_ocr.models import OcrBlock, OcrResult
-from muse_customer_card_ocr.fields import extract_primary_customer
-from PIL import Image
-import mcp_client
+from typing import Any
 
-def norm_mobile(m):
-    d = re.sub(r"\D", "", m or "")
-    if len(d) == 13 and d.startswith("86"):
-        d = d[2:]
-    return d
 
-def mcp_call(tool, args, mid):
-    res = mcp_client._mcp_call_resilient("tools/call", {"name": tool, "arguments": args}, mid)
-    txt = res["content"][0]["text"]
-    return json.loads(txt)
+def _add_configured_source() -> None:
+    source = os.environ.get("MUSE_CUSTOMER_CARD_OCR_SRC")
+    if source:
+        source_path = Path(source).expanduser().resolve()
+        if not (source_path / "muse_customer_card_ocr" / "__init__.py").is_file():
+            raise RuntimeError("OCR_PACKAGE_PATH_INVALID")
+        sys.path.insert(0, str(source_path))
+    client_source = os.environ.get("MUSE_CARD_DAV_MCP_CLIENT_SRC")
+    if client_source:
+        client_path = Path(client_source).expanduser().resolve()
+        if not (client_path / "mcp_client.py").is_file():
+            raise RuntimeError("MCP_CLIENT_PATH_INVALID")
+        sys.path.insert(0, str(client_path))
 
-def get_name(c):
-    if not isinstance(c, dict):
-        return ""
-    n = c.get("name") or {}
-    return n.get("full") if isinstance(n, dict) else str(n)
 
-def get_phones(c):
-    out = []
-    if not isinstance(c, dict):
-        return out
-    for p in c.get("phones", []) or []:
-        if isinstance(p, dict) and p.get("value"):
-            out.append(p.get("value"))
-        elif isinstance(p, str):
-            out.append(p)
-    return out
+_add_configured_source()
 
-def main():
-    image_path = Path(sys.argv[1])
-    image_bytes = image_path.read_bytes()
-    with Image.open(image_path) as im:
-        w, h = im.size
-    cmd = ["/home/hatch/workspace/server/ssh-seoul.sh", "python3 /home/ubuntu/baidu-ocr-service/baidu_ocr_service.py --stdin-image"]
-    completed = subprocess.run(cmd, input=image_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
-    if completed.returncode != 0:
-        print("SEOUL_CLI_FAILED returncode:", completed.returncode)
-        return 1
+from PIL import Image  # noqa: E402
+import mcp_client  # noqa: E402
+from muse_customer_card_ocr import (  # noqa: E402
+    OcrResult,
+    RuntimeContractError,
+    decide_contact_duplicate,
+    decode_mcp_tool_result,
+    extract_primary_customer,
+    normalize_mobile_number,
+    parse_seoul_ocr_response,
+    run_seoul_ocr,
+    validate_contacts_search_result,
+)
+
+
+def mcp_call(tool: str, arguments: dict[str, Any], msg_id: int) -> dict[str, Any]:
+    envelope = mcp_client._mcp_call_resilient(
+        "tools/call", {"name": tool, "arguments": arguments}, msg_id
+    )
+    if envelope is None:
+        raise RuntimeContractError("MCP_CALL_FAILED")
+    return decode_mcp_tool_result(envelope)
+
+
+def dedup_decision(
+    name: str,
+    mobile: str,
+    name_results: tuple[dict[str, Any], ...],
+    mobile_results: tuple[dict[str, Any], ...],
+) -> tuple[str, int]:
+    return decide_contact_duplicate(name, mobile, name_results, mobile_results)
+
+
+def _safe_code(error: Exception) -> str:
+    code = getattr(error, "code", None)
+    if isinstance(code, str) and code.replace("_", "").isalnum():
+        return code
+    return type(error).__name__
+
+
+def main(argv: list[str] | None = None, *, ocr_runner=run_seoul_ocr) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("image")
+    parser.add_argument("--full-image-authorized", action="store_true")
+    args = parser.parse_args(argv)
+    if not args.full_image_authorized:
+        print("OCR_STOP: FULL_IMAGE_AUTHORIZATION_REQUIRED")
+        return 2
+
     try:
-        payload = json.loads(completed.stdout.decode("utf-8"))
-    except Exception:
-        print("SEOUL_CLI_INVALID_JSON")
-        return 1
-    print("SEOUL_OK:", payload.get("ok"))
-    print("HTTP_STATUS:", payload.get("http_status"))
-    print("ERROR_CODE:", payload.get("error_code"))
-    print("FIRST_BYTE_MS:", payload.get("first_byte_ms"))
-    print("TOTAL_MS:", payload.get("total_ms"))
-    print("TOKEN_REFRESHED:", payload.get("token_refreshed"))
-    if not payload.get("ok"):
-        print("OCR_ERROR:", payload.get("error"))
-        return 1
-    words = payload.get("words_result") or []
-    print("WORDS_COUNT:", len(words))
-    blocks = tuple(OcrBlock(text=(item.get("words") or "")) for item in words if isinstance(item, dict))
-    result = OcrResult(status="success", blocks=blocks, request_id=uuid.uuid4().hex,
-                       service_log_id=None, image_mime_type="image/jpeg",
-                       image_width=w, image_height=h, upload_mode="seoul_ocr_service")
-    extraction = extract_primary_customer(result)
-    print("EXTRACTION_STATUS:", extraction.status)
-    print("REVIEW_REASONS:", [r.value for r in extraction.review_reasons])
-    f = extraction.fields
-    print("NAME_PRESENT:", bool(f.name))
-    print("MOBILE_PRESENT:", bool(f.mobile))
-    print("BIRTHDAY_PRESENT:", bool(f.birthday))
-    print("GENDER_PRESENT:", f.gender is not None)
-    print("ID_PRESENT:", bool(f.identity_number))
-    print("ADDRESS_PRESENT:", bool(f.address))
-    if extraction.status != "ready" or extraction.review_reasons:
-        print("DEDUP_DECISION: MANUAL_REVIEW")
-        print("DEDUP_REASON: EXTRACTION_NEEDS_REVIEW")
-        print("ICLOUD_SEARCH_RUN: False")
-        return 0
-    # Dedup search only, using parsed name/mobile in memory, never printed
-    try:
-        login = mcp_call("apple_login", {}, 60)
-        sid = login.get("session_id")
-        caps = login.get("capabilities", {})
-        print("LOGIN_OK:", bool(sid))
-        print("CAP_CONTACTS_READ:", bool(caps.get("contactsRead")))
-        if not sid or not caps.get("contactsRead"):
-            print("DEDUP_DECISION: STOP")
-            print("DEDUP_REASON: SEARCH_LOGIN_FAIL")
+        image_path = Path(args.image)
+        image_bytes = image_path.read_bytes()
+        with Image.open(image_path) as image:
+            width, height = image.size
+            mime_type = "image/png" if image.format == "PNG" else "image/jpeg"
+        payload = ocr_runner(image_bytes)
+        if payload.get("ok") is not True:
+            print("OCR_STOP: SEOUL_OCR_FAILED")
             return 1
-        r_name = mcp_call("contacts_search", {"session_id": sid, "query": f.name, "limit": 50}, 61)
-        r_mobile = mcp_call("contacts_search", {"session_id": sid, "query": f.mobile, "limit": 50}, 62)
-        pre_name = r_name.get("contacts", []) if isinstance(r_name, dict) else []
-        pre_mobile = r_mobile.get("contacts", []) if isinstance(r_mobile, dict) else []
-        seen = {}
-        for c in pre_name + pre_mobile:
-            key = c.get("contact_id") if isinstance(c, dict) else None
-            if key is None:
-                key = (get_name(c), tuple(get_phones(c)))
-            seen[key] = c
-        candidates = list(seen.values())
-        dn = f.name.strip()
-        dm = norm_mobile(f.mobile)
-        matching = []
-        for c in candidates:
-            cn = get_name(c).strip()
-            cm_list = [norm_mobile(v) for v in get_phones(c)]
-            if cn == dn or dm in cm_list:
-                matching.append(c)
-        if not matching:
-            dec = "ALLOW_CREATE"
-        elif len(matching) > 1:
-            dec = "MANUAL_REVIEW"
-        else:
-            c0 = matching[0]
-            cn0 = get_name(c0).strip()
-            cm0 = [norm_mobile(v) for v in get_phones(c0)]
-            if cn0 == dn and dm in cm0:
-                dec = "EXISTS_SKIP"
-            else:
-                dec = "MANUAL_REVIEW"
-        print("PRE_NAME_COUNT:", len(pre_name))
-        print("PRE_MOBILE_COUNT:", len(pre_mobile))
-        print("PRE_UNIQUE_CANDIDATES:", len(candidates))
-        print("DEDUP_DECISION:", dec)
+        blocks = parse_seoul_ocr_response(payload, request_id=uuid.uuid4().hex)
+        result = OcrResult(
+            status="success",
+            blocks=blocks,
+            request_id=uuid.uuid4().hex,
+            service_log_id=None,
+            image_mime_type=mime_type,
+            image_width=width,
+            image_height=height,
+            upload_mode="seoul_ocr_service_full_image_authorized",
+        )
+        extraction = extract_primary_customer(result)
+        print("OCR_BLOCK_COUNT:", len(blocks))
+        print("EXTRACTION_STATUS:", extraction.status)
+        print("REVIEW_REASONS:", [reason.value for reason in extraction.review_reasons])
+        fields = extraction.fields
+        print("NAME_PRESENT:", bool(fields.name))
+        print("MOBILE_PRESENT:", bool(fields.mobile))
+        print("BIRTHDAY_PRESENT:", fields.birthday is not None)
+        print("GENDER_PRESENT:", fields.gender is not None)
+        print("ID_PRESENT:", bool(fields.identity_number))
+        print("ADDRESS_PRESENT:", bool(fields.address))
+        print("OTHER_PHONE_COUNT:", len(fields.other_phones))
+        if extraction.status != "ready" or extraction.review_reasons:
+            print("DEDUP_DECISION: MANUAL_REVIEW")
+            print("ICLOUD_SEARCH_RUN: False")
+            return 0
+
+        login = mcp_call("apple_login", {}, 60)
+        session_id = login.get("session_id")
+        capabilities = login.get("capabilities")
+        if (
+            not isinstance(session_id, str)
+            or not session_id
+            or not isinstance(capabilities, dict)
+            or capabilities.get("contactsRead") is not True
+        ):
+            raise RuntimeContractError("CONTACTS_READ_NOT_AVAILABLE")
+
+        name_results = validate_contacts_search_result(
+            mcp_call(
+                "contacts_search",
+                {"session_id": session_id, "query": fields.name, "limit": 50},
+                61,
+            )
+        )
+        mobile_results = validate_contacts_search_result(
+            mcp_call(
+                "contacts_search",
+                {"session_id": session_id, "query": fields.mobile, "limit": 50},
+                62,
+            )
+        )
+        decision, candidate_count = dedup_decision(
+            fields.name, fields.mobile, name_results, mobile_results
+        )
+        print("PRE_NAME_COUNT:", len(name_results))
+        print("PRE_MOBILE_COUNT:", len(mobile_results))
+        print("PRE_UNIQUE_CANDIDATES:", candidate_count)
+        print("DEDUP_DECISION:", decision)
         print("ICLOUD_SEARCH_RUN: True")
-    except Exception as e:
-        print("DEDUP_DECISION: STOP")
-        print("DEDUP_REASON: SEARCH_FAILED")
-        print("SEARCH_ERROR_TYPE:", type(e).__name__)
+        return 0
+    except Exception as exc:
+        print("WP10_STOP:", _safe_code(exc))
         return 1
-    return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

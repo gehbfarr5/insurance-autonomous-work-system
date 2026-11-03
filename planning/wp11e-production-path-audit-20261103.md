@@ -1,34 +1,53 @@
 # WP11-E production path and source provenance audit
 
 Date: 2026-11-03  
-Scope: read-only MUSE source inspection and source provenance. No production code was executed or changed; no OCR, Baidu, iCloud, or contact operation was performed.
+Scope: static MUSE source audit, controlled source-only handoff, and isolated local repair. No production code was executed or changed; no OCR, Baidu, iCloud, or contact operation was performed locally.
 
-## Result
+## Status
 
-**Production integration blocker confirmed; do not deploy the parser package by itself.** MUSE reported that production is on package 0.5.0 at commit `8336008d080387ab709d1e0ab9381683b1138e0f`. The tracked `fields.py` blob at that commit was independently read from Git and its SHA-256 matches MUSE's reported `186200379b12f7bdd95d93dd3dc80afc6429704dfa1c02e65b9fd05757968001`.
+**Production remains blocked; do not deploy this branch.** MUSE reported production on package 0.5.0 at commit `8336008d080387ab709d1e0ab9381683b1138e0f`. The production `fields.py` blob hash reported by MUSE (`186200379b12f7bdd95d93dd3dc80afc6429704dfa1c02e65b9fd05757968001`) was independently verified locally.
 
-The actual upload path enters `wp8-seoul-ocr-service/muse_adapter.py` and `wp10-real-card/wp10_ocr_dedup.py`; MUSE reports that both construct `OcrBlock` with text only. In the Seoul adapter, `main()` at line 57 reads the `words` key and does not pass `location`, `probability`, or `chars`. The OCR response still has those non-value keys on each `words_result` item, so geometry and character metadata are lost before field extraction. Production 0.5.0's parser is line-oriented and does not use coordinates. The 0.8.1 geometry parser therefore cannot fix the live path through a package-only upgrade; both caller wiring and parser adoption are required.
+The four runtime scripts were untracked in MUSE and had no verified owner repository/ref/commit. MUSE copied only those source files to isolated branch `muse/wp11-runtime-source-snapshot-20261103`, commit `9b7feede68775b36b81ecf7336380fb80819a852`, then the snapshot was merged into the WP11 repair branch at `36f7c5b`. The original source identity remains unknown, so this is a controlled review snapshot, not a production release or a provenance-complete source checkout.
 
-The four runtime scripts `wp8-seoul-ocr-service/muse_adapter.py`, `wp10-real-card/wp10_ocr_dedup.py`, `wp10-real-card/wp10_create_readback.py`, and `carddav-mcp-client/mcp_client.py` were reported as untracked and outside a Git working tree. Their owner repository, ref, commit, and source hashes are unknown. The production checkout cannot be compared to an untracked commit. A similarly named tracked CardDAV client is a different component. The runtime source itself is not available in this controlled repository, so no patch to those live callers was attempted.
+The repository is public. The initial scan found one private host constant in `mcp_client.py`; the handoff stopped before commit. MUSE then redacted only that value in the isolated copy, rescanned it, and pushed the snapshot after the scan passed. MUSE reports the original MUSE file was not modified. No customer/OCR/contact data, logs, configuration, credentials, or other host values were copied.
 
-## Additional control findings
+| Snapshot path | SHA-256 | Handoff treatment |
+|---|---|---|
+| `wp8-seoul-ocr-service/muse_adapter.py` | `5b7f139b23268f9fef5d41d596db18b6b3ff392bb4c507b55d8cd949f919bae3` | byte-identical to reported source |
+| `wp10-real-card/wp10_ocr_dedup.py` | `4c78025fc1e9b672049474493971b36a3e22d4627e8b29b994885d9379a82fbf` | byte-identical to reported source |
+| `wp10-real-card/wp10_create_readback.py` | `b9260b429b8861d9f383ad255ee661241c0d23a0e5dae6cd73b81a75125e7411` | byte-identical to reported source |
+| `carddav-mcp-client/mcp_client.py` | `52515dbde60e276f48d47d89a3dda575cd83c1e9891ed6796465c5257c055a6d` | one private host value redacted |
 
-- MUSE's static audit reports that chat confirmation is not enforced by a code-level create flag; a technical caller can reach the manual create script while extraction is `REVIEW_REQUIRED`.
-- Duplicate search is required in the normal scripts but is pre-create only. There is no idempotency key; a successful create followed by a lost response or failed readback can leave a contact that needs manual cleanup.
-- Readback checks created fields, but no update/delete path was found in the inspected WP10 flow.
-- The production package checkout was reported clean at 0.5.0 before and after inspection. MUSE reported unchanged package/source hashes and no external operations. Seoul service deployment hash was not independently established.
+MUSE reported original `mcp_client.py` hash `e49d983eefcecff78c6bc12c484ff43fb518f7e9981816491c2a4ecc4e5d085e`; that unredacted source is MUSE-only and was not published. Local `git show` SHA-256 checks matched all four snapshot hashes. Local literal scans and `git diff --check` found no private IP/DNS, mobile/ID/email literals, credential assignments, or bearer tokens in the snapshot.
 
-## Repair options and selected MVP
+## Source-level findings
 
-1. **Adapt the existing Baidu word-block path (selected, pending source access).** Preserve `location`, `probability`, and `chars` when both OCR entry points create `OcrBlock`, and wire both callers to the reviewed parser. Add a code-enforced stop before contact creation for any `REVIEW_REQUIRED` result, with duplicate search and an explicit confirmation state in the same create path. This reuses the existing Seoul OCR service, `OcrBlock`/`BoundingBox` schema, conservative 0.8.1 parser, and existing duplicate/readback workflow. The main cost is recovering and reviewing the untracked runtime callers and testing their actual orchestration.
-2. **Add a separate image/table-recognition pipeline.** This could extract layout before field matching, but it introduces another OCR/model runtime and another handling path for complete card images. Prior research found PaddleOCR, RapidTable, and Table Transformer are not drop-in parsers for the existing protected Baidu word blocks. It would also need fresh privacy/data authorization, dependency review, and acceptance evidence. Do not select this unless the existing path cannot expose usable geometry or evidence demonstrates the current parser cannot meet accuracy.
+The following were found by static inspection of the four imported files; no file was executed during this review:
 
-The selected MVP is limited to source recovery, caller wiring, code-level create gates, and synthetic adapter/parser regressions. Implementation order: (1) obtain the approved source-only snapshot or tracked source ref and verify hashes/secrets, (2) inspect and patch both entry points and the create gate on a dedicated branch, (3) add synthetic input-contract tests for geometry/character preservation and fail-closed mapping, (4) run the full offline suite and MUSE isolated review, then (5) use only an explicitly authorized and fully labeled acceptance set. No production deployment is included. Rollback is a branch revert and restoring the previous 0.5.0 pin/callers; no contact cleanup should be required because no contact write is part of these stages.
+- Both OCR callers used the old absolute package path and made text-only `OcrBlock` objects. They silently treated missing `words_result` as empty and skipped malformed non-dict blocks, dropping `location`, `probability`, and `chars` before extraction.
+- `muse_adapter.py` printed the full birthday and could write full contact fields to an arbitrary `--draft-out` path with a fictional-data label, even when input was real.
+- The duplicate/create scripts treated a missing or malformed `contacts` list as an empty search result, which could lead to `ALLOW_CREATE`.
+- The create script did not require a code-level confirmation state or validate required values. It could use a failed primary-phone readback as a pass and treated any returned address as a failure.
+- `_mcp_call_resilient` could repeat generic `tools/call` operations after session errors, including non-idempotent creation. The client also printed raw MCP results and embedded response bodies in exceptions; OAuth state was stored beside the source file.
+- No transaction/outcome journal existed. A lost create response or failed readback could leave a contact while a later run attempted another create.
 
-## Next controlled work
+## Selected repair and reuse decision
 
-Before adapting the live path, obtain a read-only, source-only copy of the four untracked scripts with per-file hashes and a secret/data scan, or identify their owning tracked repository and exact commit. Review the copy before adding it to a dedicated repair branch. Then update both OCR entry points to preserve supported OCR metadata and route through the reviewed parser, and enforce the review/duplicate/confirmation gate in the create code path. Keep this in an isolated MUSE worktree and rerun synthetic plus authorized protected acceptance checks. The 30-card gate remains unmet: inventory is below 30, authorization is unconfirmed, and reference annotations are incomplete. No production deployment is authorized or recorded here.
+**Selected: adapt the existing Seoul Baidu word-block path.** Reuse `OcrBlock`/`BoundingBox`, the existing conservative parser, the current duplicate gate, and standard-library JSON/fsync/atomic-replace journal patterns already used in local `src/forest_policy/journal.py`. The new MUSE-specific journal narrows the state to a random operation ID, phase, and timestamps; it stays outside the Git repository and serializes create attempts with a file lock. No contact values or server contact IDs are stored.
 
-## Evidence boundary
+**Avoid: a second OCR/table-model pipeline.** Existing research recorded in the package README found PaddleOCR, RapidTable, and Table Transformer are not drop-in parsers for the already-protected Baidu word blocks; they would introduce another image-processing path without fixing confirmation, retry, or readback controls. No new runtime dependency was added.
 
-The entry-point behavior, line number, control-flow findings, and source provenance above are MUSE-reported from a read-only static audit. Locally, only the tracked 0.5.0 `fields.py` blob hash was independently verified. No adapter source, customer content, OCR value, contact data, credential, or private URL was copied into this record.
+The current patch adds a strict Seoul response adapter that preserves geometry, confidence, and character candidates; updates both OCR callers to use it; requires an explicit per-call full-image authorization flag; and removes OCR value printing/file output. It also makes search-result validation fail closed: pre-create searches require an explicit `truncated: false` and empty `partial_failures` list, reusing the completeness signals in the repository's existing CardDAV workflow. A different or undocumented live MUSE response shape therefore stops before create. The patch requires `READY` or `MANUALLY_REVIEWED` plus `USER_CONFIRMED` and valid required fields before create, verifies the primary phone and optional address/other phones on readback, and leaves a pending operation after any uncertain write/readback outcome. The MCP client never retries contact writes and requires a protected host configuration value; OAuth state moves to the user config directory. Errors and tool results no longer print raw response content.
+
+The MCP protocol has no generally interoperable server-side write idempotency guarantee in the inspected tool-call schema. The Request Idempotency SEP PR was closed without merge, so it is not an available contract for this MUSE server. Therefore the patch uses a local pending-create stop and manual reconciliation instead of sending an unverified idempotency parameter. See the [closed MCP Request Idempotency proposal](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/3182) and the [MCP tool annotations schema](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2025-06-18/schema.ts). This journal prevents blind retries only on the runtime that shares its protected state directory; it does not claim server-side or multi-host exactly-once semantics.
+
+## Verification and remaining gates
+
+- Focused synthetic runtime tests: PASS — 22 tests, including geometry/candidate preservation, fail-closed response/search contracts, confirmation gates, no write retry, PII-free pending state, and mocked create/readback. No provider or MCP endpoint was called.
+- Full offline suite: PASS — 117 tests, 0 failures, 0 errors, package 0.9.0 candidate.
+- MUSE isolated review: pending. It may replay only the already-authorized WP10 structured OCR result in the protected workspace; do not rerun OCR or call iCloud.
+- Geometry acceptance remains open. WP11-D's protected replay mismatched the reviewed name, mobile, ID, explicit birthday, and gender; there is still no evidence to loosen ties, overlap, or row-search gates.
+- 30-card acceptance set remains gated: inventory below 30, authorization unconfirmed, and required reference annotations incomplete. Do not access new cards until separately authorized.
+- Production package remains 0.5.0 by MUSE report. No deployment, Baidu call, iCloud operation, or contact write was performed as part of this repair.
+
+The branch repair is reversible by reverting its commits; no production rollback or contact cleanup is needed because no production change/write occurred. Before any future MUSE deployment, confirm the package/runtime path configuration, MCP host in protected configuration, OAuth state directory, persistent journal location, actual MUSE tool schemas, and the tested package pin. Keep deployment and 30-card validation as separate gated tasks.
