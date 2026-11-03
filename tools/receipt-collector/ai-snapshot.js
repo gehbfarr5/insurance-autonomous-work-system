@@ -75,9 +75,9 @@ async function collectAiSnapshot(root, options, digest) {
       if(!record || !Array.isArray(record.answerList))return missing('RECORD_SHAPE_UNKNOWN');
       if(record.answerList.length>100)return missing('ANSWERS_TRUNCATED');
       for(const answer of record.answerList) {
-        if(!answer || typeof answer.recordId!=='string')return missing('RECORD_ID_UNKNOWN');
+        if(!answer || typeof answer.recordId!=='string' || !answer.recordId)return missing('RECORD_ID_UNKNOWN');
         if(recordHashes.length>=2000)return missing('HASH_BUDGET_EXCEEDED');
-        if(answer.recordId)recordHashes.push(await fingerprint(answer.recordId));
+        recordHashes.push(await fingerprint(answer.recordId));
       }
     }
     const out={status:'SNAPSHOT', versionBinding:options.versionBinding,

@@ -5,6 +5,10 @@
 
 > **阳光森林当前访问门禁｜2026-11-03 17:25 CST：** 最新CUA清单显示Muse进程仍运行，但浏览器清单为空，Work设置报告浏览器控制已禁用；未取得Forest scheduler/task/queue读数。此前16:23 MUSE并发快照已过时，当前仍为UNKNOWN。遵守既有边界，未打开不相关WP1上下文，也未连接Pixel；没有MUSE/Pixel专用connector。设备锁及部署哈希仍UNKNOWN。11月4日review-only collector的`.failure`标记修正、目标Activity观测边界和E07规则来源审计见[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)。没有设备、业务state、调度或凭据变更。需要先从正确MUSE线程取得新鲜并发/锁读数，再按手册决定Pixel只读访问。
 
+> **空列表观察器上下文门禁｜2026-11-03 17:38 CST：** 被动观察器现在要求sourcePin为非空字符串、salt至少32字符；不合规上下文在任何CDP调用前返回BLOCKED。5项合成测试PASS。真实成功空列表同周期响应/赋值仍未观察，代码未部署，MUSE当前安装版本仍UNKNOWN。证据见[剩余工作证据索引](planning/remaining-work-evidence-2026-10-29.json)。
+
+> **回执候选离线修正｜2026-11-03 17:35 CST：** 静态审查发现AI快照会把空`recordId`从基线hash中省略，可能使新旧记录比较缺少完整基线；现改为`REVIEW / RECORD_ID_UNKNOWN`，并以合成回归复核，采集器测试29/29 PASS。独立offline provides候选现用描述符读取并阻断访问器getter，测试PASS。两处都未部署或实机验证；MUSE安装版本仍UNKNOWN，真实问答结束正例和成功空列表同周期回执仍缺。无设备、业务或调度操作。证据见[剩余工作证据索引](planning/remaining-work-evidence-2026-10-29.json)。
+
 > **阳光森林当前访问门禁与采集器审计｜2026-11-03 17:12 CST（Pixel本地连接复核17:03）：** CUA库存仅确认MUSE进程运行，浏览器控制不可用，未读到Forest任务/调度。最近并发读数仍为16:23且已过时，当前为UNKNOWN；本轮未连接Pixel，设备锁与部署哈希仍UNKNOWN。静态审查11月4日review-only包发现collector会忽略monitor `.failure`标记，已修正本机私有collector：保留脱敏sidecar事件并将结果降为`PARTIAL_UNKNOWN`；相关合成路径通过，14/14成员哈希复核通过。monitor只说明目标app/gesture Activity是否匹配，无法识别其他前台Activity；account也只保留匹配布尔值。worker请求/返回不证明输入或认证成功，prepare登录字段和assistant gate观察器离线。没有设备、业务state、调度或凭据变更。先取得新鲜MUSE状态，确认无并发后再按[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)复核Pixel。
 
 > **阳光森林前次访问门禁｜2026-11-03 16:52 CST：** 本轮CUA库存只确认MUSE进程运行，未提供Forest任务或调度读回；浏览器控制不可用。最近一次Forest任务状态读数仍是16:23，彼时MUSE报告唯一每日09:00任务下次为11月4日、running/queued/in-flight为0/0/false且runner lock为FREE；这只是历史读数，当前并发状态为UNKNOWN，不能用作Pixel访问前置门禁。本轮未连接Pixel；本地确认既有SSH别名存在但未使用。16:33静态读回确认live runner哈希匹配部署值，prepare最长70秒轮询resumed Activity；具体超时触发与09:06:17–09:11:17间隔仍UNKNOWN，精确源码未导出。无设备、业务state、调度或凭据变更。下一步先取得新鲜MUSE状态；确认无并发后才可按[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)只读接触Pixel。P4仍开放，S1未验收，P50/月度规划挂起。

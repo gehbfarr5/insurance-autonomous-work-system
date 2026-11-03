@@ -1,5 +1,13 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 回执候选静态修正｜2026-11-03 17:35 CST
+
+AI快照现在要求baseline中的每个`recordId`都是非空字符串；缺失或空值返回`REVIEW / RECORD_ID_UNKNOWN`，避免不完整基线支持“新记录”结论。新增合成回归后`test-collector.cjs`29/29 PASS。独立offline provides候选对遍历字段采用描述符读取，getter不执行；回归PASS，Proxy陷阱不在其保障范围。仅仓库候选发生变化，未安装/部署/实机验收；MUSE当前版本仍UNKNOWN。AI同次结束正例、成功空列表同周期响应与赋值证据继续待取；无业务动作、设备写入或调度变化。详情见[证据索引](remaining-work-evidence-2026-10-29.json)和[采集器说明](../tools/receipt-collector/README.md)。
+
+## 空列表观察器预检修正｜2026-11-03 17:38 CST
+
+观察器要求sourcePin非空字符串、salt至少32字符；不合规输入在CDP前fail-closed。`test_empty_observer.py`五项合成测试PASS，含无效profile时0次CDP调用。观察器未部署到MUSE，真实成功空列表同周期响应/赋值证据仍缺；详情见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 当前接续状态｜2026-11-03 17:25 CST
 
 截至17:25，CUA inventory显示Muse进程运行但浏览器清单为空、Work设置禁用浏览器控制；没有Forest状态读回或专用MUSE/Pixel connector。此前16:23并发读数已过时，当前仍UNKNOWN；按既有WP1边界未打开Muse界面，未连接Pixel。17:03本机SSH配置检查确认既有Pixel别名，但不提供设备锁/部署哈希。17:12完成11月4日review-only采集包字段审计并修正collector忽略`.failure`标记；17:22复核E07规则原件与索引哈希匹配，CPIC官方4条精确规则搜索未命中。其余字段限制和时间周期边界见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[剩余工作与证据边界](remaining-work-2026-10-29.md)。先取得新鲜MUSE状态确认无并发，再做Pixel只读核查。16:33 live runner静态读数未定位具体超时触发，精确源码尚未导出。无业务、设备、state/cron/调度或凭据变更。

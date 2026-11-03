@@ -49,6 +49,35 @@ assert(own, 'own symbol at level 0 missing');
 assert.equal(run({}).status, 'ROOT_NOT_EXPOSED');
 console.log('PASS: component provides chain, inherited Symbol, cycles, ref whitelist-boolean only, no secret/set leakage, absent root');
 
+// Traversal pointers must not invoke user-defined getters.
+let traversalGetterCalls = 0;
+const accessorComponent = {setupState:{}, props:{}, exposed:{}, provides:{}};
+Object.defineProperty(accessorComponent, 'subTree', {get(){traversalGetterCalls++; throw Error(secret);}});
+const accessorResult = run({_vnode:{component:accessorComponent}});
+assert.equal(traversalGetterCalls, 0);
+assert.equal(accessorResult.status, 'READ_ERROR');
+assert(accessorResult.errors.some(e => e.errorType === 'ACCESSOR_BLOCKED'));
+assert(!JSON.stringify(accessorResult).includes(secret));
+console.log('PASS: traversal accessors are blocked without invocation and reported as unknown');
+
+let thrownNameGetterCalls = 0;
+const thrownByProxy = {};
+Object.defineProperty(thrownByProxy, 'name', {get(){thrownNameGetterCalls++; throw Error(secret);}});
+const proxyVnode = new Proxy({}, {getOwnPropertyDescriptor(){throw thrownByProxy;}});
+const proxyResult = run({_vnode:proxyVnode});
+assert.equal(thrownNameGetterCalls, 0);
+assert.equal(proxyResult.status, 'READ_ERROR');
+assert(proxyResult.errors.some(e => e.errorType === 'READ_FAILED'));
+assert(!JSON.stringify(proxyResult).includes(secret));
+console.log('PASS: reflection errors are sanitized without inspecting thrown error properties');
+
+let deepType = {name:'Deep'};
+for(let i=0;i<300;i++) deepType = Object.create(deepType);
+const deepResult = run({_vnode:{component:{type:deepType,setupState:{},props:{},provides:{}}}});
+assert.equal(deepResult.status, 'TRUNCATED');
+assert(deepResult.truncationReasons.includes('PROPERTY_PROTOTYPE_DEPTH'));
+console.log('PASS: property-prototype lookup is explicitly bounded');
+
 // Real accessor traps, shared ancestor coverage, and explicit symbol bounds.
 let invoked = 0;
 const tricky = {};

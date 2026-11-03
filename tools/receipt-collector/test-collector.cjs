@@ -32,6 +32,12 @@ async function check(name,fn){await fn();count++;console.log('PASS '+name);}
   f.finish();const after=await collectAiSnapshot(f.root,options,digest);assert.equal(reconcile(before,after).verdict,'ACCEPT');
   const output=JSON.stringify({before,after});for(const s of [secret,id,conv])assert(!output.includes(s));
  });
+ await check('empty record id cannot be omitted from baseline',async()=>{
+  const f=fixture();f.records.push({question:secret,answerList:[{recordId:''}]});
+  const snapshot=await collectAiSnapshot(f.root,options,digest);
+  assert.equal(snapshot.status,'REVIEW');assert.equal(snapshot.reason,'RECORD_ID_UNKNOWN');
+  assert(!JSON.stringify(snapshot).includes(secret));
+ });
  for(const [name,mutate,expected] of [
   ['stream error',f=>f.answer.streamData[0].error=true,'REVIEW'],
   ['missing error',f=>delete f.answer.streamData[0].error,'REVIEW'],

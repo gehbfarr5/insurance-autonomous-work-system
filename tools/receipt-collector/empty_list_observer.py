@@ -41,8 +41,9 @@ class Observer:
         if len(self.events)>2000:raise ObservationError('OBSERVER_EVENT_BUDGET')
     def run(self):
         p=self.profile
-        if not p.get('sourcePin') or not p.get('salt'):
-            return {'status':'BLOCKED','reason':'SOURCE_OR_INTENT_CONTEXT_MISSING'}
+        if (not isinstance(p,dict) or not isinstance(p.get('sourcePin'),str) or not p['sourcePin']
+            or not isinstance(p.get('salt'),str) or len(p['salt'])<32):
+            return {'status':'BLOCKED','reason':'SOURCE_OR_INTENT_CONTEXT_INVALID'}
         # Establish exact target and keep the initial actual list object alive.
         expression="""(()=>{if(location.origin!==ORIGIN||location.pathname!==PATH)throw Error('WRONG_TARGET');const v=document.querySelector('.customer-list-page')?.__vue__;if(!v||!Array.isArray(v.customers))throw Error('LIST_UNKNOWN');return v.customers;})()""".replace('ORIGIN',json.dumps(p['origin'])).replace('PATH',json.dumps(p['path']))
         baseline=self.call('Runtime.evaluate',{'expression':expression,'returnByValue':False})
