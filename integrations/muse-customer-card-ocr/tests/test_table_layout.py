@@ -160,6 +160,20 @@ class TableLayoutExtractionTests(unittest.TestCase):
         self.assertEqual(extraction.fields.identity_number, _synthetic_identity_number())
         self.assertEqual(extraction.fields.birthday, date(1990, 2, 2))
 
+    def test_near_tied_column_centers_require_review(self):
+        blocks = [
+            _block("姓名", 20, 20, 40),
+            _block("虚构客户甲", 48, 20, 80),
+            _block("性别", 120, 20, 40),
+            _block("家属亲友", 20, 80, 100),
+        ]
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.name)
+        self.assertIn(ReviewReason.TABLE_LAYOUT_UNCERTAIN, extraction.review_reasons)
+
     def test_reassembles_adjacent_identity_number_fragments_with_valid_checksum(self):
         identity = _synthetic_identity_number()
         blocks = [

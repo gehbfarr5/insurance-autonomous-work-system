@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11C-MUSE-ISOLATED-RETEST-20261103",
+  "status": "FAIL",
+  "run_time_utc": "2026-11-03T06:16:49Z",
+  "repository": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "ccc9d17abfe27919c93ef3feba97a6aa3082d016",
+    "package_version": "0.8.0"
+  },
+  "environment": {
+    "os_image": "Linux x86_64",
+    "python_version": "3.12.3",
+    "pillow_version": "10.2.0",
+    "isolated_worktree": true,
+    "isolated_virtualenv": true
+  },
+  "offline_suite": {
+    "status": "PASS",
+    "passed": 94,
+    "failed": 0,
+    "errors": 0,
+    "failure_test_ids": []
+  },
+  "synthetic_regressions": {
+    "cross_column_neighbor_rejected": "PASS",
+    "overlapping_columns_require_review": "PASS",
+    "valid_identity_fragments_joined": "PASS",
+    "invalid_or_ambiguous_identity_fragments_require_review": "PASS",
+    "pure_draft_mapping": "PASS"
+  },
+  "wp10_existing_payload": {
+    "available_in_authorized_protected_workspace": "YES",
+    "replay": "FAIL",
+    "reason": "REPLAY_FIELD_MISMATCH",
+    "parser_decision": "REVIEW_REQUIRED",
+    "field_match_reference": {
+      "name": "MISMATCH",
+      "mobile": "MISMATCH",
+      "identity_number": "MISMATCH",
+      "explicit_birthday": "MISMATCH",
+      "gender": "MISMATCH",
+      "address": "MATCH",
+      "other_phone": "NOT_CHECKED"
+    },
+    "review_reason_codes": [
+      "table_layout_uncertain",
+      "mobile_missing",
+      "address_uncertain",
+      "identity_number_uncertain"
+    ],
+    "customer_values_or_ocr_text_in_report": false
+  },
+  "external_operations": {
+    "baidu_calls": 0,
+    "icloud_reads": 0,
+    "icloud_writes": 0,
+    "production_configuration_changed": false,
+    "production_package_version_before": "0.5.0",
+    "production_package_version_after": "0.5.0"
+  },
+  "production_source_readback": {
+    "status": "PASS",
+    "revision_or_source_sha256": "186200379b12f7bdd95d93dd3dc80afc6429704dfa1c02e65b9fd05757968001",
+    "production_source_changed": false
+  },
+  "notes": [
+    "The protected replay returned REVIEW_REQUIRED and automatic draft mapping was rejected.",
+    "The address was omitted as in the reviewed draft; other_phone was not checked.",
+    "MUSE reported no Baidu/iCloud operations and no production configuration change."
+  ]
+}

@@ -491,6 +491,7 @@ def _matches_label_column(
             label.block.location.height if label.block.location else 0,
             candidate.block.location.height if candidate.block.location else 0,
         ),
+        0.2 * (candidate.block.location.width if candidate.block.location else 0),
     )
     if second_distance - nearest_distance <= tie_margin:
         return False, True

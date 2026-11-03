@@ -42,7 +42,7 @@ Return a completed copy of `wp11c-muse-result-template-20261103.json`. Keep the 
 
 ## Pass criteria
 
-- Exact tested commit imports as 0.8.0 in an isolated venv and all 92 offline tests pass.
+- Exact tested commit imports as 0.8.0 in an isolated venv and all 94 offline tests pass.
 - Synthetic nearest-column and ID-fragment regressions pass; fail-closed behavior remains intact.
 - Protected WP10 replay matches the reviewed reference for required fields and draft mapping is allowed. Any `REVIEW_REQUIRED`, mismatched field, or unknown required field is a failure of the v1.0 release gate, not a reason to loosen geometry without evidence.
 - Baidu calls, iCloud reads/writes, and production configuration changes are all zero/false.

@@ -154,4 +154,16 @@ python -m unittest discover -s tests -v
 - Local verification: Python 3.14.7, Pillow 12.2.0; targeted table-layout tests PASS — 17/17; full offline suite PASS — 94 tests, 0 failures, 0 errors.
 - Added synthetic coverage: a right-adjacent block in another field column is not accepted as the name; adjacent numeric fragments are joined only into a checksum-valid identity number; invalid fragments remain under review; a short address fragment is withheld and requires manual review. Existing overlapping-column and fail-closed tests remain passing.
 - Test data: synthetic fields, ID-shaped checksum values, and synthetic coordinates only. No real OCR payload, image, customer values, or credentials were read locally.
-- MUSE acceptance: pending for 0.8.0 in a separate worktree/venv. The task and redacted result template are in `../../planning/wp11c-muse-retest-20261103.md` and `../../planning/wp11c-muse-result-template-20261103.json`. No production deployment is part of this re-test.
+- MUSE acceptance: FAIL for 0.8.0. The protected replay returned `REVIEW_REQUIRED`; name, mobile, identity number, explicit birthday, and gender mismatched the reviewed reference. Address was omitted as in the reviewed draft. MUSE reported no external operations and production remained 0.5.0. The sanitized result is `../../planning/wp11c-muse-result-20261103.json`; no production deployment was part of the re-test.
+
+## WP11-D near-tied column review margin
+
+- Date: 2026-11-03
+- Package version: 0.8.1
+- Development branch: `codex/wp11-family-card-table-parser-20261103`
+- Trigger: WP11-C's isolated 0.8.0 run passed 94/94 offline tests but the protected replay still returned `REVIEW_REQUIRED`. Its aggregate diagnosis showed the name's adjacent block could not be distinguished from the next field column; phone and ID column geometry also remained non-unique.
+- Change: scale the column tie margin by the candidate block width so visually broad/near-tied candidates are withheld for review. This iteration does not extend the phone search beyond the next visual row or infer missing gender/checkmark state.
+- Local verification: Python 3.14.7, Pillow 12.2.0; editable package install 0.8.1 PASS; targeted table-layout tests PASS — 18/18; full offline suite PASS — 95 tests, 0 failures, 0 errors.
+- Added synthetic coverage: near-tied column centers require `REVIEW_REQUIRED`.
+- MUSE re-test: pending for the exact 0.8.1 code commit in an isolated worktree/venv. The task and redacted template are `../../planning/wp11d-muse-retest-20261103.md` and `../../planning/wp11d-muse-result-template-20261103.json`.
+- Data boundary: all local inputs are synthetic. No real OCR payload, customer values, credentials, Baidu call, iCloud operation, or production change was used.
