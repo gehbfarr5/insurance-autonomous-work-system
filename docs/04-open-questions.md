@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 五模块限定词检索与live身份复核｜2026-11-03 23:05 CST
+
+MUSE只读确认当前 `policy.py`、`tasks.py`、`forest_cdp.py` 的哈希与唯一导入关系；本机五份精确源码副本均匹配对应live值。对 `run.py`、`policy.py`、`tasks.py`、`forest_cdp.py`、`assistant.py` 作客温客价术语及五项扩展名的静态词面检索，没有命中。此项只能说明限定的五模块未见这些词，不能排除其他部署模块或间接实现；客温客价的系统级实现映射和独立收据仍待。P4开放、S1未验收。详情见[源码审计](../planning/local-evidence-audit-2026-10-29.md#当前live-helper模块与五文件限定词检索2026-11-03-2305-cst)，结构化键 `liveModuleSourceCoverage20261103_230512`。
+
 ## 最新MUSE/Pixel门禁与规则源检索｜2026-11-03 22:51—22:57 CST
 
 Pixel 22:51:04经既有别名、非root UID 10249只读确认Pixel 3a/Android 15/boot完成及v0.19安装APK pin；设备锁、monitor私有状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。MUSE 22:56:37在原Forest线程确认无活动/排队/在途任务、runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00 schedule仍于11月4日触发，live哈希及最近调度结果不变。四项新增Drive document metadata-only查询均为0，未打开正文；官方时点、周期、触发、限额和资格原据仍未恢复。继续等自然运行，结束后先取同轮脱敏MUSE证据；无精确、已验证的非root设备读取路径时保留UNKNOWN。未读业务state、未部署或改变设备/调度。证据键：`pixelReadonlyPreflight20261103_225104`、`museReadonlyStatus20261103_225637`、`googleDriveRuleMetadataSearch20261103_225425`。

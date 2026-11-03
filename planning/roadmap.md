@@ -1,5 +1,9 @@
 # 工作阶段与能力路线图
 
+## 精确live模块限定词覆盖｜2026-11-03 23:05 CST
+
+MUSE只读确认当前 `policy.py`、`tasks.py`、`forest_cdp.py` 哈希与唯一导入关系；本机五个精确源码副本的SHA均匹配。静态词面检索覆盖live `run.py`、`policy.py`、`tasks.py`、`forest_cdp.py`、`assistant.py`，对客温客价和五项扩展名称无命中。它仅缩小了这五个模块内可见线索范围；未审部署路径及间接实现仍未知，独立业务收据仍缺。P4开放，S1未验收。详情见[本地审计](local-evidence-audit-2026-10-29.md#当前live-helper模块与五文件限定词检索2026-11-03-2305-cst)和 `liveModuleSourceCoverage20261103_230512`。
+
 ## 最新Forest运行与来源核查｜2026-11-03 22:51—22:57 CST
 
 MUSE 22:56:37确认Forest当前空闲，唯一Asia/Shanghai每日09:00调度下次11月4日，runner lock FREE、无Forest进程，live hashes及最近结果不变。Pixel 22:51:04非root只读确认Pixel 3a/Android 15/boot完成、SecureView APK pin匹配；设备锁、monitor私有状态/hash、Keyguard和前台Activity仍UNKNOWN。新增四项Drive metadata-only规则查询均0结果，不读取正文，官方时点/周期/触发/资格仍未得到原据。保留自然运行；P4开放，S1未验收，P50/月度/2U=2800继续挂起。证据键：`museReadonlyStatus20261103_225637`、`pixelReadonlyPreflight20261103_225104`、`googleDriveRuleMetadataSearch20261103_225425`。

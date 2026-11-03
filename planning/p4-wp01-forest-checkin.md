@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## live helper模块覆盖补核｜2026-11-03 23:05 CST
+
+MUSE只读确认当前 `policy.py`、`tasks.py`、`forest_cdp.py` 哈希及唯一导入关系；与已留存私有源码副本一致。对精确live的 `run.py`、`policy.py`、`tasks.py`、`forest_cdp.py`、`assistant.py` 五个模块检索温价词和五项扩展名，未发现词面命中。此结果限于五个模块，不推断其余部署代码或间接路径不存在，也不构成业务收据。无源码/任务运行、设备访问或写入。证据与hash见[本地审计](local-evidence-audit-2026-10-29.md#当前live-helper模块与五文件限定词检索2026-11-03-2305-cst)及 `liveModuleSourceCoverage20261103_230512`。
+
 ## 最新自然运行与设备预检｜2026-11-03 22:51—22:57 CST
 
 Pixel 22:51:04经既有别名以UID 10249非root只读确认Pixel 3a/Android 15/boot完成、SecureView APK pin匹配v0.19。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。MUSE 22:56:37确认唯一Asia/Shanghai每日09:00任务下次11月4日，Forest任务/队列/在途均空、runner lock FREE、进程未见，live hashes与最近结果未变。Drive四项document metadata-only规则检索均为0。未部署、写设备、运行任务或读业务state。下一步等既有自然运行，先读同轮脱敏结果；无精确、已验证非root读取方式时设备字段继续UNKNOWN。P4开放、S1未验收。证据键：`pixelReadonlyPreflight20261103_225104`、`museReadonlyStatus20261103_225637`、`googleDriveRuleMetadataSearch20261103_225425`。

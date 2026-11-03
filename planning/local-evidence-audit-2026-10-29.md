@@ -1,5 +1,11 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 当前live helper模块与五文件限定词检索｜2026-11-03 23:05 CST
+
+MUSE在既有Forest线程只读确认当前 `policy.py`（7,313 bytes，SHA-256 `6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e`）、`tasks.py`（4,886 bytes，`b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b`）和 `forest_cdp.py`（7,447 bytes，`a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148`）的live字节指纹和唯一身份；MUSE确认前两者由当前 `run.py` 导入，后者由 `run.py` 和 `tasks.py` 导入，`policy.py` 仅定义一次 `run_workflow`。`run.py` anchor为 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`。此前取得的五个本机私有源码副本SHA均与对应live值一致。
+
+对这五份精确副本作静态词面检索，范围包括客温/客价/温价、temperature/customer price/value，以及保单芯管家、态幸福、三节一生、E锦囊、签单协同；五个模块均无命中。该结果只表示这些已核验模块没有相应词面，不能证明整个部署、未审依赖或间接调用链绝对不存在相关实现，也不替代客温客价独立收据或业务验收。源码未执行；无设备访问、业务状态/日志读取、部署、任务运行或调度/状态修改。完整指纹和检索范围见结构化记录 `liveModuleSourceCoverage20261103_230512`。
+
 ## 最新运行、设备与规则来源边界｜2026-11-03 22:51—22:57 CST
 
 22:51:04 Pixel经既有别名、非root UID 10249只读确认Pixel 3a/Android 15/boot完成，SecureView安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；没有已验证的非root私有状态读取路径。MUSE 22:56:37确认Forest范围无活动/排队/在途任务、runner lock FREE、无Forest进程，唯一每日09:00任务下次11月4日，live hashes和最新调度结果未变。本轮Drive对“阳光森林 规则”“阳光雨露 结算”“行为积分 上限”“三段一生 太享福 E锦囊”作document metadata-only检索，各0结果，未取回正文；规则时点/周期/触发/资格原据仍缺。无设备写入、部署、业务state/raw log读取或任务运行。结构化记录见`pixelReadonlyPreflight20261103_225104`、`museReadonlyStatus20261103_225637`、`googleDriveRuleMetadataSearch20261103_225425`。
