@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 最新prepare失败层级定位｜2026-11-03 19:02 CST
+
+MUSE只读复核Forest旁聊既有的11月3日三段脱敏摘要：误触助理、调度助理和主流程均在prepare事件止于MainActivity后结束，原因码`PREPARE_TIMEOUT_NO_FALLBACK`、没有业务阶段、cleanup PASS。两段助理`NOT_SENT`且`vueCheck`缺失；主流程`pendingAction`为空且业务字段未出现。可定位到runner Activity/就绪标记轮询超时层，assistant页面门禁未被求值；module登录态门禁与具体未就绪原因仍UNKNOWN。没有读取raw log、业务state或设备，也没有运行任务。该结论不等于完整根因定位；下一步是等待11月4日自然运行及新鲜只读证据。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[运行手册](forest-diagnostics-operations-2026-11-04.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 最新更新：运行状态与规则原据续查｜2026-11-03 18:56 CST
 
 云端Forest runner的`assistant.py`已按已审查候选完成有界集成；live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，原备份及部署侧回滚副本为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只有五个脱敏诊断字段新增，固定调用门禁未变。写后schedule/runner状态不变；没有运行代码/业务或访问设备。树内消费者审计为中等证据，外部解析器未知。assistant gate诊断集成已验证，但11月4日自然运行字段、登录态observer、prepare根因和全部业务回执仍未完成；P4继续开放，S1未验收。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。

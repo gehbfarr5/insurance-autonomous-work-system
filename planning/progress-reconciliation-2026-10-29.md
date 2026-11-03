@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 最新更新｜prepare失败层级定位｜2026-11-03 19:02 CST
+
+对MUSE Forest旁聊中既存脱敏摘要作只读审计，三段11月3日执行（08:57误触助理、09:00调度助理、09:00主流程）prepare事件均止于MainActivity，均以`PREPARE_TIMEOUT_NO_FALLBACK`结束且cleanup PASS；没有业务阶段。此证据定位到runner Activity/就绪标记轮询超时层。助理页面门禁未求值，module登录态门禁缺少逐字段证据，不能定位更深原因；屏幕/Keyguard/认证输入仍UNKNOWN。没有读取原始日志、业务state、设备或运行任务。该结论细节与三段时间见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及[结构化证据索引](remaining-work-evidence-2026-10-29.json)。自然运行、业务回执和P4/S1验收继续待后续证据。
+
 ## 最新更新｜运行状态与规则原据续查｜2026-11-03 18:56 CST
 
 已完成有界云端集成：18:40:41原子替换Forest runner的`assistant.py`，18:40:48哈希验证为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；原始备份和新回滚副本均保持原哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只增加五个脱敏门禁诊断字段，不放宽Vue/固定方法pin/唯一菜单项约束。写后唯一每日09:00 schedule、下一触发11月4日09:00、runner idle/unlocked、Forest进程未见；未执行代码/任务或访问设备，未改业务state/cron/凭据/module/APK。树内消费者兼容证据中等，树外未知。11月3日超时根因仍UNKNOWN，11月4日自然结果待观察；仅集成状态PASS，不代表P4或S1完成。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
