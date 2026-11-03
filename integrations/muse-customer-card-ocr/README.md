@@ -216,6 +216,8 @@ Local tests use fictional OCR values and generated coordinates. The exact commit
 
 MUSE reported one narrow fetch of the authorized target branch to obtain the exact commit, then offline checks; zero OCR reruns, Baidu calls, reference reads, other network access, iCloud/contacts operations, production-code execution, production changes, commits, or pushes. Production remained package 0.5.0 at commit `8336008d080387ab709d1e0ab9381683b1138e0f`; source hashes matched before and after. The replay worktree and original payload were reported unchanged. The 0.11.0 candidate is not v1.0 Stable and must not be deployed. Address remains optional and this change cannot turn missing required name/mobile fields into `READY`; the 30-card authorization and reference-annotation gates remain open.
 
+A value-free same-input diagnostic was then requested to reconcile the earlier 0.10.0 address-candidate counters with the 0.11.0 replay. The MUSE task had started, but the CUA tool reported the Mac locked before a diagnostic response could be retrieved. The follow-up is **INTERRUPTED at readback**; its result, completion state, and post-run integrity are not confirmed. No Stop action was sent. After the Mac is manually unlocked, inspect the existing MUSE thread and task state before deciding whether a result is available or whether any retry is needed. Until then, the candidate's address rescue is not demonstrated on the protected template.
+
 ## Rollback
 
 Remove the isolated venv and this branch checkout/package. No credentials or connector configuration are created by this code. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.
