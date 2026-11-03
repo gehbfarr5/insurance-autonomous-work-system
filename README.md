@@ -2,6 +2,8 @@
 
 > **iCloud MCP 项目归档（2026-11-02）：** 核心首尔 MCP 与现有 Agent 已进入可用阶段；Chat 和 Work Cloud 同一 Sites MCP 演示工具已分别验收，但 **ChatGPT 真实 iCloud 数据链路仍受 Site 源码工作区阻断，子项目暂缓**。完整部署、研究、验收、无效尝试及恢复条件见 [iCloud MCP 全阶段总归档](planning/icloud-mcp-master-handover-2026-11-02.md)，不要将 demo PASS 误称为生产 iCloud PASS。
 
+> **家庭卡 OCR → iCloud 联系人｜2026-11-03：** MUSE 已完成 WP11-B 真实模板复验并发现 0.6.0 候选字处理缺陷；Codex 已在 WP11 分支修复为 0.7.0，完整离线回归 90/90 通过。修复后的 MUSE 隔离复验及受限 WP10 OCR 结构回放待执行，生产包仍按 MUSE 报告为 0.5.0（Codex 尚未独立读回）；没有生产部署。目标状态为 **VALIDATION_PENDING**，真实样本目标至少 30 张。架构、版本、测试和部署边界见[模块 README](integrations/muse-customer-card-ocr/README.md)、[测试证据](integrations/muse-customer-card-ocr/TEST_REPORT.md)及[P4 进度记录](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6596548305)。
+
 > **阳光森林与 Pixel 登录助手最新核查｜2026-11-02：** Pixel 登录助手 Android 15 固定组件恢复及守护健康分支复核通过。阳光森林11月2日自然执行在准备阶段阻断；原 v0.18 桥接器的 bundle 指纹/旧模块锚点与当前运行包不匹配，模块已加载但补丁失败，五项业务未执行。已完成 v0.19 本机候选修复、离线构建、签名比对和保护分支验证；远端 staging、部署及本日一次补跑仍待 MUSE 界面恢复后完成。详细根因与证据等级见[修复与补跑记录](planning/forest-prepare-repair-2026-11-02.md)。P50/月度规划继续挂起。
 
 > **当时的执行模式记录｜2026-10-30：** 本机主导开发、验证与证据判定；组件回执及成功空采集已在本机隔离接入，9项集成/29项回归/3组真实子进程恢复通过；MUSE有限安装证据已核对（16项），状态树43→43不变；本地认证已支持本人手势页自动输入；冷启动、再次重开、与显式入口重叠三项实机验证通过，每次仅输入一次；单实例锁/心跳正常，原凭据未改；刷新读数和组件基线仍待补证，真实业务正例未验收。MUSE保留既有每日执行及必要云端取证。需求目标不变，未迁移运行器/改调度。跨日已到自然次日，先读已有结果，不补跑；P50/月度规划继续挂起。[新方案与接续顺序](planning/execution-mode-2026-10-30.md)为当前入口，以下10月29日状态保留为历史。
@@ -38,6 +40,7 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 用途 | 权威入口 |
 | --- | --- |
 | 当前阶段与下一步 | [P0—P4 路线图](planning/roadmap.md) |
+| 家庭卡 OCR → iCloud 联系人 | [模块架构与部署状态](integrations/muse-customer-card-ocr/README.md) · [WP11-B MUSE 隔离复验任务](planning/wp11b-muse-retest-20261103.md) · [P4 进度 Issue #3](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3#issuecomment-6596548305) |
 | iCloud MCP 多 Agent 接入（2026-11-01） | **[已接入 Agent 与验收台账](planning/icloud-mcp-agent-connection-status-2026-11-01.md)** · [持续跟踪 Issue #6](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/6) |
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |
