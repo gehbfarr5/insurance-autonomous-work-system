@@ -28,7 +28,7 @@
 
 继续保留11月4日既有自然运行，运行后先从MUSE取同轮脱敏prepare/结果/stages/助手派发/cleanup证据；不重放、不放宽门禁、不安装过期候选。日常五项回执与扩展分类维持既有状态；P4开放、S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
 
-## 自然运行前最新状态与规则检索边界｜2026-11-03 23:13—23:21 CST
+## 自然运行前状态与规则检索边界｜2026-11-03 23:13—23:21 CST
 
 MUSE 23:13:43确认Forest当时空闲、唯一Asia/Shanghai每日09:00任务下次11月4日，runner lock FREE、无Forest进程；live hashes不变，最近失败11月3日09:11:17、最近成功10月31日09:15:50。Pixel约23:14经既有非root别名确认Pixel 3a/Android 15/boot完成与v0.19 APK pin；设备操作锁和monitor/屏幕/Keyguard/Activity私有状态仍UNKNOWN。Drive document metadata-only“阳光森林”搜索无结果，后续调用遇到配额限制和内部错误后停止；CPIC官方域未找到现行任务/奖励规则。原件、时点、周期、触发和资格继续待核。未读业务状态/日志、执行源码/任务或写设备/调度。自然运行及同轮脱敏证据仍待；P4开放，S1未验收。证据键：`museReadonlyStatus20261103_231343`、`pixelReadonlyPreflight20261103Late`、`boundedRuleSourceSearch20261103LateTurn`。
 
@@ -36,11 +36,11 @@ MUSE 23:13:43确认Forest当时空闲、唯一Asia/Shanghai每日09:00任务下�
 
 MUSE对当前 `policy.py`、`tasks.py`、`forest_cdp.py` 的字节哈希和唯一导入身份完成只读确认；其哈希与本机留存五份私有源码副本一致。限定词检索覆盖这五个精确模块，对客温客价术语及五项扩展名称均无词面命中。结论仅限这些模块，不能外推整个部署均无实现；完整模块身份、哈希和边界见[本地审计](local-evidence-audit-2026-10-29.md#当前live-helper模块与五文件限定词检索2026-11-03-2305-cst)及结构化键 `liveModuleSourceCoverage20261103_230512`。没有运行源码或业务，也没有读取设备/业务状态。
 
-## 最新运行门禁与规则原件搜索｜2026-11-03 22:51—22:57 CST
+## 运行门禁与规则原件搜索｜2026-11-03 22:51—22:57 CST
 
 Pixel 22:51:04的非root只读读数确认设备启动及SecureView v0.19 APK pin；设备锁、monitor私有状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。MUSE 22:56:37确认Forest当前无活动/排队/在途，runner lock FREE、无进程，唯一Asia/Shanghai每日09:00 schedule下次11月4日，live hashes不变。Drive四项document metadata-only检索均为0、没有读取正文；本次检索不证明原始规则材料不存在或从未确认。官方时点、周期、触发、限额和当前资格仍需原据。自然运行待发生；未部署/写设备、运行任务、读业务状态或改schedule。证据键：`pixelReadonlyPreflight20261103_225104`、`museReadonlyStatus20261103_225637`、`googleDriveRuleMetadataSearch20261103_225425`。
 
-## 最新Forest/Pixel只读预检｜2026-11-03 22:37—22:43 CST
+## Forest/Pixel只读预检｜2026-11-03 22:37—22:43 CST
 
 MUSE 22:37:51回读当时无Forest活动任务，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live源码哈希不变。22:43:04经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成；SecureView安装APK SHA-256匹配v0.19 pin。设备操作锁、monitor私有状态/hash及显示/Keyguard/前台Activity仍UNKNOWN。没有设备写入、业务state读取、任务/源码运行、部署或调度变化。下一步保留09:00自然运行，先读取MUSE同轮脱敏结果与cleanup；无精确已验证的非root设备方法时不采设备私有状态。证据键`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。
 
@@ -150,7 +150,7 @@ MUSE于21:11:41私有附上三份live runner引用的页面脚本：`snapshot.js
 
 现有collector需要`su`读取私有文件，当前不符合无root约束；截至19:45针对性检查的MUSE状态请求未见回复。20:02 MUSE窗口打开在非目标对话，未继续交互，因此当前MUSE与Pixel操作锁UNKNOWN。本轮没有连接Pixel。11月4日自然轮与设备证据采集继续待办；先等原MUSE线程回复，只有无在途状态新鲜确认且已核实非root读出方式才考虑只读采集。否则按UNKNOWN记录，不猜路径或切换通道。P4开放，S1未验收；P50/月度/2U=2800继续挂起。详细结果见[准备诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[交接](p4-next-session-handoff.md)、[运行手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
 
-## 最新运行门禁｜2026-11-03 19:08—19:10 CST
+## 运行门禁｜2026-11-03 19:08—19:10 CST
 
 MUSE 19:08:09只读状态：Forest唯一每日Asia/Shanghai 09:00任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；`run.py`/`assistant.py`live SHA仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最新失败09:11:17、最近成功10月31日09:15:50；业务结果未读，其他聊天未探测。
 
@@ -168,7 +168,7 @@ MUSE只读复核Forest旁聊既有的11月3日三段脱敏摘要：误触助理�
 
 与10月26日私有旧`run.py`（SHA-256 `1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`，266行）作AST结构比较：当前live文件301行，23个共有函数/方法中20个AST相同，`Device.prepare()`、`Device.read_fresh()`、`main()`不同；旧`Device.login`不在live源码中，live改为`Device.auth_start()`，并增加deadline/终止及stale-lock函数。该差异进一步证明旧副本不得直接补丁或替代live基线。没有修改任何运行源码；本机缺少与此live runner整套匹配的 `tasks.py` 和当前 `assistant.py` 原字节，因此五项完整实现映射及代码修复仍待单独审查。业务结果、AI答案/奖励及11月4日自然运行仍待核验。结构化事实见[证据索引](remaining-work-evidence-2026-10-29.json)。
 
-## 最新更新：运行状态与规则原据续查｜2026-11-03 18:56 CST
+## 运行状态与规则原据续查｜2026-11-03 18:56 CST
 
 云端Forest runner的`assistant.py`已按已审查候选完成有界集成；live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，原备份及部署侧回滚副本为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只有五个脱敏诊断字段新增，固定调用门禁未变。写后schedule/runner状态不变；没有运行代码/业务或访问设备。树内消费者审计为中等证据，外部解析器未知。assistant gate诊断集成已验证，但11月4日自然运行字段、登录态observer、prepare根因和全部业务回执仍未完成；P4继续开放，S1未验收。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
 
@@ -212,7 +212,7 @@ review-only候选增加固定前台Activity类别枚举，使用侧车schema v4�
 
 连接Drive对四个关键词组“阳光森林”“阳光雨露”“森林任务 周期”“科技个险 阳光值”作document metadata-only检索，每组最多20项，全部0结果；未抓取文件内容。该有界搜索不能证明原始文件或历史确认不存在。森林日重置、任务周期、奖励到账延迟仍缺原始依据。完整检索范围记录在[证据索引](remaining-work-evidence-2026-10-29.json)。
 
-## 最新接续状态｜2026-11-03 17:25 CST
+## 接续状态｜2026-11-03 17:25 CST
 
 截至17:25，CUA inventory显示Muse进程运行，但浏览器清单为空、Work设置禁用浏览器控制，未取得Forest任务/调度读回。16:23 MUSE并发快照已过时，当前UNKNOWN；本轮未打开无关WP1上下文或连接Pixel。17:12采集器审计/`.failure`修正通过合成路径，包哈希14/14；17:22 E07规则文件8079字节、哈希匹配索引，但不提供森林重置/重复周期/到账延迟。CPIC官方域4条精确规则查询未命中。以上静态与合成证据不等于设备或窗口验收。P4继续开放，S1未验收，P50/月度规划挂起。
 

@@ -28,13 +28,13 @@
 
 在既有Forest线程完成只读刷新：无活动任务，running/queued/in-flight `0/0/false`，runner lock `FREE`，无Forest进程；唯一schedule为Asia/Shanghai每日09:00、下次11月4日09:00。live `run.py`/`assistant.py` SHA-256仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败11月3日09:11:17、最近成功10月31日09:15:50。此轮未访问Pixel；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，上次设备身份/APK只读读数约23:14。没有读取业务状态/raw logs、运行任务或源码、修改设备/文件/部署/调度/凭据。下一步保留原09:00自然任务，运行后先从MUSE读取同轮脱敏prepare事件、结果、stages、assistant状态和cleanup；设备私有字段无精确已验证非root只读路径时继续记UNKNOWN。P4开放、S1未验收。结构化证据：`museReadonlyStatus20261103_233312`。
 
-## 最新只读状态与来源复查｜2026-11-03 23:13—23:21 CST
+## 自然运行前只读状态与来源复查｜2026-11-03 23:13—23:21 CST
 
 MUSE 23:13:43在精确既有Forest线程确认：无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；唯一schedule为Asia/Shanghai每日09:00，下一次11月4日09:00。live `run.py`/`assistant.py` SHA仍为已核值；最近失败11月3日09:11:17、最近成功10月31日09:15:50。约23:14 Pixel经既有SSH别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成及SecureView APK pin匹配；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，没有已验证的非root读取路径。无业务结果/state/log读取、任务执行或设备/调度写入。
 
 Drive document metadata-only“阳光森林”查询0结果，后续请求遇到配额限制和内部错误后停止；CPIC官方域定向查询未发现当前任务/奖励规则。规则原件未恢复，不能据此推断其不存在、历史未确认或结算周期。继续保留11月4日既有自然运行，运行后先取同轮MUSE脱敏结果；不重放业务、不放宽门禁、不安装候选。结构化证据：`museReadonlyStatus20261103_231343`、`pixelReadonlyPreflight20261103Late`、`boundedRuleSourceSearch20261103LateTurn`。
 
-## 最新只读预检｜2026-11-03 22:51—22:57 CST
+## 只读预检｜2026-11-03 22:51—22:57 CST
 
 Pixel 22:51:04经既有别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成和SecureView APK pin；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。MUSE 22:56:37在原Forest线程确认无活动/排队/在途任务、runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00任务下次11月4日，live hashes及最近结果未变。新一轮四项Drive document metadata-only规则检索均无结果且未读正文。未读业务state/raw logs，未运行任务/源码、写设备、部署或改schedule。保留既有自然任务；结束后先由MUSE读取同轮prepare事件、结果、stages、assistant状态及cleanup；只有存在精确已验证的非root设备路径时才读设备，否则字段继续UNKNOWN。证据键：`museReadonlyStatus20261103_225637`、`pixelReadonlyPreflight20261103_225104`、`googleDriveRuleMetadataSearch20261103_225425`。
 
@@ -59,7 +59,7 @@ Pixel 22:51:04经既有别名以非root UID 10249只读确认Pixel 3a/Android 15
 4. 对比同轮Activity序列、nonce标记状态和运行结果，只判断实际证据支持的最深层；不要把prepare超时解释成Keyguard、登录或页面门禁失败。
 5. 不安装过期Keyguard v3，不重装历史monitor-only工件，不部署两个离线observer；不改schedule、credentials、business state或客户数据。
 
-## 最新运行与Pixel预检｜2026-11-03 21:45—21:47 CST
+## 运行与Pixel预检｜2026-11-03 21:45—21:47 CST
 
 MUSE于21:45:36只读确认Forest当时无活动、running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程；唯一schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00。live run.py/assistant.py SHA仍为已核实值。约21:46经Pixel既有别名非root读取确认设备启动、AutoX/AutoJS进程未见、SecureView APK与v0.19 pin匹配。设备锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。没有设备写入或部署。
 
@@ -111,7 +111,7 @@ MUSE 21:30:20在既有Forest线程确认当时任务、队列和在途数均为0
 
 20:21对已知的独立私有v2 review包做了限定范围静态路径检查：13个文本文件中，既有collector包含`su`调用；未发现`adb pull`或`run-as`导出路径，README/审查记录提到non-root约束但未给可执行替代。Mac本机进程盘点未发现使用既有`pixel3a-kjgx`别名的SSH会话。此范围内没有可验证的非root collector或设备锁读取方式；结果不证明其他本机位置不存在该路径。没有建立连接或运行远端命令。结构化限制：[`pixelLocalNonrootPathAudit20261103_2021`](remaining-work-evidence-2026-10-29.json)。
 
-### 最新接续与采集通道限制｜2026-11-03 20:08 CST
+### 接续与采集通道限制｜2026-11-03 20:08 CST
 
 截至19:45针对性界面检查，既有Forest MUSE线程发出的只读状态请求未见回复，本轮不重复发送。20:02 MUSE窗口打开在非目标对话，我停止继续交互，未取得Forest当前状态；scheduler/queue/in-flight与Pixel操作锁均UNKNOWN。本轮未连接Pixel。prepare字段observer v2仅在私有副本完成离线测试，未部署或构建APK。
 
@@ -119,7 +119,7 @@ MUSE 21:30:20在既有Forest线程确认当时任务、队列和在途数均为0
 
 离线验证复用v0.19 one-shot逻辑、固定runGroup窗口和现有allowlist投影/segment joiner；仅适配私有observer及collector schema；避免旁路门禁、换设备通道和部署未固定APK。合成覆盖通过不构成实机或业务PASS。
 
-### 最新MUSE/Pixel只读门禁｜2026-11-03 19:08—19:10 CST
+### MUSE/Pixel只读门禁｜2026-11-03 19:08—19:10 CST
 
 MUSE 19:08:09报告唯一Forest schedule每日09:00 Asia/Shanghai、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败11月3日09:11:17、上次成功10月31日09:15:50。该状态读数没有访问其他聊天或业务state。
 
@@ -133,7 +133,7 @@ MUSE仅复核既有Forest对话的三段脱敏摘要，读取时间19:02:18 CST�
 
 现可定位到runner Activity/就绪标记轮询超时层；assistant页面门禁未被求值，不能归因为门禁失败。module登录态门禁因无登录类事件、逐字段布尔值或采样时间，仍UNKNOWN。就绪标记未到达的具体原因以及屏幕/Keyguard/认证输入原因仍UNKNOWN。该记录是已有脱敏摘要的复核，不是对原始设备日志的重读；它缩小了失败层级，但未证明底层触发原因。逐段时序见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及[结构化证据](remaining-work-evidence-2026-10-29.json)。
 
-### 最新只读状态与来源复核｜2026-11-03 18:54—18:56 CST
+### 只读状态与来源复核｜2026-11-03 18:54—18:56 CST
 
 18:47:11 MUSE在既有Forest对话中报告：唯一启用的任务仍为`Asia/Shanghai`每日09:00、下次2026-11-04 09:00；running/queued/in-flight为`0/0/false`，runner lock `FREE`、无Forest进程。live `run.py` SHA为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，live `assistant.py` SHA为18:40集成候选`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该请求未重读业务结果；assistant/main阶段值沿用先前读数，其他聊天未探测。
 
@@ -187,7 +187,7 @@ MUSE仅复核既有Forest对话的三段脱敏摘要，读取时间19:02:18 CST�
 
 CUA inventory returned “Mac is locked”; MUSE UI was not read at that time. The following 16:23 MUSE-only readback supersedes this unknown queue status. No Pixel connection followed. Private CUA error record: `muse-access-gate-20261103-1614.json`, SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`.
 
-### 最新MUSE只读回读｜2026-11-03 16:23 CST
+### MUSE只读回读｜2026-11-03 16:23 CST
 
 MUSE confirmed the single enabled Asia/Shanghai 09:00 schedule, next trigger Nov 4, running/queued/in-flight `0/0/false`, runner lock `FREE`, no `forest-agent` process, latest scheduler failure Nov 3 09:11:17, last success Oct 31 09:15:50, and three consecutive failures. The query was accidentally truncated to keywords; MUSE stated this read was read-only and did not access Pixel, read business state, or change anything. The assistant/main status remains carried forward from earlier and was not reread. Pixel device state, device-operation lock, and foreground Activity remain UNKNOWN. Private sanitized readback `muse-access-readback-20261103-1623.json`, SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`; it is not a raw UI export.
 
@@ -195,7 +195,7 @@ MUSE confirmed the single enabled Asia/Shanghai 09:00 schedule, next trigger Nov
 
 MUSE recomputed the current live `run.py` hash and confirmed it matches the recorded deployment hash. Static flow: `Device.prepare()` polls resumed Activity with a 70-second deadline and 1-second interval; `Device.event()` writes prepare events; `Device.cleanup()` is called from `main()` and handles marker cleanup, app stop, and owner-checked lock release, with a failure branch on exception. MUSE attributed scheduler-level `FAILED` to the worker reporting unfinished work, consistent with the incomplete assistant/main segments. The 09:06:17–09:11:17 interval remains UNKNOWN because neither runner code nor scheduler metadata has a sub-step breakdown; this read also does not identify the specific prepare-timeout trigger. MUSE reported a private export of the exact live runner is available, but did not export or attach it. Private sanitized readback SHA-256: `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`.
 
-### 最新只读复核｜2026-11-03 15:54—15:58 CST
+### 只读复核｜2026-11-03 15:54—15:58 CST
 
 - MUSE 15:54:29确认唯一既有每日09:00 CST任务，下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。
 - 在上述无并发readback之后，经唯一允许的`pixel3a-kjgx`别名及既有`su`路径于15:58:24只读回读：Android 15、boot完成、Dozing；monitor `watching`、guard清、heartbeat新鲜、requests=0；monitor lock存在，blocked/stop不存在。monitor/trigger/worker哈希分别为`2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、`0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、`f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。
