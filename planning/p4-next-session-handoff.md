@@ -1,5 +1,20 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 00:47—00:49 CST — current preflight and next handoff
+
+The existing Sunshine Forest MUSE thread returned fresh read-only scheduler/deployment metadata at 00:47:37 CST: no active task; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed. Live `run.py` / `assistant.py` hashes remain `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`; latest failure Nov 3 09:11:17, last success Oct 31 09:15:50. This is a point-in-time MUSE metadata read only.
+
+After the no-in-flight MUSE read, a bounded non-root Pixel identity/APK check through the existing alias succeeded. By the 00:49:31 CST local clock check, it confirmed Pixel 3a, Android 15, boot complete, and installed SecureView APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167` matching the v0.19 pin; exact command time was not captured. Pixel operation lock, monitor state/hash, screen/Keyguard, and foreground Activity remain UNKNOWN. No root/su, business-state/raw-log access, app/task/code execution, installation, device write, deployment, or schedule change occurred. Evidence: `museReadonlyStatus20261104_004737`, `pixelReadonlyPreflight20261104_0049`.
+
+### Next natural-run handoff
+
+1. Leave the existing 09:00 schedule unchanged. Do not start, replay, retry, deploy, or change business state.
+2. After the natural window, refresh MUSE concurrency/deployment metadata and retrieve that run's sanitized prepare events, result, stages, assistant dispatch/status, and cleanup first.
+3. Keep Pixel operation lock, monitor status/hash, screen/Keyguard, and foreground Activity UNKNOWN unless an exact, existing, verified non-root read method is available. Do not use `su`, guess a path, or install an expired-window candidate.
+4. Compare the same-run markers and outcome; localize only to the deepest evidenced stage. Unknown/mismatched state stops further action. Preserve fail-closed Activity, auth, Vue/method-pin, and unique-menu gates.
+
+Current gates: bounded MUSE/Pixel preflight PASS for the fields observed; Nov 3 localization PASS at prepare waiting only; full device/field diagnosis and repair/integration BLOCKED; five daily tasks and five extensions BLOCKED; historical rule evidence PARTIAL; cross-day/long-term observation SUSPENDED. P4 remains open; do not claim S1 or overall completion. P50, monthly planning, and 2U=2800 remain excluded.
+
 ## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.

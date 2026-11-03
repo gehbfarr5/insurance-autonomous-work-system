@@ -1,5 +1,11 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 00:47—00:49 CST — refreshed current state
+
+本节更新当前状态；下方00:19—00:21的MUSE读取失败记录仍是历史事实，但其“当前状态未确认”结论已由00:47:37成功只读回读更新。当前唯一schedule为每日09:00 Asia/Shanghai、下次11月4日09:00；MUSE当时无活动/排队/在途任务，runner lock FREE、无Forest进程，live `run.py`/`assistant.py` hashes未变。Pixel既有别名非root只读检查确认Pixel 3a、Android 15、boot完成及SecureView APK pin；命令在00:49:31本地时钟采样前完成，但精确时刻未捕获。
+
+尚未解决的问题没有改变：Pixel设备操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；同轮逐字段登录guard/auth dispatch/gesture门禁及登录字段采样仍缺；11月3日ready marker未到的底因未知。保留09:00自然轮，结束后先读同轮脱敏MUSE证据，不重试或重放。此状态不会将设备写入门禁视为通过。证据键：`museReadonlyStatus20261104_004737`、`pixelReadonlyPreflight20261104_0049`。
+
 ## 2026-11-04 00:19—00:21 CST — no fresh MUSE status read obtained
 
 The existing Forest thread was reread; its newest visible MUSE reply is timestamped 2026-11-03 23:38:55. Current MUSE task/queue/in-flight state, schedule, runner lock/process, and live hashes were not freshly confirmed. The reported 09:00 next trigger remains historical until refreshed. No status request was submitted. Local process inventory found no SSH process matching the existing Pixel alias and no active adb command; a local adb server alone does not establish Pixel connectivity or its operation lock. No Pixel/device command or connection occurred. Keep device operation lock, monitor state/hash, screen/Keyguard, and foreground Activity UNKNOWN; get a fresh MUSE no-in-flight read before any Pixel access. Evidence: `currentStatusReadAttempt20261104_0020`.

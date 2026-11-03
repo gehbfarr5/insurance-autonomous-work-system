@@ -1,5 +1,13 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 00:47—00:49 CST：刷新MUSE与Pixel只读预检，保留自然运行
+
+MUSE在既有阳光森林线程00:47:37只读确认：Forest无活动任务；唯一启用schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight为`0/0/false`，runner lock `FREE`，无Forest进程。live `run.py` / `assistant.py` SHA-256仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新失败与最近成功仍分别为11月3日09:11:17和10月31日09:15:50。该读数只证明MUSE元数据。
+
+该无在途读数后，经既有Pixel别名以非root完成限定身份/APK读取；到00:49:31前确认Pixel 3a、Android 15、boot完成，SecureView安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin。设备操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；命令精确时间未捕获。无root/su、设备写入、任务/代码执行、业务state/log读取、安装、部署或schedule变化。继续等既有09:00自然轮，结束后先取同轮脱敏证据。证据键：`museReadonlyStatus20261104_004737`、`pixelReadonlyPreflight20261104_0049`。
+
+关口：有限MUSE/Pixel预检PASS；11月3日仅定位到prepare Activity/ready-marker等待层，底因UNKNOWN；完整设备诊断与修复/集成BLOCKED；五项日常与五项扩展验收BLOCKED；历史规则原据PARTIAL；跨日/长期稳定性SUSPENDED。P4仍开放，S1未验收；P50、月度规划、2U=2800继续排除。
+
 ## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.

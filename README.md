@@ -1,5 +1,13 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 00:47—00:49 CST — current status preflight; natural run pending
+
+At 00:47:37 CST, the existing Sunshine Forest MUSE thread returned a fresh read-only status: no active Forest task; the single enabled daily schedule remains 09:00 Asia/Shanghai with next trigger 2026-11-04 09:00; running/queued/in-flight are 0/0/false; runner lock FREE; no Forest process observed. Live `run.py` and `assistant.py` hashes remain `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` and `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`; latest scheduler failure and last success remain Nov 3 09:11:17 and Oct 31 09:15:50. This is a point-in-time MUSE metadata check; it does not establish Pixel operation lock or monitor state/hash.
+
+After that no-in-flight read, a bounded non-root Pixel read through the existing alias confirmed Pixel 3a, Android 15, boot completed, and installed SecureView APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`, matching the v0.19 pin. The local clock check was at 00:49:31 CST; the exact command timestamp was not captured. Device operation lock, monitor state/hash, screen/Keyguard, and foreground Activity remain UNKNOWN. No root/su, app/task/code execution, business-state/log read, device write, install, deployment, or schedule change occurred. The 09:00 natural run remains pending; after its window, read same-run sanitized MUSE evidence first. Evidence: `museReadonlyStatus20261104_004737`, `pixelReadonlyPreflight20261104_0049`.
+
+**Current gate summary:** MUSE/Pixel bounded preflight PASS within the fields read; Nov 3 failure localized only to prepare Activity/readiness-marker waiting; full device diagnosis and repair/integration remain BLOCKED; daily task and extension acceptance remain BLOCKED; historical rule recovery PARTIAL; cross-day/long-term stability SUSPENDED. P4 remains open; do not claim S1 or project completion. P50, monthly planning, and 2U=2800 remain excluded.
+
 ## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
@@ -132,7 +140,7 @@ By 00:36:49 CST, the existing thread returned a read-only readback of all three 
 
 阅读顺序：本页 → [整体审阅与内容地图](planning/project-review-2026-10-24.md) → [总体框架](docs/02-project-framework-v0.2.md) → [已确认决定](docs/03-confirmed-decisions.md) → [缺失与待验证内容](docs/04-open-questions.md)。需要落实时再进入 P4 交接和工作包。
 
-## 当前状态｜截至2026-11-04 00:08 CST
+## 历史状态｜截至2026-11-04 00:08 CST（已由上方00:49检查更新）
 
 **P1—P3已完成，P4进行中，S1未整体验收。** 五项日常最近可信结果仍为10月31日：签到 `SIGNED +0.5`、时光轴 `VIEWED 6055ms`、一键领取 `+6.5`；智能助理为 `SENT` 但答案与奖励未确认，客温客价无独立回执。11月1—3日没有五项业务阶段完成。11月3日三段停在runner Activity/就绪标记轮询超时；为何未到达仍UNKNOWN，不能归咎认证输入。最新可验证的MUSE读数为11月3日23:38:55：当时无活动/排队/在途任务，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00，runner lock FREE、无Forest进程；live `run.py` / `assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，最近失败和成功仍分别为11月3日09:11:17及10月31日09:15:50。其后至23:42:02，经既有Pixel别名及非root UID 10249只读确认Pixel 3a/Android 15/boot完成、SecureView已装APK SHA-256与v0.19 pin相符；Pixel操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity均UNKNOWN。没有root/su、任务执行、设备写入、部署或调度更改；自然运行同轮结果尚待获取。五项扩展仍全部待核实；规则日限额/计量的历史证据不证明重置、重复周期或到账时延。P50/月度规划继续挂起，2U＝2800目标不纳入本期。
 

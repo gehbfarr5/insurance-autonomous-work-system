@@ -1,5 +1,13 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 00:47—00:49 CST：MUSE并发/版本与Pixel身份/APK只读复核
+
+在既有Forest MUSE线程00:47:37只读确认当时无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；唯一启用schedule为Asia/Shanghai每日09:00、下次11月4日09:00。live `run.py` / `assistant.py` SHA-256仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败/成功为11月3日09:11:17和10月31日09:15:50。
+
+该读数后，经既有Pixel别名以非root只读确认Pixel 3a / Android 15 / boot完成、SecureView安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`与v0.19 pin相符。只知道该命令在00:49:31本地时钟采样前完成，未记录精确执行时刻。Pixel操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；未运行app/业务/task/code、未读业务state/raw logs、未用root/su或写设备，未安装、部署或改schedule。该读数不能证明设备写入许可。
+
+11月3日现有三段脱敏摘要仍只支持prepare Activity/ready-marker等待超时的阶段定位；其逐字段login guard、认证派发、gesturePage/accountMatch、登录字段presence/sample time及底层marker原因没有新证据，仍UNKNOWN。继续采用证据后修复，不绕过门禁；自然09:00运行尚待，之后先读同轮脱敏结果。证据：`museReadonlyStatus20261104_004737`、`pixelReadonlyPreflight20261104_0049`。
+
 ## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.

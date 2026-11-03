@@ -1,5 +1,13 @@
 # 11月2日准备阻断修复与单次补跑记录｜2026-11-02
 
+## 2026-11-04 00:47—00:49 CST：复核当前门禁；不具备设备集成条件
+
+00:47:37 CST MUSE只读回报Forest无活动任务、唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；live `run.py` / `assistant.py`哈希仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50。
+
+随后通过既有Pixel别名以非root完成限定身份/APK读取：Pixel 3a、Android 15、boot完成，SecureView APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin；本地时钟不晚于00:49:31，精确命令时间未捕获。该读取没有提供设备操作锁、monitor状态/hash、屏幕/Keyguard或前台Activity；它们继续UNKNOWN。未用root/su、运行代码/任务、读业务state/raw logs、安装/部署、写设备或更改schedule。
+
+修复取舍维持既定结论：直接绕过Activity/就绪标记门禁或加认证重试会掩盖未明根因并改变生产路径；采用保留所有门禁、等待自然运行并先回收同轮脱敏证据的路径。现有候选仅离线审查，特权导出路径不可复用，未安装。11月3日三段仍只定位到prepare等待阶段，底因未知；本轮无新证据支持修改主路径。下一证据点为既有11月4日09:00自然运行，完成后先读同轮MUSE结果、stages、assistant状态和cleanup。P4开放，S1未验收。证据键：`museReadonlyStatus20261104_004737`、`pixelReadonlyPreflight20261104_0049`。
+
 ## 离线候选完整性复核｜2026-11-03 23:43—23:45 CST
 
 11月4日逐字段和固定Activity类别两份候选的哈希清单分别14/14、11/11匹配；既有离线合成测试最终记录PASS；collector/joiner首次断言因期望结果漏列新增`fieldShapeStatus`而失败，修正断言后复跑PASS（无候选运行时异常）；本轮未重跑，亦不证明Android/AutoX兼容。导出器静态使用`su -c`，当前约束下不可用；Pixel操作锁与live monitor状态/hash仍UNKNOWN，候选未安装/重启。复用严格门禁与白名单投影、采用证据后修复、拒绝绕过；维持自然调度。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及结构化键`offlineCandidateIntegrityReview20261103_234515`。

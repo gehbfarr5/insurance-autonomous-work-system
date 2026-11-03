@@ -1,5 +1,13 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 00:47—00:49 CST：自然运行前状态复核
+
+00:47:37 CST在既有Forest MUSE线程完成只读并发/部署元数据复核：无活动任务；唯一schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；`run.py` / `assistant.py` live哈希未变，最近失败11月3日09:11:17、最近成功10月31日09:15:50。此读数不覆盖Pixel锁或monitor。
+
+其后以既有Pixel别名、非root完成只读身份/APK核对（本地时钟在00:49:31已到）：Pixel 3a / Android 15 / boot完成；SecureView APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin。精确命令时间未捕获；设备操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。未读取业务state/log、未执行任务/代码、未用root/su或写设备、安装/部署/改schedule。自然运行待09:00；之后先从MUSE读取同轮脱敏prepare、结果、stages、assistant状态与cleanup。证据键：`museReadonlyStatus20261104_004737`、`pixelReadonlyPreflight20261104_0049`。
+
+当下仅MUSE并发/deployment metadata与Pixel身份/APK预检通过，不代表设备写入门禁通过或业务验收。11月3日故障仍只定位到prepare等待层；完整诊断/修复、五项日常收据和扩展验收继续未完成。P4开放，S1未验收；P50/月度/2U=2800排除。
+
 ## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.

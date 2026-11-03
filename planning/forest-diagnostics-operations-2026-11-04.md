@@ -1,5 +1,13 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 00:47—00:49 CST：当前只读预检与执行边界
+
+MUSE 00:47:37只读状态：无活动任务；唯一每日Asia/Shanghai 09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；live `run.py` / `assistant.py`哈希未变，最新失败/最近成功为11月3日09:11:17和10月31日09:15:50。随后通过既有Pixel别名以非root完成身份/APK只读检查（本地时钟至00:49:31前）：Pixel 3a、Android 15、boot完成，SecureView APK哈希匹配v0.19 pin。精确设备命令时刻未捕获。
+
+Pixel操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；MUSE空闲不能替代设备锁。没有已验证的非root锁/私有数据读取法，private collector需要`su`，所以不读私有状态、不安装或重启monitor、不写设备。未读取业务state/raw logs、未执行任务/源码、未更改schedule/deployment。证据键：`museReadonlyStatus20261104_004737`、`pixelReadonlyPreflight20261104_0049`。
+
+保留自然09:00调度。运行后刷新MUSE状态并先读同轮脱敏prepare/结果/stages/assistant/cleanup；对未知或不一致状态停止，不重试、不重放。只有精确、既有、已验证的非root读取路径可用于补充只读字段；不得猜锁路径或沿用过期观察候选。设备级修复与回滚仍受设备锁/monitor未知阻断。
+
 ## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
