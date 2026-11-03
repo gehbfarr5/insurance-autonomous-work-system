@@ -1,6 +1,10 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
-## 最新只读续记｜2026-11-03 16:04 CST
+## 当前只读访问门禁｜2026-11-03 16:52 CST
+
+CUA库存只确认MUSE进程运行，未提供Forest任务/调度读回；浏览器控制不可用。Forest并发最后一次读回为16:23，当前为UNKNOWN。本轮未连接Pixel；本地确认现有SSH别名配置存在但未使用。16:33的live runner静态哈希核对仍不能确定prepare超时触发条件，完整runner源码未导出。设备和业务state、调度、凭据均未改动。下一步须先读取新鲜MUSE并发状态，再决定是否通过唯一既有别名进行Pixel只读检查。扩展任务官方公开来源的补充查找与有限结论见[剩余工作记录](remaining-work-2026-10-29.md#扩展来源补查2026-11-03-1652-cst)。
+
+## 既有只读记录（补充至16:33 CST）｜2026-11-03
 
 MUSE正确的「阳光森林每日执行部署」对话于15:54:29回读：唯一既有Asia/Shanghai每日09:00任务，下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17、最近成功10月31日09:15:50，连续失败3次。此前确认的11月3日assistant/main prepare timeout仍无业务阶段/回执、cleanup PASS；本次状态问询未重取业务结果。15:58:24经既有Pixel别名及原`su`路径只读回读Android 15/Dozing、monitor watching、guard清、heartbeat新鲜、requests=0；monitor/trigger/worker哈希一致于部署记录。设备操作锁和前台Activity UNKNOWN；APK pin最后一次直接核验在15:22且当时匹配。无设备写入、业务重跑或调度/state变更。
 
