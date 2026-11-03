@@ -1,5 +1,11 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## assistant.py附件回读及本机静态核对｜2026-11-03 19:36 CST
+
+从既有Forest旁聊下载私有`assistant.py`候选附件，本机SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`与MUSE 19:08最后一次live哈希匹配；文件12,700字节、权限0600，仅保存在用户私有Downloads。没有进行19:36云端live重读。Python AST语法解析PASS，顶层函数为`is_eligible`、`_main_locked`、`main`，代码未执行。
+
+`result["vueCheck"]`共7个键；结合既有18:36候选对照，5个新增诊断字段为`vue`、`onClickAppPresent`、`aiItemCount`、`runGroup`、`sampledAt`。固定方法pin匹配、Vue存在、唯一AI目标项的门禁及原方法调用保持不变，诊断字段不是通过条件。配套live`tasks.py`、AI intent/答案/奖励、业务state与独立回执仍未本机核对；11月3日ready-marker未到的底层原因和业务结果仍UNKNOWN。证据索引：`assistantCandidateLocalAudit20261103_193651`。
+
 ## 最新只读运行门禁｜2026-11-03 19:08—19:10 CST
 
 MUSE 19:08:09确认Forest唯一每日Asia/Shanghai 09:00调度下次11月4日09:00，running/queued/in-flight `0/0/false`，runner lock FREE，无Forest进程；`run.py`和`assistant.py`哈希仍分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败为11月3日09:11:17，上次成功10月31日09:15:50；本次未读业务结果或其他聊天。

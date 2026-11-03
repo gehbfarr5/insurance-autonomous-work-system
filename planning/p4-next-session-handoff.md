@@ -1,8 +1,12 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 19:36 CST新增：assistant.py已与最近live哈希对齐
+
+从既有Forest旁聊私有附件下载`assistant.py`候选，本机SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`与MUSE 19:08最后一次live哈希完全一致；文件12,700字节、权限0600、未加入仓库。只做AST语法/结构核对、未执行代码。`vueCheck`共7个字段；既有静态差异记录确认5个新增诊断字段为Vue存在、方法存在、AI目标数量、runGroup和sampledAt；固定方法pin、Vue存在及恰好一个目标项的原门禁和方法调用保持不变。此次没有新的云端live状态读取，不能把19:08哈希表述成19:36实时状态。配套`tasks.py`、AI意图、业务state/答案/奖励/独立回执仍缺本机逐项核验；P4开放，S1未验收。
+
 ## 2026-11-03 19:22 CST新增：live runner源码已匹配
 
-精确live `run.py`私有附件已下载到用户私有Downloads，权限0600；SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与19:08 MUSE live hash相同。静态控制流确认11月3日三段结果止于 `Device.prepare()`的Activity/ready-marker轮询超时，assistant页面门禁未运行，登录态层仍UNKNOWN。与10月26日旧本地 `run.py`（`1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`）比较，`Device.prepare()`、`Device.read_fresh()`、`main()`不同，且旧`Device.login`已被live `Device.auth_start()`替代；不对旧runner打补丁、不将其冒充live副本。live配套 `tasks.py`、当前`assistant.py`原字节及全量AI意图/业务结果未全部核验，故P4/S1不结项。
+精确live `run.py`私有附件已下载到用户私有Downloads，权限0600；SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与19:08 MUSE live hash相同。静态控制流确认11月3日三段结果止于 `Device.prepare()`的Activity/ready-marker轮询超时，assistant页面门禁未运行，登录态层仍UNKNOWN。与10月26日旧本地 `run.py`（`1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`）比较，`Device.prepare()`、`Device.read_fresh()`、`main()`不同，且旧`Device.login`已被live `Device.auth_start()`替代；不对旧runner打补丁、不将其冒充live副本。配套live `tasks.py`与AI意图/业务结果仍未全部核验；`assistant.py`已在19:36补齐本机字节核对，细节见顶部新记录。P4/S1不结项。
 
 ## 最新接续事实｜2026-11-03 19:08—19:10 CST
 

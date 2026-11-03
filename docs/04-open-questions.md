@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## live assistant.py附件本机核对｜2026-11-03 19:36 CST
+
+从既有Forest旁聊取得的`assistant.py`私有附件，本机SHA-256与MUSE 19:08最后一次live哈希完全一致；文件12,700字节、权限0600，仅在用户私有Downloads，未入仓库。本机仅做AST语法与结构检查、未执行代码；固定方法pin、Vue、唯一目标项门禁未变。19:36没有重新读取云端live状态。配套`tasks.py`和AI/业务state及回执仍待本机对齐；P4保持开放、S1未验收。见[本地核查](../planning/local-evidence-audit-2026-10-29.md)和[结构化证据](../planning/remaining-work-evidence-2026-10-29.json)。
+
 ## 最新运行门禁与剩余观测｜2026-11-03 19:08—19:10 CST
 
 MUSE 19:08:09确认Forest每日Asia/Shanghai 09:00任务下次11月4日，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，部署哈希未变。19:10通过既有`pixel3a-kjgx`别名非root读取Pixel 3a/Android 15、Asia/Shanghai、boot完成、AutoX/AutoJS进程未见；本次未读取设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity，均UNKNOWN。没有写设备或部署观察器；不得拿18:22锁读数作当前值。故障层仅定位到runner Activity/就绪标记轮询超时，具体未就绪原因仍待同轮自然证据。下一次既有自然运行前后仍须执行手册门禁。详见[诊断检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)和[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)。

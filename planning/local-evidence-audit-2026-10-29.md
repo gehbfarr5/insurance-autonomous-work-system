@@ -1,12 +1,20 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 精确live assistant.py附件本机核对｜2026-11-03 19:36 CST
+
+从既有阳光森林MUSE旁聊的私有附件下载`assistant.py`诊断候选，另存为本机私有文件`sunshine-forest-assistant-live-candidate-20261103.py`。本机重算SHA-256为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，与MUSE 19:08最后一次live `assistant.py`哈希完全一致。文件12,700字节、权限0600、仅留在用户私有Downloads、未进入仓库。没有在本轮重新读取云端live哈希；因此身份对应于最近的19:08部署报告，不外推为19:36云端新读数。
+
+只做Python AST解析和结构检查，语法解析PASS；文件未执行。`result["vueCheck"]`有7个键：`vue`、`onClickAppPresent`、`onClickAppMatches`、`aiItems`、`aiItemCount`、`runGroup`、`sampledAt`。既有18:36静态差异记录将新增字段界定为`vue`、`onClickAppPresent`、`aiItemCount`、`runGroup`和`sampledAt`；保留原`onClickAppMatches`与`aiItems`。门禁仍要求Vue对象存在、`onClickApp`方法源码与固定pin匹配、目标项恰好一项；原方法调用和fail-closed条件未放宽。AST发现4处`evaluate`调用；不代表本轮运行过这些调用，本轮只解析文件结构。
+
+该字节身份与MUSE 19:08 live哈希相符，足以补齐当前`assistant.py`最后已报告版本的本机源字节核对。配套live `tasks.py`、业务state、AI intent/答案/奖励及独立业务回执仍未本机取得/核对；11月3日的ready-marker未到根因与09:06:17—09:11:17间隔仍UNKNOWN。没有设备访问、任务/业务运行、部署、state/cron/schedule变更或源码修改；没有检查其他聊天或触及WP1内容。
+
 ## 精确live runner源码及本地旧副本对照｜2026-11-03 19:22 CST
 
 从既有阳光森林MUSE旁聊的私有附件下载 `sunshine-forest-v0.19-live-run.py`，本机SHA-256重算为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，与19:08 live部署元数据报告完全匹配。文件保存在用户私有Downloads、权限0600；未进入仓库，未导出其他源码/日志/state，也没有运行代码、连接设备或读取业务state。精确源码含内部路由/安装细节，因此公开仓库只记哈希与控制流结论。
 
 源码静态确认 `Device.prepare()` 对resumed Activity及nonce匹配的准备marker执行70秒、1秒间隔轮询；Activity变化由 `Device.event()`记录；认证入口条件检查Activity字符串是否包含`GestureActivity`，且本轮尚未尝试时调用一次 `auth_start()`；marker为`BLOCKED`时结束，`NAVIGATED`时进入 `wait_ready()`；超时抛出`PREPARE_TIMEOUT_NO_FALLBACK`。`main()`先prepare再进入业务workflow，并在finally调用 `Device.cleanup()`；11月3日三段脱敏摘要的MainActivity终止事件与该路径一致，cleanup均为PASS。因此失败层被live源码直接交叉核实为runner的Activity/就绪marker等待超时，底层为何未到ready及09:06:17—09:11:17间隔仍UNKNOWN。
 
-与10月26日私有旧runner（`1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`，266行）做AST比对：live为301行；23个共有函数/方法中20个结构相同，`Device.prepare()`、`Device.read_fresh()`、`main()`不同；旧 `Device.login`被live `Device.auth_start()`取代，另有deadline/终止处理和stale-lock决策函数。结论：live `run.py`现已取得并匹配，旧本地副本仍不适合作为live基线；本机未取得与live runner配套的 `tasks.py` 或当前 `assistant.py`原字节，五项逐项实现/结果映射仍不完整。无代码修复或部署。
+与10月26日私有旧runner（`1088ff636d2f5e3f8eeca26c51cad7dac628c29546bb7ecedf0927435db18cc5`，266行）做AST比对：live为301行；23个共有函数/方法中20个结构相同，`Device.prepare()`、`Device.read_fresh()`、`main()`不同；旧 `Device.login`被live `Device.auth_start()`取代，另有deadline/终止处理和stale-lock决策函数。结论：live `run.py`现已取得并匹配，旧本地副本仍不适合作为live基线；截至该19:22记录时，配套`tasks.py`和`assistant.py`原字节未取得。后续19:36记录已将`assistant.py`附件核对到MUSE 19:08 live哈希；`tasks.py`及五项逐项实现/结果映射仍不完整。无代码修复或部署。
 
 ## 当前访问门禁｜2026-11-03 18:56 CST
 
