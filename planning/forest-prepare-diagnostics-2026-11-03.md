@@ -1,6 +1,16 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
-## 当前MUSE访问门禁｜2026-11-03 17:00 CST
+## 最新集成状态｜2026-11-03 18:40 CST
+
+18:40:26写前核验、18:40:41原子替换、18:40:48写后复核：已将唯一云端Forest runner的`assistant.py`更新为已审查的门禁诊断候选，live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份SHA保持`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`；独立回滚副本字节匹配。只增加Vue存在、`onClickApp`存在、目标项数量、固定runGroup及门禁采样时间，原固定方法pin、唯一目标项、调用顺序和失败关闭行为未变。此次不执行代码/测试，不访问Pixel，不读写模块/APK/业务state；schedule、runner idle/lock、进程状态写后未变。树内消费者静态检查为中等兼容证据，外部消费者未知。11月3日prepare超时仍UNKNOWN，不能由这项诊断补改追溯；待11月4日自然运行结束后，再读取脱敏MUSE结果并按窗口规则采集关联证据。P4开放，S1未验收。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+## 集成前状态与assistant gate静态核对｜2026-11-03 18:24 CST
+
+MUSE 18:15:56报告唯一每日Asia/Shanghai 09:00任务、下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock `FREE`、Forest进程未见；其他聊天未探测。18:22:27经现有`pixel3a-kjgx`非root SSH只读回读设备操作锁`FREE`、Android 15和AutoX进程不存在；屏幕、Keyguard、device locked和前台Activity未知，monitor私有状态/hash不可读，已安装SecureView APK哈希与已知v0.19工件匹配。未用root/su，未写设备或运行业务。
+
+18:24:13 MUSE仅静态核验当前`assistant.py`原字节哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。门禁条件是Vue对象存在、`onClickApp`存在且方法源码匹配固定pin、目标菜单项数量恰好1；三项同时满足后才调用原方法。持久化记录没有单独的Vue存在、method存在布尔值、目标数量、门禁采样时间或run group，因此私有observer仍有明确诊断用途。模块源码本地MISSING，已安装版本/hash未知。静态检查不证明11月3日执行曾到达该门禁，prepare超时具体触发点仍UNKNOWN；monitor状态也不能由AutoX进程缺席以外的信息推出。11月4日自然结果与完整同轮证据仍待读取。结构化记录见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+## 历史MUSE访问门禁｜2026-11-03 17:00 CST
 
 CUA库存再次只确认MUSE应用进程运行；浏览器控制不可用，没有Forest任务或调度读回。最近并发读数16:23已过时，当前为UNKNOWN；本轮未连接Pixel。16:33静态读取确认live runner hash与部署记录相同，但具体prepare超时触发条件和09:06:17—09:11:17间隔仍UNKNOWN；完整当前runner源码尚未导出。先取得新鲜MUSE并发读数；只有确认无其他任务在途后才通过既有别名核对Pixel锁和哈希。没有设备、业务state、cron或调度修改。窗口后采集继续遵循[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 
@@ -16,7 +26,7 @@ MUSE于15:54:29只读确认：唯一既有`Asia/Shanghai`每日09:00任务下次
 
 ## Outcome
 
-**Monitor-only diagnostics are installed for the 2026-11-04 natural window; same-run evidence is still pending.** The bounded monitor observer is live and a read-only exporter is ready. The prepare observer and assistant gate expression remain offline. No business run was requested or replayed, and no schedule, cron, credential, or business state was changed. P4 remains open; this is not an S1 or project completion claim.
+**Monitor-only diagnostics are installed for the 2026-11-04 natural window; assistant gate telemetry is now integrated cloud-side; same-run evidence is still pending.** The bounded monitor observer is live and a read-only exporter is ready. The prepare/login-field observer remains offline. No business run was requested or replayed, and no schedule, cron, credential, or business state was changed. P4 remains open; this is not an S1 or project completion claim.
 
 ## Current evidence
 

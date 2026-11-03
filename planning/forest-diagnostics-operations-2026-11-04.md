@@ -2,7 +2,35 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 18:08 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 18:40 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### assistant门禁诊断遥测集成｜2026-11-03 18:40 CST
+
+**有界集成结果：PASS（只验证源码替换与运行元数据）；同轮运行及业务结果：PENDING。** 18:36:23 MUSE只读预检确认唯一启用的Forest schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock `FREE`、Forest进程未见。live与原始备份哈希均为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`，私有候选哈希为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。设备操作锁本次未读，18:22:27既有别名读数为FREE；本次集成未访问设备。
+
+静态消费者审计覆盖MUSE现存代码树：未发现该assistant结果记录的读取器、schema/validator或精确键集合约束；已知报告按字段选择读取且曾容忍缺字段。既有写入器本来就产生不同形状的记录。证据对已检查代码树为中等，对未来工具或外部解析器为UNKNOWN，因此不能声称普遍兼容。
+
+写前复核时间18:40:26，原子替换18:40:41，写后复核18:40:48。目标为云端Forest runner的`assistant.py`，不是设备/APK/module。仅在结果对象中增加五个脱敏诊断字段：Vue存在布尔值、`onClickApp`存在布尔值、目标项数量、固定`forest-20261104-0900` runGroup、门禁专属采样时间；不可用来源时按候选约定保留UNKNOWN/null。原方法源码固定pin、目标项必须恰好一个、失败在调用前停止以及原页面方法调用均未改变；没有加入新的放行条件，也不保存方法源码、菜单文本、客户数据或凭据。
+
+替换采用同目录临时文件加rename。先从原备份建立并验证独立部署侧回滚副本，原备份未动；live SHA-256现与候选一致`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，两份原始备份均与基线一致。写后唯一schedule/下次触发不变，running/queued/in-flight仍`0/0/false`、runner lock `FREE`、无Forest进程且无临时文件遗留；无需回滚。没有运行解释器、语法检查、业务脚本、任务或设备，也没有改变state/dedupe/history/cron/schedule/credentials/network/module/APK/WP1。细节见证据索引`assistantGateIntegration20261103`。
+
+### MUSE只读状态复核｜2026-11-03 18:15:56 CST
+
+既有森林对话确认：Forest部署范围内没有观测到活跃任务，唯一启用任务为`Asia/Shanghai`每日09:00，下次触发2026-11-04 09:00；running/queued/in-flight为`0/0/false`，runner lock `FREE`，无forest-agent进程。其他聊天未探测，不能据此断言全局MUSE空闲。live `run.py`哈希为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，`assistant.py`哈希为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50；业务段状态沿用早先读取，没有本次重读。设备操作锁在这次MUSE查询中未读取。
+
+### Pixel非root只读预检｜2026-11-03 18:22:27 CST
+
+通过唯一既有`pixel3a-kjgx`配置，以非root远端用户读取：Pixel 3a、Android 15、`Asia/Shanghai`、boot completed；设备操作锁`FREE`，AutoX相关进程未见。已安装SecureView APK的SHA-256为`dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`，与已知v0.19工件值一致，但运行时版本属性未读到。屏幕状态、Keyguard showing、device locked和前台Activity均UNKNOWN；monitor状态/hash因私有应用目录对非root不可读而UNKNOWN。该读数不证明monitor在运行，也不回溯11月3日prepare结果。本次未用root/su、未写设备/业务state、未启动或停止进程、未运行任务、未改调度或凭据。
+
+### live assistant gate静态核对｜2026-11-03 18:24:13 CST
+
+当前assistant.py原字节SHA-256为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`，与预期完全匹配。调用门禁要求root元素可达Vue对象、`onClickApp`存在且源码匹配固定pin、过滤后目标项恰好一个；三个条件同时满足才先记录阶段标记再调用。失败在调用前停止。live记录保留method-match布尔值及仅含code/name的过滤列表；Vue存在性、单独的method存在性、单独数量、门禁专属采样时间/run group未写入记录，只有一般保存时间及成功阶段标记。module源码在本地适配副本中MISSING；安装module版本/hash在不访问设备时UNKNOWN。这个静态审查不能证明历史运行到达门禁，11月3日prepare超时根因仍UNKNOWN。结构化事实见证据索引的`assistantGateStaticAudit20261103`。
+
+以上18:24记录为集成前快照；新增诊断字段已按上方18:40记录集成到云端assistant脚本，设备侧APK/module与monitor未改。
+
+### 官方来源补查｜2026-11-03
+
+追加的Drive定向metadata检索对森林规则与五项扩展词组均无命中，未读取文件内容；精确查询和边界见证据索引。CPIC官方历史页面提到E锦囊/保险超市产品页迭代及销售支持用途，但未提供当前激活流程、本人资格或森林奖励周期；因此五项扩展分类仍全部“仍待核实”。[E锦囊历史方案公告](https://www.cpic.com.cn/c/2018-11-02/1562542.shtml) · [太保2017投资者日材料](https://www.cpic.com.cn/upload/resources/file/2017/12/22/47047.pdf)。
 
 ### 私有离线Activity类别候选复核｜2026-11-03 18:08 CST
 

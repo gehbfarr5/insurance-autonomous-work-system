@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 最新更新：assistant gate诊断集成｜2026-11-03 18:40 CST
+
+云端Forest runner的`assistant.py`已按已审查候选完成有界集成；live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，原备份及部署侧回滚副本为`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只有五个脱敏诊断字段新增，固定调用门禁未变。写后schedule/runner状态不变；没有运行代码/业务或访问设备。树内消费者审计为中等证据，外部解析器未知。assistant gate诊断集成已验证，但11月4日自然运行字段、登录态observer、prepare根因和全部业务回执仍未完成；P4继续开放，S1未验收。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 回执候选静态复核｜2026-11-03 17:35 CST
 
 AI快照已修正空`recordId`从基线hash中消失的缺口：每条记录必须有非空ID，否则`REVIEW / RECORD_ID_UNKNOWN`。新合成回归使采集器测试29/29 PASS。独立offline provides候选的遍历字段现在只读数据描述符，访问器不执行且报告`READ_ERROR`；测试PASS。两项都未部署/实机验证，MUSE安装版本仍UNKNOWN。AI同次结束正例仍缺，成功空列表仍缺同周期成功响应与赋值的实机证据；prepare根因及设备状态也没有变化。详细hash和范围见[证据索引](remaining-work-evidence-2026-10-29.json)。
@@ -14,13 +18,17 @@ AI快照已修正空`recordId`从基线hash中消失的缺口：每条记录必�
 
 按五个扩展名称定向搜索CPIC官方域，只有“态幸福”命中相关官方历史资料：[中国太保寿险加速队伍职业化、专业化、数字化转型（2022-04-07）](https://cpic.com.cn/c/2022-04-07/1633278.shtml)。该文将“态幸福”称为NBS销售支持中的交互式需求分析系统，用于协助营销伙伴制订个性化保障计划，并报告当时的月均使用率；它没有说明阳光森林任务关联、当前资格、奖励触发或重复周期。对“保单芯管家”搜到的健康管家文档及对“E锦囊激活”搜到的一般保单激活页面均不作同名认定。未发现“三节一生”或“签单协同”直接匹配官方流程。五项均保持“仍待核实”，没有足够证据加入自动化或归为现实外部阻碍。搜索词与结果见[证据索引](remaining-work-evidence-2026-10-29.json)。
 
+## 五项扩展CPIC历史资料补查｜2026-11-03（记录于18:26 CST）
+
+CPIC官方2018项目公告只说明E锦囊（保险超市）产品页曾多次迭代；[2017投资者日PDF](https://www.cpic.com.cn/upload/resources/file/2017/12/22/47047.pdf)将E锦囊/保险超市列为可经微信分享的销售支持与线索工具。这些是历史产品背景，没有当前激活步骤、本人资格、森林任务映射或奖励条件。其他四项没有找到直接流程来源。新增Drive metadata-only检索对森林规则四个词组及五项扩展九个词组全部无命中，未读取正文。五项扩展仍全部“仍待核实”；不把历史资料或有界无命中推导成现行规则。来源URL、查询词和限制见[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## MUSE只读复核与私有离线候选｜2026-11-03 18:08 CST
 
 约18:05 WP11对话生成已结束；18:08只读切至既有森林线程，AX树显示发送框、未见生成中控件。没有本轮新的scheduler/task/queue/in-flight/runner-lock/部署哈希读回；16:23读数过期，当前并发和设备锁门禁仍UNKNOWN，本轮未连接Pixel。须先从森林线程取得新鲜调度和锁状态；Pixel仍只可使用原配置别名，别名不可用时停止。结构化记录见[证据索引](remaining-work-evidence-2026-10-29.json)。
 
 ## 前台Activity类别私有离线候选｜2026-11-03 18:08 CST
 
-review-only候选增加固定前台Activity类别枚举，使用侧车schema v4且collector兼容v3/v4；不持久化原始Activity字符串，沿用API异常fail-loud。五项离线脚本PASS（Node 26.0.0、Python 3.14.7），11/11 SHA清单匹配。候选SHA-256及清单SHA-256见证据索引；候选仅在私有本地副本，未安装/部署/设备验证。prepare逐字段登录态与assistant gate observer仍未集成live runner，所以完整单次自然运行及11月3日prepare超时根因仍未解决。此候选不能标业务PASS。
+review-only候选增加固定前台Activity类别枚举，使用侧车schema v4且collector兼容v3/v4；不持久化原始Activity字符串，沿用API异常fail-loud。五项离线脚本PASS（Node 26.0.0、Python 3.14.7），11/11 SHA清单匹配。候选SHA-256及清单SHA-256见证据索引；候选仅在私有本地副本，未安装/部署/设备验证。prepare逐字段登录态observer仍未集成live runner；assistant gate observer已按上方18:40记录集成云端脚本，但尚无自然运行字段回读，所以完整单次自然运行及11月3日prepare超时根因仍未解决。此项不能标业务PASS。
 
 ## 前一轮MUSE界面门禁｜2026-11-03 17:57 CST
 

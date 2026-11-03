@@ -1,8 +1,18 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 当前状态与离线候选｜2026-11-03 18:08 CST
+## 最新状态｜2026-11-03 18:40 CST
 
-约18:05 WP11对话生成已结束；18:08只读打开森林线程，AX树显示发送框、未见生成中控件，但没有新的Forest scheduler/task/queue/in-flight/runner-lock/部署哈希读回。16:23 MUSE调度与15:58 Pixel快照均过期，不能放行设备；本轮未连接Pixel。11月4日review-only私有Activity类别候选已完成5项离线脚本验证、11/11清单哈希匹配；未部署。候选仍未集成prepare逐字段登录态与assistant gate观察器，不能给出完整一次运行诊断、根因或业务PASS。CPIC官方域追加检索无直接森林规则原据，但无命中不证明原件不存在。没有业务、设备、state/cron/调度或凭据变更。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
+18:40:26—18:40:48完成有界云端assistant gate遥测集成：唯一Forest runner的`assistant.py` live SHA-256为`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。同目录原子替换；原始备份未动、部署侧回滚副本经哈希验证与旧版一致（`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`）。仅增加五个脱敏门禁观察值；原Vue存在/固定方法pin/恰好一项门禁及失败关闭不变。运行器未执行，业务与设备未运行/修改。
+
+18:40:48写后验证schedule仍为每日Asia/Shanghai 09:00、下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、Forest进程未见；设备锁未在本次读取（18:22最近读数FREE）。已知代码树消费者宽容，外部工具兼容未知；下次自然运行之前不做设备读写。11月3日prepare超时根因仍UNKNOWN，业务成功和完整同轮证据未得。范围判定：有界脚本集成 PASS；自然运行与业务验收 PENDING；P4开放，S1未验收。详见[运行说明](forest-diagnostics-operations-2026-11-04.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+## 集成前状态快照｜2026-11-03 18:24 CST
+
+MUSE 18:15:56只读确认唯一启用的Asia/Shanghai每日09:00任务、下次触发11月4日09:00；running/queued/in-flight为0/0/false、runner lock FREE、Forest进程未见。此结果只覆盖Forest部署范围，其他聊天状态未探测。live `run.py`与`assistant.py`哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`；11月3日最新调度失败仍是09:11:17，最近成功10月31日09:15:50。18:22:27经既有`pixel3a-kjgx`非root通道只读确认Pixel 3a/Android 15、设备操作锁FREE、AutoX进程不存在；SecureView APK哈希为已知v0.19工件值。屏幕/Keyguard/Activity不可读，monitor脚本哈希/状态未知。18:24:13静态审查`assistant.py`哈希匹配：调用门禁要求Vue存在、方法匹配固定pin、目标项数量恰好1；落盘记录缺Vue布尔值、独立数量、门禁采样时间与run group。此静态结构不解释11月3日prepare超时，根因仍UNKNOWN。Activity类别候选仍是私有离线版，未部署；prepare逐字段登录态及assistant gate观察器未集成到live runner。没有任务/业务运行、设备写入、state/cron/调度或凭据变更。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
+
+### 静态assistant gate核对｜2026-11-03 18:24 CST
+
+当前live `assistant.py`源字节SHA-256与`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`完全一致。门禁单次求值：页面root可达Vue对象；page对象methods上存在`onClickApp`且其源码匹配本地固定pin；筛选的目标项必须恰好1项。全部通过后先记阶段标记，再调用原页面方法；任一条件失败则调用前报错。现有记录持久化method-match布尔值和只含code/name的筛选列表，但不单独保留Vue存在性、method存在性、数量、门禁采样时间或run group。设备侧module source在本地适配副本中MISSING，已安装module版本/hash在不访问设备时UNKNOWN。该核对不代表11月3日运行执行到此门禁，也不定位prepare超时根因。
 
 ### 前一轮访问门禁｜2026-11-03 17:57 CST
 

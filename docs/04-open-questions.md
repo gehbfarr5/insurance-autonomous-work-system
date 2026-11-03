@@ -1,5 +1,13 @@
 # 缺失内容与 P4 按需核查
 
+## assistant门禁遥测已集成｜2026-11-03 18:40 CST
+
+MUSE在18:40:26写前核验后，仅原子更新云端Forest runner `assistant.py`；18:40:48写后哈希为候选SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份与单独部署侧回滚副本均保留原哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。只加Vue、`onClickApp`存在布尔值、目标项数量、固定runGroup和采样时间；旧门禁及失败关闭未变。已知消费者静态核查不严格拒绝附加字段（证据对检查树中等，树外未知）。写后schedule、队列、runner lock和进程读数未变；无代码/业务运行或设备访问。11月3日prepare超时根因和11月4日业务结果仍未知；设备侧monitor和prepare观察仍需按既有窗口采集。P4开放，S1未验收。详情见[操作手册](../planning/forest-diagnostics-operations-2026-11-04.md)、[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)和[结构化证据](../planning/remaining-work-evidence-2026-10-29.json)。
+
+## 集成前只读证据｜2026-11-03 18:24 CST
+
+Forest部署范围内MUSE 18:15:56回报唯一每日09:00任务、下次11月4日09:00，running/queued/in-flight为0/0/false、runner lock FREE；其他聊天未探测。Pixel 18:22:27经既有非root别名只读确认设备操作锁FREE，但AutoX进程不存在；屏幕、Keyguard、前台Activity及monitor私有状态/hash仍UNKNOWN。live `assistant.py`静态哈希匹配。该门禁记录没有Vue存在布尔值、独立目标数量、专属采样时间/run group。11月3日prepare超时根因继续UNKNOWN，下一次应等自然调度形成可关联证据；不得把静态门禁核查当历史运行结论。细节见[诊断检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)与[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)。
+
 ## 回执候选本机修正｜2026-11-03 17:35 CST
 
 静态复核发现`tools/receipt-collector/ai-snapshot.js`曾允许空`recordId`从baseline hash中消失；现要求所有记录ID均为非空字符串，否则返回`REVIEW / RECORD_ID_UNKNOWN`。新增合成回归后采集器29/29 PASS。独立offline provides候选的遍历字段改为数据描述符读取，访问器被阻断且返回`READ_ERROR`；测试PASS。两项都没有部署或实机验收；MUSE安装版本当前UNKNOWN，AI同次完成正例与成功空列表响应/赋值同周期证据仍待自然可观测来源。详见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)及[采集器说明](../tools/receipt-collector/README.md)。
@@ -16,7 +24,7 @@ CPIC官方2022年文章将“态幸福”描述为NBS销售支持中的交互式
 
 Drive document metadata-only查询“阳光森林”“阳光雨露”“森林任务 周期”“科技个险 阳光值”各20项范围均返回0项，且未读取文件内容。这是本次连接账户与关键词范围内的无命中，不证明历史未曾确认或其他位置没有原件。详见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。
 
-## 当前访问门禁与离线诊断候选｜2026-11-03 18:08 CST
+## 前一轮访问门禁与离线诊断候选｜2026-11-03 18:08 CST
 
 约18:05 WP11对话生成已结束；18:08只读打开既有森林线程，AX树显示发送框、未见生成中控件。该线程没有本轮新的scheduler/task/queue/in-flight/runner-lock/部署状态读回；可见的16:23读数已过期，不能放行Pixel。本机本轮未查设备或连接Pixel。11月4日review-only前台Activity类别候选已在私有副本完成5项离线脚本验证（Node 26.0.0、Python 3.14.7），11/11文件清单匹配；候选未部署，prepare逐字段登录态和assistant gate观察仍未接入live runner，也没有完整自然运行记录或根因结论。私有候选及其SHA-256见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。CPIC官方域追加四组检索未发现直接森林规则原据；无命中不证明历史原件不存在。历史E07规则原件支持日上限/动作单位，不支持森林重置、重复周期或到账时延。P4继续开放、S1未验收；详见[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)。
 
