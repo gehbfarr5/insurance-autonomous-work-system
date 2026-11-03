@@ -1,5 +1,11 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 03:19 CST：历史指针与私有文件名有界复核
+
+公开Git历史中，D-029“官方时点曾确认”至少在`fb148f2`已出现，但该版本没有官方来源标题或URL；同期本地审计写明定向查找未找到原始确认输出。对受控P4-WP01私有目录只扫描文件名，没有发现独立时点来源文件；未读私有文件正文、截图或混合客户表单。此复核不证明原件不存在，也不否定D-029；不含MUSE线程历史或更广泛文件系统搜索。证据：`sourcePointerHistoryReview20261104_0319`。
+
+03:19:13 CST在同一MUSE线程刷新只读调度元数据：无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、未观察到Forest进程，唯一每日09:00 Asia/Shanghai schedule仍启用。此结果不证明Pixel设备锁、monitor或UI门禁。证据：`museReadonlyStatus20261104_031913`。
+
 ## 2026-11-04 03:07—03:16 CST：官方时点来源定向检索
 
 Connected Drive metadata-only document searches for “阳光森林 官方 时间点”, “阳光森林 截止时间”, and “Forest official timepoint” returned zero results; no document content was fetched. This search did not recover the exact pointer. D-029 still records that the official timepoint was previously confirmed; this bounded empty search does not negate that record or prove the original source absent. Evidence key: `googleDriveTimingSourcePointerSearch20261104_0308` in the [evidence index](evidence-index-2026-10-29.json).

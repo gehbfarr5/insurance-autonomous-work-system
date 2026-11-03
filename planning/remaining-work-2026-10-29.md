@@ -1,5 +1,11 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 03:19 CST：规则来源指针仍待恢复
+
+Reviewed public Git history shows D-029's official-timepoint prior-confirmation statement by `fb148f2`, but that revision names no source title or URL; its contemporaneous audit says the original output was not located in the directed search. A filename-only scan of the controlled private P4-WP01 workspace found no distinct timing-source file. No private contents, screenshots, or mixed customer forms were opened; MUSE history and broader filesystem locations were not searched. This limited result does not prove source absence or negate D-029. Evidence: `sourcePointerHistoryReview20261104_0319`.
+
+The 03:19:13 MUSE refresh shows the natural daily 09:00 Asia/Shanghai schedule still enabled and idle, with runner lock FREE and no process observed. This does not verify Pixel lock/UI conditions; refresh MUSE before any device action. Evidence: `museReadonlyStatus20261104_031913`.
+
 ## 2026-11-04 03:04 CST：Android诊断权限边界
 
 Android 15 AOSP框架清单将android.permission.DUMP标为signature/privileged/development，并注明不供第三方应用使用；Android官方文档给出的dumpsys入口是adb shell。现有Pixel SSH UID的实际DUMP授权未核，未运行dumpsys或ADB探针。不能假定应用式SSH会话可以读取系统转储；屏幕、Keyguard和前台Activity继续记UNKNOWN，不切换访问通道或授予权限。这是诊断访问约束，不是森林故障根因。证据：androidDumpPermissionReview20261104_030429。[Android 15 AOSP清单](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934)；[Android dumpsys文档](https://developer.android.com/tools/dumpsys)。

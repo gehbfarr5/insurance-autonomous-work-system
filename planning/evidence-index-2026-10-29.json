@@ -176,6 +176,25 @@
       "resultCount": 0,
       "contentFetched": false,
       "scopeLimit": "No matching file was returned for these queries; this does not establish that the source is absent or that the previously confirmed official timepoint was never confirmed."
+    },
+    {
+      "id": "X06",
+      "recordKey": "sourcePointerHistoryReview20261104_0319",
+      "source": "Public repository history and controlled private-workspace filename-only review",
+      "reviewedAt": "2026-11-04 03:19 Asia/Shanghai",
+      "publicHistoryAnchor": "fb148f2",
+      "privateFilenameScope": "../.private/p4-wp01; basenames only, matching rule/time/source/evidence/schedule/history/confirm",
+      "summary": "D-029's prior-confirmation statement appears by fb148f2 without an official source title or URL; the contemporaneous audit says the original output was not located within its directed search. The bounded filename review found no distinct timing-source file. No private file contents, screenshots, or mixed customer forms were opened.",
+      "scopeLimit": "Applies only to the reviewed public Git history and controlled private filenames. It excludes MUSE thread history, broad home-directory search, and private-file contents; it does not prove source absence or negate D-029's recorded prior confirmation."
+    }
+  ],
+  "runtimeObservations": [
+    {
+      "recordKey": "museReadonlyStatus20261104_031913",
+      "observedAt": "2026-11-04 03:19:13 Asia/Shanghai",
+      "source": "Existing Sunshine Forest MUSE thread, read-only metadata refresh",
+      "summary": "No active task; running/queued/in-flight 0/0/false; runner lock FREE; no Forest process observed; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00:00. Live run.py SHA-256 de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562; assistant.py SHA-256 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c. Latest scheduler result: 2026-11-03 09:11:17 failed; last success 2026-10-31 09:15:50.",
+      "scopeLimit": "Read-only scheduler/deployment metadata only; does not establish Pixel lock, monitor, screen, Keyguard, foreground Activity, business state, or same-run completion."
     }
   ]
 }

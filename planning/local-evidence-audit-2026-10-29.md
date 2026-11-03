@@ -1,5 +1,11 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 03:19 CST：时点来源指针历史复核
+
+公开Git历史显示D-029“官方时点曾确认”最迟在`fb148f2`已出现，但该版本没有官方来源标题/URL；同期本地审计记载定向查找未找到原始确认输出。对受控P4-WP01私有目录仅按文件名进行有界扫描，未发现独立时点来源文件。未读私有正文、截图、混合客户表单，也未查MUSE线程历史或更广泛文件系统。此结果不证明原件不存在或历史确认未发生，D-029保持原状。证据：`sourcePointerHistoryReview20261104_0319`。
+
+03:19:13 CST同一MUSE线程只读元数据复核：无活动任务，running/queued/in-flight `0/0/false`，runner lock `FREE`，无Forest进程观察值，唯一schedule为每日09:00 Asia/Shanghai。该证据不覆盖Pixel设备锁、monitor或UI。证据：`museReadonlyStatus20261104_031913`。
+
 ## 2026-11-04 03:04 CST：Android诊断权限边界
 
 Android 15 AOSP框架清单将android.permission.DUMP标为signature/privileged/development，并注明不供第三方应用使用；Android官方文档给出的dumpsys入口是adb shell。现有Pixel SSH UID的实际DUMP授权未核，未运行dumpsys或ADB探针。不能假定应用式SSH会话可以读取系统转储；屏幕、Keyguard和前台Activity继续记UNKNOWN，不切换访问通道或授予权限。这是诊断访问约束，不是森林故障根因。证据：androidDumpPermissionReview20261104_030429。[Android 15 AOSP清单](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934)；[Android dumpsys文档](https://developer.android.com/tools/dumpsys)。
