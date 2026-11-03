@@ -1,5 +1,11 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 最新运行门禁｜2026-11-03 19:08—19:10 CST
+
+MUSE 19:08:09只读状态：Forest唯一每日Asia/Shanghai 09:00任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；`run.py`/`assistant.py`live SHA仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最新失败09:11:17、最近成功10月31日09:15:50；业务结果未读，其他聊天未探测。
+
+19:10通过既有`pixel3a-kjgx`别名以非root UID 10249只读确认Pixel 3a/Android 15/Asia/Shanghai/boot完成、未见AutoX/AutoJS进程。设备操作锁、monitor私有状态/hash UNKNOWN；屏幕/Keyguard/Activity未读，APK hash未复核。没有root/su、写设备、部署候选或运行任务；因当前设备锁没有已记录的非root读取路径，不把18:22历史FREE沿用到现在。11月3日prepare失败层已定位到runner Activity轮询超时，但根因和11月4日自然运行/业务结果仍待观察。详见[操作手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 最新prepare失败层级定位｜2026-11-03 19:02 CST
 
 MUSE只读复核Forest旁聊既有的11月3日三段脱敏摘要：误触助理、调度助理和主流程均在prepare事件止于MainActivity后结束，原因码`PREPARE_TIMEOUT_NO_FALLBACK`、没有业务阶段、cleanup PASS。两段助理`NOT_SENT`且`vueCheck`缺失；主流程`pendingAction`为空且业务字段未出现。可定位到runner Activity/就绪标记轮询超时层，assistant页面门禁未被求值；module登录态门禁与具体未就绪原因仍UNKNOWN。没有读取raw log、业务state或设备，也没有运行任务。该结论不等于完整根因定位；下一步是等待11月4日自然运行及新鲜只读证据。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[运行手册](forest-diagnostics-operations-2026-11-04.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。

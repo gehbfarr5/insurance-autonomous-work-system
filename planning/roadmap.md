@@ -1,5 +1,7 @@
 # 工作阶段与能力路线图
 
+> **P4当前运行门禁｜2026-11-03 19:08—19:10 CST：** MUSE新鲜读数显示Forest唯一Asia/Shanghai每日09:00任务下次11月4日、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live哈希与已记录值一致。随后经配置别名`pixel3a-kjgx`非root只读得到UID 10249、Pixel 3a/Android 15/boot完成、AutoX进程未见；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，因此没有设备写入或部署。11月3日prepare失败层定位到runner Activity/就绪轮询超时，底层原因未定。P4开放，S1未验收；[操作手册](forest-diagnostics-operations-2026-11-04.md)记录后续门禁。
+
 > **P4 prepare超时层级定位｜2026-11-03 19:02 CST：** 既有Forest对话中的脱敏摘要确认11月3日误触助理、调度助理及主流程均停在runner Activity/就绪标记轮询超时；三段最后均为MainActivity，没有业务阶段，清理PASS。assistant页面门禁未执行（`vueCheck`缺失），module登录态门禁未知。故障层已定位，底层就绪标记未到达的具体原因仍UNKNOWN；未读原始日志/业务state，也未访问设备。11月4日自然运行仍待观察。P4开放，S1未验收；细节见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。
 
 > **P4运行与规则来源继续核查｜2026-11-03 18:54—18:56 CST：** MUSE 18:54:37回读Forest仍空闲，下一触发11月4日09:00；run.py/assistant.py哈希不变，未读业务结果。附加Drive metadata-only四词组与CPIC官方域三词组检索均无直接规则结果；本次未命中不能证明原件不存在或从未确认。Pixel最近读数为18:48:55，设备操作锁仍UNKNOWN。P4/S1状态不变，详见[工作包](p4-wp01-forest-checkin.md)、[来源记录](remaining-work-2026-10-29.md)和[证据索引](remaining-work-evidence-2026-10-29.json)。

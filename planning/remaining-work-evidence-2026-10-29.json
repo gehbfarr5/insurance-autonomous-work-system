@@ -1636,5 +1636,47 @@
     },
     "interpretation": "The evidence localizes the stop to the runner Activity/readiness-marker polling timeout layer; it does not establish why readiness was not reached and is not a complete root-cause finding.",
     "actions": "No device access, raw-log or business-state read, code/job execution, file/deployment/schedule/cron change, or other-chat inspection."
+  },
+  "museReadonlyStatus20261103_190809": {
+    "readAt": "2026-11-03T19:08:09+08:00",
+    "schedule": {
+      "enabledCount": 1,
+      "time": "09:00:00",
+      "timezone": "Asia/Shanghai",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "otherChats": "UNKNOWN; not inspected.",
+    "businessResults": "Not reread.",
+    "actions": "No device connection, business-state read, code/job execution, file/deployment/schedule/cron change, or WP1/other-chat inspection."
+  },
+  "pixelReadonlyPreflight20261103_1910": {
+    "recordedAt": "2026-11-03T19:10:33+08:00",
+    "deviceReadTime": "Approx 19:10 CST; remote read commands were not individually timestamped.",
+    "transport": "Existing configured alias pixel3a-kjgx; alias resolution was verified locally, and the device connection used only this alias.",
+    "remoteUid": 10249,
+    "device": {
+      "model": "Pixel 3a",
+      "androidVersion": "15",
+      "timezone": "Asia/Shanghai",
+      "bootCompleted": true,
+      "autoxOrAutojsProcess": "NOT_FOUND"
+    },
+    "deviceOperationLock": "UNKNOWN; no documented non-root read command was present in the checked repository/runbook, and no path was guessed.",
+    "monitorStatusAndHash": "UNKNOWN; private status was not read through an undocumented path.",
+    "screenKeyguardAndForegroundActivity": "UNKNOWN; not read.",
+    "secureViewApkHash": "NOT_RECHECKED; last read at 2026-11-03 18:48:55 matched the known v0.19 artifact.",
+    "rootOrSuUsed": false,
+    "actions": "No business-state read, install/deploy, device write, process start/stop, code/job execution, or schedule change."
   }
 }

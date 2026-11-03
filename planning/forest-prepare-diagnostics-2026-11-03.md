@@ -1,5 +1,11 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 最新只读运行门禁｜2026-11-03 19:08—19:10 CST
+
+MUSE 19:08:09确认Forest唯一每日Asia/Shanghai 09:00调度下次11月4日09:00，running/queued/in-flight `0/0/false`，runner lock FREE，无Forest进程；`run.py`和`assistant.py`哈希仍分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败为11月3日09:11:17，上次成功10月31日09:15:50；本次未读业务结果或其他聊天。
+
+19:10经唯一配置别名`pixel3a-kjgx`非root只读确认UID 10249、Pixel 3a、Android 15、Asia/Shanghai、boot完成、AutoX/AutoJS进程未见。设备操作锁、monitor私有状态/hash为UNKNOWN；屏幕/Keyguard/Activity未读取；APK hash本次未复读。没有root/su、设备写入、候选部署或任务执行。设备操作锁缺有记录的非root读取路径，不能以18:22历史FREE替代，故不安装候选。
+
 ## 最新prepare失败层级审计｜2026-11-03 19:02 CST
 
 MUSE仅查本Forest对话中已存在的脱敏运行摘要，读取时间19:02:18 CST；未访问设备、未读业务state或原始日志、未运行代码/任务、未改文件/调度。

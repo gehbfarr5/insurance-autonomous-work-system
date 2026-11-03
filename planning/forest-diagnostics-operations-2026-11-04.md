@@ -2,7 +2,13 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 19:02 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 19:10 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### 最新MUSE/Pixel只读门禁｜2026-11-03 19:08—19:10 CST
+
+MUSE 19:08:09报告唯一Forest schedule每日09:00 Asia/Shanghai、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败11月3日09:11:17、上次成功10月31日09:15:50。该状态读数没有访问其他聊天或业务state。
+
+19:10通过唯一既有`pixel3a-kjgx`配置别名只读连接，远端`id -u`为10249；Pixel 3a、Android 15、时区Asia/Shanghai、boot completed；AutoX/AutoJS进程未见。当前设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity未读取，均为UNKNOWN；APK hash未在本次重读。未使用root/su、未部署/安装/启动/停止、未读写业务state或运行任务。由于缺少已记录的非root设备锁读取路径，保留UNKNOWN，不尝试猜路径；review-only observer未部署。自然运行前的设备写入/重启门禁仍未满足。
 
 ### 11月3日prepare失败层级审计｜2026-11-03 19:02 CST
 

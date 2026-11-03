@@ -1,5 +1,7 @@
 # 保险规划师自主工作系统
 
+> **P4最新运行门禁｜2026-11-03 19:08—19:10 CST：** MUSE 19:08:09只读确认Forest唯一每日09:00 Asia/Shanghai任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希仍与已记录值一致。19:10经唯一配置别名`pixel3a-kjgx`只读连接，非root UID 10249，Pixel 3a/Android 15、boot完成、时区Asia/Shanghai，未见AutoX/AutoJS进程。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity本次UNKNOWN；未重用18:22历史FREE值，故未部署observer或写设备。未读业务state、未跑业务/任务或改调度。11月3日故障层已定位到runner Activity/就绪标记轮询超时，具体未就绪原因仍未知；P4开放、S1未验收，等待11月4日自然观察。详见[运行手册](planning/forest-diagnostics-operations-2026-11-04.md)和[证据索引](planning/remaining-work-evidence-2026-10-29.json)。
+
 > **P4 prepare超时层级定位｜2026-11-03 19:02 CST：** 只读复核Forest旁聊中已有的三段脱敏摘要：08:57误触助理、09:00调度助理和主流程均止于runner的Activity/就绪标记轮询超时；三段最后都记录到MainActivity，未进入业务，cleanup PASS。助理`vueCheck`缺失，页面门禁没有被求值；module登录态门禁仍UNKNOWN。已定位失败层，不等于定位就绪标记未到达的底层原因；屏幕、Keyguard、登录字段与认证输入原因仍未知。未读原始日志或业务state、未访问设备或运行任务。下一步仍是11月4日自然运行后的有界只读观测。P4开放，S1未验收。详见[诊断检查点](planning/forest-prepare-diagnostics-2026-11-03.md)及[证据索引](planning/remaining-work-evidence-2026-10-29.json)。
 
 > **P4继续核查｜2026-11-03 18:54—18:56 CST：** MUSE在18:54:37再次确认Forest唯一每日Asia/Shanghai 09:00任务下次11月4日，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希与18:47相同，业务结果未重读。18:48:55是本轮最近Pixel只读值：Android 15、AutoX进程未见、APK匹配v0.19；设备操作锁/monitor内部状态仍UNKNOWN。新增4项Drive metadata-only和3项CPIC官方域词面查询均未找到可用规则原据；不代表原件不存在或历史上未确认。P4开放，S1未验收；11月4日自然观察待发生。详情见[证据索引](planning/remaining-work-evidence-2026-10-29.json)及[来源核查](planning/remaining-work-2026-10-29.md)。
