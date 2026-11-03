@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 04:58 CST：五段脱敏包的本机完整性与字段形态复核
+
+从已记录Downloads路径读取脱敏ZIP外层并重算SHA-256，与索引值一致（7,844 bytes）；核验包内5个分段JSON与`SHA256SUMS.txt`一致。五段`moduleArtifactSha256`事件共5个、仅一个不同值，并均匹配已知v0.19 APK pin。仅提取白名单状态、时间、marker类型、Activity类别、cleanup和缺失字段名称；未读`state-snapshot.json`或owner-token内容。11月2手动助理只在该五段中到达BridgeWebActivity，随后固定调用门禁失败且`NOT_SENT`；手动主流程为登录态门禁失败。11月3三段均在MainActivity超时（误触助理先经过Splash），两助理`NOT_SENT`，cleanup均PASS。五段`has_login_event:false`为实记，但字段级登录状态/采样时间与gesture/accountMatch缺失。摘要投影中两个main的`stages`为null；先前MUSE称raw键缺失，原始result文件未随包导出，故不能独立核实source key shape；维持UNKNOWN，不把null归一为空数组。记录：`nov3SanitizedPackageRecheck20261104_0458`。
+
 ## 2026-11-04 04:53—04:54 CST：MUSE composer与本机Pixel连接前置复核
 
 在MUSE精确Forest线程只读检查，最新助手状态仍为03:47:07。屏幕可见原composer中的旧状态查询尾部多出`READ`，发送控制可见；没有发送或编辑，因此未取得任何当前scheduler/deployment数据。03:47状态不作为当前并发门禁。当前时刻早于09:00自然轮。本机`ps -Ao pid,comm`按`ssh`可执行名筛查未返回匹配，未运行SSH、未查询ADB设备列表，也未连接Pixel；这只能说明本次本机进程快照未观察到SSH，不能证明Pixel离线。设备连接/锁、monitor/hash和UI仍UNKNOWN。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
@@ -115,12 +119,12 @@ Google Drive连接器以`require_viewed_by_user=true`、document metadata-only�
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
 
-By 00:36:49 CST, the existing thread returned a read-only readback of all three existing sanitized Nov 3 segment summaries; MUSE did not provide the underlying read time. Each segment stopped during prepare before business work. The two assistant segments recorded `has_login_event:false`, `stages:[]`, assistant `NOT_SENT`, and cleanup PASS; the main segment recorded `has_login_event:false`, a missing stages key (UNKNOWN), `pendingAction:null`, `automaticReplay:false`, and cleanup PASS. The per-field login guard, auth dispatch, gesturePage/accountMatch, and `user`/`empNoAES`/`operateFlag` presence and sample times are missing (UNKNOWN); the reason the ready marker did not arrive remains UNKNOWN. This refines the failure-stage evidence but does not establish a lower-level cause. Evidence: `nov3SanitizedSummaryReadback20261104_003649`. Keep the Nov 4 09:00 natural run and retrieve its same-run sanitized evidence first.
+By 00:36:49 CST, the existing thread returned a read-only readback of all three existing sanitized Nov 3 segment summaries; MUSE did not provide the underlying read time. Each segment stopped during prepare before business work. The two assistant segments recorded `has_login_event:false`, `stages:[]`, assistant `NOT_SENT`, and cleanup PASS; the main segment recorded `has_login_event:false`, `pendingAction:null`, `automaticReplay:false`, and cleanup PASS. MUSE’s readback described its stages key as missing; the later local sanitized projection contains `stages:null`. Because the original `result.json` bytes are unavailable, the raw key shape remains UNKNOWN. The per-field login guard, auth dispatch, gesturePage/accountMatch, and `user`/`empNoAES`/`operateFlag` presence and sample times are missing (UNKNOWN); the reason the ready marker did not arrive remains UNKNOWN. This refines the failure-stage evidence but does not establish a lower-level cause. Evidence: `nov3SanitizedSummaryReadback20261104_003649`. Keep the Nov 4 09:00 natural run and retrieve its same-run sanitized evidence first.
 
 
 ## 验收关口状态｜2026-11-04 00:36 CST
 
-MUSE元数据预检PASS（00:29:15；不代表Pixel设备锁/monitor已复核）；11月3日故障阶段定位PASS（仅到prepare等待层，marker未到的原因UNKNOWN）。00:36读回确认三段`has_login_event:false`为记录值；两段assistant的`stages:[]`、主流程stages键缺失（UNKNOWN）；逐字段guard/auth dispatch/gesture门禁及登录字段采样仍缺失。完整设备诊断与修复/集成BLOCKED；五项日常与五项扩展验收BLOCKED；规则原据PARTIAL；跨日/长期稳定性SUSPENDED。不得据此关闭P4或声明S1完成。关口细项见[交接表](p4-next-session-handoff.md)与`acceptanceGateStatus20261104_003649`。
+MUSE元数据预检PASS（00:29:15；不代表Pixel设备锁/monitor已复核）；11月3日故障阶段定位PASS（仅到prepare等待层，marker未到的原因UNKNOWN）。00:36读回确认三段`has_login_event:false`为记录值；两段assistant的`stages:[]`、MUSE当时报告主流程stages键缺失；本地脱敏投影为`stages:null`；原始`result.json`字节未提供，原始键形态仍UNKNOWN；逐字段guard/auth dispatch/gesture门禁及登录字段采样仍缺失。完整设备诊断与修复/集成BLOCKED；五项日常与五项扩展验收BLOCKED；规则原据PARTIAL；跨日/长期稳定性SUSPENDED。不得据此关闭P4或声明S1完成。关口细项见[交接表](p4-next-session-handoff.md)与`acceptanceGateStatus20261104_003649`。
 
 ## 官方规则短语定向检索｜2026-11-03 23:54—23:55 CST
 
@@ -204,7 +208,7 @@ MUSE在22:26:24只读回读Forest无活动任务，running/queued/in-flight为0/
 
 MUSE于21:58:28报告Forest无活动/排队/在途任务，唯一每日09:00调度下次11月4日09:00、runner lock FREE、无Forest进程，live run.py/assistant.py哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败09:11:17、最近成功10月31日09:15:50。22:00:18经`pixel3a-kjgx`以非root UID 10249只读确认Pixel 3a/Android 15、APK SHA匹配v0.19、AutoX/AutoJS进程未见。设备锁、monitor状态/hash、屏幕/Keyguard/Activity UNKNOWN。
 
-22:03:12 MUSE在原线程私有提供`run.py`，MUSE报告大小19,082、精确live SHA与单一runner文件身份匹配。代码通过MUSE附件查看器静态审阅；本机Downloads和`/tmp`无同名文件，故没有本机独立字节复算，也未把源码写入仓库或私有审计文件。prepare的70秒Activity/nonce marker等待、GestureActivity单次认证分支、`BLOCKED`/`NAVIGATED`分支与超时路径，与11月3日三段摘要相符：最后记录MainActivity、无BridgeWebActivity/NAVIGATED、stages为空。结论限于runner prepare等待层；未到assistant页面门禁，module login-state和底因UNKNOWN。源码含特权设备路径，本轮未执行。未连接设备读锁以外的私有状态，未改设备/业务/state/schedule，也未部署observer。
+22:03:12 MUSE在原线程私有提供`run.py`，MUSE报告大小19,082、精确live SHA与单一runner文件身份匹配。代码通过MUSE附件查看器静态审阅；本机Downloads和`/tmp`无同名文件，故没有本机独立字节复算，也未把源码写入仓库或私有审计文件。prepare的70秒Activity/nonce marker等待、GestureActivity单次认证分支、`BLOCKED`/`NAVIGATED`分支与超时路径，与11月3日三段摘要相符：最后记录MainActivity、无BridgeWebActivity/NAVIGATED、两段assistant的stages为空，主流程本地投影为`stages:null`且原始键形态UNKNOWN。结论限于runner prepare等待层；未到assistant页面门禁，module login-state和底因UNKNOWN。源码含特权设备路径，本轮未执行。未连接设备读锁以外的私有状态，未改设备/业务/state/schedule，也未部署observer。
 
 ## 精确live源码映射与最新运行预检｜2026-11-03 21:45—21:47 CST
 

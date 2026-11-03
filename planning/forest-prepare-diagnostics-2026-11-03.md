@@ -70,7 +70,7 @@ MUSE在既有Forest线程00:47:37只读确认当时无活动任务、running/que
 
 MUSE在既有Forest线程报告live `run.py`附件19,082字节，SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`，身份唯一、私有附件。代码通过MUSE附件查看器静态审阅；本机Downloads和`/tmp`未找到同名文件，因此没有独立本机字节复算。未执行、规范化或修改源码。
 
-源码显示`prepare()`最多轮询70秒：记录变化的resumed Activity、搜索nonce匹配的模块准备事件；仅在Activity名包含`GestureActivity`且尚未触发时调用一次认证入口。模块`BLOCKED`会直接停止；`NAVIGATED`才进入`wait_ready()`；等待结束仍无上述状态时抛出`PREPARE_TIMEOUT_NO_FALLBACK`。11月3日三段脱敏摘要的最后Activity均为MainActivity，无BridgeWebActivity或NAVIGATED记录、stages为空、cleanup PASS。结合该分支，直接证据将失败定位到runner prepare等待层；assistant Vue gate在`prepare()`返回前不运行，故`vueCheck`缺失；module登录态gate没有BLOCKED证据，仍UNKNOWN。
+源码显示`prepare()`最多轮询70秒：记录变化的resumed Activity、搜索nonce匹配的模块准备事件；仅在Activity名包含`GestureActivity`且尚未触发时调用一次认证入口。模块`BLOCKED`会直接停止；`NAVIGATED`才进入`wait_ready()`；等待结束仍无上述状态时抛出`PREPARE_TIMEOUT_NO_FALLBACK`。11月3日三段脱敏摘要的最后Activity均为MainActivity，无BridgeWebActivity或NAVIGATED记录；两段assistant摘要的`stages`为空，主流程本地投影为`stages:null`（MUSE此前报告原键缺失），但原始字节未提供，键形态仍UNKNOWN；cleanup PASS。结合该分支，直接证据将失败定位到runner prepare等待层；assistant Vue gate在`prepare()`返回前不运行，故`vueCheck`缺失；module登录态gate没有BLOCKED证据，仍UNKNOWN。
 
 源码没有说明为何Activity/marker未抵达。屏幕/Keyguard/前台细节、GestureActivity是否在未记录瞬间短暂出现、认证是否触发、设备锁和monitor状态均未知。源码还包含特权`su`设备路线，本轮按非root边界未执行或尝试复用。下步保留09:00自然任务并只读取同轮脱敏证据，不通过放宽门禁、重试业务或安装观察器来弥补。
 

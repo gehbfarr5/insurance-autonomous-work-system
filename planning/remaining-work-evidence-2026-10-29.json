@@ -5287,5 +5287,23 @@
     "finding": "A filter for an executable named ssh returned no matching process. No command arguments were retained.",
     "limit": "This does not establish Pixel reachability or disconnection. No alias connection or device/ADB query occurred; Pixel connectivity, operation lock, monitor/hash, and UI remain UNKNOWN.",
     "actions": "Local read-only process inventory only; no credentials or endpoints recorded."
+  },
+  "nov3SanitizedPackageRecheck20261104_0458": {
+    "recordedAt": "2026-11-04T04:58:02+08:00",
+    "source": "Local offline review of the existing sanitized five-segment evidence ZIP and its SHA256SUMS manifest.",
+    "package": {
+      "bytes": 7844,
+      "outerSha256": "56e7280ee48f41cbad2d74e10d4a61c3d051a2e7831074d35a9e1de18e2cbe02",
+      "segmentJsonFiles": 5,
+      "segmentJsonHashesMatchManifest": true
+    },
+    "artifactMarkers": {
+      "count": 5,
+      "allMatchKnownV019ApkPin": true
+    },
+    "safeProjection": "Nov 2 manual assistant reached BridgeWebActivity before the fixed-entry gate stopped it; question NOT_SENT and cleanup PASS. Nov 2 manual main flow stopped at MainActivity with PREPARE_LOGIN_STATE_MISSING. Nov 3 accidental assistant recorded Splash then MainActivity; the scheduled assistant and main flow recorded MainActivity; all three timed out during prepare. Both assistant questions were NOT_SENT; all three Nov 3 cleanup records were PASS. All five segments explicitly recorded has_login_event:false.",
+    "stagesSemantics": "Both main-flow sanitized projections contain stages:null; prior MUSE readback described the raw key as absent. The original result.json bytes are not in the ZIP, so raw key shape cannot be independently verified. Preserve UNKNOWN, not an empty list.",
+    "unknowns": "Per-field user/empNoAES/operateFlag booleans and sample times, gesturePage, accountMatch, and lower-level ready-marker cause remain UNKNOWN.",
+    "actions": "Read only SHA256SUMS.txt and the five sanitized segment JSON members. Did not read state-snapshot.json, operation-owner.json, raw result files, business state, raw logs, or private credentials; no device, MUSE message, code, or job was accessed or changed."
   }
 }

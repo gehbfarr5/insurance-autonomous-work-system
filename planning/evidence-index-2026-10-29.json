@@ -384,6 +384,13 @@
       "source": "Local macOS process-name inventory only; no SSH or ADB device query",
       "summary": "A filter for an executable named ssh returned no matching process. No command arguments were retained. This does not establish Pixel reachability or that the device is disconnected.",
       "scopeLimit": "No SSH connection, alias command, ADB device-list query, or device read occurred. Pixel connectivity, operation lock, monitor, and UI remain UNKNOWN; no credentials or endpoints were recorded."
+    },
+    {
+      "recordKey": "nov3SanitizedPackageRecheck20261104_0458",
+      "observedAt": "2026-11-04T04:58:02+08:00",
+      "source": "Local offline review of the existing sanitized five-segment evidence ZIP and its SHA256SUMS manifest.",
+      "summary": "Both main-flow sanitized projections contain stages:null; prior MUSE readback described the raw key as absent. The original result.json bytes are not in the ZIP, so raw key shape cannot be independently verified. Preserve UNKNOWN, not an empty list. Five segment JSON hashes matched the package manifest; all five module artifact markers matched the known v0.19 APK pin.",
+      "scopeLimit": "Read only SHA256SUMS.txt and the five sanitized segment JSON members. Did not read state-snapshot.json, operation-owner.json, raw result files, business state, raw logs, or private credentials; no device, MUSE message, code, or job was accessed or changed. Original raw result key shape, per-field login values/times, gesture/account-match, and lower-level marker cause remain UNKNOWN."
     }
   ]
 }

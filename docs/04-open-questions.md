@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 04:58 CST：复核五段脱敏运行包并校准stages语义
+
+本机重算已下载Nov 2–3脱敏ZIP外层SHA-256与记录值一致；5个分段JSON均与包内SHA256SUMS匹配。5个`moduleArtifactSha256`事件均一致且匹配v0.19 APK pin。安全字段复核显示：Nov 2手动助理为MainActivity→BridgeWebActivity后固定入口门禁阻断、`NOT_SENT`；手动主流程停MainActivity并报`PREPARE_LOGIN_STATE_MISSING`。Nov 3误触助理为Splash→Main、调度助理和主流程均只记录MainActivity，准备超时，助理`NOT_SENT`；三段cleanup PASS。所有段明确记录`has_login_event:false`，但逐字段`user`/`empNoAES`/`operateFlag`布尔值与时间、`gesturePage`/`accountMatch`仍缺。脱敏投影中两个主流程`stages:null`；因原始`result.json`字节未随包提供，不能独立确认原始键形态；保持UNKNOWN，不改写为空列表。未读state-snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。
+
 ## 2026-11-04 04:54 CST：MUSE状态刷新仍受旧草稿阻断
 
 04:53—04:54对精确Forest线程做只读截图复核，最新回复仍为03:47:07，composer仍保留末尾多出`READ`的旧请求，发送按钮可见。没有发送或改写草稿，因而不能取得当前scheduler/queue/in-flight、runner lock或live哈希；这些仍为UNKNOWN。09:00自然运行尚未到时。macOS本机可执行文件名筛查未发现`ssh`进程，但未查询设备，Pixel连接状态仍UNKNOWN。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
@@ -245,7 +249,7 @@ CPIC公开材料只提供历史功能背景：[2022年太保文章](https://cpic
 
 21:58:28 MUSE在既有Forest线程报告无活动任务，唯一启用任务仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程。live `run.py`/`assistant.py` SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败仍为11月3日09:11:17，最近成功10月31日09:15:50。22:00:18经既有`pixel3a-kjgx`以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS，SecureView APK SHA匹配v0.19；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。
 
-22:03:12 MUSE在同一线程提供live `run.py`私有附件，报告字节大小19,082、SHA-256与live pin完全匹配、runner目录身份唯一且无公开链接。代码在MUSE附件查看器中静态审阅；本机Downloads和`/tmp`均未找到同名下载文件，故本轮没有独立本机复算字节hash。源码显示prepare在最多70秒内轮询resumed Activity及nonce匹配的模块标记；仅当Activity包含`GestureActivity`且尚未触发时调用一次认证入口，收到`BLOCKED`即停，收到`NAVIGATED`才进入后续页面就绪等待，否则以`PREPARE_TIMEOUT_NO_FALLBACK`结束。它支持将11月3日三段失败定位到runner prepare/Activity与标记等待层；三个既有脱敏摘要最后记录MainActivity，未记录BridgeWebActivity或NAVIGATED，stages为空，故assistant Vue页面门禁未运行，module登录态门禁结果仍UNKNOWN。未就绪原因、屏幕/Keyguard、认证是否触发及更底层原因均未被该证据解释。源码含特权`su`设备路径；按非root约束不运行、不复用。未执行源码、任务或业务，没有设备写入、部署、状态或调度更改。
+22:03:12 MUSE在同一线程提供live `run.py`私有附件，报告字节大小19,082、SHA-256与live pin完全匹配、runner目录身份唯一且无公开链接。代码在MUSE附件查看器中静态审阅；本机Downloads和`/tmp`均未找到同名下载文件，故本轮没有独立本机复算字节hash。源码显示prepare在最多70秒内轮询resumed Activity及nonce匹配的模块标记；仅当Activity包含`GestureActivity`且尚未触发时调用一次认证入口，收到`BLOCKED`即停，收到`NAVIGATED`才进入后续页面就绪等待，否则以`PREPARE_TIMEOUT_NO_FALLBACK`结束。它支持将11月3日三段失败定位到runner prepare/Activity与标记等待层；三个既有脱敏摘要最后记录MainActivity，未记录BridgeWebActivity或NAVIGATED，两段assistant摘要的stages为空，主流程本地投影为`stages:null`且原始键形态UNKNOWN；故assistant Vue页面门禁未运行，module登录态门禁结果仍UNKNOWN。未就绪原因、屏幕/Keyguard、认证是否触发及更底层原因均未被该证据解释。源码含特权`su`设备路径；按非root约束不运行、不复用。未执行源码、任务或业务，没有设备写入、部署、状态或调度更改。
 
 执行选择：不放宽Activity/页面门禁、不重试业务、不安装任何observer；保留既有09:00调度，下一自然轮只读收集同轮脱敏prepare事件、结果与cleanup。设备写入继续受操作锁UNKNOWN阻断；若没有精确、既有的非root只读读取方法，锁继续记UNKNOWN。规则来源补查仍未找到当前任务规则直接原件：限定Drive metadata搜索未返回匹配文档（“官方时点”仅命中无关PDF元数据且未打开），CPIC官方域搜索未命中任务/奖励规则；不能据此推断原件不存在、历史未确认、重置周期或资格。
 

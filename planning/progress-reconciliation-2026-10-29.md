@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 04:58 CST：五段运行脱敏证据本机复核
+
+已重算Nov 2–3脱敏ZIP外层哈希并核对5个分段JSON内部SHA；所有五段`moduleArtifactSha256`事件匹配v0.19 APK pin。对照结果与现有阶段判断一致：Nov 2助理到BridgeWebActivity后固定方法/菜单门禁失败、`NOT_SENT`，主流程停MainActivity且登录态门禁失败；Nov 3误触助理经历Splash→Main，调度助理与主流程止于MainActivity并prepare超时，助理`NOT_SENT`，三段cleanup PASS。所有段`has_login_event:false`是明确布尔记录；逐字段登录状态/时点与gesture/accountMatch仍缺。两段主流程的本地摘要投影将`stages`置为null，而MUSE此前报告raw键缺失；原始result字节不在ZIP，无法独立判定其原始键形态，统一保持UNKNOWN。未打开state snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。
+
 ## 2026-11-04 04:54 CST：自然轮前MUSE并发门禁仍UNKNOWN
 
 约04:53—04:54对精确Forest线程做只读截图，仍只有03:47:07状态回复；旧的畸形查询仍在composer，末尾多一个`READ`。无发送或草稿修改，因此当前调度/队列/在途、runner lock与live hashes为UNKNOWN。09:00运行尚未到时。本机进程名扫描没有发现`ssh`，但未访问Pixel，连接状态仍UNKNOWN。P4继续开放，不重放或放宽门禁。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
@@ -106,7 +110,7 @@ MUSE在22:26:24读回无活动/排队/在途任务、runner lock FREE，09:00 sc
 
 ## 2026-11-03 22:03 CST：补充live runner附件核对及最新只读预检
 
-21:58:28 MUSE只读状态仍为空闲，唯一每日09:00任务下次11月4日，队列/在途为0，runner lock FREE，live哈希及最近调度结果未变。22:00:18 Pixel经既有别名以UID 10249非root读取；设备、APK和进程状态见结构化证据，设备锁和私有monitor/屏幕状态UNKNOWN。22:03:12 MUSE确认live `run.py`私有附件大小19,082、hash与当前live pin一致。MUSE附件查看器静态审阅表明prepare最多等70秒，只有收到`NAVIGATED`才继续；11月3日三个分段均以`PREPARE_TIMEOUT_NO_FALLBACK`结束且stages为空，因此assistant页面门禁未运行，底因及module登录态仍未知。本机没有同名下载副本，无本机字节复算；源码未执行。runner内特权设备路径不符合当前非root限制，未复用。
+21:58:28 MUSE只读状态仍为空闲，唯一每日09:00任务下次11月4日，队列/在途为0，runner lock FREE，live哈希及最近调度结果未变。22:00:18 Pixel经既有别名以UID 10249非root读取；设备、APK和进程状态见结构化证据，设备锁和私有monitor/屏幕状态UNKNOWN。22:03:12 MUSE确认live `run.py`私有附件大小19,082、hash与当前live pin一致。MUSE附件查看器静态审阅表明prepare最多等70秒，只有收到`NAVIGATED`才继续；11月3日三个分段均以`PREPARE_TIMEOUT_NO_FALLBACK`结束；两段assistant摘要的stages为空，主流程本地投影为`stages:null`但原始键形态UNKNOWN；因此assistant页面门禁未运行，底因及module登录态仍未知。本机没有同名下载副本，无本机字节复算；源码未执行。runner内特权设备路径不符合当前非root限制，未复用。
 
 规则补查仅限指定Drive metadata和CPIC官方域词面查询，未找到森林任务/奖励规则直接原件；一个“官方时点”结果为无关PDF元数据且未打开。该搜索不证明原件不存在或历史未确认。无业务重放、设备写入、observer部署或调度更改；11月4日自然结果/回执仍待。
 

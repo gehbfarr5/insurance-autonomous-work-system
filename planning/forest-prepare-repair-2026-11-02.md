@@ -1,5 +1,9 @@
 # 11月2日准备阻断修复与单次补跑记录｜2026-11-02
 
+## 2026-11-04 04:58 CST：重核历史五段脱敏包
+
+脱敏ZIP外层校验和匹配既有索引；五个分段JSON各自匹配内部SHA清单。5个模块artifact事件都匹配v0.19 APK pin。重新提取到的状态与已记录对照一致：11月2手动助理Main→BridgeWeb后因入口固定门禁失败、未发送；手动主流程停MainActivity并阻断于登录态。11月3三段都只到MainActivity（误触助理先有Splash）并超时，助理NOT_SENT，cleanup PASS。五段`has_login_event:false`为实记；字段级登录布尔值/时间、gesturePage/accountMatch均缺。摘要投影将两段main的`stages`记为null；此前MUSE报告raw键缺失，但源result字节未包含，无法在本机确认其原键形态，仍按UNKNOWN、不等同空数组。未读取state snapshot或owner token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。
+
 ## 2026-11-04 04:54 CST：自然运行前不具备刷新/设备门禁
 
 MUSE精确Forest线程仍只显示03:47:07状态；composer保留尾部多出`READ`的旧请求。没有发消息或改动草稿，故当前调度、运行队列/在途、runner lock与live哈希均UNKNOWN，不能把旧FREE快照当并发保证。本机`ssh`进程名筛查未发现匹配，但没有设备查询，Pixel连接与设备锁、monitor/hash、屏幕/Keyguard/Activity仍UNKNOWN。09:00自然轮尚未来到；不部署诊断候选、不重放、不改门禁或调度。证据：`museComposerRevalidation20261104_0454`、`pixelLocalAliasProcessCheck20261104_0454`。
