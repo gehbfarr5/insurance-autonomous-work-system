@@ -1,5 +1,13 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 03:29–03:32 CST — current status and bounded Pixel preflight
+
+At 03:29:58, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and one enabled daily 09:00 Asia/Shanghai schedule due at 09:00 today. The live runner/assistant hashes and latest scheduler failure/success timestamps were unchanged.
+
+After that fresh no-in-flight check, the existing `pixel3a-kjgx` alias returned non-root UID 10249, Pixel 3a, Android 15, Asia/Shanghai, boot complete, and device time 03:31:59. The first `ps -A -o UID,NAME` attempt exited 1 because Android did not support that output format; it yielded no valid process observation. The corrected `ps -A` filter for `autox|autojs|secureview|org.autojs` returned no matching lines, a limited filter result only. SecureView base APK SHA-256 matches the known v0.19 pin; the corrected query finished before local time 03:32:23, with no command-level device timestamp captured.
+
+The documented device-lock marker was last absent at 02:53:06 and was not re-read. Overall Pixel operation lock, monitor state/hash, screen, Keyguard, and foreground Activity remain UNKNOWN; no verified non-root private-data path is available. No business state/raw logs, code/job execution, app action, device write, install/restart, deployment or schedule change occurred. Keep the 09:00 natural run; afterward refresh MUSE and inspect only its sanitized same-run evidence and independent receipts. Device stop/rollback remains BLOCKED. P4 stays open; S1 is not accepted. Evidence: `museReadonlyStatus20261104_032958`, `pixelReadonlyPreflight20261104_033159`, `pixelProcessFormatFailure20261104_0331`, `pixelProcessFilter20261104_0332`.
+
 ## 2026-11-04 03:26 CST — in-thread timing-source pointer remains UNKNOWN
 
 At 03:26:29 CST, the read-only reply in the exact existing Sunshine Forest MUSE thread reports the official source title/URL, the date/time cited by a source, and any existing in-thread message/document pointer as UNKNOWN. This is limited to the reviewed history of that thread and does not confirm or refute D-029; the reply supplied no inferred reset value, time, eligibility, cycle, or trigger. Its own response timestamp is UNKNOWN. No other chat, MUSE resource, web, Drive, filesystem, device, business state/log, code/job, file, or schedule was accessed or changed. This check did not refresh scheduler/device gates. Evidence: `museThreadHistoryPointerReview20261104_0326`.

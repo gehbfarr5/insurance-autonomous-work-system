@@ -1,5 +1,14 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 03:29—03:32 CST：自然轮前MUSE状态与有限Pixel读取
+
+- **MUSE：** 03:29:58无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、未观察到Forest进程；唯一每日09:00 Asia/Shanghai schedule仍启用，下次今日09:00。live哈希及最近失败/成功时点未变。
+- **Pixel：** 新鲜MUSE读数后，经既有alias以非root确认UID 10249、Pixel 3a、Android 15、Asia/Shanghai、boot完成、设备时钟03:31:59。首次`ps -A -o UID,NAME`格式不支持、退出1，没有进程观察；修正的`ps -A`窄过滤无匹配，SecureView APK匹配v0.19 pin。
+- **未知与限制：** 锁marker最后于02:53:06未发现，本轮未重读。整体设备操作锁、monitor/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；无已验证非root私有数据路径。不得把MUSE runner lock或有限进程过滤当作设备锁/monitor读数；停止/回滚仍BLOCKED。
+- **下一步：** 保留既有09:00自然轮；结束后先刷新MUSE，再读取同轮脱敏结果及独立回执。不得重放、使用root/`su`、读业务state/raw logs或写设备。
+
+结构化记录：`museReadonlyStatus20261104_032958`、`pixelReadonlyPreflight20261104_033159`、`pixelProcessFormatFailure20261104_0331`、`pixelProcessFilter20261104_0332`。
+
 ## 2026-11-04 03:04 CST：Android诊断权限边界
 
 Android 15 AOSP框架清单将android.permission.DUMP标为signature/privileged/development，并注明不供第三方应用使用；Android官方文档给出的dumpsys入口是adb shell。现有Pixel SSH UID的实际DUMP授权未核，未运行dumpsys或ADB探针。不能假定应用式SSH会话可以读取系统转储；屏幕、Keyguard和前台Activity继续记UNKNOWN，不切换访问通道或授予权限。这是诊断访问约束，不是森林故障根因。证据：androidDumpPermissionReview20261104_030429。[Android 15 AOSP清单](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934)；[Android dumpsys文档](https://developer.android.com/tools/dumpsys)。

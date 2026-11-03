@@ -203,6 +203,34 @@
       "source": "Existing Sunshine Forest MUSE thread, read-only history and attachment pointer review",
       "summary": "The reviewed reply reports the exact official source title or URL as UNKNOWN, source-cited date/time as UNKNOWN, and existing in-thread message/document pointer as UNKNOWN. This means no exact pointer was found in the reviewed history of this thread; the reply explicitly does not confirm or refute D-029 and supplies no inferred reset value, time, eligibility, cycle, or trigger.",
       "scopeLimit": "Limited to prior messages and attachments in the exact existing Sunshine Forest thread. No external web, Drive, other chats, other MUSE resources, filesystem, device, business-state/log, code/job, file, or schedule access/change. Does not establish source absence, negate D-029, or refresh scheduler/device gates."
+    },
+    {
+      "recordKey": "museReadonlyStatus20261104_032958",
+      "observedAt": "2026-11-04 03:29:58 Asia/Shanghai",
+      "source": "Existing Sunshine Forest MUSE thread, read-only scheduler/deployment status refresh",
+      "summary": "No active Forest task; running/queued/in-flight 0/0/false; MUSE runner lock FREE; no Forest process observed. The unique enabled schedule remains daily 09:00 Asia/Shanghai, next trigger 2026-11-04 09:00:00. Live run.py SHA-256 de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562; assistant.py SHA-256 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c. Latest scheduler result remains 2026-11-03 09:11:17 failed; last success remains 2026-10-31 09:15:50.",
+      "scopeLimit": "Read-only scheduler/deployment metadata only. Does not establish Pixel device lock, monitor state/hash, screen, Keyguard, foreground Activity, business state, or same-run completion. No schedule or task change."
+    },
+    {
+      "recordKey": "pixelReadonlyPreflight20261104_033159",
+      "observedAt": "2026-11-04 03:31:59 Asia/Shanghai (device clock reported by the existing alias)",
+      "source": "Existing pixel3a-kjgx SSH alias, non-root read-only preflight after the fresh MUSE check",
+      "summary": "UID 10249; Pixel 3a; Android 15; timezone Asia/Shanghai; sys.boot_completed=1; device clock 2026-11-04 03:31:59. The command then attempted an unsupported ps output format and returned exit status 1; that process portion produced no valid observation and is separately recorded as pixelProcessFormatFailure20261104_0331.",
+      "scopeLimit": "Basic identity/boot/time only. No root/su, business-state or raw-log read, task/code execution, app launch/stop, device write, install/restart, deployment or schedule change. Device operation lock, monitor state/hash, screen, Keyguard, and foreground Activity remain UNKNOWN."
+    },
+    {
+      "recordKey": "pixelProcessFormatFailure20261104_0331",
+      "observedAt": "2026-11-04 03:31 CST (within the preflight command; exact failure time unavailable)",
+      "source": "Existing pixel3a-kjgx alias, attempted ps -A -o UID,NAME read-only process query",
+      "summary": "Android ps rejected the requested UID user-defined format specifier and the command exited 1. This attempt yielded no valid process observation; it is not evidence that any process was absent or present.",
+      "scopeLimit": "Read-only query failure only. A corrected supported ps -A query was run separately and is recorded under pixelProcessFilter20261104_0332."
+    },
+    {
+      "recordKey": "pixelProcessFilter20261104_0332",
+      "observedAt": "Completed after device clock read 03:31:59 and before local clock read 03:32:23 Asia/Shanghai; exact device command timestamp unavailable",
+      "source": "Existing pixel3a-kjgx alias, corrected non-root ps -A and installed APK hash read",
+      "summary": "Corrected ps -A output filtered for autox|autojs|secureview|org.autojs returned no matching lines. This is limited to those process-name patterns and is not proof that all processes or the monitor are absent/stopped. The installed com.p4.secureview base APK SHA-256 was dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167, matching the known v0.19 pin. The corrected command exited 0.",
+      "scopeLimit": "No overall device-lock or monitor read. The exact documented operation-lock marker was last checked absent at 02:53:06, not re-read in this checkpoint because no verified non-root private-data path is available. Overall device operation lock, monitor state/hash, screen, Keyguard, and foreground Activity remain UNKNOWN. No root/su, business-state/raw-log read, task/code execution, app action, device write, install/restart, deployment or schedule change."
     }
   ]
 }
