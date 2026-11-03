@@ -1,6 +1,6 @@
 # MUSE family-card OCR package
 
-Version 0.13.0 candidate (`VALIDATION_PENDING`); it is not approved for production. The active MUSE runtime version/hash and the source-to-deployment binding remain UNKNOWN. The 0.13.0 candidate requires an explicit `address_book_id` in a confirmed draft and routes the local create path through the strict shared serializer. The ID is checked for presence and control characters; address-book discovery, MUSE UI wiring, and live runtime binding remain unverified. This package carries the full-image OCR and iCloud parameter adapters, the WP6-C Bearer helper, the WP7 query-parameter Access Token helper, the WP11 table-layout parser, and strict adapters for the existing Seoul OCR response. It does not implement an undocumented MUSE Secure Vault API and makes no Baidu API calls. Tests use Mock transports and synthetic OCR blocks only; no real MCP tool or iCloud operation is invoked.
+Version 0.13.0 candidate (`VALIDATION_PENDING`); it is not approved for production. The active MUSE runtime version/hash and the source-to-deployment binding remain UNKNOWN. The 0.13.0 candidate requires an explicit `address_book_id` in a confirmed draft and routes the local create path through the strict shared serializer. The ID is checked for presence and control characters; address-book discovery, MUSE UI wiring, and live runtime binding remain unverified. The WP6-C Bearer and WP7 query-token helpers are retained historical/testable package adapters; they are not the current MUSE OCR route. WP8-B reports MUSE calling the existing Seoul OCR service. The active MUSE runtime and Seoul deployment are not bound to this repository, so this reported workflow is not independently verified as the current production deployment. This package carries the full-image OCR and iCloud parameter adapters, historical WP6/WP7 helper code, the WP11 table-layout parser, and strict adapters for the Seoul OCR response. It does not implement an undocumented MUSE Secure Vault API. Offline tests use Mock transports and synthetic OCR blocks only; they invoke no provider, real MCP tool, or iCloud operation.
 
 ## End-to-end architecture and release state
 
@@ -46,15 +46,15 @@ The previous mandatory `PrivacyMaskResult` gate has been removed. A caller must 
 
 When called, the package sends the complete image representation after EXIF orientation, size normalization, and JPEG encoding. It does not crop or mask regions. The tool therefore must only be called after the complete-image authorization applies. It accepts JPEG/PNG bytes or paths confined to `~/workspace/user/files` by default. HEIC remains unsupported.
 
-## OCR authentication modes
+## Historical direct-to-Baidu adapter experiments (WP6-C/WP7-A; not the current route)
 
-The production integration target for this branch is Baidu's legacy `access_token` query authentication. Construct `BaiduOcrClient` with `auth_mode="query_param:access_token"` and inject a `SecureQueryParamAccessTokenConnector`. The request uses the fixed HTTPS handwriting endpoint without a query string; the connector supplies the single `access_token` query parameter from protected storage. Python never receives, reads, caches, or logs the token, and it never reads `BAIDU_OCR_AK`, `BAIDU_OCR_SK`, or any production credential.
+WP7-A experimented with Baidu's legacy `access_token` query authentication through a package-owned connector port and mocks. It did not establish a live MUSE connector contract. It is not the current Family Card architecture: WP8-B reports MUSE calling the existing Seoul OCR service. Keep these adapter examples for compatibility and isolated package tests only; do not route the current MUSE workflow directly to Baidu.
 
-`BaiduOcrClient` keeps `auth_mode="bearer"` as the backward-compatible default so WP6-C callers and tests continue to work. New MUSE production wiring should explicitly select `query_param:access_token`; no silent fallback between modes is implemented.
+`BaiduOcrClient` keeps `auth_mode="bearer"` as a backward-compatible default for WP6-C compatibility tests. `query_param:access_token` remains an isolated WP7 adapter mode. Neither mode is the documented current MUSE workflow; no direct-to-Baidu production route is verified or authorized by this package.
 
-The package does not obtain or refresh the Access Token. MUSE's secured connector or another approved secure control plane must provide a valid token and own its expiry/refresh lifecycle. The existing historical AK/SK pair is not an Access Token and is never consumed by this package. A stale or unauthorized token surfaces as a classified authentication error.
+In this historical WP7 adapter mode, the package does not obtain or refresh the Access Token. Any future approved use would require a documented secure control plane to provide the token and own its expiry/refresh lifecycle. The existing historical AK/SK pair is not an Access Token and is never consumed by this package. A stale or unauthorized token surfaces as a classified authentication error.
 
-### Backward-compatible Bearer example
+### Historical WP6-C Bearer example (compatibility/test path only)
 
 ```python
 from muse_customer_card_ocr import (
@@ -81,7 +81,7 @@ contact_draft = map_to_icloud_fields(extraction)
 # `contact_draft` is a canonical projection only. No MCP write is performed.
 ```
 
-### WP7 Access Token route
+### Historical WP7 Access Token adapter example (not the current MUSE path)
 
 Use the dedicated adapter and mode explicitly:
 
@@ -100,9 +100,9 @@ client = BaiduOcrClient(
 )
 ```
 
-The client retains Baidu's `recognize_granularity=small` and `probability=true` parameters, response blocks, available coordinates, line confidence, character candidates, and safe service/request IDs. Errors expose categories and status codes, not response bodies. It has no internal logger, and OCR text, request bodies, and response bodies are excluded from object `repr` output. MUSE must keep transport-level HTTP debug logs off because helper-level traces could expose request details.
+The client retains Baidu's `recognize_granularity=small` and `probability=true` parameters, response blocks, available coordinates, line confidence, character candidates, and safe service/request IDs. Errors expose categories and status codes, not response bodies. It has no internal logger, and OCR text, request bodies, and response bodies are excluded from object `repr` output. Any separate test of this historical adapter must also keep transport-level HTTP debug logs off; this does not describe verified active MUSE behavior.
 
-## Fixed Baidu helper and Python connector adapters
+## Historical Baidu helper implementations (package tests only; no verified MUSE contract)
 
 `muse_baidu_helper.py` and `muse_secure_connector.py` add a testable package-owned boundary:
 
@@ -120,7 +120,7 @@ The client retains Baidu's `recognize_granularity=small` and `probability=true` 
 - HTTP error/redirect bodies are discarded. Timeouts map to the package timeout class; transport exceptions map to a safe network failure. Stdio remains bounded and carries only the form body and structured response envelope.
 - Each OCR request timeout is capped at 60 seconds; the optional subprocess wrapper allows a separate 5-second exit grace without increasing the provider request timeout.
 
-`BaiduSecureHttpTransport`, `BaiduQueryParamHttpTransport`, `StdioHelperInvoker`, and both JSON stdio envelopes are package-owned interfaces, not documented MUSE helper APIs. Before MUSE use, bind the documented custom connector to `BaiduQueryParamHttpTransport` or the stdio adapter and verify the MUSE side enforces the fixed endpoint, exact query key, redirect prohibition, limits, token expiry behavior, and log redaction. WP6-C Bearer remains available as a compatibility path. Tests prove local package behavior only; they do not prove MUSE has these capabilities.
+`BaiduSecureHttpTransport`, `BaiduQueryParamHttpTransport`, `StdioHelperInvoker`, and both JSON stdio envelopes are package-owned interfaces, not documented MUSE helper APIs. The current Family Card route uses the existing Seoul OCR service per the WP8-B stage report. These direct-to-Baidu helper adapters are not wired into that reported route and have no verified active-runtime binding. Tests prove local package behavior only; they do not prove MUSE has these capabilities.
 
 ## Field extraction and review gates
 
@@ -161,39 +161,22 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 
 Tests use generated fictional images, OCR payloads, Mock Vault placeholder substitution, and a Mock `contacts_create` invoker. They cover both authentication adapters, the single mock `access_token` query parameter, fixed helper endpoint, stdin body transfer, redirect prohibition, size/timeout bounds, safe error classification, no sensitive stdout/stderr, image processing, structure parsing, field extraction, ID/birthday review gates, iCloud field projection, explicit address-book selection, and omitted optional fields. They make no network calls.
 
-## MUSE integration checklist
+## Current MUSE integration and release checklist (WP8-B through WP11)
 
-1. Check out `codex/wp11-family-card-table-parser-20261103` and run the complete offline suite in an isolated venv first.
-2. Obtain MUSE's real Secure Vault/custom connector documentation and map it to the package-owned `BaiduQueryParamHttpTransport` / `StdioHelperInvoker` seam. Do not infer a MUSE helper function name, stdin shape, placeholder syntax, or credential API from these local protocols.
-3. Configure the MUSE-side connector for `query_param:access_token`; it must add only the `access_token` parameter outside Python, restrict the allowed HTTPS host/path/method, disable redirects, enforce body and timeout bounds, return structured status/body data, and suppress URL/query/token and OCR request/response logs. Confirm how the connector obtains and refreshes the Access Token. Keep it mocked until these properties are documented and verified.
-4. A real Baidu call would send a complete image. Perform none until the authorized MUSE workflow, connector, quota/cost, token lifecycle, and separate API-test approval are ready. Any first API test must use a generated fictional image only.
-5. The caller owns the attachment lifecycle. This package reads but does not delete or persist the MUSE attachment, OCR text, or temporary files. Keep OCR text transient and out of ordinary logs, traces, and long-term Agent memory.
-6. Do not pass `full_image_authorized=True` based only on tool visibility. The calling workflow must ensure the complete-image authorization is applicable to the submitted photo.
+1. Keep the reported route MUSE upload → existing Seoul OCR service → OCR response parsing. Do not connect the current Family Card workflow directly to Baidu through the historical WP6/WP7 helpers.
+2. Treat WP8-B and WP9 as prior stage reports, not current independent production verification. Bind the active MUSE runtime, workflow caller, Seoul service, and live MCP schemas to immutable source/release identifiers before attributing local source behavior to production. WP11-O found the package 0.5.0 checkout but no source-to-runtime or Seoul deployment binding.
+3. For the local candidate, use the exact WP11-P/Q handoff below. WP11-Q is an offline test only. WP11-P may reuse only the same previously authorized WP10 structured OCR result, at most once, with no reference read or new OCR call.
+4. In source tied to the active runtime, verify field-level review/edit, explicit confirmation before create, complete duplicate search, create retry/idempotency, readback, and uncertain-write recovery. The inspected workspace copies and local candidate do not prove these live controls.
+5. Keep the 30-card inventory closed until explicit authorization and complete reference annotations exist. Keep per-card images, OCR, and references in the protected validation workspace; publish aggregates only.
+6. Do not deploy this candidate until the data, runtime, live-schema, E2E, and recovery gates pass. Record the exact deployment pin and test the rollback procedure in a separately authorized deployment task.
 
-## WP11 MUSE staging and re-test
+## WP11 current candidate retest and transfer
 
-WP11 changes extraction only. It does not require a new connector, OCR call, or iCloud MCP call. The last exact-tested code commit is `180f6333046b830010d60338edb580b23c03927c` (package 0.11.0); its MUSE offline suite passed 127/127, but the protected replay remained `REVIEW_REQUIRED`. Do not repeat that passing run without a relevant code, dependency, or test change. For a new candidate, use a fresh checkout/worktree and venv, and pin the exact candidate SHA rather than the moving branch tip. Keep the current runtime pinned:
+The current local create-safety candidate is package 0.13.0 at code commit `c6e30b14552a3e27cd7b57f2597f1923260ca1d2`. The full local offline suite was rerun at pushed worktree HEAD `c434aaa56309f7a5b13c1c17639fca80cf988ff3`: 146/146 passed on Python 3.14.7 / Pillow 12.2.0 using synthetic data and mocks. This does not establish MUSE execution, live workflow wiring, or production acceptance.
 
-```bash
-git fetch --no-tags origin codex/wp11-family-card-table-parser-20261103
-git cat-file -e '180f6333046b830010d60338edb580b23c03927c^{commit}'
-git worktree add ~/workspace/wp11-family-card-ocr-0.11.0 180f6333046b830010d60338edb580b23c03927c
-test "$(git -C ~/workspace/wp11-family-card-ocr-0.11.0 rev-parse HEAD)" = "180f6333046b830010d60338edb580b23c03927c"
-python3.12 -m venv ~/workspace/.venvs/muse-customer-card-ocr-wp11-0.11.0
-source ~/workspace/.venvs/muse-customer-card-ocr-wp11-0.11.0/bin/activate
-python -c 'import sys, PIL, setuptools; print(sys.version.split()[0], PIL.__version__, setuptools.__version__)'
-python -m pip install --no-index --no-build-isolation --no-deps -e ~/workspace/wp11-family-card-ocr-0.11.0/integrations/muse-customer-card-ocr
-cd ~/workspace/wp11-family-card-ocr-0.11.0/integrations/muse-customer-card-ocr
-python -c 'from importlib.metadata import version; assert version("muse-customer-card-ocr") == "0.11.0"'
-python -c 'import PIL, sys; assert sys.version_info[:3] == (3, 12, 3); assert PIL.__version__ == "10.2.0"'
-PYTHONPATH=src python -m unittest discover -s tests -v
-```
+Codex has no MUSE connector in the available tool inventory, and an earlier desktop UI handoff was misrouted. Do not retry through that ambiguous UI. The complete one-time manual transfer is in [`WP11-P/Q task`](../../planning/wp11pq-muse-explicit-address-book-and-rejection-histogram-20261103.md), with the [`machine-readable response template`](../../planning/wp11pq-muse-explicit-address-book-and-rejection-histogram-result-template-20261103.json). WP11-Q verifies the exact 0.13.0 candidate and full offline suite. WP11-P diagnoses first terminal rejection gates on the earlier pinned parser using only the same prior authorized WP10 structured result, at most once, and no reviewed reference. Neither phase allows source changes, OCR/provider calls, contact operations, production execution, or deployment.
 
-The example is pinned to the already-tested commit for reproducibility; for a changed candidate, replace the SHA, path suffix, expected package version, and expected test count with the new task's exact values. Confirm Python 3.12.3 / Pillow 10.2.0 and the local build backend are available before installation. If any dependency would require another network fetch, stop instead of accessing PyPI. After the single authorized branch fetch, complete package install, tests, and any replay offline. Do not call Baidu or iCloud during parser re-tests.
-
-For synthetic fixtures, confirm `decision == "READY"` for a unique valid table and `decision == "REVIEW_REQUIRED"` for blank/overlapping cells, a first-character-candidate mismatch, conflicting values, a checksum-invalid identity number, or unavailable geometry. Differing lower-ranked character alternatives alone must not force review. For the protected WP10 result, reuse only the already-authorized structured payload, do not read/find a reference unless the task explicitly authorizes it, and return only field-presence booleans, decisions, reason codes, and aggregate counters. Never copy OCR data into the repository, ordinary logs, screenshots, or task reports.
-
-No production deployment or rollback was performed in this work. The MUSE package source checkout reports 0.5.0, but its link to the active runtime is unverified. If a future isolated experiment changes only an isolated package pin, restore that isolated environment's recorded prior version and rerun its pinned offline suite. Production rollback requires verified deployment provenance and a separately authorized deployment task; this section does not authorize it.
+No 30-card data, new images, reviewed reference, OCR call, or iCloud operation was used for the local 0.13.0 verification. MUSE exact-commit verification and all live production gates remain pending.
 
 ## WP11-B isolated retest handoff
 
@@ -275,4 +258,4 @@ MUSE completed a static-only audit with result `PARTIAL`. It found a clean 0.5.0
 
 ## Rollback
 
-Remove the isolated venv and this branch checkout/package. No credentials or connector configuration are created by this code. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.
+The 0.13.0 candidate has not been deployed, so no production rollback has been run. For an isolated MUSE test, remove its temporary worktree and venv; the checked-in candidate can be reverted with its exact commit `c6e30b14552a3e27cd7b57f2597f1923260ca1d2` if a code rollback is needed before deployment. A production rollback procedure still requires verified active source/deployment provenance and an authorized deployment task; do not infer production rollback steps from this local branch. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.
