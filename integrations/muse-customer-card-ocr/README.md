@@ -1,0 +1,261 @@
+# MUSE family-card OCR package
+
+Version 0.13.2 candidate (`VALIDATION_PENDING`); it is not approved for production. The active MUSE runtime version/hash and the source-to-deployment binding remain UNKNOWN. The candidate requires an explicit `address_book_id` in a confirmed create draft and routes the local create path through the strict shared serializer. The ID is checked for presence and control characters. Readback-only pending-operation recovery may omit the ID because that path only reads the existing contact and cannot create another one. The schema 1.1 acceptance evaluator also rejects contradictory auto-usable/failure-code rows and manual-review rows without a failure code. Address-book discovery, MUSE UI wiring, and live runtime binding remain unverified. The WP6-C Bearer and WP7 query-token helpers are retained historical/testable package adapters; they are not the current MUSE OCR route. WP8-B reports MUSE calling the existing Seoul OCR service. The active MUSE runtime and Seoul deployment are not bound to this repository, so this reported workflow is not independently verified as the current production deployment. This package carries the full-image OCR and iCloud parameter adapters, historical WP6/WP7 helper code, the WP11 table-layout parser, and strict adapters for the Seoul OCR response. It does not implement an undocumented MUSE Secure Vault API. Offline tests use Mock transports and synthetic OCR blocks only; they invoke no provider, real MCP tool, or iCloud operation.
+
+## End-to-end architecture and release state
+
+The required architecture is MUSE photo upload → the existing Seoul Baidu OCR service → table or legacy line parsing → primary-customer field review → iCloud name/mobile duplicate search → explicit user confirmation → iCloud contact creation → readback verification. This repository implements the parser package and local adapters. The live MUSE orchestration, duplicate-search workflow, confirmation UI, deployed package pin, and readback workflow are separate runtime components; current production source and deployment evidence do not bind them to this candidate. The architecture is therefore a target, not a verified end-to-end production path.
+
+As of 2026-11-03, WP8-B Seoul OCR and the WP9 synthetic duplicate/create/readback flow are reported as passing. WP10 created one real contact only after the user confirmed a manually reviewed draft; automatic table extraction failed. WP11-B was executed on 0.7.0 and failed against the reviewed name and required fields. The prior 0.12.0 parser candidate passed 144/144 isolated offline tests at exact commit `6d5e7d4b8bbf29e8e5b4b1bc9bf43fa2d344cb6b`; its replay against the same authorized WP10 structured result remained `REVIEW_REQUIRED`. A value-free diagnostic at `0c97938342d77ab23b5f061ad472529d3999918e` found no geometry-passing name, mobile, or birthday candidate; address candidates did not pass field validation; gender had no structured checked-state signal. One identity candidate passed parser gates, but its accuracy is unverified because the reviewed reference is unavailable. No safe parser relaxation is supported. WP11-O completed a partial static provenance audit: the reported MUSE 0.5.0 source checkout is still not bound to the active runtime, and the active MUSE and Seoul versions/hashes remain UNKNOWN. Its component findings are unbound source evidence; actual production workflow behavior remains unverified. WP11-P has not yet been executed by MUSE; its value-free diagnostic is included in the combined WP11-P/Q handoff. No candidate deployment occurred. See the [WP11-M/N/O evidence](TEST_REPORT.md#wp11-m-current-candidate-replay-2026-11-03) and the [WP11-P handoff](../../planning/wp11p-muse-wp10-rejection-reason-histogram-20261103.md), [WP11-O result](../../planning/wp11o-muse-production-provenance-result-20261103.json).
+
+The current 0.13.2 safety candidate passes the local offline suite 148/148 on Python 3.14.7 / Pillow 12.2.0 at code commit `0b162686fe6a8cfa29cda7dfcd224976339746f4`. It retains the explicit, nonblank, control-free `address_book_id` requirement for confirmed create drafts and readback-only recovery without that ID or a second create. New regressions reject acceptance rows that claim automatic usability while carrying failure codes, and require a reason code for manual-review rows. Exact-commit MUSE verification is pending; this is not evidence of live MUSE wiring or production behavior. See the [WP11-Q recovery record](TEST_REPORT.md#wp11-q-recovery-only-readback-follow-up-2026-11-03) and [acceptance consistency record](TEST_REPORT.md#wp11-q-acceptance-record-consistency-fix-2026-11-03).
+
+## 30-card OCR acceptance aggregation
+
+The schema 1.1 standard-library evaluator in `src/muse_customer_card_ocr/acceptance_metrics.py` accepts per-card booleans, closed accuracy/failure codes, and three closed diversity codes: `handwriting_code` (`H1`–`H5`), `clarity_code` (`CLEAR`, `MODERATE`, `LOW`), and `table_layout_code` (`L1`–`L5`). It rejects sample identifiers, OCR text, customer/reference values, free-text notes, and unknown fields; stdout contains aggregate counts only. The codebook definitions and each card's category assignment stay inside MUSE's protected validation workspace. The blank [input template](../../planning/wp11-30-card-acceptance-input-template-20261103.json) starts with authorization and annotation gates closed and contains one schema-only row. After authorization, replace it with one sanitized row per eligible or explicitly excluded sample; excluded rows must use `NOT_APPLICABLE` for all diversity codes. Do not treat the placeholder as a result. The closed study gates return `BLOCKED` before processing rows. Keep populated input and reviewed labels inside MUSE's protected validation workspace; do not commit them or copy them into ordinary logs/reports. The [copyable MUSE task](../../planning/wp11-30-card-acceptance-task-20261103.md) and [result template](../../planning/wp11-30-card-muse-result-template-20261103.json) separate data-free offline checks from the gated real-card work.
+
+Before the schema 1.1 diversity change, MUSE independently verified exact commit `376e0d251db3d93e111c973b9f0957c52a356e96` in a fresh detached worktree and isolated venv (Python 3.12.3 / Pillow 12.3.0): 143/143 offline tests passed, and the blank-template CLI returned the expected `BLOCKED`. This historical run did not access real-card data or references and did not call OCR or contacts; see the [sanitized MUSE result](../../planning/wp11-30-card-muse-result-20261103.json). It verifies the earlier local package and evaluator only, not the live MUSE runtime or current schema.
+
+The schema 1.1 follow-up adds closed category codes for handwriting groups, image clarity, and table-layout groups. At least two categories per dimension are required among eligible cards; excluded rows use `NOT_APPLICABLE`. Only aggregate category counts and distinct-category totals are returned. The category codebook and card assignments stay in MUSE's protected validation workspace. Local verification passes 144/144 tests on Python 3.14.7 / Pillow 12.2.0, and the blank-template CLI returns `BLOCKED` with diversity `NOT_TESTED`. MUSE independently verified exact commit `1d6b8302eef102aa71f34a4b70f67f73b856eb5a` in a clean detached worktree/isolated venv (Python 3.12.3 / Pillow 12.3.0): 144/144 tests passed and blank-template smoke passed. MUSE reported two feature-branch fetches and zero real-data, OCR/provider, contact, production, deployment, and raw-export operations; see the [schema 1.1 sanitized result](../../planning/wp11-30-card-muse-result-20261103-schema-1.1.json). Real-card authorization remains unanswered.
+
+Run from this package directory after authorization:
+
+```bash
+PYTHONPATH=src python3 -m muse_customer_card_ocr.acceptance_metrics /protected/path/30-card-results.json
+```
+
+`eligible` must be determined before OCR and include in-scope cards even when OCR fails; exclude only out-of-scope, duplicate, or pre-OCR corrupt inputs and record the matching closed reason code. `auto_usable_draft` means all required draft fields and the primary-customer assignment can be shown for ordinary confirmation without a human field correction. `manual_review_required` records whether a correction or interpretation is needed before confirmation. `released_for_confirmation` means the final reviewed draft is ready for the normal confirmation step; it does not mean the user confirmed or a contact was created. For released drafts, compare each field against reviewed reference labels and enter only `PASS`, `FAIL`, or `NOT_TESTED`; an absent optional field is `PASS` only when the reviewed label confirms it should be absent.
+
+The evaluator uses eligible samples as the denominator for the 90% auto-usable target and manual-review-required rate. Each field's accuracy denominator is every draft released for confirmation; untested labels remain in that denominator and cannot count as correct. The aggregate diversity summary counts eligible rows only and reports counts and distinct-category totals for each dimension. At least 30 eligible distinct cards, all three study attestations, and at least two categories in each of handwriting, image clarity, and table layout are required before OCR acceptance metrics can pass. If any data gate fails, per-card rows are never returned and downstream OCR metrics are `BLOCKED`. Contact duplicate, create-confirmation, overwrite/delete, readback, MUSE UI, and production-deployment gates remain outside this aggregation and are reported `NOT_TESTED` or `VALIDATION_PENDING`.
+
+The initial MUSE workspace review found that the inspected copies of `wp8-seoul-ocr-service/muse_adapter.py` and `wp10-real-card/wp10_ocr_dedup.py` passed text-only blocks and omitted `location`, `probability`, and `chars`. Those copies, `wp10-real-card/wp10_create_readback.py`, and `carddav-mcp-client/mcp_client.py` were imported into a controlled source-only snapshot (`9b7feede68775b36b81ecf7336380fb80819a852`); their owner repository/ref/commit remain unknown. A later provenance audit confirmed these workflow files are absent from the reported 0.5.0 package checkout and untracked there, with no deployment record tying the checkout to the active runtime. Therefore the coordinate-loss, create/retry, and output findings describe inspected workspace copies only, not verified deployed behavior. One private host value in the MCP client was redacted in the public snapshot and locally replaced by protected configuration. No production code was changed. The candidate patch addresses these local source paths; it is not deployed.
+
+The reviewed candidate snapshot still does not implement the operator's field-level review UI. Its Seoul adapter calls `map_to_icloud_fields` but emits only status, reason codes, presence booleans, and a draft-status marker; it does not display/edit field values or submit a reviewed draft. The create/readback entry point separately accepts confirmed JSON on stdin. This is a static finding about the sanitized snapshot, not proof of the live MUSE UI; a working edit/confirm handoff remains unverified and is a release blocker.
+
+A read-only review of the MUSE workspace copies found no dedicated field review UI or code-level confirmation gate; those files are not tied to the active runtime. The copies indicated that a caller-supplied `REVIEW_REQUIRED` draft might reach create, that the inspected client might retry `contacts_create` after an unknown/session/404 error, and that readback failure did not automatically roll back. Treat these as static snapshot findings only. Actual deployed workflow behavior, client/server provenance, server idempotency, live schema version, empty-field behavior, and Seoul deployment hash remain UNKNOWN.
+
+The local repair candidate already requires `READY` or `MANUALLY_REVIEWED` plus `USER_CONFIRMED`, blocks create retries in its MCP client's allowlist, and leaves uncertain operations pending in a protected local journal. The existing offline suite includes a regression check for create retry suppression. This does not supply the missing operator UI or prove that production runs this candidate.
+
+The source-only snapshot is complete, but the source provenance remains incomplete: it is a review snapshot, not an identified production checkout. The reported 0.5.0 package source checkout at commit `8336008d080387ab709d1e0ab9381683b1138e0f` contains `fields.py`, whose Git blob hash was independently verified locally; this does not bind the file to the active runtime. The geometry and sample-inventory diagnosis is in [`wp11d-followup-diagnostic-20261103.md`](../../planning/wp11d-followup-diagnostic-20261103.md); source provenance and the repaired code path are in [`wp11e-production-path-audit-20261103.md`](../../planning/wp11e-production-path-audit-20261103.md). The 30-card set is not ready: fewer than 30 samples, authorization unconfirmed, and required reference annotations incomplete. Do not describe any candidate as production-ready or v1.0 Stable.
+
+The current OCR path is the existing Seoul OCR service with protected MUSE transport. Do not switch to the abandoned MUSE-cloud-direct-to-Baidu route described in earlier drafts.
+
+## Full-image authorization
+
+The previous mandatory `PrivacyMaskResult` gate has been removed. A caller must pass `full_image_authorized=True` to `recognize_customer_card` for every OCR call. The flag is an explicit call-site attestation that the applicable user and organization authorization exists; it is not a legal authorization check or a MUSE permission mechanism.
+
+When called, the package sends the complete image representation after EXIF orientation, size normalization, and JPEG encoding. It does not crop or mask regions. The tool therefore must only be called after the complete-image authorization applies. It accepts JPEG/PNG bytes or paths confined to `~/workspace/user/files` by default. HEIC remains unsupported.
+
+## Historical direct-to-Baidu adapter experiments (WP6-C/WP7-A; not the current route)
+
+WP7-A experimented with Baidu's legacy `access_token` query authentication through a package-owned connector port and mocks. It did not establish a live MUSE connector contract. It is not the current Family Card architecture: WP8-B reports MUSE calling the existing Seoul OCR service. Keep these adapter examples for compatibility and isolated package tests only; do not route the current MUSE workflow directly to Baidu.
+
+`BaiduOcrClient` keeps `auth_mode="bearer"` as a backward-compatible default for WP6-C compatibility tests. `query_param:access_token` remains an isolated WP7 adapter mode. Neither mode is the documented current MUSE workflow; no direct-to-Baidu production route is verified or authorized by this package.
+
+In this historical WP7 adapter mode, the package does not obtain or refresh the Access Token. Any future approved use would require a documented secure control plane to provide the token and own its expiry/refresh lifecycle. The existing historical AK/SK pair is not an Access Token and is never consumed by this package. A stale or unauthorized token surfaces as a classified authentication error.
+
+### Historical WP6-C Bearer example (compatibility/test path only)
+
+```python
+from muse_customer_card_ocr import (
+    BaiduOcrClient,
+    extract_primary_customer,
+    map_to_icloud_fields,
+    recognize_customer_card,
+)
+
+# `muse_secure_connector` must be a MUSE-provided adapter implementing the
+# package port after its real helper contract has been confirmed.
+client = BaiduOcrClient(connector=muse_secure_connector)
+result = recognize_customer_card(
+    image_bytes,
+    mime_type="image/jpeg",
+    full_image_authorized=True,
+    client=client,
+)
+extraction = extract_primary_customer(result)
+if extraction.needs_manual_review:
+    # Present review reasons to the authorized operator; do not map or write.
+    raise RuntimeError(extraction.review_reasons)
+contact_draft = map_to_icloud_fields(extraction)
+# `contact_draft` is a canonical projection only. No MCP write is performed.
+```
+
+### Historical WP7 Access Token adapter example (not the current MUSE path)
+
+Use the dedicated adapter and mode explicitly:
+
+```python
+from muse_customer_card_ocr import (
+    BaiduOcrClient,
+    SecureQueryParamAccessTokenConnectorAdapter,
+)
+
+# `muse_query_transport` must be bound to MUSE's documented custom connector
+# after its real helper contract and query-parameter credential behavior are verified.
+muse_query_adapter = SecureQueryParamAccessTokenConnectorAdapter(muse_query_transport)
+client = BaiduOcrClient(
+    connector=muse_query_adapter,
+    auth_mode="query_param:access_token",
+)
+```
+
+The client retains Baidu's `recognize_granularity=small` and `probability=true` parameters, response blocks, available coordinates, line confidence, character candidates, and safe service/request IDs. Errors expose categories and status codes, not response bodies. It has no internal logger, and OCR text, request bodies, and response bodies are excluded from object `repr` output. Any separate test of this historical adapter must also keep transport-level HTTP debug logs off; this does not describe verified active MUSE behavior.
+
+## Historical Baidu helper implementations (package tests only; no verified MUSE contract)
+
+`muse_baidu_helper.py` and `muse_secure_connector.py` add a testable package-owned boundary:
+
+- Only the HTTPS handwriting endpoint is accepted; the stdio request envelope has no URL, host, path, method, headers, or credential fields.
+- The helper constructs a fixed POST request with form content type, a bounded request body, an explicit timeout, and `allow_redirects=False`.
+- The body crosses the helper boundary as base64 JSON on stdin. Stdout carries one structured response envelope; successful OCR response bytes are base64 encoded for IPC, while non-2xx bodies and transport error details are discarded. Neither helper nor adapter logs to stdout/stderr outside the protocol response.
+- `SecureBearerConnectorAdapter` rejects any request that differs from the fixed URL, POST method, Bearer mode, content type, size, or timeout policy; it maps helper timeout/network failures to the package's safe connector exceptions.
+- `BaiduSecureHttpTransport` and `StdioHelperInvoker` are local package protocols. `baidu_ocr_bearer` is a logical credential slot name, not a Vault placeholder syntax or secret. The Mock tests simulate replacement with a synthetic Bearer value entirely inside the mock transport.
+
+`muse_baidu_token_helper.py` and `muse_token_query_connector.py` add the separate `query_param:access_token` path:
+
+- The client request type has no token or query-parameter value. It allows only the fixed HTTPS host/path, POST, form content type, bounded body and timeout.
+- The helper passes the fixed endpoint and logical credential slot `baidu_ocr_access_token` to the injected transport with redirects disabled. The transport contract permits only `query_param:access_token`; the stdio envelope has no URL, method, query, header, or credential field.
+- The MUSE connector is expected to inject exactly one `access_token` query parameter outside Python. The Mock constructs a synthetic final URL and verifies the single query key; it does not validate MUSE's production behavior.
+- HTTP error/redirect bodies are discarded. Timeouts map to the package timeout class; transport exceptions map to a safe network failure. Stdio remains bounded and carries only the form body and structured response envelope.
+- Each OCR request timeout is capped at 60 seconds; the optional subprocess wrapper allows a separate 5-second exit grace without increasing the provider request timeout.
+
+`BaiduSecureHttpTransport`, `BaiduQueryParamHttpTransport`, `StdioHelperInvoker`, and both JSON stdio envelopes are package-owned interfaces, not documented MUSE helper APIs. The current Family Card route uses the existing Seoul OCR service per the WP8-B stage report. These direct-to-Baidu helper adapters are not wired into that reported route and have no verified active-runtime binding. Tests prove local package behavior only; they do not prove MUSE has these capabilities.
+
+## Field extraction and review gates
+
+`extract_primary_customer(result)` supports both the original `label: value` line format and the Baidu handwriting response's positioned `words_result` blocks. For positioned tables it groups blocks into visual rows using their returned bounding boxes, then pairs an exact supported label with its immediate right-hand block or a uniquely aligned value block in the next row. It stops at recognized family/relative section headings and uses the returned coordinates to place that boundary even when OCR blocks arrive out of reading order. It does not synthesize empty cells, search arbitrary distant rows, infer gender, fill a missing value, or choose between conflicting candidates.
+
+The parser requires a clear primary name, one valid mobile number, and a readable identity number for this target workflow. For each Baidu character result, the first candidate is treated as the provider's recognized character; differing later alternatives alone do not trigger review. A missing recognized character or disagreement between its recognized text and first candidate does trigger review. Overlapping table columns, conflicting values, and checksum-invalid identity numbers also produce a review decision. Table-only text without usable coordinates is not guessed; the legacy line parser still handles explicit `label: value` text. `FieldExtractionResult.status` keeps its previous values (`ready` / `needs_manual_review`) for compatibility, while `FieldExtractionResult.decision` exposes `READY` / `REVIEW_REQUIRED` to callers.
+
+Baidu's `probability=true` response supplies per-line `average`, `variance`, and `min`, and `recognize_granularity=small` can return per-character candidates. Version 0.7.0 does not apply a numerical probability threshold: one template's aggregate confidence is insufficient to calibrate a general threshold. Confidence-only review remains unimplemented pending a representative, authorized calibration set.
+
+The existing extraction gate still requires a clear primary name, one valid mobile number, and a readable identity number. It validates the ID's 18-character format, encoded date and checksum; conflicting or invalid ID evidence requires review, and OCR characters are never repaired. The embedded ID date is used only to compare with an explicit card birthday and is never copied to the birthday field. Conflicting dates require review. A first-candidate mismatch in name, mobile, birthday, gender or ID requires review; uncertain optional address/other-phone values are omitted. The checksum is a transcription-integrity check, not identity verification or a registry lookup.
+
+`map_to_icloud_fields(extraction)` raises `MANUAL_REVIEW_REQUIRED` for a pending result. For a ready result, it returns a non-writing `ICloudContactDraft` with:
+
+- `name_full` from the primary customer name;
+- `phone_mobile` and `phone_other` from the labelled phone fields;
+- `birthday` as the explicit date only;
+- `address` as the original labelled address;
+- `note` lines in stable order: `性别：...`, then `身份证号：...`.
+
+The active iCloud MCP tool declaration exposes `contacts_create` as `{session_id, address_book_id?, contact}`. `contact` accepts `name.full`, `phones[]` (`value`, `type`, `primary`), `birthday`, `addresses[]` (including `street`), and `note`. The adapter in `contacts_create_adapter.py` maps the draft to that argument shape. Its tests use synthetic values and a Mock caller; no MCP tool was invoked.
+
+`build_contacts_create_arguments(draft, session_id=..., address_book_id=...)` is a pure serializer. The server's schema says omitting `address_book_id` selects the first writable book, so the serializer rejects a missing/blank ID and always requires an explicit, previously verified target. It passes `session_id` supplied by the caller from the existing `apple_login` session. It keeps the name in `name.full` without guessing family/given boundaries, maps the mobile as `type=["cell"], primary=true`, other numbers as `type=["other"]`, birthday as `YYYY-MM-DD`, the complete address only to `addresses[].street`, and the draft note verbatim. Missing optional fields are omitted. Any text in the resulting argument object is sensitive and must not be logged.
+
+`call_contacts_create(..., call_tool=...)` is an injectable test seam that dispatches only the `contacts_create` tool name. `McpToolCaller` is a local package protocol, not a documented MUSE Python bridge API. No update operation exists in this adapter; it cannot overwrite a contact. It also does not perform duplicate search, so the future workflow must complete its duplicate gate before using it. This package does not connect to the MCP or perform any contact operation by itself.
+
+## Install and offline regression
+
+Python 3.10 or later. Runtime dependency: Pillow. Requests and Baidu SDK are not used by this package. In an isolated environment:
+
+```bash
+python3 -m venv ~/workspace/.venvs/muse-customer-card-ocr
+source ~/workspace/.venvs/muse-customer-card-ocr/bin/activate
+python -m pip install "Pillow==10.2.0"
+python -m pip install --no-deps -e /path/to/repo/integrations/muse-customer-card-ocr
+cd /path/to/repo/integrations/muse-customer-card-ocr
+PYTHONPATH=src python -m unittest discover -s tests -v
+```
+
+Tests use generated fictional images, OCR payloads, Mock Vault placeholder substitution, and a Mock `contacts_create` invoker. They cover both authentication adapters, the single mock `access_token` query parameter, fixed helper endpoint, stdin body transfer, redirect prohibition, size/timeout bounds, safe error classification, no sensitive stdout/stderr, image processing, structure parsing, field extraction, ID/birthday review gates, iCloud field projection, explicit address-book selection, and omitted optional fields. They make no network calls.
+
+## Current MUSE integration and release checklist (WP8-B through WP11)
+
+1. Keep the reported route MUSE upload → existing Seoul OCR service → OCR response parsing. Do not connect the current Family Card workflow directly to Baidu through the historical WP6/WP7 helpers.
+2. Treat WP8-B and WP9 as prior stage reports, not current independent production verification. Bind the active MUSE runtime, workflow caller, Seoul service, and live MCP schemas to immutable source/release identifiers before attributing local source behavior to production. WP11-O found the package 0.5.0 checkout but no source-to-runtime or Seoul deployment binding.
+3. For the local candidate, use the exact WP11-P/Q handoff below. WP11-Q is an offline test only. WP11-P may reuse only the same previously authorized WP10 structured OCR result, at most once, with no reference read or new OCR call.
+4. In source tied to the active runtime, verify field-level review/edit, explicit confirmation before create, complete duplicate search, create retry/idempotency, readback, and uncertain-write recovery. The inspected workspace copies and local candidate do not prove these live controls.
+5. Keep the 30-card inventory closed until explicit authorization and complete reference annotations exist. Keep per-card images, OCR, and references in the protected validation workspace; publish aggregates only.
+6. Do not deploy this candidate until the data, runtime, live-schema, E2E, and recovery gates pass. Record the exact deployment pin and test the rollback procedure in a separately authorized deployment task.
+
+## WP11 current candidate retest and transfer
+
+The current local create-safety and acceptance-consistency candidate is package 0.13.2 at code commit `0b162686fe6a8cfa29cda7dfcd224976339746f4`. The full local offline suite passed 148/148 on Python 3.14.7 / Pillow 12.2.0 using synthetic data and mocks. This does not establish MUSE execution, live workflow wiring, or production acceptance.
+
+Codex has no MUSE connector in the available tool inventory, and an earlier desktop UI handoff was misrouted. Do not retry through that ambiguous UI. The complete one-time manual transfer is in [`WP11-P/Q task`](../../planning/wp11pq-muse-explicit-address-book-and-rejection-histogram-20261103.md), with the [`machine-readable response template`](../../planning/wp11pq-muse-explicit-address-book-and-rejection-histogram-result-template-20261103.json). WP11-Q verifies the exact 0.13.2 candidate and full offline suite, including readback-only recovery without an address-book ID and the two acceptance-row consistency invariants. WP11-P diagnoses first terminal rejection gates on the earlier pinned parser using only the same prior authorized WP10 structured result, at most once, and no reviewed reference. Neither phase allows source changes, OCR/provider calls, contact operations, production execution, or deployment.
+
+No 30-card data, new images, reviewed reference, OCR call, or iCloud operation was used for the local 0.13.2 verification. MUSE exact-commit verification and all live production gates remain pending.
+
+## WP11-B isolated retest handoff
+
+The first MUSE real-template rerun (2026-11-03) returned `REVIEW_REQUIRED` because the 0.6.0 parser treated every lower-ranked Baidu character alternative as an ambiguity. The evidence and synthetic reproduction are recorded in [`wp11b-ambiguous-char-handoff-20261103.md`](../../planning/wp11b-ambiguous-char-handoff-20261103.md). Version 0.7.0 includes the candidate-order fix and a synthetic regression test. The exact copyable isolated retest and redacted machine-readable response template are in [`wp11b-muse-retest-20261103.md`](../../planning/wp11b-muse-retest-20261103.md) and [`wp11b-muse-result-template-20261103.json`](../../planning/wp11b-muse-result-template-20261103.json).
+
+## WP11-C conservative column matching
+
+The 0.7.0 MUSE replay showed that direct row adjacency could cross a field column, while the protected OCR response contained a valid identity number split across neighboring word blocks. Version 0.8.0 reuses the existing `OcrBlock`/`BoundingBox` model, visual-row clustering, checksum validator, and manual-review gate. It assigns same-row values only when their horizontal center is uniquely attributable to one field label, treats overlapping/tied columns as uncertain, and joins ID fragments only when adjacent blocks form one complete checksum-valid value in the same visual cell. It still searches only the immediate next row; MUSE could not establish a unique farther-row phone column, so the parser does not widen that search. It never infers checkbox gender from OCR structure without a signal.
+
+**Reuse / adapt / avoid decision:** reuse the existing Baidu word-box schema and fail-closed review contract; adapt the local geometry matcher and add a narrowly constrained checksum-validated ID join; avoid a new image-model pipeline for this package change. Public candidates reviewed were [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) (Apache-2.0, active project, latest release v3.7.0 in June 2026), [RapidTable](https://github.com/RapidAI/RapidTable) (Apache-2.0, v3.0.2 in April 2026), and [Microsoft Table Transformer](https://github.com/microsoft/table-transformer) (MIT, last release v1.0.0 in 2023). They consume document images and would introduce a separate model/OCR pipeline; none is a drop-in parser for the already-protected Baidu word blocks. No package dependency was added.
+
+Spatial address evidence shorter than four characters or carrying ambiguous OCR is withheld and requires manual review; an absent optional address remains omitted. Near-tied label columns also remain under review using a margin scaled to the candidate block width. Local offline regression is 95/95 passing on synthetic data. MUSE's 0.8.0 and 0.8.1 results are recorded in [`wp11c-muse-result-20261103.json`](../../planning/wp11c-muse-result-20261103.json) and [`wp11d-muse-result-20261103.json`](../../planning/wp11d-muse-result-20261103.json). The 0.8.1 run passed its isolated suite and seven synthetic regressions, but its protected replay remained `REVIEW_REQUIRED`; the follow-up diagnostic found no evidence to relax geometry and confirmed the 30-card set is not ready. See [`wp11d-followup-diagnostic-20261103.md`](../../planning/wp11d-followup-diagnostic-20261103.md) for the redacted categories. The separate acceptance gate remains open. Follow [`wp11d-muse-retest-20261103.md`](../../planning/wp11d-muse-retest-20261103.md) for the exact tested commit and evidence boundary. No production deployment, Baidu call, iCloud operation, or real customer payload was used locally.
+
+## WP11-E runtime repair candidate (0.9.0)
+
+The isolated repair now routes both OCR callers through `parse_seoul_ocr_response`, preserving word geometry, probability, and character candidates. The Seoul and WP10 OCR commands require `--full-image-authorized` on each run. They print only statuses, reason codes, counts, and presence booleans; the former arbitrary `--draft-out` file path was removed.
+
+Before any isolated MUSE use, install the candidate package in a separate venv and configure the source locations explicitly when the runtime does not install them as packages:
+
+- `MUSE_CUSTOMER_CARD_OCR_SRC`: package `src` directory.
+- `MUSE_CARD_DAV_MCP_CLIENT_SRC`: directory containing the reviewed `mcp_client.py`.
+- `MUSE_PERSONAL_MCP_ORIGIN`: the private MCP HTTPS origin, stored in protected MUSE configuration. No host value belongs in Git.
+- OAuth state defaults to `${XDG_CONFIG_HOME:-~/.config}/muse-personal/oauth.json` with directory/file permissions 0700/0600.
+- Create-attempt state defaults to `${XDG_STATE_HOME:-~/.local/state}/muse-family-card/contact-create-state.json`; set `MUSE_FAMILY_CARD_STATE_DIR` only to another protected directory outside the repository. The state file holds a random operation ID, phase, and timestamp only.
+
+`wp10_create_readback.py` accepts one reviewed JSON object on stdin. It requires `extraction_status` to be `READY` or `MANUALLY_REVIEWED`, `review_status` to be `USER_CONFIRMED`, and valid non-empty name, mainland mobile, gender, explicit ISO birthday, checksum-valid identity number, and a nonblank, control-free `address_book_id`. The operator must include the intended address book in the reviewed draft; this local gate does not verify it against live address-book discovery. `address` and `other_phones` are optional. The create script performs a fresh name and mobile search; it requires a contacts array, explicit `truncated: false`, and an explicit empty `partial_failures` list before treating either result as complete. Missing or malformed metadata, partial failures, conflicting matches, or reaching the limit stop without creating. These completeness fields reuse the local CardDAV workflow's existing search contract; the live MUSE schema remains unverified, so a different response shape stays blocked until documented. It creates at most one contact and checks name, primary mobile, all phone numbers, birthday, exact note, and optional address on readback.
+
+`contacts_create` is never retried automatically. The protected local journal records a pending operation before the call and blocks later creates if the response or readback is uncertain. Inspect iCloud manually before resolving it. The operator-only resolution input is `operation_id`, `resolution` (`CONTACT_CONFIRMED` or `NO_CONTACT_AFTER_MANUAL_CHECK`), and `manual_reconciliation_confirmed: true`, supplied to `wp10_create_readback.py --resolve-pending`. The journal is scoped to one runtime state directory and is not a server idempotency key; it does not provide cross-host exactly-once behavior. Do not clear a pending attempt without manual reconciliation.
+
+MCP writes were not run during local verification. Before any later MUSE create/readback test or deployment, confirm the live `contacts_create` and `contacts_read` schemas, especially address/other-phone encoding, primary-phone readback, and the protected host/OAuth configuration. The local candidate uses the repository's existing contacts field mapping and intentionally fails readback if the live schema does not preserve those fields.
+
+The MUSE replay used an isolated worktree/venv at commit `c1396a862404a55d8ebb94b015003c3a90c3eb0e` (Python 3.12.3, Pillow 10.2.0) and passed 117/117 offline tests. Against the existing 89-block WP10 structured result it returned `REVIEW_REQUIRED` with `table_layout_uncertain`, `main_customer_identity_unclear`, `mobile_missing`, `address_uncertain`, and `identity_number_uncertain`; draft mapping was rejected. Name, mobile, birthday, gender, and identity number were mismatches because no fields were returned. Address MATCH only reflects that the reviewed draft omitted address; it does not show that the card address was extracted. The saved result lacked the Seoul envelope's `ok` and `words_result_num` keys, so MUSE supplied `ok: true` in memory and left the optional count absent; it did not modify the saved result.
+
+MUSE reported zero OCR reruns, Baidu calls, iCloud MCP calls, contact reads/writes, production-code execution, or production changes. Production remained package 0.5.0 at commit `8336008d080387ab709d1e0ab9381683b1138e0f`; the read-only source hashes matched before and after. The isolated worktree was clean and no MUSE commit/push was made. The 0.9.0 candidate is not v1.0 Stable. The separately authorized 30-card acceptance gate remains blocked; no production package pin or runtime was changed.
+
+## WP11-F same-row identity candidate repair (0.10.0)
+
+MUSE's value-free diagnosis of the already-authorized WP10 result found exactly one complete ID-shaped block before the family boundary, checksum valid, with no invalid full-shaped competitor. It shares the unique explicit ID label's visual row and is not the immediate right neighbor; no different checksum-valid multi-block candidate or ambiguous-character composite was found. Generic column geometry still rejected it because it competed with another field label.
+
+The 0.10.0 candidate reuses the current OCR block schema, visual-row clustering, and ID checksum/date validator. It adapts only the ID path: a fallback is allowed only for exactly one complete ID-shaped block in the primary-customer region, exactly one pure ID label, same-row placement, a passing checksum, and no ambiguous OCR characters. It is disabled when explicit ID evidence already exists and does not lower generic tie margins or widen other fields' search radius. A complete ID-shaped token is not considered as another field's value. No dependency or OCR route was added. A generic geometry relaxation was avoided because it could assign values across fields without evidence.
+
+Synthetic regressions cover the same-row non-neighbor positive case, multiple complete ID candidates, invalid checksum, multiple ID labels, ambiguous OCR characters, and a short multi-row address guard. Targeted table-layout tests pass 24/24 and the full local offline suite passes 123/123 on Python 3.14.7 / Pillow 12.2.0. A GitHub search did not find a directly applicable maintained parser for these existing Baidu word boxes; the result was unrelated and is weak evidence, so the change stays local and dependency-free.
+
+MUSE retested the exact code commit `e129c80e2d8b35ed667a5b4f2335007543a2c4d0` in a fresh worktree/venv (Python 3.12.3, Pillow 10.2.0): 123/123 offline tests and the synthetic suite passed. The protected WP10 replay remained `REVIEW_REQUIRED` and draft mapping was rejected. Name, mobile, birthday, and gender were absent; the ID was present, but the reviewed ID reference was unavailable in the authorized workspace, so exact match remains UNKNOWN; address MATCH reflects omission on both sides only. See the detailed evidence in [`TEST_REPORT.md`](TEST_REPORT.md). Production remains 0.5.0 and unchanged; this candidate is not v1.0 Stable. The 30-card set remains inaccessible until its authorization and reference-annotation gates are satisfied.
+
+## WP11-G same-row address candidate repair (0.11.0)
+
+MUSE's follow-up on the same authorized WP10 structured result resolved an inconsistent aggregate report. The current parser's direct-right/next-row search produced multiple address candidates but none passed the minimum-length check. In the same-row region beyond the immediate right block, multiple candidates passed the existing column rule, but exactly one distinct candidate also passed the address length and character checks. This candidate is not in the reviewed reference; the prior draft intentionally omitted address, so no address accuracy claim is possible.
+
+The 0.11.0 candidate reuses the existing OCR block schema, row clustering, nearest-column rule, address length check, OCR-character ambiguity check, and review gate. Only a sole, pure address label can use the same-row extension; it scans that row only, rejects phone/identity-shaped values, and uses the rescue only when exactly one distinct candidate passes both geometry and field checks. Invalid short fragments may be replaced only when they are unambiguous; ambiguous candidates, multiple valid values, conflicting existing values, or ties remain under review. Name, mobile, birthday, other-phone, gender, and ID search behavior is unchanged. No new dependency or OCR path was added. Generic same-row expansion was avoided because the existing result provides no unique candidate evidence for those fields. GitHub code search found only unrelated matches for coordinate-based label/value parsing; this is weak reuse evidence, so the implementation remains a local adapter to the existing Baidu blocks.
+
+Local tests use fictional OCR values and generated coordinates. The exact commit `180f6333046b830010d60338edb580b23c03927c` was retested by MUSE in a fresh detached worktree and venv (Python 3.12.3, Pillow 10.2.0); the offline suite passed 127/127. On the same authorized 89-block WP10 structured result, the replay returned `REVIEW_REQUIRED` with `table_layout_uncertain`, `main_customer_identity_unclear`, `mobile_missing`, `address_conflict`, and `address_uncertain`; draft mapping was rejected. Name, mobile, birthday, gender, address, and other-phone fields were absent; the ID field was present, but this run did not read the reviewed reference or compare values. The stored JSON lacked `ok` and `words_result_num`; MUSE supplied `ok: true` only in an in-memory wrapper and skipped the absent optional count. This was structured-block replay, not byte-for-byte envelope validation; the stored payload was unchanged.
+
+MUSE reported one narrow fetch of the authorized target branch to obtain the exact commit, then offline checks; zero OCR reruns, Baidu calls, reference reads, other network access, iCloud/contacts operations, production-code execution, production changes, commits, or pushes. Production remained package 0.5.0 at commit `8336008d080387ab709d1e0ab9381683b1138e0f`; source hashes matched before and after. The replay worktree and original payload were reported unchanged. The 0.11.0 candidate is not v1.0 Stable and must not be deployed. Address remains optional and this change cannot turn missing required name/mobile fields into `READY`; the 30-card authorization and reference-annotation gates remain open.
+
+The same-input value-free diagnostic and its follow-up classification are complete. It confirmed that line-format address evidence was absent, `allow_address_rescue` was true, and the unique address label triggered the same-row rescue. Of the expanded candidates, one distinct value passed column assignment and address checks. A second distinct value also passed the address length and character checks, but its column center was near-tied and it was closer to another field label; existing geometry still could not assign it uniquely to that field. This kept the rescue uncertain, so it did not append the otherwise valid representative. The direct/next-row evidence contained two distinct values and remained in conflict; the final address stayed absent with `address_conflict` and `address_uncertain`. Payload, isolated worktree, and production state were reported unchanged; no reference was read. The rejection is supported by the current geometry, not by the line-evidence precondition. No safe parser change is justified; keep the result under manual review.
+
+## WP11-H follow-up: same-input field diagnosis
+
+MUSE then diagnosed the other fields on the same authorized WP10 result at exact commit `180f6333046b830010d60338edb580b23c03927c`. Name, mobile, explicit birthday, and other phone had zero candidates through the existing geometry uniqueness gate; none had an acceptable candidate under current rules. Gender had no explicit label or independent structured checked-state signal, so no gender value was inferred. The decision remained `REVIEW_REQUIRED`; no parser change is justified by this result. See the sanitized [WP11-H field diagnosis](../../planning/wp11h-field-diagnostic-20261103.md) and detailed [test report](TEST_REPORT.md). No reference, new sample, 30-card set, or production state was accessed.
+
+## WP11-I read-only create/recovery contract audit
+
+MUSE read-only audit used `tools/list` only; no login or contact CRUD occurred. Production was reported at package 0.5.0, commit `8336008d080387ab709d1e0ab9381683b1138e0f` (branch name was not rechecked this round); deployed MCP client/tool-server ref and hash remain UNKNOWN. The tool list contained 33 tools but no `outputSchema` or server version/ref fields. `contacts_create` requires `session_id` and `contact`; `address_book_id` is optional. Its stable response ID and server idempotency guarantee remain UNKNOWN, and no idempotency key is declared. The inspected deployed client may retry once after an error containing `session`, `404`, or `unknown`, including for create; it does not retry timeout errors or non-exception uncertain results.
+
+`contacts_read` requires `session_id` and `contact_id`, but has no declared output schema. The static client exposes no ETag/version token and discards HTTP response headers. `contacts_delete` accepts optional `expected_etag`, but the read path cannot supply a corresponding fresh token; the live contract does not establish a safe conditional rollback. MUSE also reported that its generic CLI prints tool results to stdout and has no protected contact-ID/version retention path. The local candidate therefore keeps rollback deletion disabled and stores a known create ID only in its mode-0600 pending journal. Do not substitute `updated_at` for an ETag.
+
+## WP11-J pending readback recovery candidate (0.12.0)
+
+After `contacts_create` returns an ID, the candidate now keeps that opaque ID only in the existing mode-0600 pending journal while the operation needs readback. It stores no customer values, OCR output, or MCP session. The new `--resume-pending` command requires the exact pending operation ID and a freshly confirmed, validated draft, then performs `apple_login` and `contacts_read` only. It never creates or deletes. A mismatch, transport error, old journal without an ID, or any uncertain result leaves the operation pending; only a complete matching readback clears it. This closes the local readback-resume gap while deletion rollback remains gated on MUSE schema evidence.
+
+Local synthetic tests cover successful resume without a second create, mismatched readback, wrong operation ID, and legacy pending state. The full local offline suite passes 133/133 on Python 3.14.7 / Pillow 12.2.0. MUSE independently retested exact commit `ad13570da5794077ace40893d660c5e92b8ee5e0` (0.12.0) in a clean detached worktree and venv on Python 3.12.3 / Pillow 10.2.0; its offline suite also passed 133/133. MUSE required one fetch of the authorized target branch, then ran setup and tests offline; OCR, Baidu, login, contacts, production execution, and deployment counts were all zero. This verifies the isolated offline suite only, not production acceptance or v1.0 Stable. The `contacts_read` response contract and any conditional-delete rollback remain unverified.
+
+MUSE then replayed the same authorized WP10 structured result at exact branch commit `e9814eaee6b16d677ab06f0857fa2a5bd1f6a586` (0.12.0, Python 3.12.3 / Pillow 10.2.0). It still returned `REVIEW_REQUIRED` with `table_layout_uncertain`, `main_customer_identity_unclear`, `mobile_missing`, `address_conflict`, and `address_uncertain`. Only the identity-number field was present; name, gender, explicit birthday, mobile, address, and other phone were absent. No reference was read, so identity correctness remains unknown. The protected input was unchanged; OCR, Baidu, reference, login, contacts, production execution, and deployment counts were all zero. This is an automation acceptance failure with the review gate correctly retained. The candidate remains `VALIDATION_PENDING` and is not approved for production.
+
+## WP11-O read-only production provenance audit
+
+MUSE completed a static-only audit with result `PARTIAL`. It found a clean 0.5.0 package source checkout at `8336008d080387ab709d1e0ab9381683b1138e0f`, but no evidence binds that checkout to the active MUSE runtime. Active MUSE package/hash/release digest, Seoul deployment version/hash, and OCR route remain `UNKNOWN`. The source files inspected for the Seoul adapter, parser, duplicate search, create, and readback are all unbound. The audit did not find field-level review UI, code-enforced pre-create confirmation, or uncertain-write rollback in the inspected source; because source-to-runtime binding is absent, these are not production absence claims. Create retry/idempotency, duplicate fail-closed behavior, and PII-safe logging remain unknown. Audit counts were 3 package metadata, 12 Git provenance, 21 source-file, 2 deployment-metadata, and 1 process-metadata reads; credentials, logs, OCR, contacts, production execution/writes, deployment, and exports were not accessed. See the [WP11-O result](../../planning/wp11o-muse-production-provenance-result-20261103.json), [test report](TEST_REPORT.md#wp11-o-read-only-production-provenance-audit-2026-11-03), and [release-gates issue #18](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/18). The release remains blocked pending verifiable runtime/deployment binding and the remaining live safety gates.
+
+## Rollback
+
+The 0.13.2 candidate has not been deployed, so no production rollback has been run. For an isolated MUSE test, remove its temporary worktree and venv; the checked-in candidate can be reverted with its exact commit `0b162686fe6a8cfa29cda7dfcd224976339746f4` if a code rollback is needed before deployment. A production rollback procedure still requires verified active source/deployment provenance and an authorized deployment task; do not infer production rollback steps from this local branch. The package does not modify the MUSE SDK Bridge, attachments, iCloud MCP, or contacts.

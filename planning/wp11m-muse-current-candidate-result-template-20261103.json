@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11M-MUSE-CURRENT-CANDIDATE-REPLAY-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "",
+    "package_version": "0.12.0"
+  },
+  "environment": {
+    "os_image": "",
+    "python_version": "",
+    "pillow_version": "",
+    "isolated_worktree": false,
+    "isolated_virtualenv": false
+  },
+  "offline_suite": {
+    "status": "PASS|FAIL|NOT_RUN",
+    "passed": 0,
+    "failed": 0,
+    "errors": 0
+  },
+  "wp10_replay": {
+    "structured_result_available": "YES|NO|NOT_CHECKED",
+    "reviewed_reference_available": "YES|NO|NOT_CHECKED",
+    "parser_replay_status": "PASS|FAIL|BLOCKED|NOT_RUN",
+    "accuracy_comparison_status": "PASS|FAIL|BLOCKED|NOT_RUN",
+    "decision": "READY|REVIEW_REQUIRED|UNKNOWN",
+    "draft_mapping": "ACCEPTED|REJECTED|NOT_RUN",
+    "reason_codes": [],
+    "field_presence": {
+      "main_customer": "PRESENT|ABSENT|NOT_RUN",
+      "name": "PRESENT|ABSENT|NOT_RUN",
+      "mobile": "PRESENT|ABSENT|NOT_RUN",
+      "identity_number": "PRESENT|ABSENT|NOT_RUN",
+      "explicit_birthday": "PRESENT|ABSENT|NOT_RUN",
+      "gender": "PRESENT|ABSENT|NOT_RUN"
+    },
+    "field_match_to_reference": {
+      "main_customer": "MATCH|MISMATCH|NOT_CHECKED",
+      "name": "MATCH|MISMATCH|NOT_CHECKED",
+      "mobile": "MATCH|MISMATCH|NOT_CHECKED",
+      "identity_number": "MATCH|MISMATCH|NOT_CHECKED",
+      "explicit_birthday": "MATCH|MISMATCH|NOT_CHECKED",
+      "gender": "MATCH|MISMATCH|NOT_CHECKED",
+      "address": "MATCH|MISMATCH|NOT_CHECKED",
+      "other_phone": "MATCH|MISMATCH|NOT_CHECKED"
+    },
+    "source_envelope_integrity": "BYTE_FOR_BYTE_VALIDATED|IN_MEMORY_ADAPTATION|NOT_CHECKED|NOT_APPLICABLE"
+  },
+  "production_readback": {
+    "status": "PASS|UNKNOWN",
+    "reported_package_version": "UNKNOWN",
+    "active_runtime_version": "UNKNOWN",
+    "active_runtime_commit_or_hash": "UNKNOWN",
+    "source_to_deployment_binding": "VERIFIED|NOT_VERIFIED|UNKNOWN",
+    "production_unchanged": "YES|UNKNOWN"
+  },
+  "operation_counts": {
+    "branch_fetches": 0,
+    "wp10_structured_result_reads": 0,
+    "wp10_reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_creates": 0,
+    "contact_reads": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0
+  }
+}

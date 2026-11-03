@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11O-MUSE-PRODUCTION-SOURCE-DEPLOYMENT-PROVENANCE-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "task_commit": "8091c3fefcf566dff2f487520d204646990a9173",
+    "package_version": "0.12.0"
+  },
+  "audit": {
+    "status": "PARTIAL",
+    "timestamp": "2026-11-03T18:02:55+08:00",
+    "environment": "Ubuntu 24.04.5 LTS (Linux x86_64)",
+    "method": "READ_ONLY_STATIC"
+  },
+  "package_source_checkout": {
+    "found": "YES",
+    "package_version": "0.5.0",
+    "branch": "codex/wp7-muse-baidu-token-query-adapter-20261102",
+    "commit": "8336008d080387ab709d1e0ab9381683b1138e0f",
+    "worktree_state": "CLEAN",
+    "source_to_active_runtime_binding": "UNKNOWN"
+  },
+  "active_runtime": {
+    "found": "UNKNOWN",
+    "package_version": "UNKNOWN",
+    "source_commit_or_hash": "UNKNOWN",
+    "release_or_image_digest": "UNKNOWN",
+    "binding_evidence_kind": "NONE",
+    "seoul_service_version_or_hash": "UNKNOWN",
+    "ocr_route": "UNKNOWN"
+  },
+  "components": {
+    "muse_upload_orchestration": {
+      "status": "UNKNOWN",
+      "relative_paths": [],
+      "sha256": [],
+      "finding_code": "AGENT_FLOW_NOT_IN_SOURCE"
+    },
+    "seoul_ocr_caller_and_response_adapter": {
+      "status": "PRESENT_UNBOUND",
+      "relative_paths": [
+        "wp8-seoul-ocr-service/muse_adapter.py",
+        "wp8-seoul-ocr-service/baidu_ocr_service.py"
+      ],
+      "sha256": [
+        "5b7f139b23268f9fef5d41d596db18b6b3ff392bb4c507b55d8cd949f919bae3",
+        "804565db206a905c92380ebc266bf00d80e85b2f144ca7d30de4eaaa4ca0638e"
+      ],
+      "preserves_text_location_probability_chars": "NO",
+      "finding_code": "UNBOUND_ADAPTER_NO_PRESERVATION"
+    },
+    "table_and_line_parser_binding": {
+      "status": "PRESENT_UNBOUND",
+      "relative_paths": [
+        "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/fields.py"
+      ],
+      "sha256": [
+        "186200379b12f7bdd95d93dd3dc80afc6429704dfa1c02e65b9fd05757968001"
+      ],
+      "package_pin": "UNKNOWN",
+      "finding_code": "PRODUCTION_0_5_0_UNBOUND"
+    },
+    "primary_customer_and_family_boundary": {
+      "status": "PRESENT_UNBOUND",
+      "relative_paths": [
+        "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/fields.py"
+      ],
+      "sha256": [
+        "186200379b12f7bdd95d93dd3dc80afc6429704dfa1c02e65b9fd05757968001"
+      ],
+      "finding_code": "PRODUCTION_0_5_0_UNBOUND"
+    },
+    "icloud_duplicate_search": {
+      "status": "PRESENT_UNBOUND",
+      "relative_paths": [
+        "wp10-real-card/wp10_ocr_dedup.py",
+        "wp9-dedup-icloud/wp9_icloud_e2e.py"
+      ],
+      "sha256": [
+        "4c78025fc1e9b672049474493971b36a3e22d4627e8b29b994885d9379a82fbf",
+        "7faef228123f6f90971d29187b35a5553eb58437c5a977c8b74c9addda52396c"
+      ],
+      "fail_closed_on_incomplete_search": "UNKNOWN",
+      "finding_code": "UNBOUND_DEDUP_BEHAVIOR_UNKNOWN"
+    },
+    "field_level_review_and_edit_ui": {
+      "status": "NOT_FOUND_IN_INSPECTED_SOURCE",
+      "relative_paths": [],
+      "sha256": [],
+      "finding_code": "NO_UI_SOURCE_FILE"
+    },
+    "explicit_precreate_user_confirmation": {
+      "status": "NOT_FOUND_IN_INSPECTED_SOURCE",
+      "relative_paths": [],
+      "sha256": [],
+      "finding_code": "NO_CODE_ENFORCED_CONFIRMATION"
+    },
+    "contact_create_retry_and_idempotency": {
+      "status": "PRESENT_UNBOUND",
+      "relative_paths": [
+        "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/contacts_create_adapter.py"
+      ],
+      "sha256": [
+        "0aa33bb802b301ccb4b10269c2eb22214f82e8e1f232b8def45b84a4678b0c1b"
+      ],
+      "write_retry_policy": "UNKNOWN",
+      "server_idempotency": "UNKNOWN",
+      "finding_code": "UNBOUND_CREATE_ADAPTER_NO_RETRY_PIN"
+    },
+    "postcreate_readback": {
+      "status": "PRESENT_UNBOUND",
+      "relative_paths": [
+        "wp10-real-card/wp10_create_readback.py"
+      ],
+      "sha256": [
+        "b9260b429b8861d9f383ad255ee661241c0d23a0e5dae6cd73b81a75125e7411"
+      ],
+      "finding_code": "UNBOUND_READBACK_SCRIPT"
+    },
+    "uncertain_write_recovery_and_rollback": {
+      "status": "NOT_FOUND_IN_INSPECTED_SOURCE",
+      "relative_paths": [],
+      "sha256": [],
+      "finding_code": "NO_ROLLBACK_SOURCE_FILE"
+    },
+    "pii_safe_logging": {
+      "status": "UNKNOWN",
+      "relative_paths": [],
+      "sha256": [],
+      "finding_code": "LOGGING_BEHAVIOR_NOT_ESTABLISHED"
+    }
+  },
+  "operation_counts": {
+    "package_metadata_reads": 3,
+    "git_provenance_reads": 12,
+    "source_files_read": 21,
+    "deployment_manifest_or_metadata_reads": 2,
+    "process_metadata_reads": 1,
+    "configuration_secret_values_read": 0,
+    "logs_read": 0,
+    "production_code_executions": 0,
+    "ocr_calls": 0,
+    "baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_reads": 0,
+    "contact_creates": 0,
+    "contact_updates": 0,
+    "contact_deletes": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_code_exports": 0,
+    "commits": 0,
+    "pushes": 0
+  }
+}

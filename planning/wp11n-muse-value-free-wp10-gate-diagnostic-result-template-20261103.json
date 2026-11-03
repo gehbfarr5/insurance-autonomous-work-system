@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11N-MUSE-VALUE-FREE-WP10-GATE-DIAGNOSTIC-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "",
+    "package_version": "0.12.0"
+  },
+  "environment": {
+    "os_image": "",
+    "python_version": "",
+    "pillow_version": "",
+    "isolated_worktree": false,
+    "isolated_virtualenv": false
+  },
+  "wp10_source": {
+    "structured_result_available": "YES|NO|NOT_CHECKED",
+    "same_wp11m_result_reused": false,
+    "parser_replay_status": "PASS|FAIL|BLOCKED|NOT_RUN",
+    "decision": "READY|REVIEW_REQUIRED|UNKNOWN",
+    "draft_mapping": "ACCEPTED|REJECTED|NOT_RUN",
+    "reason_codes": [],
+    "field_presence": {
+      "name": "PRESENT|ABSENT|NOT_RUN",
+      "mobile": "PRESENT|ABSENT|NOT_RUN",
+      "identity_number": "PRESENT|ABSENT|NOT_RUN",
+      "explicit_birthday": "PRESENT|ABSENT|NOT_RUN",
+      "gender": "PRESENT|ABSENT|NOT_RUN",
+      "address": "PRESENT|ABSENT|NOT_RUN",
+      "other_phone": "PRESENT|ABSENT|NOT_RUN"
+    },
+    "reviewed_reference_used": false
+  },
+  "count_semantics": {
+    "status": "COMPLETE|PARTIAL|BLOCKED|NOT_RUN",
+    "null_count_reason": "NOT_INSTRUMENTED|NOT_AVAILABLE|NOT_RUN|NONE",
+    "candidate_counts_are_distinct_blocks_per_field_and_stage": true,
+    "raw_values_returned": false
+  },
+  "fields": {
+    "name": {
+      "pure_labels": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    },
+    "mobile": {
+      "pure_labels": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    },
+    "identity_number": {
+      "pure_labels": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    },
+    "explicit_birthday": {
+      "pure_labels": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    },
+    "gender": {
+      "pure_labels": null,
+      "text_blocks": null,
+      "structured_checked_state_signals": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    },
+    "address": {
+      "pure_labels": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    },
+    "other_phone": {
+      "pure_labels": null,
+      "candidate_sources": {
+        "direct_right": null,
+        "same_row_nonadjacent": null,
+        "next_visual_row": null
+      },
+      "geometry_gate": {"evaluated": null, "passed": null, "rejected_or_ambiguous": null},
+      "field_validation_gate": {"evaluated": null, "passed": null, "rejected": null},
+      "unique_assignment_gate": {"evaluated": null, "passed": null, "blocked_by_ambiguity_or_conflict": null},
+      "family_boundary_exclusions": null
+    }
+  },
+  "operation_counts": {
+    "branch_fetches": 0,
+    "wp10_structured_result_reads": 0,
+    "wp10_reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_creates": 0,
+    "contact_reads": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_files_modified": 0,
+    "muse_commits": 0,
+    "muse_pushes": 0
+  }
+}
