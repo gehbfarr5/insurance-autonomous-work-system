@@ -1274,18 +1274,61 @@
     "interpretation": "Historical product context is not evidence of current user eligibility, completion steps, Forest task association, reward trigger, or cycle. No-hit results do not establish absence."
   },
   "museUiSnapshot20261103": {
-    "recordedAt": "2026-11-03T17:50:36+08:00",
-    "source": "Read-only CUA accessibility snapshot of the running MUSE application.",
-    "observed": "The selected conversation showed an assistant generation indicator and a stop control. The UI was not switched to the Forest conversation.",
+    "recordedAt": "2026-11-03T18:08:19+08:00",
+    "source": "Read-only CUA accessibility tree of the running MUSE application after the WP11 conversation had completed generation, showing the existing Forest conversation.",
+    "observed": "The selected Forest conversation showed a send composer and no generation-in-progress control. The visible conversation contained historical scheduler data from 16:23 only; this turn obtained no fresh scheduler/task/queue/in-flight/runner-lock/deployment readback.",
     "notRead": [
-      "Forest scheduler or task definition",
-      "Forest running/queued/in-flight state",
-      "Runner lock",
+      "Current Forest scheduler or task definition",
+      "Current Forest running/queued/in-flight state",
+      "Current runner lock",
       "Current deployed version/hash",
       "Pixel device state or device-operation lock"
     ],
-    "actions": "No message was sent, no generation was interrupted, no business or schedule state was changed, and Pixel was not connected.",
-    "classification": "Forest concurrency and device-access gates remain UNKNOWN. A foreground generation indicator does not establish Forest runner concurrency or lock state. The previous 16:23 readback is stale and cannot authorize device access.",
-    "nextStep": "After the current MUSE work completes naturally, read the latest state from the existing Forest conversation before considering any Pixel read-only inspection."
+    "actions": "No MUSE message was sent and no generation was interrupted. No device, business state, schedule, or credentials were accessed or changed; Pixel was not connected.",
+    "classification": "The visible 16:23 schedule and lock values are stale. Current Forest concurrency, schedule, deployment version, runner lock, and Pixel device-access gates remain UNKNOWN; an idle-looking conversation UI does not establish runner state.",
+    "nextStep": "When MUSE allows, read fresh schedule, queue/in-flight, runner-lock, and deployment status from the existing Forest conversation. Only consider Pixel through the existing configured alias after no concurrency and a clear device-operation lock are confirmed."
+  },
+  "activityClassObserverReview20261103": {
+    "recordedAt": "2026-11-03T18:06:00+08:00",
+    "source": "Private offline-only derivative of the review-only diagnostic candidate; original review package left untouched.",
+    "candidateSha256": "1310672261f2851465c756287e9d60882526f8f25a14fcc9585043a2f02944b1",
+    "manifestSha256": "2802b8c406d420e916835efc471f4b0905e9ffa86c0ca5525953b9e360a08fe4",
+    "manifestFilesVerified": "11/11",
+    "runtimeVersions": {
+      "node": "26.0.0",
+      "python": "3.14.7"
+    },
+    "offlineScripts": {
+      "test-monitor-diagnostics.cjs": "PASS",
+      "test-forest-loginstate-observer.cjs": "PASS",
+      "test-assistant-gate-observer.cjs": "PASS",
+      "test-join-run-evidence.py": "PASS",
+      "test-collect-run-diagnostics.py": "PASS"
+    },
+    "change": "Adds fixed foreground-Activity categories to a schema-v4 sidecar and keeps the collector compatible with v3/v4. The projection allowlists enum values and does not persist raw Activity names. Existing exact GestureActivity dispatch gate, assistant method pin, auth input, schedule, and business state are unchanged; Activity API exceptions remain fail-loud.",
+    "reuseAdaptAvoid": {
+      "reuse": "Existing monitor/trigger/worker flow, fixed-window logging projection, and runGroup/time evidence join.",
+      "adapt": "Categorical foreground observation and v3/v4 sidecar projection in a private candidate copy.",
+      "avoid": "Raw Activity strings and unrelated runtime, auth, schedule, or business-state changes."
+    },
+    "limits": [
+      "Offline synthetic checks only; no install, deployment, device, Android, or AutoX compatibility verification.",
+      "Prepare per-field login-state observer and assistant Vue/method-pin/menu observer remain unintegrated with the live runner.",
+      "Does not provide a complete natural-run trace, establish business success, or identify the 2026-11-03 prepare-timeout root cause.",
+      "Candidate was not committed or published."
+    ]
+  },
+  "rulesOfficialSearchBroad20261103": {
+    "recordedAt": "2026-11-03T17:57:01+08:00",
+    "source": "Targeted web search using CPIC official-domain phrases; no returned page was treated as a rule source unless directly relevant.",
+    "queries": [
+      "site:cpic.com.cn 阳光森林 阳光值",
+      "site:life.cpic.com.cn 阳光森林 规则",
+      "site:cpic.com.cn 阳光雨露 任务",
+      "site:cpic.com.cn 行为值 营销员 太保"
+    ],
+    "result": "No directly relevant official source for Forest rules, reset time, repeat cycle, reward trigger, or settlement delay surfaced. Results were unrelated company directory and general insurance pages.",
+    "classification": "Bounded no-hit only; this does not establish that original internal materials do not exist or were never confirmed.",
+    "effect": "No change to rule conclusions or extension classifications."
   }
 }

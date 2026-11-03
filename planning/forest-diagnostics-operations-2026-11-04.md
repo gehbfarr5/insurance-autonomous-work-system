@@ -2,11 +2,19 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 17:50 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 18:08 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
 
-### MUSE界面只读可用性复核｜2026-11-03 17:50 CST
+### 私有离线Activity类别候选复核｜2026-11-03 18:08 CST
 
-约17:50 CUA读取MUSE应用可访问性树，当前对话显示Assistant正在输入，界面含停止生成控件。未切换到森林对话、未发送消息或中断生成；也未读取Forest scheduler/task/queue/runner lock/deployed hash。该UI证据只说明当时MUSE前台有生成状态，不足以判断Forest后台并发或设备锁。浏览器清单为空、Work设置禁用浏览器控制。没有连接Pixel或进行业务/调度写入。当前并发和设备访问门禁保持UNKNOWN；待该MUSE工作自然结束后，通过既有森林线程重取新鲜状态，再考虑是否进行Pixel只读检查。结构化证据见`remaining-work-evidence-2026-10-29.json`的`museUiSnapshot20261103`。
+针对11月4日review-only窗口，在私有副本中增加前台Activity固定类别枚举与v3/v4侧车兼容投影。选择固定类别而非原始类名，避免持久化运行时Activity字符串；复用现有monitor/trigger/worker控制流、固定窗口日志投影和runGroup/时间关联工具。候选SHA-256为`1310672261f2851465c756287e9d60882526f8f25a14fcc9585043a2f02944b1`，11文件SHA清单为`2802b8c406d420e916835efc471f4b0905e9ffa86c0ca5525953b9e360a08fe4`，逐文件11/11匹配。五项离线合成脚本均PASS（Node 26.0.0、Python 3.14.7）；未安装、部署、连接设备或验证AutoX/Android运行兼容。候选不更改GestureActivity精确门禁、assistant固定方法pin、认证输入、调度或业务状态；API读取异常仍fail-loud。prepare逐字段登录态及assistant Vue/方法pin/菜单观察器仍未集成live runner；本候选不构成完整单轮诊断，也不定位11月3日超时根因。候选更新/重启可能影响进程内触发状态，继续受备份、MUSE无并发、设备操作锁确认及可回滚门禁约束。详见证据索引中的`activityClassObserverReview20261103`。
+
+### MUSE只读状态复核｜2026-11-03 18:08 CST
+
+约18:05 WP11对话已结束生成；随后只读打开既有森林线程。当前AX树显示发送框、未见生成中控件，但线程没有本轮新的scheduler/task/queue/in-flight/runner-lock/部署哈希读回；可见的16:23调度读数已过时。因此并发与Pixel设备门禁仍UNKNOWN，本轮未连接Pixel。不得将历史16:23的FREE锁读数或本机没有SSH进程当作当前设备授权。结构化记录见`remaining-work-evidence-2026-10-29.json`的`museUiSnapshot20261103`。
+
+### 前一轮MUSE界面只读可用性复核｜2026-11-03 17:57 CST
+
+约17:50及17:54 CUA读取MUSE应用可访问性树，当前对话两次均显示Assistant正在输入，界面含停止生成控件。未切换到森林对话、未发送消息或中断生成；也未读取Forest scheduler/task/queue/runner lock/deployed hash。该UI证据只说明MUSE前台仍有生成状态，不足以判断Forest后台并发或设备锁。浏览器清单为空、Work设置禁用浏览器控制。17:55本机进程盘点未发现SSH客户端或匹配`pixel3a-kjgx`的会话；本轮未连接Pixel，此检查不代表设备端状态。当前并发和设备访问门禁保持UNKNOWN；当时等待该MUSE工作自然结束后，通过既有森林线程重取新鲜状态。结构化证据见`remaining-work-evidence-2026-10-29.json`的`museUiSnapshot20261103`。
 
 ### 访问门禁历史记录｜2026-11-03 16:14 CST
 
