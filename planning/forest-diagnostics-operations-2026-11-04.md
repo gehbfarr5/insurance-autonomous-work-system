@@ -33,6 +33,10 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 
 ## 自然运行顺序
 
+### 当前访问门禁｜2026-11-03 16:52 CST
+
+本轮CUA库存只确认MUSE进程运行，未提供Forest任务/调度读回；浏览器控制不可用。16:23的MUSE状态读数仍是最近一次Forest并发证据，当前并发状态UNKNOWN。未连接Pixel。不得使用旧的0/0/false与runner lock FREE读数作为当前设备门禁；先获取新鲜MUSE状态，确认目标任务结束、没有其他任务在途，再通过既有别名读设备锁和哈希。既有别名在本机配置中存在，但本轮未建立SSH连接。16:33静态源码读回只解释prepare轮询控制流，尚未定位触发超时的具体分支，也未导出完整live runner。后续步骤和窗口限制仍按本节 runbook 执行。
+
 1. **先确认 MUSE 并发，再接触 Pixel。** 通过已有 MUSE 运行入口只读确认当前日程、运行/排队/在途任务及目标自然运行。只有确认没有其他设备任务占用、且目标任务身份明确后，才通过现有 Pixel 别名复读 monitor、设备操作锁及部署哈希。若 MUSE 当前任务或队列不可读/UNKNOWN，跳过 Pixel 连接和所有设备诊断；记录 UNKNOWN，等待可验证无并发后再继续。不手动启动、取消或改动原任务，不连接备用 SSH 路线。
 2. **只允许既有自然调度发生。** 不点击入口，不重放、不补跑、不登录，不清理 `state`、防重记录、attempt 或 audit 文件。已有授权只覆盖原每日范围，不因诊断窗口扩大业务权限。
 3. **窗口结束且确认无在途任务后只读采集。** 取得 MUSE 已脱敏的 `assistant` 与 `main` 两段唯一、非重叠起止时间，并确认任务已结束、没有其他设备任务运行，再通过本机私有 collector 从同一 Pixel 别名读取 sidecar 与 epoch 时间日志。若任务结束或设备独占状态无法确认，先不连接 Pixel、不采集；继续标记 UNKNOWN。使用本机私有包`auth-trigger-diagnostics-20261104-review-only/README.txt`中的输入契约；先在包目录执行`shasum -a 256 -c SHA256SUMS.txt`，14个成员均须为OK。该包要求仅输入脱敏的唯一assistant/main区间，collector命令为：
