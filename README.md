@@ -5,7 +5,7 @@
 
 > **家庭卡 OCR 当前候选复验｜2026-11-03：** MUSE 在精确提交 `6d5e7d4b8bbf29e8e5b4b1bc9bf43fa2d344cb6b`（0.12.0）的隔离 worktree/venv 中通过 144/144 离线测试；仅重放同一已授权 WP10 结构化 OCR 结果，仍为 `REVIEW_REQUIRED`，草稿映射被拒，姓名/手机号/显式生日/性别缺失，身份证号存在。已审参考不可用，未作准确率比较或值匹配声明。MUSE 随后对精确提交 `0c97938342d77ab23b5f061ad472529d3999918e` 完成 value-free 门禁计数：姓名、手机、生日无候选通过几何门禁；地址候选未通过字段校验；性别没有结构化勾选信号。身份证候选通过现有门禁，但因 reference 不可用而不宣称准确。没有证据支持放宽解析规则。诊断报告同一 WP10 结果读取6次，reference、新样本/图片、OCR/Baidu、联系人、生产执行/写入、部署和 raw export 均为0；生产版本/部署绑定仍UNKNOWN。见[WP11-M 机器结果](planning/wp11m-muse-current-candidate-result-20261103.json)、[WP11-N 诊断任务](planning/wp11n-muse-value-free-wp10-gate-diagnostic-20261103.md)与[计数结果](planning/wp11n-muse-value-free-wp10-gate-diagnostic-result-20261103.json)。
 
-> **阳光森林当前访问门禁｜2026-11-03 17:25 CST：** 最新CUA清单显示Muse进程仍运行，但浏览器清单为空，Work设置报告浏览器控制已禁用；未取得Forest scheduler/task/queue读数。此前16:23 MUSE并发快照已过时，当前仍为UNKNOWN。遵守既有边界，未打开不相关WP1上下文，也未连接Pixel；没有MUSE/Pixel专用connector。设备锁及部署哈希仍UNKNOWN。11月4日review-only collector的`.failure`标记修正、目标Activity观测边界和E07规则来源审计见[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)。没有设备、业务state、调度或凭据变更。需要先从正确MUSE线程取得新鲜并发/锁读数，再按手册决定Pixel只读访问。
+> **阳光森林当前访问门禁｜2026-11-03 17:50 CST：** CUA只读打开MUSE时，当前界面显示另一个对话正在生成回复；没有切换到森林线程，也未打断该任务。浏览器清单为空、Work浏览器控制被禁用；未取得Forest scheduler/task/queue/lock或当前部署版本读数，故并发状态与设备门禁仍UNKNOWN。未连接Pixel；没有MUSE/Pixel专用connector。证据及边界见[运行恢复说明](planning/forest-diagnostics-operations-2026-11-04.md)。没有设备、业务state、调度或凭据变更。待当前MUSE工作结束后，先从正确线程刷新并发/锁读数，再按手册决定Pixel只读访问。
 
 > **空列表观察器上下文门禁｜2026-11-03 17:38 CST：** 被动观察器现在要求sourcePin为非空字符串、salt至少32字符；不合规上下文在任何CDP调用前返回BLOCKED。5项合成测试PASS。真实成功空列表同周期响应/赋值仍未观察，代码未部署，MUSE当前安装版本仍UNKNOWN。证据见[剩余工作证据索引](planning/remaining-work-evidence-2026-10-29.json)。
 
