@@ -45,7 +45,7 @@ CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；
 
 静态核对本机私有review包的README、monitor、collector、joiner及observer候选，未读取原始设备日志，也未连接Pixel。实际字段边界如下：
 
-- 已安装monitor在固定窗口内采集屏幕亮灭、Keyguard读取状态及两个布尔值、目标应用/手势Activity匹配、guard/account门禁、延迟复核门禁、episode接受、worker请求及worker返回状态/原因。Activity和account只保留匹配布尔值，不导出原始Activity名或标记值。
+- 已安装monitor在固定窗口内采集屏幕亮灭、Keyguard读取状态及两个布尔值、目标应用/手势Activity匹配、guard/account门禁、延迟复核门禁、episode接受、worker请求及worker返回状态/原因。它只能说明目标应用/手势Activity是否匹配，无法识别其他前台Activity；account只保留匹配布尔值，不导出原始Activity名或标记值。
 - MUSE脱敏分段负责提供assistant/main区间、阶段、回执与cleanup。joiner的`auth.dispatch=DISPATCHED`代表monitor请求了认证worker；`auth.return=RETURNED`代表worker调用返回，不证明实际手势已输入、应用接受输入或服务端认证成功。
 - `forest-prepare-loginstate-observer.js`与`assistant-gate-observer-expression.js`均未部署/集成。三项登录字段的存在性及采样时间、助理Vue/方法固定pin/菜单数量快照，除非MUSE在精确分段内提供匹配时间戳，否则都必须保持UNKNOWN。
 - 发现collector先前忽略monitor写失败`.failure`标记，可能把不完整sidecar误报为完整关联。现已在本机私有collector加入标记计数：保留已有脱敏样本，同时将`correlationStatus`降为`PARTIAL_UNKNOWN`；若没有sidecar则monitor来源仍为UNAVAILABLE。对应合成采集器检查通过，包清单已重算并复核14/14。该修正只影响本机导出器，不改设备代码、monitor、APK、runner、调度或业务state。

@@ -102,7 +102,7 @@ Drive metadata-only查询新增六组词面：“阳光森林 重置时点 官�
 
 ### Review-only采集字段审计｜2026-11-03 17:12 CST
 
-已安装monitor只输出屏幕/Keyguard状态、目标app与手势Activity匹配、guard/account门禁及worker请求/返回布尔/枚举，不输出原始Activity/account标记。worker请求或返回不等于实际手势输入或成功认证。assistant/main阶段、业务回执和cleanup取自脱敏MUSE分段；prepare登录字段与assistant gate观察器仍离线，缺少同段匹配时间戳时继续记UNKNOWN。collector此前忽略monitor写失败`.failure`标记，可能让不完整日志显示为完整关联；现已修正为计数并强制`PARTIAL_UNKNOWN`，已保留可用的脱敏事件。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+已安装monitor只输出屏幕/Keyguard状态、目标app与手势Activity是否匹配、guard/account门禁及worker请求/返回布尔/枚举；它不能识别目标Activity以外的前台Activity，也不输出原始Activity/account标记。worker请求或返回不等于实际手势输入或成功认证。assistant/main阶段、业务回执和cleanup取自脱敏MUSE分段；prepare登录字段与assistant gate观察器仍离线，缺少同段匹配时间戳时继续记UNKNOWN。collector此前忽略monitor写失败`.failure`标记，可能让不完整日志显示为完整关联；现已修正为计数并强制`PARTIAL_UNKNOWN`，已保留可用的脱敏事件。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 
 ## 仍需证据及具体停止点
 
