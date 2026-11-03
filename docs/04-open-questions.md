@@ -1,5 +1,10 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 05:11 CST：E07原规则弹层复核；时点依据仍缺
+
+私有E07快照为8,079字节，SHA-256与证据索引一致。本次只读取规则弹层文本：记载阳光日上限10、雨露日上限20，奖励按次/人/单计量。该历史弹层没有日界重置时刻/时区、重复奖励窗口、到账时延或当前版本信息；D-029“官方时点曾确认”保持原样，仍待定位原始时点依据。尝试只读打开精确Forest线程时，CUA返回“Local browser use is disabled in Work settings”；没有发消息、改草稿或查设备。最后可见回复为04:54截图中的03:47:07旧快照，当前调度/队列/锁/live哈希仍UNKNOWN。记录：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：复核五段脱敏运行包并校准stages语义
 
 本机重算已下载Nov 2–3脱敏ZIP外层SHA-256与记录值一致；5个分段JSON均与包内SHA256SUMS匹配。5个`moduleArtifactSha256`事件均一致且匹配v0.19 APK pin。安全字段复核显示：Nov 2手动助理为MainActivity→BridgeWebActivity后固定入口门禁阻断、`NOT_SENT`；手动主流程停MainActivity并报`PREPARE_LOGIN_STATE_MISSING`。Nov 3误触助理为Splash→Main、调度助理和主流程均只记录MainActivity，准备超时，助理`NOT_SENT`；三段cleanup PASS。所有段明确记录`has_login_event:false`，但逐字段`user`/`empNoAES`/`operateFlag`布尔值与时间、`gesturePage`/`accountMatch`仍缺。脱敏投影中两个主流程`stages:null`；因原始`result.json`字节未随包提供，不能独立确认原始键形态；保持UNKNOWN，不改写为空列表。未读state-snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。

@@ -1,5 +1,10 @@
 # 11月2日准备阻断修复与单次补跑记录｜2026-11-02
 
+## 2026-11-04 05:11 CST：规则原件复核与运行访问门禁
+
+E07私有规则快照哈希/大小与索引匹配；其规则弹层只支持每日阳光10、雨露20上限及按次/人/单计量，不提供重置时刻/时区、重复周期、到账时延或当前规则版本。保持D-029历史确认、不推断时点。尝试只读打开唯一Forest MUSE线程被Work settings拒绝（本地浏览器使用禁用）；无新鲜任务/队列/锁/部署哈希，均UNKNOWN。05:11本机进程盘点未观察到`ssh`可执行进程，但没有Pixel查询，不能证明设备离线。09:00任务保持原样；不连接、不部署、不重放。证据：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`、`pixelLocalSshProcessCheck20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：重核历史五段脱敏包
 
 脱敏ZIP外层校验和匹配既有索引；五个分段JSON各自匹配内部SHA清单。5个模块artifact事件都匹配v0.19 APK pin。重新提取到的状态与已记录对照一致：11月2手动助理Main→BridgeWeb后因入口固定门禁失败、未发送；手动主流程停MainActivity并阻断于登录态。11月3三段都只到MainActivity（误触助理先有Splash）并超时，助理NOT_SENT，cleanup PASS。五段`has_login_event:false`为实记；字段级登录布尔值/时间、gesturePage/accountMatch均缺。摘要投影将两段main的`stages`记为null；此前MUSE报告raw键缺失，但源result字节未包含，无法在本机确认其原键形态，仍按UNKNOWN、不等同空数组。未读取state snapshot或owner token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。

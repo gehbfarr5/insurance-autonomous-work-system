@@ -1,5 +1,10 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 05:11 CST：当前可用规则证据与运行门禁
+
+E07私有历史规则弹层快照复核通过索引SHA/大小；支持日上限阳光10、雨露20及按次/人/单计量，未说明重置时刻/时区、重复奖励周期、到账延迟或当前版本。D-029时点原依据仍开放。打开精确Forest MUSE线程的只读尝试被Work settings禁用浏览器所阻；当前调度、队列/在途、runner lock与live哈希仍UNKNOWN，未连接Pixel。五项日常单轮证据已与跨日/长期验收分开记录；P4继续开放、S1未验收。Issue #3仍OPEN；无关PR #17为WP11，mergeability UNKNOWN且没有checks。证据：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：脱敏五段对照包本机复核
 
 Nov 2–3脱敏ZIP外层哈希与记录值一致，5个分段JSON哈希均匹配包内manifest。五段的模块artifact hash marker都匹配已知v0.19 APK pin。对照显示仅Nov 2手动助理到BridgeWebActivity后触发固定入口门禁失败；另外四段停留在MainActivity（误触助理还先经过Splash）；Nov 3自然助理均`NOT_SENT`且三段cleanup PASS。五段`has_login_event:false`有明确记录，字段级登录状态、采样时点和gesture/accountMatch仍UNKNOWN。两个主流程的脱敏`stages`字段为null，而先前MUSE报告raw键缺失；原始result字节未提供，故均保持UNKNOWN，不视为空列表。证据：`nov3SanitizedPackageRecheck20261104_0458`。

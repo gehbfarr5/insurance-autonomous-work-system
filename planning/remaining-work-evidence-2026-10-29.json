@@ -5305,5 +5305,40 @@
     "stagesSemantics": "Both main-flow sanitized projections contain stages:null; prior MUSE readback described the raw key as absent. The original result.json bytes are not in the ZIP, so raw key shape cannot be independently verified. Preserve UNKNOWN, not an empty list.",
     "unknowns": "Per-field user/empNoAES/operateFlag booleans and sample times, gesturePage, accountMatch, and lower-level ready-marker cause remain UNKNOWN.",
     "actions": "Read only SHA256SUMS.txt and the five sanitized segment JSON members. Did not read state-snapshot.json, operation-owner.json, raw result files, business state, raw logs, or private credentials; no device, MUSE message, code, or job was accessed or changed."
+  },
+  "e07RuleSnapshotRecheck20261104_0511": {
+    "recordedAt": "2026-11-04T05:11:07+08:00",
+    "source": "Private local E07 rule-dialog snapshot indexed as the historical official rules overlay; 8,079 bytes; SHA-256 matches index.",
+    "finding": "The text supports daily caps of 10 Sunshine points and 20 Dew points and describes reward units by action/person/order. It does not state the daily reset time or timezone, repeat-reward windows, settlement delay, or current rule version.",
+    "scope": "Read only the rule-overlay text and file identity. Did not inspect app render-code body, state values, business state, raw logs, or customer data. The full source remains private.",
+    "interpretation": "Historical source evidence only. D-029 prior confirmation remains recorded; the original timing calculation/source is still unresolved."
+  },
+  "museThreadAccessBlocked20261104_0511": {
+    "recordedAt": "2026-11-04T05:11:07+08:00",
+    "source": "Read-only CUA attempt to open the exact authorized Sunshine Forest MUSE thread.",
+    "finding": "The tool returned: Local browser use is disabled in Work settings. The thread could not be opened in this attempt.",
+    "actions": "No MUSE request/message was sent; no draft was edited; no alternate thread/interface or MUSE resource was used; no Pixel query/connection, code/job run, business-state/raw-log read, file change, or schedule change occurred.",
+    "limit": "The latest visually observed MUSE reply remains 03:47:07 from the 04:54 screenshot, a stale point-in-time response. Current scheduler/task, queue/in-flight, runner lock, and live hashes remain UNKNOWN."
+  },
+  "pixelLocalSshProcessCheck20261104_0511": {
+    "recordedAt": "2026-11-04T05:11:07+08:00",
+    "source": "Local macOS process-name inventory (`ps -Ao comm`), filtered only for executable name ssh.",
+    "finding": "No process named ssh was observed at this snapshot.",
+    "limit": "No alias command, SSH connection, ADB/device query, or device read occurred. This does not prove Pixel reachability or disconnection; Pixel connectivity, operation lock, monitor/hash, and UI remain UNKNOWN.",
+    "actions": "Read-only local process inventory; no command arguments, credentials, paths, or endpoints were recorded."
+  },
+  "githubStateCheck20261104_0511": {
+    "recordedAt": "2026-11-04T05:11:07+08:00",
+    "source": "Read-only GitHub CLI checks of Issue #3 and open pull requests.",
+    "issue3": "OPEN",
+    "openPullRequest": {
+      "number": 17,
+      "title": "Harden Family Card OCR table field mapping",
+      "state": "OPEN",
+      "scope": "Unrelated WP11",
+      "mergeability": "UNKNOWN",
+      "checks": []
+    },
+    "actions": "Read-only metadata; no issue, pull request, branch, or merge state was changed."
   }
 }

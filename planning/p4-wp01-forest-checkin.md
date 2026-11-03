@@ -1,5 +1,10 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 05:11 CST：当前任务门禁与规则原件复核
+
+E07私有规则弹层快照按索引复核通过，支持阳光日上限10、雨露日上限20及按次/人/单计量；不提供重置时刻/时区、奖励周期、到账时延或当前规则版本。日常五项最近可信动作、NOT_SENT/SENT、结果与跨日验收拆分见[本地证据审计](local-evidence-audit-2026-10-29.md#五项日常任务的动作结果与验收边界2026-11-04-0511-cst)。CUA尝试只读打开唯一Forest线程时被Work settings拒绝；当前MUSE并发、Pixel连接/锁/monitor和live哈希均UNKNOWN。没有连接Pixel、部署、重放、改门禁或调度。记录：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：五段脱敏运行包复核
 
 本机确认已下载ZIP外层哈希匹配记录值，5个分段JSON均通过内部哈希核验；五个`moduleArtifactSha256`标记均匹配已知v0.19 APK pin。Nov 2手动助理到BridgeWebActivity后因固定入口门禁失败并保持`NOT_SENT`；手动主流程停在MainActivity并报登录态门禁失败。Nov 3误触助理为Splash→Main，两个调度段都只到MainActivity并prepare超时；助理均`NOT_SENT`。三段cleanup PASS。五段均有明确`has_login_event:false`，但各字段登录状态/采样时间、`gesturePage`和`accountMatch`仍UNKNOWN。两段主流程的本地脱敏投影为`stages:null`；原始`result.json`未随包提供，无法独立核验原始键形态，保持UNKNOWN而不当作空列表。未读取state snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。

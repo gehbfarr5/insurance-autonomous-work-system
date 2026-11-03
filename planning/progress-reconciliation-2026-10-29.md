@@ -1,5 +1,10 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-04 05:11 CST：E07规则来源复核、五项日常分层与MUSE访问门禁
+
+E07私有规则弹层快照为8,079字节、SHA-256与索引匹配；记载阳光日上限10、雨露日上限20及按次/人/单计量。它不含重置时刻/时区、重复奖励周期、到账延迟或当前版本；D-029曾确认的官方时点依据仍待恢复。只读打开精确Forest MUSE线程被Work settings拒绝，本轮没有状态查询；最近可见MUSE答复仍为03:47:07，当前scheduler/queue/runner lock/live hashes均UNKNOWN。05:11本机进程列表没有`ssh`可执行项，但未查询Pixel，不能判断设备离线。五项日常最近动作/回执、重复检查和跨日挂起状态已在本地审计集中列明。Issue #3仍OPEN；唯一开放PR #17属于无关WP11，mergeability UNKNOWN且没有checks。无Pixel连接、代码/任务执行、业务或state/raw-log读取、设备/调度/部署改动。证据：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`、`pixelLocalSshProcessCheck20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：五段运行脱敏证据本机复核
 
 已重算Nov 2–3脱敏ZIP外层哈希并核对5个分段JSON内部SHA；所有五段`moduleArtifactSha256`事件匹配v0.19 APK pin。对照结果与现有阶段判断一致：Nov 2助理到BridgeWebActivity后固定方法/菜单门禁失败、`NOT_SENT`，主流程停MainActivity且登录态门禁失败；Nov 3误触助理经历Splash→Main，调度助理与主流程止于MainActivity并prepare超时，助理`NOT_SENT`，三段cleanup PASS。所有段`has_login_event:false`是明确布尔记录；逐字段登录状态/时点与gesture/accountMatch仍缺。两段主流程的本地摘要投影将`stages`置为null，而MUSE此前报告raw键缺失；原始result字节不在ZIP，无法独立判定其原始键形态，统一保持UNKNOWN。未打开state snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。

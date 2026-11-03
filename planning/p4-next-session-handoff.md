@@ -1,5 +1,10 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 05:11 CST — E07 rule evidence and blocked MUSE refresh
+
+The private E07 rule-dialog snapshot still matches its indexed 8,079-byte SHA-256. Its historical text supports daily caps of 10 Sunshine and 20 Dew points and per-action/person/order units only. It does not define reset time/timezone, repeat-reward cycle, settlement delay, or current rules. D-029's prior-confirmation record stays intact; the original timing evidence remains unresolved. A read-only attempt to reopen the exact Forest MUSE thread was denied by Work settings (“Local browser use is disabled”); no request was sent. The last visible MUSE reply remains the stale 03:47:07 snapshot, so current scheduler/queue/lock/hashes are UNKNOWN. A local `ssh` process scan found no process but did not query Pixel; connectivity remains UNKNOWN. Keep the 09:00 schedule unchanged; do not connect to Pixel without a fresh no-in-flight check. Issue #3 is OPEN; unrelated PR #17 (WP11) is OPEN with mergeability UNKNOWN and no reported checks. Daily task evidence and distinct acceptance states are summarized in the [local evidence audit](local-evidence-audit-2026-10-29.md#五项日常任务的动作结果与验收边界2026-11-04-0511-cst).
+
+
 ## 2026-11-04 04:58 CST — sanitized five-segment package rechecked
 
 The documented Nov 2–3 ZIP outer hash still matches; all five segment JSON members match the internal manifest. Each of the five `moduleArtifactSha256` events matches the known v0.19 APK pin. The safe comparison preserves the distinction between the Nov 2 assistant reaching BridgeWebActivity before a fixed method/menu gate stopped it, and the Nov 3 runs stopping in prepare. All five report `has_login_event:false`; field-by-field login samples and gesture/account-match fields remain UNKNOWN. The downloaded summary projection uses `stages:null` for both main segments, while MUSE previously reported the raw key absent. Original result bytes are not in the ZIP, so do not claim independent verification of raw key presence; keep both main-stage results UNKNOWN, not empty. No state snapshot or owner-token content was read. Evidence: `nov3SanitizedPackageRecheck20261104_0458`.

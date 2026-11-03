@@ -1,5 +1,12 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 05:11 CST：规则原件限度与每日结果分层
+
+E07规则弹层私有快照本次按8,079字节及SHA-256与索引匹配；只读文本支持阳光日上限10、雨露日上限20及按次/人/单单位。该文件没有每日边界时刻/时区、重复周期、奖励到账延迟或当前适用版本；不得从“每日”或09:00调度推导重置时间。D-029此前确认仍保留，原始时点证据继续待恢复。五项日常的动作、独立收据、重复检查、跨日/长期状态已列于[本地审计矩阵](local-evidence-audit-2026-10-29.md#五项日常任务的动作结果与验收边界2026-11-04-0511-cst)。
+
+精确Forest MUSE线程只读打开尝试被Work settings拒绝（本地浏览器使用禁用）；没有发送状态请求。当前调度/队列/锁/live哈希UNKNOWN；本机无`ssh`可执行进程只是一条本机观察，不证明Pixel离线。本轮未连接设备或触发业务。证据键：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`、`pixelLocalSshProcessCheck20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：五段脱敏包来源与三态字段复核
 
 文档所指脱敏ZIP外层SHA与记录值相符，5个分段JSON哈希均通过内部manifest；5个模块artifact标记均匹配已知v0.19 APK pin。核实了11月2助理到BridgeWeb后被固定门禁拦截（`NOT_SENT`）、11月2主流程登录态阻断，以及11月3三个分段均只到prepare超时，助理无发送，三段cleanup PASS。五段`has_login_event:false`都有明确记录，但user/employee/operation字段的逐项存在性和采样时间、手势页/本人匹配仍UNKNOWN。两个main segment的本地脱敏投影为`stages:null`；MUSE先前称raw结果无该键，但原始result字节未随包导出，故无法独立核实原键形态。按UNKNOWN处理，不混同于`[]`。没有读取state snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。

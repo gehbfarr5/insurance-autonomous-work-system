@@ -1,5 +1,10 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 05:11 CST：E07规则范围确认；运行刷新仍不可用
+
+对照私有E07快照的索引SHA与字节数后，仅读取规则弹层：阳光日上限10、雨露日上限20；奖励标注按次/人/单计量。未读页面渲染代码或余额值。该快照不说明每日边界的时刻/时区、跨日重置规则、奖励重复周期或到账延迟。CUA对精确Forest线程的只读打开请求被Work settings拒绝（浏览器使用已禁用）；没有MUSE查询/消息，也没有Pixel连接。03:47:07仍是最近观察到的MUSE状态，但不能作为当前并发门禁。保持09:00原调度不动；未取得新鲜同轮门禁前不连接Pixel、不部署、不重放。证据：`e07RuleSnapshotRecheck20261104_0511`、`museThreadAccessBlocked20261104_0511`、`pixelLocalSshProcessCheck20261104_0511`。
+
+
 ## 2026-11-04 04:58 CST：复核既有五段脱敏证据
 
 本机复核已归档的脱敏ZIP：外层哈希与记录值匹配，五个分段JSON均通过内部SHA256SUMS核验。五个模块标记全部匹配已知v0.19 APK pin。Nov 2仅手动助理到BridgeWebActivity，随后固定菜单/方法门禁失败且`NOT_SENT`；手动主流程停在MainActivity并为`PREPARE_LOGIN_STATE_MISSING`。Nov 3误触助理记录Splash→Main，两个自然调度段都只记录MainActivity并在prepare超时；两个助理均`NOT_SENT`。三次cleanup均PASS，主流程没有独立业务stage/receipt。五段均明确`has_login_event:false`，但三个登录字段逐项存在性/采样时间、`gesturePage`/`accountMatch`仍UNKNOWN。已下载摘要把两个主流程`stages`投影为null，而MUSE先前报告原键缺失；源`result.json`未随包提供，不能独立验证原字节的键形态，保持UNKNOWN而非`[]`。未读取state snapshot或owner-token内容。证据：`nov3SanitizedPackageRecheck20261104_0458`。

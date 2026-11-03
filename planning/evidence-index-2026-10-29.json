@@ -391,6 +391,34 @@
       "source": "Local offline review of the existing sanitized five-segment evidence ZIP and its SHA256SUMS manifest.",
       "summary": "Both main-flow sanitized projections contain stages:null; prior MUSE readback described the raw key as absent. The original result.json bytes are not in the ZIP, so raw key shape cannot be independently verified. Preserve UNKNOWN, not an empty list. Five segment JSON hashes matched the package manifest; all five module artifact markers matched the known v0.19 APK pin.",
       "scopeLimit": "Read only SHA256SUMS.txt and the five sanitized segment JSON members. Did not read state-snapshot.json, operation-owner.json, raw result files, business state, raw logs, or private credentials; no device, MUSE message, code, or job was accessed or changed. Original raw result key shape, per-field login values/times, gesture/account-match, and lower-level marker cause remain UNKNOWN."
+    },
+    {
+      "recordKey": "e07RuleSnapshotRecheck20261104_0511",
+      "observedAt": "2026-11-04T05:11:07+08:00",
+      "source": "Private local E07 rule-dialog snapshot indexed as the historical official rules overlay; 8,079 bytes; SHA-256 matches index.",
+      "summary": "The text supports daily caps of 10 Sunshine points and 20 Dew points and describes reward units by action/person/order. It does not state the daily reset time or timezone, repeat-reward windows, settlement delay, or current rule version.",
+      "scopeLimit": "Historical source evidence only. D-029 prior confirmation remains recorded; the original timing calculation/source is still unresolved."
+    },
+    {
+      "recordKey": "museThreadAccessBlocked20261104_0511",
+      "observedAt": "2026-11-04T05:11:07+08:00",
+      "source": "Read-only CUA attempt to open the exact authorized Sunshine Forest MUSE thread.",
+      "summary": "The tool returned: Local browser use is disabled in Work settings. The thread could not be opened in this attempt.",
+      "scopeLimit": "The latest visually observed MUSE reply remains 03:47:07 from the 04:54 screenshot, a stale point-in-time response. Current scheduler/task, queue/in-flight, runner lock, and live hashes remain UNKNOWN. No MUSE request/message was sent; no draft was edited; no alternate thread/interface or MUSE resource was used; no Pixel query/connection, code/job run, business-state/raw-log read, file change, or schedule change occurred."
+    },
+    {
+      "recordKey": "pixelLocalSshProcessCheck20261104_0511",
+      "observedAt": "2026-11-04T05:11:07+08:00",
+      "source": "Local macOS process-name inventory (`ps -Ao comm`), filtered only for executable name ssh.",
+      "summary": "No process named ssh was observed at this snapshot.",
+      "scopeLimit": "No alias command, SSH connection, ADB/device query, or device read occurred. This does not prove Pixel reachability or disconnection; Pixel connectivity, operation lock, monitor/hash, and UI remain UNKNOWN. Read-only local process inventory; no command arguments, credentials, paths, or endpoints were recorded."
+    },
+    {
+      "recordKey": "githubStateCheck20261104_0511",
+      "observedAt": "2026-11-04T05:11:07+08:00",
+      "source": "Read-only GitHub CLI checks of Issue #3 and open pull requests.",
+      "summary": "Issue #3 is OPEN. PR #17 is the only open PR observed and belongs to unrelated WP11 family-card OCR; GitHub reports mergeability UNKNOWN and no checks.",
+      "scopeLimit": "Point-in-time repository metadata only; no issue, PR, or merge state was changed."
     }
   ]
 }
