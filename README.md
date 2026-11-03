@@ -20,7 +20,7 @@
 
 > **最新并发与设备只读预检｜2026-11-03 23:38—23:42 CST：** MUSE 23:38:55在既有Forest线程确认当时无活动/排队/在途任务（`0/0/false`）、MUSE runner lock `FREE`、无Forest进程；唯一Asia/Shanghai每日09:00调度下次11月4日09:00，live runner/assistant哈希及最近运行记录未变。随后经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、SecureView安装APK哈希匹配v0.19。Pixel操作锁、monitor私有状态/hash及屏幕/Keyguard/Activity仍UNKNOWN。没有业务状态/日志读取、任务执行、设备写入、部署或调度更改。保留自然运行；P4开放，S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
 
-> **P4最新MUSE只读状态｜2026-11-03 23:33:12 CST：** 既有Forest线程回读无活动/排队/在途任务，runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00。live `run.py`/`assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近调度失败11月3日09:11:17，最近成功10月31日09:15:50。此轮未连接Pixel；设备操作锁、monitor私有状态及屏幕/Keyguard/前台Activity仍UNKNOWN，最近Pixel身份/APK只读读数约23:14。未读业务state或日志、执行源码/任务、改动设备/文件/调度。保留11月4日自然运行并优先读取同轮脱敏证据；P4开放、S1未验收。详情见[交接](planning/p4-next-session-handoff.md)、[诊断手册](planning/forest-diagnostics-operations-2026-11-04.md)和证据键`museReadonlyStatus20261103_233312`。
+> **较早MUSE只读状态｜2026-11-03 23:33:12 CST：** 既有Forest线程回读无活动/排队/在途任务，runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00。live `run.py`/`assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近调度失败11月3日09:11:17，最近成功10月31日09:15:50。此轮未连接Pixel；设备操作锁、monitor私有状态及屏幕/Keyguard/前台Activity仍UNKNOWN，最近Pixel身份/APK只读读数约23:14。未读业务state或日志、执行源码/任务、改动设备/文件/调度。保留11月4日自然运行并优先读取同轮脱敏证据；P4开放、S1未验收。详情见[交接](planning/p4-next-session-handoff.md)、[诊断手册](planning/forest-diagnostics-operations-2026-11-04.md)和证据键`museReadonlyStatus20261103_233312`。
 
 > **当前live模块覆盖补核｜2026-11-03 23:05 CST：** MUSE只读确认 `policy.py`、`tasks.py`、`forest_cdp.py` 当前hash与唯一导入身份；本机五份精确源码副本均匹配对应live hash。限定词检索在 `run.py`、`policy.py`、`tasks.py`、`forest_cdp.py`、`assistant.py` 中没有发现客温客价术语或五项扩展名称。该结论仅限五模块，不表示整个部署没有相关实现，也不替代业务收据；客温客价仍缺独立回执。P4开放、S1未验收。详情见[本地审计](planning/local-evidence-audit-2026-10-29.md#当前live-helper模块与五文件限定词检索2026-11-03-2305-cst)和结构化键 `liveModuleSourceCoverage20261103_230512`。
 
@@ -125,9 +125,9 @@
 
 阅读顺序：本页 → [整体审阅与内容地图](planning/project-review-2026-10-24.md) → [总体框架](docs/02-project-framework-v0.2.md) → [已确认决定](docs/03-confirmed-decisions.md) → [缺失与待验证内容](docs/04-open-questions.md)。需要落实时再进入 P4 交接和工作包。
 
-## 当前状态｜2026-11-03
+## 当前状态｜截至2026-11-04 00:08 CST
 
-**P1—P3已完成，P4进行中，S1未整体验收。** 五项日常最近可信结果仍为10月31日：签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立回执。11月1—3日没有五项业务阶段完成。11月3日三段停在runner Activity/就绪标记轮询超时；为何未到达仍UNKNOWN，不能归咎认证输入。MUSE 23:33:12只读状态显示11月4日09:00 schedule不变且当时无运行/排队/在途任务，runner lock FREE、无Forest进程；最近失败和成功仍分别为11月3日09:11:17及10月31日09:15:50。Pixel最近约23:14经既有别名做非root只读预检，设备操作锁和monitor状态UNKNOWN；本次未连接设备。五项扩展仍全部待核实，规则日限额/计量的历史证据不证明重置、重复周期或到账时延。11月4日自然观察及完整回执仍待补。P50/月度规划继续挂起，保留2U＝2800目标。
+**P1—P3已完成，P4进行中，S1未整体验收。** 五项日常最近可信结果仍为10月31日：签到 `SIGNED +0.5`、时光轴 `VIEWED 6055ms`、一键领取 `+6.5`；智能助理为 `SENT` 但答案与奖励未确认，客温客价无独立回执。11月1—3日没有五项业务阶段完成。11月3日三段停在runner Activity/就绪标记轮询超时；为何未到达仍UNKNOWN，不能归咎认证输入。最新可验证的MUSE读数为11月3日23:38:55：当时无活动/排队/在途任务，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00，runner lock FREE、无Forest进程；live `run.py` / `assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，最近失败和成功仍分别为11月3日09:11:17及10月31日09:15:50。其后至23:42:02，经既有Pixel别名及非root UID 10249只读确认Pixel 3a/Android 15/boot完成、SecureView已装APK SHA-256与v0.19 pin相符；Pixel操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity均UNKNOWN。没有root/su、任务执行、设备写入、部署或调度更改；自然运行同轮结果尚待获取。五项扩展仍全部待核实；规则日限额/计量的历史证据不证明重置、重复周期或到账时延。P50/月度规划继续挂起，2U＝2800目标不纳入本期。
 
 **[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [五项扩展与规则来源核查](planning/remaining-work-2026-10-29.md) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。五项扩展的流程/本人资格/奖励周期仍按证据分类；完整官方时点原依据尚未恢复。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 
