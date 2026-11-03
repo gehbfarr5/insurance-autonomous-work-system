@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11L-MUSE-30CARD-ACCEPTANCE-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "",
+    "package_version": "0.12.0"
+  },
+  "environment": {
+    "python_version": "",
+    "pillow_version": "",
+    "isolated_worktree": false,
+    "isolated_virtualenv": false
+  },
+  "offline_suite": {
+    "status": "PASS|FAIL|NOT_RUN",
+    "passed": 0,
+    "failed": 0,
+    "errors": 0
+  },
+  "blank_template_smoke": {
+    "status": "PASS|FAIL|NOT_RUN",
+    "expected_real_card_ocr_result": "BLOCKED"
+  },
+  "real_card_validation": {
+    "status": "BLOCKED|NOT_RUN|PASS|FAIL",
+    "reason_codes": ["REAL_DATA_AUTHORIZATION_NOT_CONFIRMED"],
+    "aggregate_metrics": null
+  },
+  "operation_counts": {
+    "branch_fetches": 0,
+    "real_card_inventory_reads": 0,
+    "card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "reference_label_reads": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_creates": 0,
+    "contact_reads": 0,
+    "contact_deletes": 0,
+    "production_executions": 0,
+    "deployments": 0,
+    "raw_data_exports": 0
+  }
+}
