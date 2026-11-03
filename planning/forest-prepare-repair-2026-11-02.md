@@ -241,3 +241,15 @@ v3私有review-only包SHA-256为`edb4e0425f6379fac41e53d45a781e028ca9597a6df8734
 确认现有Keyguard监控v3只能回答设备锁屏、目标应用/手势页和认证派发层状态，不能看到森林模块内部`user`、`empNoAES`、`operateFlag`各自是否存在。live v0.19 runner解析`P4ForestAuto:` JSON后直接保存完整对象`self.preparation=item`，无字段白名单丢弃扩展内容的分支；该最小脱敏片段哈希已在上文记录。
 
 为避免把已有带8秒等待的修复候选误当成纯观察，另从与安装APK内一致的`forest-prepare.js`（SHA-256 `d787363212189e495ce752b089195aad1505cd328e892cc85cd4a8e33bb29d08`）建立一个本地只读字段观察草案，草案只输出三个布尔值和采样时间，不输出字段值、不加等待/重试、不改原促销或路由动作。草案SHA-256 `6923c360bbeb41468594e60e6e002f1bd7f8b65968adc85f0debdc2cd6f86bb3`；Node语法及与原版逐场景的分支、属性读取顺序和动作调用对照测试通过。它尚未整合进签名APK、未装机、未实跑。若Keyguard v3自然运行仍留下`LOGIN_STATE_MISSING`的具体字段不明，完整根因验收还需对该观察草案做APK级审查、集成与单独授权；当前v3部署授权不覆盖APK替换。
+
+### 2026-11-03 自然运行对照｜旁聊摘要，原始包待核
+
+本机 `.private` 归档未找到11月3日原始脱敏结果包或逐文件哈希清单。以下只依据本日09:15在MUSE既有旁聊显示的摘要记录，尚未与原始JSON/运行器字节独立核对，也未访问Pixel：
+
+- 09:00自然任务按先assistant、后main顺序运行。assistant约09:01:55开始、09:03:53写结果；main约09:04:16开始、09:06:17写结果。两段prepare都只有模块哈希事件和`.MainActivity`，均以`PREPARE_TIMEOUT_NO_FALLBACK`结束；均未进入BridgeWeb或业务阶段，cleanup报告PASS。五项均未执行，assistant保持`INTENT / NOT_SENT`，无待决意图；不把签到写成SKIP。
+- 08:57另有一次摘要所称误触的assistant尝试，报告同为prepare超时/NOT_SENT；它与09:00调度轮分开，原始运行记录及误触来源尚未本机核实。
+- 对照11月2日11:14 v0.19手动补跑：当时assistant prepare曾记录`BridgeWebActivity`，再因固定入口方法匹配失败而`NOT_SENT`；main在合并登录态门禁处`PREPARE_LOGIN_STATE_MISSING`。11月3日两段均未记录BridgeWeb且停在prepare超时，运行阶段不同。
+- 当前可见材料只称11月3日模块版本门禁通过及发生模块哈希事件，未提供runner、assistant源码或模块的精确哈希、适配副本/工作目录/state目录标识、启动入口字节或逐项门禁值。因此无法证明11月3日实际运行文件与11月2日手动v0.19轮相同，也不能把失败差异归因于时段、设备锁、App登录态或调度环境。
+- 结果摘要称清理完成、设备锁释放，state无待决意图、assistant为`INTENT / NOT_SENT`、防重历史未刷新；这些仍是旁聊摘要陈述，待原始脱敏记录与哈希复核。公开记录不含余额数值、原始日志、绝对路径或私有配置。
+
+下一步优先恢复11月3日两段及08:57记录的原始脱敏结果、prepare/cleanup清单和对应源码/制品哈希，再与11月2日11:14已核对的v0.19证据逐项对照。只读取已有文件，不连接Pixel、不重跑、不改state/cron/调度。现有每日任务报告下次为11月4日09:00；P50/月度规划继续挂起。
