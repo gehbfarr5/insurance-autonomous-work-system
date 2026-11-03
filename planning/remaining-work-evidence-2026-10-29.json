@@ -1929,5 +1929,22 @@
     },
     "result": "No safe non-root export or lock-reader path was identified within the reviewed package. This bounded scan does not prove that no such path exists elsewhere.",
     "actions": "No remote command, SSH connection, root/su, file transfer, device read/write, or business action."
+  },
+  "museRefreshGate20261103_2024": {
+    "readAtApprox": "2026-11-03 20:24 CST",
+    "source": "CUA read-only inventory; no MUSE or browser content opened during this check.",
+    "nativeApps": "Unavailable; Mac reported locked and automatic unlock could not unlock it.",
+    "browserControl": "Unavailable; local browser use is disabled in Work settings.",
+    "freshForestStatusObtained": false,
+    "currentMuseSchedulerQueueInFlight": "UNKNOWN",
+    "lastKnownForestReply": {
+      "responseAt": "2026-11-03T19:42:51+08:00",
+      "readAtApprox": "2026-11-03 20:11 CST",
+      "limits": "Historical MUSE snapshot; not a current-at-20:24 concurrency guarantee."
+    },
+    "pixelOperationLock": "UNKNOWN; Pixel was not connected.",
+    "messageSent": false,
+    "alternateChannelUsed": false,
+    "actions": "No conversation navigation, new status request, Pixel connection, remote command, device read/write, task/business execution, schedule/state change, or deployment."
   }
 }

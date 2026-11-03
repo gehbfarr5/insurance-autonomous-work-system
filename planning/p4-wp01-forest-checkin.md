@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## MUSE刷新门禁｜2026-11-03 20:24 CST
+
+只读CUA库存报告Mac锁定且无法自动解锁，Work设置禁用浏览器控制；没有取得更新的Forest状态。当前MUSE运行/队列/在途UNKNOWN；19:42:51回复（约20:11读到）是最后可用快照，不作为当前门禁。Pixel操作锁和monitor状态仍UNKNOWN，未连接设备。证据：`museRefreshGate20261103_2024`。
+
 ## 最新MUSE目标线程回读｜2026-11-03 19:42:51 CST（20:11只读查看）
 
 在既有Forest线程的截图中读到完整状态回复：单一启用任务仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该快照读于20:11，不能证明更晚时刻仍空闲；未重读业务结果。Pixel设备操作锁、monitor状态/hash未读，未连接设备；自然运行待11月4日，P4开放、S1未验收。详见[结构化证据](remaining-work-evidence-2026-10-29.json)的`museReadonlyStatus20261103_194251`。

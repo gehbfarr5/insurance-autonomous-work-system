@@ -1,5 +1,7 @@
 # 保险规划师自主工作系统
 
+> **Forest状态刷新门禁｜2026-11-03 20:24 CST：** 只读CUA库存显示Mac锁定且不能自动解锁，Work设置禁用浏览器控制，因此未能再次读取MUSE。当前Forest并发状态为UNKNOWN；最后可用快照仍是19:42:51的回复（约20:11在准确目标线程中读到），不是当前保证。没有重发状态请求或连接Pixel；Pixel操作锁及monitor内部状态仍UNKNOWN。
+
 > **Forest状态补读｜2026-11-03 19:42:51 CST（20:11目标线程截图回读）：** 在既有“阳光森林每日执行部署”线程读到一条完整只读状态回复；该MUSE快照报告唯一启用的Asia/Shanghai每日09:00任务下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live `run.py`/`assistant.py`哈希仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近调度失败11月3日09:11:17，最近成功10月31日09:15:50。20:11读到的是19:42:51回复，不等于此刻状态；没有发新状态请求。Pixel操作锁及monitor内部状态未读，本轮未连接Pixel、未读业务结果、未运行任务或改动状态/调度。11月4日自然运行仍待发生；P4开放、S1未验收。
 
 > **P4 live assistant.py源码本机核对｜2026-11-03 19:36 CST：** 从既有Forest旁聊下载的私有 `assistant.py`候选附件，本机SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`与MUSE 19:08报告的live哈希完全一致；本机文件权限0600且未放入仓库。只做AST语法解析与结构检查、未执行代码：记录共7个字段，先前静态差异核对列出的5个新增诊断字段为`vue`、`onClickAppPresent`、`aiItemCount`、`runGroup`、`sampledAt`；固定方法pin、Vue/方法/唯一目标项门禁和原调用保留。该哈希匹配的是最近一次19:08 live报告，本轮没有更新读取云端live状态。配套`tasks.py`、AI意图、业务state/回执、答案与奖励仍未完成本机核验；P4开放，S1未验收。详见[证据核查](planning/local-evidence-audit-2026-10-29.md)、[诊断检查点](planning/forest-prepare-diagnostics-2026-11-03.md)和[证据索引](planning/remaining-work-evidence-2026-10-29.json)。
@@ -74,7 +76,7 @@
 
 ## 当前状态｜2026-11-03
 
-**P1—P3已完成，P4进行中，S1未整体验收。** 10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日三段运行停在MainActivity准备超时；故障层定位到runner Activity/就绪标记轮询，未就绪的底层原因及登录字段仍UNKNOWN，不归咎认证输入脚本。每日Asia/Shanghai 09:00定义未改，11月4日自然运行仍待观察。20:11从准确的Forest线程回读19:42:51回复：该时点running/queued/in-flight为`0/0/false`、runner lock FREE，Pixel操作锁仍UNKNOWN；未连接Pixel，也未发新请求。私有prepare/login-state observer和证据投影器的离线回归通过，但observer未部署；现有collector使用`su`，不能用于当前无root约束，非root导出路径尚待核实。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
+**P1—P3已完成，P4进行中，S1未整体验收。** 10月31日记录确认签到SIGNED +0.5、时光轴VIEWED 6055ms、一键领取+6.5；智能助理SENT但答案与奖励未确认，客温客价无独立收据。11月1—3日五项均未执行/完成。11月3日三段运行停在MainActivity准备超时；故障层定位到runner Activity/就绪标记轮询，未就绪的底层原因及登录字段仍UNKNOWN，不归咎认证输入脚本。每日Asia/Shanghai 09:00定义未改，11月4日自然运行仍待观察。最后可用的Forest状态回复时间为19:42:51、约20:11从目标线程读到；20:24因Mac锁定且浏览器控制禁用无法刷新，当前并发UNKNOWN。Pixel操作锁仍UNKNOWN、未连接设备。私有prepare/login-state observer和证据投影器的离线回归通过，但observer未部署；现有collector使用`su`，不能用于当前无root约束，非root导出路径尚待核实。P50/月度规划继续挂起，AI奖励、客温客价独立回执、完整恢复及扩展验收仍待补。**
 
 **[本地成果与证据核查](planning/local-evidence-audit-2026-10-29.md)** · [成果哈希索引](planning/evidence-index-2026-10-29.json) · [五项扩展与规则来源核查](planning/remaining-work-2026-10-29.md) · [可公开策略、日志与离线运行说明](src/forest_policy/README.md) · [进度核对](planning/progress-reconciliation-2026-10-29.md)。五项扩展的流程/本人资格/奖励周期仍按证据分类；完整官方时点原依据尚未恢复。P50/月度规划继续挂起，保留原月初计划和2U＝2800目标。
 

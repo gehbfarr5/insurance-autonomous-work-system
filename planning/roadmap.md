@@ -1,5 +1,7 @@
 # 工作阶段与能力路线图
 
+> **P4接续刷新门禁｜2026-11-03 20:24 CST：** CUA只读库存显示Mac锁定且无法自动解锁，Work设置禁用浏览器控制；未能再读Forest线程。故当前运行/队列/在途UNKNOWN，最后可用快照为19:42:51（约20:11读到），不作当前并发证明。Pixel操作锁与monitor状态UNKNOWN，本轮未连接设备。P4继续开放、S1未验收；11月4日自然运行及同轮证据待完成。详见[P4交接](p4-next-session-handoff.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 > **P4接续状态更新｜2026-11-03 20:11 CST：** 从精确Forest线程只读回看19:42:51 MUSE回复：唯一Asia/Shanghai每日09:00任务下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希仍为`de9bd83c…e3284562` / `7c6400b3…c35121c`。这是时间限定的MUSE快照，不含Pixel操作锁；Pixel未连接，设备锁与monitor状态仍UNKNOWN。没有发新状态请求、读业务结果或改变系统。11月4日自然运行及同轮业务/诊断证据待完成；P4开放，S1未验收，P50/月度/2U=2800挂起。详见[P4交接](p4-next-session-handoff.md)与[证据索引](remaining-work-evidence-2026-10-29.json)。
 
 > **P4 live runner源码核验｜2026-11-03 19:22 CST：** 精确live `run.py` 已从现有MUSE私有附件下载并本机重算SHA-256，与部署报告完全匹配；源码仅存于权限0600的用户Downloads，未进入Git。静态控制流与11月3日三段prepare超时摘要一致，未能说明就绪标记未到达的下层原因。认证入口分支按Activity字符串是否包含`GestureActivity`判断，并在尚未尝试时调用一次live `Device.auth_start()`。与10月26日私有runner的AST比较确认 `Device.prepare()`、`Device.read_fresh()`、`main()`不同，旧版登录方法也不等同于live登录入口。无源码修改、设备访问或业务状态读取；五项业务映射、AI结果/奖励及自然跨日证据仍未完成。P4开放，S1未验收，P50/月度规划挂起。详见[本地核查](local-evidence-audit-2026-10-29.md)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[结构化证据](remaining-work-evidence-2026-10-29.json)。

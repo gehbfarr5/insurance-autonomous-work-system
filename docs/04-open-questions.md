@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## MUSE刷新未完成｜2026-11-03 20:24 CST
+
+CUA只读库存显示Mac锁定且无法自动解锁、浏览器控制被Work设置禁用，因此本次没有再次读取Forest线程。当前MUSE调度/运行/队列/在途为UNKNOWN；最后可用快照是19:42:51回复（约20:11读取），不是当前保证。Pixel操作锁与monitor状态保持UNKNOWN，未连接设备。待界面可用后在原线程读取，不重发已有状态请求；设备侧仍需安全非root读路径。证据键：`museRefreshGate20261103_2024`。
+
 ## 最新Forest线程状态回读｜2026-11-03 19:42:51 CST（20:11读取）
 
 在精确的既有阳光森林执行线程中读到19:42:51只读回复：唯一Asia/Shanghai每日09:00任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；`run.py`/`assistant.py`哈希与最近记录一致。20:11才查看该回复，因此这是截至19:42:51的快照，不是当前并发保证。未读业务结果或Pixel设备锁/monitor内部状态；Pixel未连接，设备锁保持UNKNOWN，没有发送新状态请求。11月4日自然运行、诊断关联、业务结果与奖励核对仍待。详情见[P4运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)及[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。
