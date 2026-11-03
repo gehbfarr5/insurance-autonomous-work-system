@@ -5340,5 +5340,28 @@
       "checks": []
     },
     "actions": "Read-only metadata; no issue, pull request, branch, or merge state was changed."
+  },
+  "githubStateCheck20261104_0522": {
+    "recordedAt": "2026-11-04T05:22:41+08:00",
+    "source": "Read-only GitHub CLI checks of Issue #3 and the open pull-request list, plus local Git status.",
+    "repository": {
+      "branch": "main",
+      "head": "0873b18152f9def200da40563d5e263a315fe72a",
+      "originMain": "0873b18152f9def200da40563d5e263a315fe72a",
+      "workingTree": "clean"
+    },
+    "issue3": "OPEN",
+    "openPullRequests": [
+      {
+        "number": 17,
+        "title": "Harden Family Card OCR table field mapping",
+        "state": "OPEN",
+        "scope": "Unrelated WP11",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "statusChecks": []
+      }
+    ],
+    "actions": "Read-only state check; no issue, pull request, branch, or merge state was changed."
   }
 }
