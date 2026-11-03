@@ -1,5 +1,11 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 01:27 CST — MUSE composer unavailable; status is stale
+
+The existing Forest thread remains open, but the latest visible status reply is still 00:47:37. The CUA accessibility tree exposes the composer as a generic button rather than a settable text field; clicks opened the native file picker, which was canceled without selecting an attachment. No status request was sent. The latest UI was read at 01:27:36; the screenshot/tree was not retained as a local raw artifact. Evidence: `museUiAccessLimitation20261104_0127`.
+
+Current MUSE task, schedule, queue/in-flight state, runner lock, deployment hashes, and Pixel operation lock are UNKNOWN. The 00:47 values remain historical only. Do not access Pixel or assume the old FREE lock is current. Keep the existing natural schedule unchanged; if the thread becomes writable, refresh current metadata first, then read same-run sanitized evidence after the natural window. No request, attachment, device access, business read, task execution, or deployment/schedule change occurred.
+
 ## 2026-11-04 01:14 CST — bounded source follow-up
 
 Drive returned no matches for four viewed-document metadata queries; no document content was fetched. Official CPIC references found here are historical and do not verify current Forest workflows, eligibility, or rewards. This does not change the next step or acceptance gates: leave the 09:00 schedule intact, then retrieve same-run sanitized evidence from the existing MUSE thread before considering any further action. Full query scope and source limitations: [structured evidence](remaining-work-evidence-2026-10-29.json), [source review](remaining-work-2026-10-29.md).

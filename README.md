@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 01:27 CST — MUSE status refresh unavailable
+
+The existing Forest thread still shows the 00:47:37 metadata reply. The composer could not accept text through the exposed CUA controls; its generic button opened a file picker, canceled without selecting an attachment. No request was sent. Current MUSE task/queue/runner lock/schedule/live hashes and Pixel operation lock are `UNKNOWN`; the 00:47 values are historical. Keep device access blocked and preserve the natural schedule. Details: [handoff](planning/p4-next-session-handoff.md) and [structured evidence](planning/remaining-work-evidence-2026-10-29.json) (`museUiAccessLimitation20261104_0127`).
+
 ## 2026-11-04 01:14 CST — bounded rule-source follow-up
 
 A viewed-document-only Google Drive metadata search for four rule/extension queries returned zero matches; no file content was opened. Two official CPIC pages add historical context only: an earlier E锦囊 product-page iteration and a 2022 description of 态幸福 as an NBS customer-needs tool. Neither establishes current Forest mapping, eligibility, reward triggers, reset/repeat timing, or posting delay. All five extensions remain `仍待核实`; E07's historical limits remain unchanged. Details and limits are recorded in the [structured evidence](planning/remaining-work-evidence-2026-10-29.json) and [source review](planning/remaining-work-2026-10-29.md). Sources: [2018 CPIC notice](https://www.cpic.com.cn/c/2018-11-02/1562542.shtml), [2022 CPIC article](https://m.cpic.com.cn/c/2022-04-07/1633278.shtml).

@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 01:27 CST — MUSE status refresh unavailable
+
+The existing Forest thread still displays only the 00:47:37 status reply. At 01:27:36, CUA showed no settable composer text field; the generic composer button opened a file picker, which was canceled without selecting anything. No new request was sent. Current backend task/schedule/queue, runner lock, live hashes, and Pixel operation lock are UNKNOWN. Treat the 00:47 values as historical, keep device access blocked, and do not infer current idle status from the visible thread. Evidence and UI limitations: [structured record](../planning/remaining-work-evidence-2026-10-29.json) (`museUiAccessLimitation20261104_0127`).
+
 ## 2026-11-04 01:14 CST — rule-source follow-up
 
 Google Drive viewed-document metadata-only searches for “阳光森林”“阳光雨露”“行为值”“E锦囊 态幸福” each returned zero matches; no content was fetched. This only describes those queries and the viewed-document scope. Official CPIC material found in this follow-up is historical: the 2018 E锦囊 product-page iteration notice and the 2022 态幸福 NBS customer-needs tool description do not establish a current Forest workflow or reward rule. Current eligibility, task mapping, trigger, reset/repeat cycle, and posting time remain open; all five extensions remain `仍待核实`. See [structured evidence](../planning/remaining-work-evidence-2026-10-29.json) and [source review](../planning/remaining-work-2026-10-29.md).
