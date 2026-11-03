@@ -1,5 +1,11 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 02:24—02:25 CST — current pre-run state
+
+MUSE at 02:24:46 remains idle with runner lock `FREE` and the existing 09:00 Asia/Shanghai schedule pending. Pixel at device time 02:25:22 confirmed the expected device identity, boot completion, Asia/Shanghai timezone, and v0.19 APK pin. The process filter returned no matches and the exact documented lock marker was absent; overall device lock and monitor state remain UNKNOWN. Preserve the natural run; afterward refresh MUSE and review same-run sanitized evidence first. Five daily receipts and five extension investigations remain open; P4 remains open.
+
+Evidence: `museReadonlyStatus20261104_022446`, `pixelReadonlyPreflight20261104_022522`, `pixelProcessFilter20261104_022522`, `pixelDeviceLockMarkerRead20261104_022522`, `acceptanceGateStatus20261104_022522`.
+
 ## 2026-11-04 02:15—02:17 CST — fresh status, bounded device read, and local source recovery
 
 MUSE's 02:15:02 status remains idle with runner lock `FREE` and the existing 09:00 Asia/Shanghai schedule pending. Pixel's 02:17:22 device-clock read confirmed non-root UID 10249, Pixel 3a, Android 15, boot complete, and the v0.19 APK pin. The limited process-name filter returned no matches and the exact documented operation-lock marker was absent; overall device lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN.

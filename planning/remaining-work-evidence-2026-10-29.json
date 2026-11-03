@@ -4283,5 +4283,105 @@
     ],
     "overall": "P4 remains open. Do not claim S1 or project completion. P50 and monthly planning remain excluded.",
     "actions": "No root/su, task/code execution, business-state/raw-log reads, device writes, installs, deployments, schedule changes, replay, or gate relaxation."
+  },
+  "museReadonlyStatus20261104_022446": {
+    "recordedAt": "2026-11-04T02:24:46+08:00",
+    "source": "Fresh read-only status reply in the existing Sunshine Forest thread.",
+    "activeForestTask": false,
+    "runningQueuedInFlight": "0/0/false",
+    "museRunnerLock": "FREE",
+    "forestProcessObserved": false,
+    "enabledSchedule": "one daily schedule at 09:00 Asia/Shanghai",
+    "nextTrigger": "2026-11-04T09:00:00+08:00",
+    "liveRunPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+    "liveAssistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulRun": "2026-10-31T09:15:50+08:00",
+    "deviceOrBusinessStateRead": false,
+    "deploymentOrScheduleChanged": false,
+    "evidenceLimit": "Point-in-time MUSE scheduler/deployment metadata only; MUSE lock does not establish Pixel device-lock or monitor state."
+  },
+  "pixelReadonlyPreflight20261104_022522": {
+    "recordedAtDeviceClock": "2026-11-04T02:25:22+08:00",
+    "source": "Bounded non-root reads via the existing pixel3a-kjgx alias, after MUSE reported no in-flight task.",
+    "connection": "SUCCESS_EXISTING_ALIAS",
+    "uid": 10249,
+    "deviceModel": "Pixel 3a",
+    "androidVersion": "15",
+    "timezone": "Asia/Shanghai",
+    "bootCompleted": true,
+    "installedSecureViewApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "apkMatchesKnownV019Pin": true,
+    "rootOrSuUsed": false,
+    "businessStateOrRawLogsRead": false,
+    "appOrTaskOrCodeExecuted": false,
+    "deviceWrittenOrAppInstalledOrRestarted": false,
+    "networkCredentialsOrScheduleChanged": false,
+    "overallDeviceOperationLock": "UNKNOWN",
+    "monitorStatusAndHash": "UNKNOWN",
+    "screenKeyguardForegroundActivity": "UNKNOWN"
+  },
+  "pixelProcessFilter20261104_022522": {
+    "recordedAtDeviceClock": "2026-11-04T02:25:22+08:00",
+    "source": "Non-root process-name filter via the existing Pixel alias.",
+    "filter": "Limited AutoX, AutoJS, org.autojs, and SecureView process-name filter.",
+    "matchingOutputLines": [],
+    "exitCode": 1,
+    "interpretation": "No names matched this limited filter; general process absence and monitor state remain UNKNOWN.",
+    "rootOrSuUsed": false,
+    "deviceWritten": false
+  },
+  "pixelDeviceLockMarkerRead20261104_022522": {
+    "recordedAtDeviceClock": "2026-11-04T02:25:22+08:00",
+    "source": "Read-only check of the exact device-operation marker path documented in the private deployment runbook.",
+    "exactDocumentedMarker": "ABSENT_ON_CHECK",
+    "overallDeviceOperationLock": "UNKNOWN",
+    "rootOrSuUsed": false,
+    "interpretation": "The exact marker was absent; another lock, actor, or representation is not ruled out.",
+    "deviceWritten": false
+  },
+  "acceptanceGateStatus20261104_022522": {
+    "asOf": "2026-11-04T02:25:22+08:00",
+    "sourceEvidence": [
+      "museReadonlyStatus20261104_022446",
+      "pixelReadonlyPreflight20261104_022522",
+      "pixelProcessFilter20261104_022522",
+      "pixelDeviceLockMarkerRead20261104_022522",
+      "localCollectorPackageReview20261104_0217",
+      "nov3SanitizedSummaryReadback20261104_003649"
+    ],
+    "gates": [
+      {
+        "name": "Current pre-run MUSE status and bounded Pixel preflight",
+        "status": "PASS_WITH_SCOPE_LIMITS",
+        "limit": "Device operation lock and monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN."
+      },
+      {
+        "name": "Nov 3 failure-stage localization",
+        "status": "PASS_PREPARE_STAGE_ONLY",
+        "limit": "Lower-level marker cause remains UNKNOWN."
+      },
+      {
+        "name": "Field/Activity collector usability",
+        "status": "BLOCKED",
+        "reason": "Local hashes/manifests are verified, but both collectors require su -c and are not usable under the current non-root constraint."
+      },
+      {
+        "name": "Natural run and same-run evidence",
+        "status": "PENDING",
+        "nextEvidencePoint": "Existing schedule: 2026-11-04 09:00 Asia/Shanghai; refresh MUSE after the run before any further device read."
+      },
+      {
+        "name": "Business receipts and extension classifications",
+        "status": "BLOCKED",
+        "reason": "Independent daily receipts and current extension eligibility/workflow/reward cycles remain unresolved."
+      },
+      {
+        "name": "Cross-day and long-term stability",
+        "status": "SUSPENDED"
+      }
+    ],
+    "overall": "P4 remains open. Do not claim S1 or project completion. P50/monthly planning and 2U=2800 remain excluded.",
+    "actions": "No root/su, task/code execution, business-state/raw-log reads, device writes, installs, deployments, schedule changes, replay, or gate relaxation."
   }
 }

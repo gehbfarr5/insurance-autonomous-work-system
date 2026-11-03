@@ -1,5 +1,14 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 02:24—02:25 CST：自然运行前状态刷新
+
+- MUSE 02:24:46：无活动任务，runner lock `FREE`，每日09:00 schedule仍待触发；部署哈希与最近结果未变。
+- Pixel 02:25:22：非root读取确认Pixel 3a、Android 15、Asia/Shanghai、boot完成及APK v0.19 pin匹配。窄进程过滤无匹配、精确锁marker缺失，但整体设备锁和monitor状态/hash仍UNKNOWN。
+- 保留09:00自然运行；之后先刷新MUSE，读取同轮脱敏prepare/result/stages/assistant/cleanup，不重放，不放宽门禁。
+- P4保持开放，S1未验收；业务收据、设备诊断、扩展流程与规则依据仍未闭环。
+
+结构化记录：`museReadonlyStatus20261104_022446`、`pixelReadonlyPreflight20261104_022522`、`pixelProcessFilter20261104_022522`、`pixelDeviceLockMarkerRead20261104_022522`、`acceptanceGateStatus20261104_022522`。
+
 ## 2026-11-04 02:15—02:17 CST：状态刷新及本地collector发现
 
 - **MUSE状态：** 02:15:02无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`；唯一每日09:00 Asia/Shanghai schedule待自然触发。该MUSE锁不是Pixel锁。

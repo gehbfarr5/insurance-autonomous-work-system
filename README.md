@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 02:24—02:25 CST — latest pre-run status
+
+MUSE replied at 02:24:46 with no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, and the existing daily 09:00 Asia/Shanghai schedule still pending. Live `run.py` and `assistant.py` hashes, latest failure, and last success were unchanged. At Pixel device time 02:25:22, the existing non-root alias confirmed Pixel 3a, Android 15, Asia/Shanghai, boot complete, and the installed APK hash matching the v0.19 pin. The narrow process-name filter had no matches and the exact documented lock marker was absent; device lock and monitor state remain UNKNOWN. Keep the natural run; afterward refresh MUSE and read same-run sanitized evidence first. No root/`su`, raw logs, business state, code/job execution, writes, or schedule changes. P4 remains open. Evidence: `museReadonlyStatus20261104_022446`, `pixelReadonlyPreflight20261104_022522`, `pixelProcessFilter20261104_022522`, `pixelDeviceLockMarkerRead20261104_022522`, `acceptanceGateStatus20261104_022522`.
+
 ## 2026-11-04 02:15—02:17 CST — refreshed status and local collector review
 
 MUSE's 02:15:02 read-only status still shows no active Forest task, running/queued/in-flight `0/0/false`, runner lock `FREE`, and one daily 09:00 Asia/Shanghai schedule for today. The latest scheduler failure and last success remain Nov 3 09:11:17 and Oct 31 09:15:50. At Pixel device time 02:17:22, the existing SSH alias confirmed non-root UID 10249, Pixel 3a, Android 15, boot complete, and the installed SecureView APK hash matching the v0.19 pin. A narrow process-name filter returned no matches, and the exact documented operation-lock marker was absent; neither observation establishes overall monitor or device-lock state. Those remain UNKNOWN, as do screen, Keyguard, and foreground Activity.
