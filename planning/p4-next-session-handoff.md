@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:10 CST — rule-source pointer search
+
+Drive metadata-only searches for the D-029 reference and the historical ledger/claim terms returned no document metadata; no contents were fetched. This bounded miss does not negate D-029 or establish source absence. The timing, repeat-cycle, and reward-trigger source remains unresolved. Evidence: `googleDriveRuleSourcePointerSearch20261104_0410`.
+
 ## 2026-11-04 04:05 CST — E11 APK index date corrected
 
 Evidence-index E11 is the v0.17 APK hash from the 2026-10-29 read, not today's current Pixel package. Its description now marks that historical date; the 2026-11-04 v0.19 APK hash remains a separate fresh observation. Neither APK read proves module runtime or device lock/monitor/UI state. Evidence: `evidenceIndexE11HistoricalClarification20261104_0405`.

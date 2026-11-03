@@ -5136,6 +5136,17 @@
     "contentFetched": false,
     "scopeLimit": "No matching document metadata surfaced for these terms across accessible drives. Does not establish that the original source is absent, filed under different terms or file types, or negate D-029."
   },
+  "googleDriveRuleSourcePointerSearch20261104_0410": {
+    "id": "X12",
+    "recordKey": "googleDriveRuleSourcePointerSearch20261104_0410",
+    "source": "Connected Google Drive metadata-only document search across accessible drives",
+    "searchedAt": "2026-11-04 04:10 Asia/Shanghai (exact query times not captured)",
+    "queries": ["D-029 阳光森林", "阳光森林 账本记录 余额记录 领取"],
+    "limits": {"itemType": "document", "topN": 10, "bestEffortFetch": false, "requireViewedByUser": false},
+    "resultCounts": [0, 0],
+    "contentFetched": false,
+    "scopeLimit": "No matching document metadata surfaced for the decision-reference or historical ledger/claim terms across accessible drives. This bounded miss does not establish source absence or negate D-029."
+  },
   "runbookHistoricalSnapshotClarification20261104_0405": {
     "recordedAt": "2026-11-04T04:05:53+08:00",
     "source": "Read-only audit of the historical device-state bullets in the recovery runbook against current MUSE/Pixel checkpoints.",
