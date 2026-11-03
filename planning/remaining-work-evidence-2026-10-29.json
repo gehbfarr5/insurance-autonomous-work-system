@@ -2450,5 +2450,97 @@
     "preflightBoundary": "Non-root process inventory and installed APK pin only; did not read monitor private status/hash, device operation lock, screen, Keyguard, or foreground Activity.",
     "deviceOperationLock": "UNKNOWN; no device write or candidate deployment occurred.",
     "nextStep": "Preserve the existing 2026-11-04 09:00 schedule; wait for natural execution and same-run evidence under a fresh, verified read-only gate. Do not replay business actions."
+  },
+  "museReadonlyStatus20261103_215828": {
+    "readAt": "2026-11-03T21:58:28+08:00",
+    "source": "Read-only current-status reply in the exact existing Sunshine Forest MUSE thread.",
+    "forestScopeTaskActive": false,
+    "schedule": {
+      "enabledCount": 1,
+      "timezone": "Asia/Shanghai",
+      "dailyAt": "09:00:00",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "otherChats": "Not inspected.",
+    "businessResults": "Not reread.",
+    "actions": "No device connection, job/business-code execution, business-state/raw-log read, file/deployment/cron/schedule/credential change, other-chat inspection, or task interruption."
+  },
+  "pixelReadonlyPreflight20261103_220018": {
+    "readAt": "2026-11-03T22:00:18+08:00",
+    "transport": "Only the existing configured alias pixel3a-kjgx; non-root remote UID 10249; read-only shell commands.",
+    "remoteUid": 10249,
+    "device": {
+      "model": "Pixel 3a",
+      "android": "15",
+      "timezone": "Asia/Shanghai",
+      "bootCompleted": true
+    },
+    "autoxOrAutojsProcess": "ABSENT in filtered process inventory.",
+    "installedSecureViewPackage": "com.p4.secureview",
+    "secureViewInstalledApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "secureViewHashMatchesKnownV019Artifact": true,
+    "deviceOperationLock": "UNKNOWN; no exact documented non-root read method was available.",
+    "monitorStatusAndHash": "UNKNOWN; private app data not read.",
+    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
+    "rootOrSuUsed": false,
+    "actions": "No app/process start or stop, install/deploy, device or state write, business-state read, task/code execution, schedule change, or credential/network change."
+  },
+  "liveRunnerAttachmentAudit20261103_220312": {
+    "readAt": "2026-11-03T22:03:12+08:00",
+    "filename": "陽光森林 live run.py",
+    "reportedByteSize": 19082,
+    "reportedSha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+    "museReportedByteMatch": true,
+    "liveRunnerIdentity": "Confirmed by MUSE as unique run.py in the live runner directory alongside the verified policy/tasks/assistant modules.",
+    "privateAttachment": "Confirmed in the existing Forest thread; no public link.",
+    "localByteVerification": "No same-name file found in Downloads or /tmp; no independent local byte rehash in this turn.",
+    "staticReview": {
+      "prepare": "Up to 70 seconds polling resumed Activity and nonce-matched module events; single auth dispatch only when GestureActivity is observed and not previously attempted; BLOCKED stops, NAVIGATED continues to readiness wait, otherwise PREPARE_TIMEOUT_NO_FALLBACK.",
+      "comparisonToNov03Runs": "Existing sanitized summaries ended at MainActivity with no BridgeWebActivity/NAVIGATED, empty stages, and cleanup PASS. This supports the runner prepare Activity/marker wait as the terminal layer; assistant Vue page gate was not reached; module login-state result and underlying cause remain UNKNOWN.",
+      "constraint": "Source contains a privileged su device route; do not invoke or reuse it under the non-root-only device constraint."
+    },
+    "sourceExecuted": false,
+    "actions": "No code execution, device connection, business action/state read, source modification, deployment, schedule change, or credential access."
+  },
+  "boundedRuleSourceSearch20261103": {
+    "recordedDate": "2026-11-03",
+    "drive": {
+      "mode": "Document metadata-only search; no matching document content opened.",
+      "queriesWithZeroResults": [
+        "阳光雨露",
+        "阳光森林规则",
+        "保单芯管家",
+        "态幸福",
+        "三节一生",
+        "E錦囊",
+        "签单协同",
+        "阳光值 结算",
+        "每日阳光",
+        "行为值 结算",
+        "阳光雨露 規則"
+      ],
+      "unrelatedMetadataResult": "官方時點 returned one unrelated PDF metadata result; content was not opened."
+    },
+    "cpicOfficialDomain": {
+      "queries": [
+        "site:cpic.com.cn \"阳光雨露\" \"一天最多\"",
+        "site:cpic.com.cn \"陽光森林\" 陽光值 任務 規則",
+        "site:cpic.com.cn \"三节一生\" 太保",
+        "site:cpic.com.cn \"签单协同\" 陽光森林"
+      ],
+      "result": "No direct current Forest task/reward rule evidence found. Existing 态幸福 product-context material does not establish Forest task mapping or reward conditions."
+    },
+    "limit": "Search results are bounded to the queries and metadata/domain scope above; they do not show that an original source never existed or was never historically confirmed, and do not establish reset, repeat, settlement timing, or current eligibility."
   }
 }

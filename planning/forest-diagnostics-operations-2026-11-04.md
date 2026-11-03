@@ -1,5 +1,26 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 更新｜2026-11-03 21:58—22:03 CST：runner等待路径已核对，设备写门禁仍关闭
+
+21:58:28 MUSE在既有Forest线程报告无活动任务，唯一启用任务仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程。live `run.py`/`assistant.py` SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败仍为11月3日09:11:17，最近成功10月31日09:15:50。22:00:18经既有`pixel3a-kjgx`以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS，SecureView APK SHA匹配v0.19；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。
+
+22:03:12 MUSE在同一线程提供live `run.py`私有附件，报告字节大小19,082、SHA-256与live pin完全匹配、runner目录身份唯一且无公开链接。代码在MUSE附件查看器中静态审阅；本机Downloads和`/tmp`均未找到同名下载文件，故本轮没有独立本机复算字节hash。源码显示prepare在最多70秒内轮询resumed Activity及nonce匹配的模块标记；仅当Activity包含`GestureActivity`且尚未触发时调用一次认证入口，收到`BLOCKED`即停，收到`NAVIGATED`才进入后续页面就绪等待，否则以`PREPARE_TIMEOUT_NO_FALLBACK`结束。它支持将11月3日三段失败定位到runner prepare/Activity与标记等待层；三个既有脱敏摘要最后记录MainActivity，未记录BridgeWebActivity或NAVIGATED，stages为空，故assistant Vue页面门禁未运行，module登录态门禁结果仍UNKNOWN。未就绪原因、屏幕/Keyguard、认证是否触发及更底层原因均未被该证据解释。源码含特权`su`设备路径；按非root约束不运行、不复用。未执行源码、任务或业务，没有设备写入、部署、状态或调度更改。
+
+执行选择：不放宽Activity/页面门禁、不重试业务、不安装任何observer；保留既有09:00调度，下一自然轮只读收集同轮脱敏prepare事件、结果与cleanup。设备写入继续受操作锁UNKNOWN阻断；若没有精确、既有的非root只读读取方法，锁继续记UNKNOWN。规则来源补查仍未找到当前任务规则直接原件：限定Drive metadata搜索未返回匹配文档（“官方时点”仅命中无关PDF元数据且未打开），CPIC官方域搜索未命中任务/奖励规则；不能据此推断原件不存在、历史未确认、重置周期或资格。
+
+### 方案取舍
+
+- **方案A：** 放宽Activity判定、增加认证重试，或安装observer后再试。虽然可能产生更多信号，但会改变门禁/认证行为；设备锁未知，候选部署状态不明，且live runner使用特权设备路径，与本轮非root限制冲突。**不采用。**
+- **方案B（采用）：** 保留既有09:00调度与所有门禁，只在自然运行后回收同轮脱敏prepare事件、最终结果和cleanup；MUSE只读读取，Pixel仅在确有既有且精确的非root读取路径时访问。这样可继续判断失败层而不重放业务；若锁读不到则仍为UNKNOWN并停止设备写入。
+
+### 下一轮操作
+
+1. 不手动启动、重试、部署或修改现有任务；等11月4日09:00自然轮完成。
+2. 先从既有Forest MUSE线程读取该轮的prepare事件、结果、stages、助理NOT_SENT/页面检查、cleanup及新鲜调度并发状态；只记录脱敏摘要。
+3. 若要读Pixel，只用`pixel3a-kjgx`和非root；只按已记录的命令/路径读取操作锁。方法不存在或需猜路径/提权时停止，记录UNKNOWN，不写设备。
+4. 对比同轮Activity序列、nonce标记状态和运行结果，只判断实际证据支持的最深层；不要把prepare超时解释成Keyguard、登录或页面门禁失败。
+5. 不安装过期Keyguard v3，不重装历史monitor-only工件，不部署两个离线observer；不改schedule、credentials、business state或客户数据。
+
 ## 最新运行与Pixel预检｜2026-11-03 21:45—21:47 CST
 
 MUSE于21:45:36只读确认Forest当时无活动、running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程；唯一schedule仍为Asia/Shanghai每日09:00、下次11月4日09:00。live run.py/assistant.py SHA仍为已核实值。约21:46经Pixel既有别名非root读取确认设备启动、AutoX/AutoJS进程未见、SecureView APK与v0.19 pin匹配。设备锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。没有设备写入或部署。

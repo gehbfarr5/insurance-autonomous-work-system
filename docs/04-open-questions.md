@@ -1,5 +1,13 @@
 # 缺失内容与 P4 按需核查
 
+## P4最新只读状态与prepare路径审计｜2026-11-03 21:58—22:03 CST
+
+21:58:28 MUSE在既有Forest线程报告无活动任务，唯一启用任务仍为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false、runner lock FREE、无Forest进程。live `run.py`/`assistant.py` SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败仍为11月3日09:11:17，最近成功10月31日09:15:50。22:00:18经既有`pixel3a-kjgx`以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS，SecureView APK SHA匹配v0.19；设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。
+
+22:03:12 MUSE在同一线程提供live `run.py`私有附件，报告字节大小19,082、SHA-256与live pin完全匹配、runner目录身份唯一且无公开链接。代码在MUSE附件查看器中静态审阅；本机Downloads和`/tmp`均未找到同名下载文件，故本轮没有独立本机复算字节hash。源码显示prepare在最多70秒内轮询resumed Activity及nonce匹配的模块标记；仅当Activity包含`GestureActivity`且尚未触发时调用一次认证入口，收到`BLOCKED`即停，收到`NAVIGATED`才进入后续页面就绪等待，否则以`PREPARE_TIMEOUT_NO_FALLBACK`结束。它支持将11月3日三段失败定位到runner prepare/Activity与标记等待层；三个既有脱敏摘要最后记录MainActivity，未记录BridgeWebActivity或NAVIGATED，stages为空，故assistant Vue页面门禁未运行，module登录态门禁结果仍UNKNOWN。未就绪原因、屏幕/Keyguard、认证是否触发及更底层原因均未被该证据解释。源码含特权`su`设备路径；按非root约束不运行、不复用。未执行源码、任务或业务，没有设备写入、部署、状态或调度更改。
+
+执行选择：不放宽Activity/页面门禁、不重试业务、不安装任何observer；保留既有09:00调度，下一自然轮只读收集同轮脱敏prepare事件、结果与cleanup。设备写入继续受操作锁UNKNOWN阻断；若没有精确、既有的非root只读读取方法，锁继续记UNKNOWN。规则来源补查仍未找到当前任务规则直接原件：限定Drive metadata搜索未返回匹配文档（“官方时点”仅命中无关PDF元数据且未打开），CPIC官方域搜索未命中任务/奖励规则；不能据此推断原件不存在、历史未确认、重置周期或资格。
+
 ## 诊断候选版本边界｜2026-11-03 21:53 CST
 
 Keyguard v3的11月3日08:55—09:55版本已过期、未部署。另一个monitor-only候选哈希2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a曾按11月4日08:55—09:55窗口安装；最后历史读数为11月3日15:58 watching。21:46 Pixel非root预检没有读取monitor私有状态/hash，所以当前状态UNKNOWN，不能据历史值重装或宣称正常。前台Activity分类及prepare字段观察候选仍仅离线审查、未部署。当前设备锁UNKNOWN，任何设备写入继续关闭。

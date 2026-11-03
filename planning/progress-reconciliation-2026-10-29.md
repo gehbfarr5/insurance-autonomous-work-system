@@ -1,5 +1,11 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-03 22:03 CST：补充live runner附件核对及最新只读预检
+
+21:58:28 MUSE只读状态仍为空闲，唯一每日09:00任务下次11月4日，队列/在途为0，runner lock FREE，live哈希及最近调度结果未变。22:00:18 Pixel经既有别名以UID 10249非root读取；设备、APK和进程状态见结构化证据，设备锁和私有monitor/屏幕状态UNKNOWN。22:03:12 MUSE确认live `run.py`私有附件大小19,082、hash与当前live pin一致。MUSE附件查看器静态审阅表明prepare最多等70秒，只有收到`NAVIGATED`才继续；11月3日三个分段均以`PREPARE_TIMEOUT_NO_FALLBACK`结束且stages为空，因此assistant页面门禁未运行，底因及module登录态仍未知。本机没有同名下载副本，无本机字节复算；源码未执行。runner内特权设备路径不符合当前非root限制，未复用。
+
+规则补查仅限指定Drive metadata和CPIC官方域词面查询，未找到森林任务/奖励规则直接原件；一个“官方时点”结果为无关PDF元数据且未打开。该搜索不证明原件不存在或历史未确认。无业务重放、设备写入、observer部署或调度更改；11月4日自然结果/回执仍待。
+
 ## 2026-11-03 21:53 CST：候选版本与设备状态边界
 
 运行手册的历史记录显示，monitor-only候选SHA-256 2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a曾针对11月4日窗口安装，15:58最后读到watching。本轮21:46非root预检未读取monitor状态/hash，故当前状态UNKNOWN。用户指明的Keyguard v3是另一条绑定11月3日窗口、已过期且未部署的候选，不安装。Activity类别和prepare字段观察器也仍为未部署离线候选。此区分防止把不同版本和窗口互相替代。

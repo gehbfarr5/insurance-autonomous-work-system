@@ -1,5 +1,11 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## live runner附件只读复核与运行门禁｜2026-11-03 21:58—22:03 CST
+
+MUSE于21:58:28报告Forest无活动/排队/在途任务，唯一每日09:00调度下次11月4日09:00、runner lock FREE、无Forest进程，live run.py/assistant.py哈希分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近失败09:11:17、最近成功10月31日09:15:50。22:00:18经`pixel3a-kjgx`以非root UID 10249只读确认Pixel 3a/Android 15、APK SHA匹配v0.19、AutoX/AutoJS进程未见。设备锁、monitor状态/hash、屏幕/Keyguard/Activity UNKNOWN。
+
+22:03:12 MUSE在原线程私有提供`run.py`，MUSE报告大小19,082、精确live SHA与单一runner文件身份匹配。代码通过MUSE附件查看器静态审阅；本机Downloads和`/tmp`无同名文件，故没有本机独立字节复算，也未把源码写入仓库或私有审计文件。prepare的70秒Activity/nonce marker等待、GestureActivity单次认证分支、`BLOCKED`/`NAVIGATED`分支与超时路径，与11月3日三段摘要相符：最后记录MainActivity、无BridgeWebActivity/NAVIGATED、stages为空。结论限于runner prepare等待层；未到assistant页面门禁，module login-state和底因UNKNOWN。源码含特权设备路径，本轮未执行。未连接设备读锁以外的私有状态，未改设备/业务/state/schedule，也未部署observer。
+
 ## 精确live源码映射与最新运行预检｜2026-11-03 21:45—21:47 CST
 
 MUSE 21:45:36在既有Forest线程只读确认当时无活动任务、唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00、running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程；live run.py/assistant.py SHA为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 / 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。约21:46经已有Pixel别名非root UID 10249只读确认Pixel 3a/Android 15/boot完成、AutoX/AutoJS未见、SecureView APK SHA匹配v0.19。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；没有root/su、业务state/raw log读取、任务运行、设备写入或部署。
