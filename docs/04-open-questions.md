@@ -1,5 +1,15 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 02:15—02:17 CST：状态刷新及本地collector发现
+
+- **MUSE状态：** 02:15:02无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`；唯一每日09:00 Asia/Shanghai schedule待自然触发。该MUSE锁不是Pixel锁。
+- **Pixel设备与APK：** 设备时钟02:17:22确认Pixel 3a、Android 15、boot完成、v0.19 APK pin匹配。限定进程名过滤无匹配，精确已记录操作锁marker缺失；但整体设备操作锁、monitor/hash、屏幕/Keyguard/Activity仍UNKNOWN。
+- **Collector来源/可用性：** MUSE在已查workspace范围内未找到两份collector；后来在本机private review包找到并核对了预期SHA与manifest。静态代码调用`su -c`，当前不可运行，且没有证实非root导出路径；observer未集成。
+- **自然运行：PENDING。** 保留09:00 schedule，完成后先取同轮脱敏prepare/result/stages/assistant/cleanup；不重放、不放宽门禁。
+- **验收：** P4仍开放；设备诊断/修复、五项业务收据、五项扩展资格/触发/周期未闭环；E07为PARTIAL；跨日/长期样本SUSPENDED。
+
+结构化记录：`museReadonlyStatus20261104_021502`、`pixelReadonlyPreflight20261104_0217`、`pixelProcessFilter20261104_0217`、`pixelDeviceLockMarkerRead20261104_0217`、`localCollectorPackageReview20261104_0217`、`acceptanceGateStatus20261104_0217`。
+
 ## 2026-11-04 02:09 CST：新增状态未知项
 
 - **Pixel设备操作锁、monitor状态/hash、屏幕/Keyguard和前台Activity：UNKNOWN。** 02:09:05设备时钟只确认Pixel 3a / Android 15 / boot完成；AutoX/AutoJS名称过滤无匹配只限该过滤，不是一般进程检查。

@@ -1,5 +1,11 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 02:15—02:17 CST：重查MUSE / Pixel状态并找到本地review候选
+
+MUSE 02:15:02只读状态仍为无活动/排队/在途Forest任务、runner lock `FREE`，唯一每日09:00 Asia/Shanghai schedule待自然触发；最近失败/成功记录未变。Pixel设备时钟02:17:22只读核验确认UID 10249、Pixel 3a、Android 15、boot完成，安装APK仍匹配v0.19 pin。窄进程名过滤无匹配、精确已记录的设备操作锁marker缺失；整体操作锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。
+
+两份collector虽未出现在MUSE所查goal workspace位置，但已在本地private review包找到并以预期SHA匹配；包清单分别14/14、11/11。静态读码确认它们通过`su -c`读取，当前不可运行；观察器仍未集成。复用已有候选，只有验证非root导出路径并审阅runner/pin兼容后再适配；拒绝猜测路径、绕过Activity/auth/method-pin门禁。选择等待既有09:00自然轮，先取同轮脱敏MUSE证据。P4开放，S1未验收。证据键：`museReadonlyStatus20261104_021502`、`pixelReadonlyPreflight20261104_0217`、`pixelProcessFilter20261104_0217`、`pixelDeviceLockMarkerRead20261104_0217`、`localCollectorPackageReview20261104_0217`、`acceptanceGateStatus20261104_0217`。
+
 ## 2026-11-04 02:07—02:09 CST：自然运行门禁仍有限
 
 MUSE元数据在02:07:50刷新：无活动/排队/在途Forest任务，runner lock `FREE`；唯一每日09:00 Asia/Shanghai schedule仍待自然触发。其后Pixel有限非root身份读取成功，但操作锁、live monitor状态/hash及前台环境仍UNKNOWN；狭窄AutoX/AutoJS进程名过滤无匹配不构成monitor状态证据。MUSE静态workspace检查未找到两份请求collector（仅限所查目录，文件元数据未知且无附件）。保留自然运行并于运行后先取同轮脱敏证据；不重放或使用`su`。P4开放，设备诊断/修复和业务验收未完成，S1未验收。证据键：`museCollectorSourceAvailability20261104_0209`、`museReadonlyStatus20261104_020750`、`pixelReadonlyPreflight20261104_020905`、`pixelProcessFilter20261104_0209`、`acceptanceGateStatus20261104_0209`。

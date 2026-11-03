@@ -1,5 +1,13 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 2026-11-04 02:15—02:17 CST：本地候选已找到，设备诊断仍受限
+
+MUSE在02:15:02只读报告Forest空闲，running/queued/in-flight `0/0/false`、runner lock `FREE`，原每日09:00 Asia/Shanghai schedule仍待自然触发，runner/assistant hashes及最近运行记录未变。之后Pixel现有alias非root读取确认UID 10249、Pixel 3a、Android 15、boot完成；设备安装APK hash匹配v0.19 pin。进程名过滤无匹配，精确已记录设备操作锁marker缺失；整体设备操作锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。
+
+MUSE未在其所查goal workspace目录找到两个collector，但本地private review包已找到hash完全匹配的文件：field-presence `9dda0b75cc2375c892a5ac3214debb5c6951205613d3ccbbab434e6c66d709ae`（manifest 14/14）和Activity-category `fd01997ea87e6f6d14ff1a7eb60ebe62d57c98fb28121096dc64736b1644827e`（11/11）。它们都静态调用`su -c`，当前不可运行；不读取设备日志、不猜替代路径。复用候选的脱敏字段和时间关联设计，只有已有非root路径及runner/pin适配经验证后才考虑整合。拒绝绕过Activity/auth/assistant method-pin门禁；保留09:00自然运行，先取同轮脱敏MUSE证据。
+
+证据：`museReadonlyStatus20261104_021502`、`pixelReadonlyPreflight20261104_0217`、`pixelProcessFilter20261104_0217`、`pixelDeviceLockMarkerRead20261104_0217`、`localCollectorPackageReview20261104_0217`、`acceptanceGateStatus20261104_0217`。
+
 ## 2026-11-04 00:47—00:49 CST：刷新运行门禁，设备私有状态仍未知
 
 MUSE在既有Forest线程00:47:37只读确认当时无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；唯一schedule仍为Asia/Shanghai每日09:00、下一触发11月4日09:00。live `run.py` / `assistant.py` SHA仍分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。

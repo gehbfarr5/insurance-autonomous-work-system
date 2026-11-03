@@ -1,5 +1,11 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 02:15—02:17 CST：更新自然运行前门禁与候选来源
+
+MUSE 02:15:02只读状态为无活动/排队/在途Forest任务、runner lock `FREE`，唯一每日09:00 Asia/Shanghai schedule待今日自然触发。Pixel设备时钟02:17:22经既有alias以非root确认UID 10249、Pixel 3a、Android 15、boot完成及SecureView APK pin匹配v0.19。限定进程名过滤无匹配、精确已记录操作锁marker缺失；设备操作锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。
+
+MUSE所查workspace内未找到两份collector，但本机私有review包中两份均已按预期SHA找到，清单14/14和11/11匹配。静态代码使用`su -c`，不能在现有非root约束下运行；观察器仍离线未集成。复用其脱敏候选设计，待验证非root数据路径和runner/pin适配后再评估；不绕过Activity、认证或assistant方法pin门禁。保留09:00自然轮，结束后先读同轮MUSE脱敏证据，不重试/重放。签到与其他日常任务仍需独立业务回执；P4开放、S1未验收。证据键：`museReadonlyStatus20261104_021502`、`pixelReadonlyPreflight20261104_0217`、`pixelProcessFilter20261104_0217`、`pixelDeviceLockMarkerRead20261104_0217`、`localCollectorPackageReview20261104_0217`、`acceptanceGateStatus20261104_0217`。
+
 ## 2026-11-04 02:07—02:09 CST：更新签到验收前证据
 
 MUSE 02:07:50只读确认每日09:00自然schedule仍启用、下次触发为今天09:00，running/queued/in-flight `0/0/false`，runner lock `FREE`。live runner/assistant哈希未变。其后Pixel经既有alias以非root确认UID 10249、Pixel 3a、Android 15及boot完成，设备时钟02:09:05；限定AutoX/AutoJS进程名过滤无匹配，但不能据此判断一般进程或monitor状态。Pixel操作锁、monitor/hash、屏幕/Keyguard/Activity仍UNKNOWN。MUSE的静态workspace检查未找到两份请求collector；扫描时刻、文件名和大小未知，且没有附件，结论仅限所检查目录。

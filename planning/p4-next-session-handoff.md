@@ -1,5 +1,11 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 02:15—02:17 CST — fresh status and local candidate review
+
+MUSE's 02:15:02 read-only response still reports no Forest activity, running/queued/in-flight `0/0/false`, runner lock `FREE`, and one daily 09:00 Asia/Shanghai schedule for today. The latest failure/success records and live runner/assistant hashes are unchanged. At Pixel device time 02:17:22, the existing alias confirmed non-root UID 10249, Pixel 3a, Android 15, boot complete, and installed APK hash matching the v0.19 pin. A narrow process-name filter returned no matches; the exact documented operation-lock marker was absent. Overall device lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN.
+
+MUSE's prior missing-source report applies only to the checked goal-workspace locations. Both expected collectors are present in local private review packages and match their expected hashes; manifests verify 14/14 and 11/11 files. Static inspection confirms each collector invokes `su -c`; neither is usable within the current non-root boundary. Reuse these reviewed offline candidates, adapting only after a verified non-root evidence path and runner/pin compatibility review. Do not infer monitor absence, read raw logs, guess a path, install candidates, replay business, or relax the fail-closed gates. Preserve the natural 09:00 run and read its sanitized same-run MUSE evidence first. P4 remains open; S1 is not accepted. Evidence: `museReadonlyStatus20261104_021502`, `pixelReadonlyPreflight20261104_0217`, `pixelProcessFilter20261104_0217`, `pixelDeviceLockMarkerRead20261104_0217`, `localCollectorPackageReview20261104_0217`, `acceptanceGateStatus20261104_0217`.
+
 ## 2026-11-04 02:07—02:09 CST — latest read and source availability
 
 MUSE's 02:07:50 read-only response reports no active Forest task; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; live `run.py` / `assistant.py` SHA-256 `de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`; latest failure Nov 3 09:11:17, last success Oct 31 09:15:50.

@@ -1,5 +1,15 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 02:15—02:17 CST：刷新MUSE/Pixel状态并界定collector可用性
+
+MUSE在既有Forest线程于02:15:02报告：无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、无Forest进程；唯一启用schedule为每日09:00 Asia/Shanghai、下一触发今日09:00；live runner/assistant哈希与最近成功/失败记录未变。此为MUSE元数据，不代表Pixel设备锁。
+
+随后Pixel既有alias以非root UID 10249确认Pixel 3a、Android 15、boot完成；已安装SecureView APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin。窄AutoX/AutoJS/SecureView进程名过滤无匹配；精确已记录的设备操作锁marker未发现。两项都是有限观察，整体设备操作锁、live monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。未读原始日志或业务状态，未用root/`su`，未写设备或启动任务。
+
+本机私有review包现已确认两份预期collector存在且hash匹配：逐字段候选`9dda0b75cc2375c892a5ac3214debb5c6951205613d3ccbbab434e6c66d709ae`、16,622字节、manifest 14/14；Activity类别候选`fd01997ea87e6f6d14ff1a7eb60ebe62d57c98fb28121096dc64736b1644827e`、16,782字节、manifest 11/11。MUSE此前“未找到”的结论仍只适用于其已查goal workspace目录。静态读码显示两个collector都经既有alias调用`su -c`读取私有侧车/logcat，因此当前约束下不可运行；observer和assistant gate表达式仍为offline review、未集成。
+
+取舍：复用已有脱敏字段白名单、runGroup/时间join和固定类别候选；适配前提是找到并验证已存在的非root导出路径及runner/pin兼容；避免猜路径、启用`su`、改装候选或放宽Activity/auth/method-pin门禁。当前选择等待原有09:00自然运行，结束后先刷新MUSE并取同轮脱敏prepare/result/stages/assistant/cleanup。业务重放和候选安装均不做。证据键：`museReadonlyStatus20261104_021502`、`pixelReadonlyPreflight20261104_0217`、`pixelProcessFilter20261104_0217`、`pixelDeviceLockMarkerRead20261104_0217`、`localCollectorPackageReview20261104_0217`、`acceptanceGateStatus20261104_0217`。
+
 ## 2026-11-04 02:07—02:09 CST：更新自然运行前门禁与collector来源状态
 
 MUSE于02:07:50在既有Forest线程只读确认无活动任务，running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无Forest进程；唯一启用schedule仍为每日09:00 Asia/Shanghai、下次触发11月4日09:00；live `run.py` / `assistant.py` SHA-256仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最新失败/最近成功仍为11月3日09:11:17及10月31日09:15:50。

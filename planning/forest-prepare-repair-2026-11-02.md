@@ -1,5 +1,11 @@
 # 11月2日准备阻断修复与单次补跑记录｜2026-11-02
 
+## 2026-11-04 02:15—02:17 CST：修复路径比较与当前门禁
+
+MUSE 02:15:02只读状态显示无活动/排队/在途Forest任务、runner lock `FREE`，既有09:00 Asia/Shanghai自然schedule待触发。Pixel在设备时钟02:17:22经现有alias以非root核对身份、启动和APK pin；已安装APK匹配v0.19。窄进程过滤无匹配，精确已记录设备操作锁marker缺失，但整体设备锁、monitor状态/hash及屏幕/Keyguard/Activity仍UNKNOWN。
+
+修复方案取舍：直接绕过Activity/ready-marker/auth/method-pin门禁或加重试，会改变失败主路径且现有证据未解释底因，拒绝；复用已有field-presence与固定Activity类别离线候选，并等自然运行同轮证据，再按可观察失败修主路径，当前选择此方案。两份collector在MUSE所查workspace位置缺失，但本地private review包中的精确hash均已核对，manifest 14/14、11/11；其静态`su -c`路径与当前非root约束冲突，不能运行或用猜测路径替代。只在未来确认既有非root证据导出及runner/pin兼容后，才重新评估集成。保留09:00自然轮，不部署、不重放、不读取raw logs。证据键：`museReadonlyStatus20261104_021502`、`pixelReadonlyPreflight20261104_0217`、`pixelProcessFilter20261104_0217`、`pixelDeviceLockMarkerRead20261104_0217`、`localCollectorPackageReview20261104_0217`、`acceptanceGateStatus20261104_0217`。
+
 ## 2026-11-04 01:42—01:47 CST：再核运行状态；设备级修复门禁仍关闭
 
 MUSE 01:42:49只读确认Forest当前无活动/排队/在途任务、runner lock `FREE`、无Forest进程，既有每日09:00 Asia/Shanghai schedule下次11月4日09:00，live runner/assistant hashes及最近运行记录未变。其后Pixel既有alias以非root仅确认UID 10249、Pixel 3a、Android 15和boot完成（设备时间01:44:06）；设备操作锁、monitor状态/hash及UI状态仍UNKNOWN。没有新证据可支持修改认证或就绪门禁。

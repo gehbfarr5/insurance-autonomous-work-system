@@ -1,5 +1,13 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 02:15—02:17 CST — fresh status, bounded device read, and local source recovery
+
+MUSE's 02:15:02 status remains idle with runner lock `FREE` and the existing 09:00 Asia/Shanghai schedule pending. Pixel's 02:17:22 device-clock read confirmed non-root UID 10249, Pixel 3a, Android 15, boot complete, and the v0.19 APK pin. The limited process-name filter returned no matches and the exact documented operation-lock marker was absent; overall device lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN.
+
+The previous MUSE inventory found neither collector in its checked goal-workspace locations. Both exact expected files are now confirmed in local private review packages, with matching hashes and complete manifests (14/14 and 11/11). Static source review shows both invoke `su -c`, so neither can be run under the current constraint. Reuse the offline candidates; adapt only after a verified non-root export path and runner/pin review. Avoid guessed paths, raw-log reads, candidate installation, business replay, and gate relaxation. The chosen next step remains the 09:00 natural run, followed by fresh MUSE status and same-run sanitized evidence. Five daily receipts and five extension investigations remain open; P4 remains open, S1 is not accepted.
+
+Evidence: `museReadonlyStatus20261104_021502`, `pixelReadonlyPreflight20261104_0217`, `pixelProcessFilter20261104_0217`, `pixelDeviceLockMarkerRead20261104_0217`, `localCollectorPackageReview20261104_0217`, `acceptanceGateStatus20261104_0217`.
+
 ## 2026-11-04 02:07—02:09 CST — refreshed pre-run evidence and collector inventory
 
 MUSE's 02:07:50 read-only response reports no active Forest task; running/queued/in-flight `0/0/false`; runner lock `FREE`; one enabled daily 09:00 Asia/Shanghai schedule, next trigger 09:00 today; unchanged live runner/assistant hashes; latest failure Nov 3 09:11:17 and last success Oct 31 09:15:50. After this read, the existing Pixel alias confirmed UID 10249, Pixel 3a, Android 15, and boot complete at device time 02:09:05. A limited AutoX/AutoJS process-name filter returned no matches (exit 1); it does not establish general process absence. Pixel operation lock, monitor status/hash, screen/Keyguard, and foreground Activity remain UNKNOWN; APK hash was not read.
