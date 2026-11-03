@@ -271,3 +271,11 @@ python -m unittest discover -s tests -v
 - MUSE needed one fetch of only the authorized target branch because the object was not initially present locally. It verified the complete commit SHA and completed environment setup and tests offline afterward.
 - Operation counts: OCR 0, Baidu 0, login 0, contacts 0, production execution 0, deployment 0. No sample, reference, customer record, OCR payload, or 30-card set was accessed; no WP10 replay was run. No code, results, templates, production, or configuration were changed; no commit, push, or artifact/log export occurred.
 - This verifies the isolated offline suite only. It does not change the release gates above or establish production acceptance.
+
+### WP11-J1 exact-commit same-input WP10 parser replay
+
+- Date: 2026-11-03. MUSE replayed only the previously authorized protected 89-block structured WP10 result at exact branch commit `e9814eaee6b16d677ab06f0857fa2a5bd1f6a586`, package 0.12.0, in a clean detached worktree and isolated environment (Python 3.12.3 / Pillow 10.2.0). The exact object required one fetch of the authorized target branch; replay then ran offline. The protected input was reported unchanged.
+- Automation acceptance: **FAIL**. The parser returned `REVIEW_REQUIRED` with `table_layout_uncertain`, `main_customer_identity_unclear`, `mobile_missing`, `address_conflict`, and `address_uncertain`; fail-closed review behavior remained active.
+- Field-presence booleans: name false, gender false, identity number true, explicit birthday false, mobile false, address false, other phone false. No reviewed reference was read, so the presence of the identity-number field is not a correctness match.
+- Operation counts: OCR 0, Baidu 0, reference 0, login 0, contacts 0, production execution 0, deployment 0. No new sample or 30-card set was accessed; no raw values were returned.
+- This same-input replay does not establish field accuracy or a usable automatic draft. No parser change is supported by this run. Candidate status remains `VALIDATION_PENDING` until authorized real-card validation and the remaining production safety gates are satisfied.
