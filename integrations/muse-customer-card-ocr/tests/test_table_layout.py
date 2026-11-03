@@ -82,6 +82,27 @@ def _complete_table(*, identity_number: str | None = None) -> list[OcrBlock]:
     ]
 
 
+def _same_row_identity_table(
+    identity_number: str | None = None,
+    *,
+    identity_characters: tuple[OcrCharacter, ...] = (),
+) -> list[OcrBlock]:
+    identity = identity_number or _synthetic_identity_number()
+    blocks = _complete_table()
+    existing_identity_index = next(
+        index
+        for index, block in enumerate(blocks)
+        if block.text == _synthetic_identity_number()
+    )
+    del blocks[existing_identity_index]
+    # The birthday label separates this full ID block from its explicit ID
+    # label, so only the ID-specific unique-candidate rule may associate them.
+    blocks.append(
+        _block(identity, 900, 20, 190, characters=identity_characters)
+    )
+    return blocks
+
+
 class TableLayoutExtractionTests(unittest.TestCase):
     def test_public_decision_is_fail_closed_for_pending_or_reviewed_result(self):
         pending = FieldExtractionResult(
@@ -115,6 +136,95 @@ class TableLayoutExtractionTests(unittest.TestCase):
             extraction.fields.other_phones,
             ("010-0000-0000", "021-0000-0000"),
         )
+
+    def test_unique_same_row_identity_block_is_assigned_despite_other_label_column(
+        self,
+    ):
+        extraction = extract_primary_customer(_result(*_same_row_identity_table()))
+
+        self.assertEqual(extraction.decision, "READY")
+        self.assertEqual(
+            extraction.fields.identity_number,
+            _synthetic_identity_number(),
+        )
+        self.assertEqual(extraction.fields.birthday, date(1990, 2, 2))
+
+    def test_multiple_full_identity_blocks_do_not_use_same_row_rescue(self):
+        blocks = _same_row_identity_table()
+        blocks.append(_block(_synthetic_identity_number("19880709"), 1120, 20, 190))
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.identity_number)
+        self.assertIn(
+            ReviewReason.IDENTITY_NUMBER_UNCERTAIN,
+            extraction.review_reasons,
+        )
+
+    def test_invalid_checksum_does_not_use_same_row_identity_rescue(self):
+        valid = _synthetic_identity_number()
+        invalid = valid[:-1] + ("0" if valid[-1] != "0" else "1")
+
+        extraction = extract_primary_customer(
+            _result(*_same_row_identity_table(invalid))
+        )
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.identity_number)
+        self.assertIn(
+            ReviewReason.IDENTITY_NUMBER_UNCERTAIN,
+            extraction.review_reasons,
+        )
+
+    def test_multiple_identity_labels_do_not_use_same_row_rescue(self):
+        blocks = _same_row_identity_table()
+        blocks.append(_block("证件号码", 1120, 20, 80))
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.identity_number)
+
+    def test_ambiguous_character_does_not_use_same_row_identity_rescue(self):
+        ambiguous_characters = (
+            OcrCharacter(
+                text="9",
+                candidates=(CharacterCandidate(text="8"), CharacterCandidate(text="9")),
+            ),
+        )
+        extraction = extract_primary_customer(
+            _result(
+                *_same_row_identity_table(
+                    identity_characters=ambiguous_characters,
+                )
+            )
+        )
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertIsNone(extraction.fields.identity_number)
+        self.assertIn(
+            ReviewReason.IDENTITY_NUMBER_UNCERTAIN,
+            extraction.review_reasons,
+        )
+
+    def test_same_row_identity_rescue_does_not_join_short_address_rows(self):
+        blocks = _same_row_identity_table()
+        address_index = next(
+            index for index, block in enumerate(blocks) if block.text == "虚构地址 A"
+        )
+        blocks[address_index] = _block("甲区", 230, 120, 40)
+        blocks.append(_block("乙路", 230, 145, 40))
+
+        extraction = extract_primary_customer(_result(*blocks))
+
+        self.assertEqual(extraction.decision, "REVIEW_REQUIRED")
+        self.assertEqual(
+            extraction.fields.identity_number,
+            _synthetic_identity_number(),
+        )
+        self.assertIsNone(extraction.fields.address)
+        self.assertIn(ReviewReason.ADDRESS_UNCERTAIN, extraction.review_reasons)
 
     def test_pairs_horizontal_label_value_cells(self):
         blocks = [

@@ -195,3 +195,15 @@ python -m unittest discover -s tests -v
 - 30-card acceptance: BLOCKED; fewer than 30 samples, authorization remains unconfirmed, and reference annotations are incomplete. Do not access new samples.
 - Production: MUSE reported package 0.5.0; no package pin, production file, or configuration was changed. This 0.9.0 candidate is not v1.0 Stable and is not approved for deployment.
 - Acceptance: the protected replay still fails. Earlier WP11-D aggregate geometry diagnosis found no unique field candidate to support loosening the current geometry rules. The 30-card set remains separately blocked pending explicit authorization and complete reference annotations.
+
+## WP11-F same-row identity candidate repair
+
+- Date: 2026-11-03
+- Package candidate: 0.10.0
+- Development branch: `codex/wp11-family-card-table-parser-20261103`
+- Evidence: MUSE's value-free diagnosis on the same authorized WP10 result and exact 0.9.0 worktree found one complete ID-shaped candidate before the family boundary; it passed the existing checksum/date validation, had no invalid full-shaped competitor, shared the unique explicit ID label's visual row, and was not its immediate right neighbor. No distinct checksum-valid multi-block candidate or ambiguous-character composite was found. The candidate competed with another field label, which is why the generic geometry matcher rejected it.
+- Reuse/adapt/avoid: reuse the existing OCR block/box model, row clustering, checksum validator, and review gate; adapt only the ID field with an exact-one-block, exact-one-pure-label, same-row, valid-checksum, unambiguous-character condition. Explicit ID evidence disables the fallback. Full ID-shaped blocks are excluded from other fields' spatial candidates. Avoid generic column-margin changes, larger search windows for other fields, a second OCR/table model, and new dependencies. GitHub code search returned no relevant maintained parser and only unrelated content; this is weak reuse evidence, so the repair remains local.
+- Added synthetic cases: unique same-row non-neighbor ID is accepted; two complete ID blocks, invalid checksum, multiple ID labels, or ambiguous OCR characters remain under review; short address fragments on separate rows are not combined.
+- Local verification: Python 3.14.7 / Pillow 12.2.0; targeted table-layout suite PASS — 24/24; full offline suite PASS — 123/123; `git diff --check` PASS.
+- MUSE retest: PENDING for the exact candidate commit. The planned replay uses only the same protected WP10 structured result and reviewed reference in a fresh isolated worktree/venv. No OCR, Baidu, iCloud, contacts, production execution, or new samples are authorized.
+- Production and acceptance: production remains 0.5.0 and unchanged. The 30-card gate remains blocked by unconfirmed authorization and incomplete reference annotations. Candidate 0.10.0 is not v1.0 Stable and must not be deployed.

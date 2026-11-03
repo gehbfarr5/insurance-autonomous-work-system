@@ -1,6 +1,6 @@
 # MUSE family-card OCR package
 
-Version 0.9.0 candidate. This package carries the full-image OCR and iCloud parameter adapters, the WP6-C Bearer helper, the WP7 query-parameter Access Token helper, the WP11 table-layout parser, and strict runtime adapters for the existing Seoul OCR response. It does not implement an undocumented MUSE Secure Vault API and makes no Baidu API calls. Tests use Mock transports and synthetic OCR blocks only; no real MCP tool or iCloud operation is invoked.
+Version 0.10.0 candidate. This package carries the full-image OCR and iCloud parameter adapters, the WP6-C Bearer helper, the WP7 query-parameter Access Token helper, the WP11 table-layout parser, and strict runtime adapters for the existing Seoul OCR response. It does not implement an undocumented MUSE Secure Vault API and makes no Baidu API calls. Tests use Mock transports and synthetic OCR blocks only; no real MCP tool or iCloud operation is invoked.
 
 ## End-to-end architecture and release state
 
@@ -195,6 +195,16 @@ MCP writes were not run during local verification. Before any later MUSE create/
 The MUSE replay used an isolated worktree/venv at commit `c1396a862404a55d8ebb94b015003c3a90c3eb0e` (Python 3.12.3, Pillow 10.2.0) and passed 117/117 offline tests. Against the existing 89-block WP10 structured result it returned `REVIEW_REQUIRED` with `table_layout_uncertain`, `main_customer_identity_unclear`, `mobile_missing`, `address_uncertain`, and `identity_number_uncertain`; draft mapping was rejected. Name, mobile, birthday, gender, and identity number were mismatches because no fields were returned. Address MATCH only reflects that the reviewed draft omitted address; it does not show that the card address was extracted. The saved result lacked the Seoul envelope's `ok` and `words_result_num` keys, so MUSE supplied `ok: true` in memory and left the optional count absent; it did not modify the saved result.
 
 MUSE reported zero OCR reruns, Baidu calls, iCloud MCP calls, contact reads/writes, production-code execution, or production changes. Production remained package 0.5.0 at commit `8336008d080387ab709d1e0ab9381683b1138e0f`; the read-only source hashes matched before and after. The isolated worktree was clean and no MUSE commit/push was made. The 0.9.0 candidate is not v1.0 Stable. The separately authorized 30-card acceptance gate remains blocked; no production package pin or runtime was changed.
+
+## WP11-F same-row identity candidate repair (0.10.0)
+
+MUSE's value-free diagnosis of the already-authorized WP10 result found exactly one complete ID-shaped block before the family boundary, checksum valid, with no invalid full-shaped competitor. It shares the unique explicit ID label's visual row and is not the immediate right neighbor; no different checksum-valid multi-block candidate or ambiguous-character composite was found. Generic column geometry still rejected it because it competed with another field label.
+
+The 0.10.0 candidate reuses the current OCR block schema, visual-row clustering, and ID checksum/date validator. It adapts only the ID path: a fallback is allowed only for exactly one complete ID-shaped block in the primary-customer region, exactly one pure ID label, same-row placement, a passing checksum, and no ambiguous OCR characters. It is disabled when explicit ID evidence already exists and does not lower generic tie margins or widen other fields' search radius. A complete ID-shaped token is not considered as another field's value. No dependency or OCR route was added. A generic geometry relaxation was avoided because it could assign values across fields without evidence.
+
+Synthetic regressions cover the same-row non-neighbor positive case, multiple complete ID candidates, invalid checksum, multiple ID labels, ambiguous OCR characters, and a short multi-row address guard. Targeted table-layout tests pass 24/24 and the full local offline suite passes 123/123 on Python 3.14.7 / Pillow 12.2.0. A GitHub search did not find a directly applicable maintained parser for these existing Baidu word boxes; the result was unrelated and is weak evidence, so the change stays local and dependency-free.
+
+The MUSE exact-commit replay is pending. Production remains 0.5.0 and unchanged; this candidate is not v1.0 Stable. The 30-card set remains separate and inaccessible until its authorization and reference-annotation gates are satisfied.
 
 ## Rollback
 

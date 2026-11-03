@@ -178,7 +178,10 @@ def extract_primary_customer(result: OcrResult) -> FieldExtractionResult:
         if in_family_section:
             break
 
-    spatial_evidence, spatial_uncertain_fields = _extract_spatial_evidence(result)
+    spatial_evidence, spatial_uncertain_fields = _extract_spatial_evidence(
+        result,
+        allow_identity_rescue=not evidence["identity_number"],
+    )
     for field_name, items in spatial_evidence.items():
         evidence[field_name].extend(items)
 
@@ -327,6 +330,8 @@ def _extract_identity_number(
 
 def _extract_spatial_evidence(
     result: OcrResult,
+    *,
+    allow_identity_rescue: bool = True,
 ) -> tuple[dict[str, list[_Evidence]], set[str]]:
     """Read label/value adjacency from Baidu word-block coordinates.
 
@@ -364,6 +369,11 @@ def _extract_spatial_evidence(
         return evidence, uncertain_fields
 
     rows = _cluster_visual_rows(positioned)
+    identity_rescue = (
+        _unique_same_row_identity_candidate(rows)
+        if allow_identity_rescue
+        else None
+    )
     for row_index, row in enumerate(rows):
         for item_index, label in enumerate(row):
             if label.field_name is None or label.inline_value:
@@ -388,6 +398,10 @@ def _extract_spatial_evidence(
                 if (
                     right_neighbor.field_name is None
                     and gap <= max_gap
+                    and (
+                        label.field_name == "identity_number"
+                        or not _is_identity_number_shape(right_neighbor.block.text)
+                    )
                 ):
                     matches_column, column_ambiguous = _matches_label_column(
                         label, right_neighbor, row, same_row=True
@@ -406,6 +420,11 @@ def _extract_spatial_evidence(
                 ]
                 for candidate in below_row:
                     if candidate.field_name is not None:
+                        continue
+                    if (
+                        label.field_name != "identity_number"
+                        and _is_identity_number_shape(candidate.block.text)
+                    ):
                         continue
                     if any(
                         _same_visual_column(label, below_label)
@@ -450,6 +469,20 @@ def _extract_spatial_evidence(
                         if candidate.index not in consumed_indices
                     ]
                     candidates.extend(composites)
+
+            if (
+                label.field_name == "identity_number"
+                and identity_rescue is not None
+                and identity_rescue[0] == label.index
+                and all(
+                    candidate.index != identity_rescue[1].index
+                    for candidate in candidates
+                )
+            ):
+                # A sole, checksum-valid full ID block in the same visual row
+                # can be assigned by its explicit label even when another
+                # field label makes generic center-based column matching tie.
+                candidates.append(identity_rescue[1])
 
             for candidate in candidates:
                 value = _clean(candidate.block.text)
@@ -588,6 +621,61 @@ def _identity_fragment_candidates(
             )
 
     return candidates
+
+
+def _unique_same_row_identity_candidate(
+    rows: list[list[_SpatialBlock]],
+) -> tuple[int, _SpatialBlock] | None:
+    """Find one unambiguous full ID block beside its sole explicit label.
+
+    This narrow rescue does not relax generic field-column matching. It only
+    handles a complete checksum-valid identity value when the primary-customer
+    area contains exactly one full ID-shaped block and one pure ID label, both
+    in the same visual row, and the value is not the label's direct right
+    neighbour. Any additional complete-shaped block, invalid checksum,
+    ambiguous OCR character, inline label, or row mismatch keeps review in
+    place.
+    """
+    labels = [
+        (row_index, item)
+        for row_index, row in enumerate(rows)
+        for item in row
+        if item.field_name == "identity_number"
+    ]
+    complete_blocks = [
+        (row_index, item)
+        for row_index, row in enumerate(rows)
+        for item in row
+        if item.field_name is None and _is_identity_number_shape(item.block.text)
+    ]
+    if len(labels) != 1 or len(complete_blocks) != 1:
+        return None
+
+    label_row_index, label = labels[0]
+    candidate_row_index, candidate = complete_blocks[0]
+    if (
+        label.inline_value
+        or label_row_index != candidate_row_index
+        or _has_ambiguous_character(label.block)
+        or _has_ambiguous_character(candidate.block)
+    ):
+        return None
+
+    value = _normalize_identity_number(candidate.block.text)
+    if not _is_checksum_valid_identity_number(value):
+        return None
+
+    row = rows[label_row_index]
+    label_position = next(
+        index for index, item in enumerate(row) if item.index == label.index
+    )
+    candidate_position = next(
+        index for index, item in enumerate(row) if item.index == candidate.index
+    )
+    if candidate_position == label_position + 1:
+        return None
+
+    return label.index, candidate
 
 
 def _family_boundary(result: OcrResult) -> tuple[int | None, int | None]:
@@ -749,6 +837,10 @@ def _normalize_mobile(value: str) -> str | None:
 def _normalize_identity_number(value: str) -> str:
     normalized = unicodedata.normalize("NFKC", value)
     return re.sub(r"\s+", "", normalized).upper()
+
+
+def _is_identity_number_shape(value: str) -> bool:
+    return _ID_RE.fullmatch(_normalize_identity_number(value)) is not None
 
 
 def _is_checksum_valid_identity_number(value: str) -> bool:
