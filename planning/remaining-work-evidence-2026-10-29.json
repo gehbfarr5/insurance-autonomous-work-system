@@ -4774,5 +4774,117 @@
     ],
     "overall": "P4 remains open; no S1 or project-complete claim. P50, monthly planning, and 2U=2800 remain excluded.",
     "actions": "No root/su, business-state/raw-log read, business-code/task execution, device write, deployment, install, restart, schedule change, replay, or gate relaxation."
+  },
+  "museReadonlyStatus20261104_025048":   {
+    "recordedAt": "2026-11-04T02:50:48+08:00",
+    "source": "Existing Sunshine Forest MUSE thread; read-only scheduler/deployment metadata request.",
+    "activeForestTask": false,
+    "runningQueuedInFlight": [
+      0,
+      0,
+      false
+    ],
+    "runnerLock": "FREE",
+    "forestProcessPresence": "NONE_OBSERVED",
+    "schedule": {
+      "enabledCount": 1,
+      "timezone": "Asia/Shanghai",
+      "dailyAt": "09:00:00",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+    "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+    "latestSchedulerResult": {
+      "at": "2026-11-03T09:11:17+08:00",
+      "result": "FAILED"
+    },
+    "lastSuccess": "2026-10-31T09:15:50+08:00",
+    "scope": "Forest thread only; no device connection, business-state/raw-log reads, code/job execution, or changes."
+  },
+  "pixelReadonlyPreflight20261104_025306":   {
+    "recordedAtDeviceClock": "2026-11-04T02:53:06+08:00",
+    "source": "Existing pixel3a-kjgx SSH alias and local SSH configuration; bounded non-root reads after fresh MUSE no-in-flight status.",
+    "connection": "SUCCESS_EXISTING_ALIAS",
+    "uid": 10249,
+    "deviceModel": "Pixel 3a",
+    "androidVersion": "15",
+    "timezone": "Asia/Shanghai",
+    "bootCompleted": true,
+    "installedSecureViewApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "apkMatchesKnownV019Pin": true,
+    "rootOrSuUsed": false,
+    "businessStateOrRawLogsRead": false,
+    "appOrTaskOrCodeExecuted": false,
+    "deviceWrittenOrAppInstalledOrRestarted": false,
+    "networkCredentialsOrScheduleChanged": false,
+    "overallDeviceOperationLock": "UNKNOWN",
+    "monitorStatusAndHash": "UNKNOWN",
+    "screenKeyguardForegroundActivity": "UNKNOWN"
+  },
+  "pixelProcessFilter20261104_025306":   {
+    "recordedAtDeviceClock": "2026-11-04T02:53:06+08:00",
+    "source": "Non-root ps -A inventory filtered to the documented limited AutoX/AutoJS/org.autojs/SecureView process-name set.",
+    "psExitCode": 0,
+    "matchingOutputLines": [],
+    "interpretation": "No names matched the limited filter; general process absence and monitor state remain UNKNOWN.",
+    "rootOrSuUsed": false,
+    "deviceWritten": false
+  },
+  "pixelDeviceLockMarkerRead20261104_025306":   {
+    "recordedAtDeviceClock": "2026-11-04T02:53:06+08:00",
+    "source": "Read-only test for the exact device-operation marker documented in the private deployment rollback instructions.",
+    "exactDocumentedMarker": "ABSENT_ON_CHECK",
+    "overallDeviceOperationLock": "UNKNOWN",
+    "rootOrSuUsed": false,
+    "interpretation": "This marker read does not rule out another lock, actor, or representation.",
+    "deviceWritten": false
+  },
+  "acceptanceGateStatus20261104_025306":   {
+    "asOf": "2026-11-04T02:53:06+08:00",
+    "sourceEvidence": [
+      "museReadonlyStatus20261104_025048",
+      "pixelReadonlyPreflight20261104_025306",
+      "pixelProcessFilter20261104_025306",
+      "pixelDeviceLockMarkerRead20261104_025306"
+    ],
+    "gates": [
+      {
+        "name": "Current MUSE metadata and bounded Pixel identity/APK preflight",
+        "status": "PASS_WITH_SCOPE_LIMITS",
+        "limit": "MUSE no-in-flight and runner lock are point-in-time and do not establish Pixel lock. Device marker is absent, but overall Pixel operation lock, live monitor, and UI state remain UNKNOWN."
+      },
+      {
+        "name": "v0.19 installed APK identity",
+        "status": "PASS",
+        "limit": "Hash matches known pin; no app/task/code was executed."
+      },
+      {
+        "name": "Current natural-run outcome and same-run evidence",
+        "status": "PENDING",
+        "nextEvidencePoint": "Existing daily schedule at 2026-11-04 09:00 Asia/Shanghai; MUSE was read at 02:50:48."
+      },
+      {
+        "name": "Daily receipts, extensions, and original time/cycle rules",
+        "status": "BLOCKED_OR_PARTIAL",
+        "reason": "Existing evidence lacks independent receipts/current extension workflows and rules for reset, repeat cycles, and reward triggers/posting."
+      },
+      {
+        "name": "Cross-day and long-term stability",
+        "status": "SUSPENDED"
+      }
+    ],
+    "overall": "P4 remains open; no S1 or project-complete claim. P50, monthly planning, and 2U=2800 remain excluded.",
+    "actions": "No root/su, raw logs, business state, code/task execution, app launch/stop, device write, install, restart, deployment/schedule/network/credential changes, or replay."
+  },
+  "officialForestRuleSearch20261104_0254": {
+    "recordedAt": "2026-11-04T02:54+08:00",
+    "source": "Bounded public official-domain web search; CPIC site-restricted queries.",
+    "queries": [
+      "site:cpic.com.cn \"阳光森林\" \"阳光雨露\" 规则 奖励",
+      "site:cpic.com.cn \"保单芯管家\" \"三节一生\" \"E锦囊激活\" \"签单协同\" 森林"
+    ],
+    "result": "NO_RESULTS",
+    "scopeLimit": "These two public index searches do not establish that an original source is absent, nor resolve reset timing, repeat cycles, reward triggers/posting, current eligibility, or extension workflows."
   }
+
 }

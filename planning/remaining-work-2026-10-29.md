@@ -1,5 +1,12 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 02:50—02:54 CST — fresh pre-run status and source-search boundary
+
+MUSE at 02:50:48 reported no active Forest work, 0/0/false, runner lock FREE, and no Forest process observed. The existing daily 09:00 Asia/Shanghai schedule remains pending. The later bounded Pixel preflight confirmed the expected non-root device identity, boot state, and v0.19 APK pin. The limited process filter had no matches and the exact documented marker was absent; overall device lock, monitor/hash, and UI state remain UNKNOWN. A CPIC-domain search for current Forest rules and extension names returned no results, which is limited to those public queries and does not establish source absence. Preserve the natural run and inspect sanitized same-run evidence after fresh MUSE completion status. Do not replay or loosen gates; P4 remains open.
+
+Evidence: museReadonlyStatus20261104_025048, pixelReadonlyPreflight20261104_025306, pixelProcessFilter20261104_025306, pixelDeviceLockMarkerRead20261104_025306, acceptanceGateStatus20261104_025306, officialForestRuleSearch20261104_0254.
+
+
 ## 2026-11-04 02:30—02:31 CST — latest pre-run checkpoint
 
 MUSE at 02:30:46 is idle with runner lock `FREE` and the existing 09:00 Asia/Shanghai schedule pending. Pixel at device time 02:31:09 confirmed identity, timezone, boot completion, and the installed v0.19 APK pin through the existing non-root alias. The limited process filter returned no matches and the exact lock marker was absent; overall device lock and monitor state remain UNKNOWN. No root/`su`, business state/logs, code/job execution, or device write occurred. Preserve the natural run, then refresh MUSE and review sanitized same-run evidence. P4 remains open.

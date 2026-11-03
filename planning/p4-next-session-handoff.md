@@ -1,5 +1,15 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 02:50—02:54 CST — refreshed pre-run status and bounded rule search
+
+At 02:50:48, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight 0/0/false, runner lock FREE, and no Forest process observed. The single enabled daily 09:00 Asia/Shanghai schedule is still pending for today. The latest scheduler failure remains Nov 3 09:11:17; the last success remains Oct 31 09:15:50. The reported live run.py and assistant.py hashes are unchanged from the reviewed pins.
+
+After that MUSE read, a bounded non-root Pixel preflight through the existing alias confirmed Pixel 3a, Android 15, UID 10249, Asia/Shanghai, boot complete, and the installed SecureView APK matching the v0.19 pin. The limited AutoX/AutoJS/SecureView process-name filter had no matches; the exact documented operation-lock marker was absent. Overall device lock, monitor state/hash, screen/Keyguard, and foreground Activity remain UNKNOWN. No root/su, business-state or raw-log reads, task/code execution, app launch/stop, device writes, install/restart, deployment, or schedule/network/credential changes occurred.
+
+A bounded CPIC-domain search for Forest rules/rewards and the five extension names returned no results. This narrows only those public search queries; it does not prove the original material is absent or resolve current rules. Preserve the existing 09:00 run; after it, refresh MUSE and inspect only sanitized same-run evidence. No replay or gate relaxation. P4 remains open; P50, monthly planning, and 2U=2800 remain excluded.
+
+Evidence: museReadonlyStatus20261104_025048, pixelReadonlyPreflight20261104_025306, pixelProcessFilter20261104_025306, pixelDeviceLockMarkerRead20261104_025306, acceptanceGateStatus20261104_025306, officialForestRuleSearch20261104_0254.
+
 ## 2026-11-04 02:33—02:46 CST — source audit and pending natural run
 
 MUSE's 02:33:59 read-only status showed no active/queued/in-flight work and runner lock `FREE`; the existing daily 09:00 Asia/Shanghai schedule remains pending. At Pixel device time 02:35:36, non-root identity/boot/APK-pin reads matched the known v0.19 device state. The narrow process filter had no matches and the exact documented lock marker was absent; overall device lock, monitor/hash, screen/Keyguard, and Activity remain UNKNOWN.
