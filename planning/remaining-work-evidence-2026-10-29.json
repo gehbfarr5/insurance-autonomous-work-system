@@ -1248,5 +1248,14 @@
     "deployed": false,
     "realPositiveEvidence": false,
     "businessActionPerformed": false
+  },
+  "rulesDriveMetadataSearch20261103": {
+    "recordedAt": "2026-11-03T17:43:14+08:00",
+    "source": "Connected Google Drive search; metadata-only document search.",
+    "queries": ["阳光森林", "阳光雨露", "森林任务 周期", "科技个险 阳光值"],
+    "limits": {"itemType": "document", "topn": 20, "bestEffortFetch": false},
+    "results": [0, 0, 0, 0],
+    "contentFetched": false,
+    "interpretation": "No matching document metadata surfaced in this bounded search. This does not prove the original source was never confirmed or does not exist elsewhere."
   }
 }

@@ -4,6 +4,10 @@
 
 截至17:25，CUA inventory显示Muse进程运行，但浏览器清单为空、Work设置禁用浏览器控制；没有Forest任务/调度读回，也没有专用MUSE/Pixel connector。最近并发证据仍是16:23且已过时，当前UNKNOWN；遵守既有WP1边界未打开Muse窗口，本轮未连接Pixel。此前已完成17:12采集器审计/`.failure`修正及17:22 E07规则原件复核，具体限制见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。16:33 runner静态读回仍未定位具体prepare超时触发，精确源码未导出。取得新鲜MUSE无并发读数后才通过既有别名复核Pixel操作锁及哈希；没有业务动作、设备写入或state/cron/调度变更。
 
+## 官方规则来源追加检索｜2026-11-03 17:43 CST
+
+Drive document metadata-only搜索“阳光森林”“阳光雨露”“森林任务 周期”“科技个险 阳光值”均未命中，未读取内容。此搜索不证明原件不存在；时点、触发和奖励周期仍须以原始规则或记录为据。检索参数见[剩余工作证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 最后一次MUSE状态读数｜2026-11-03 16:23 CST（Pixel最近读取15:58 CST）
 
 MUSE 15:54:29回读唯一启用任务为`Asia/Shanghai`每日09:00、下次11月4日09:00；running/queued/in-flight为0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。随后经既有`pixel3a-kjgx`别名及原`su`路径，于15:58:24只读回读`sargo`/Android 15/boot完成/Dozing；monitor `watching`、guard清、heartbeat与设备时间一致、requests=0，monitor锁存在，blocked/stop不存在。monitor/trigger/worker哈希分别为`2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a`、`0243ee09abdbf07b162cc69c815ca69f00ad3519bda78df26d8588a5e9c0c499`、`f6fb7d23ebdb75183a62430d92aa7e161ff1ec7fc3db10f26ac857da8939000f`。设备操作锁及前台Activity本次无法确认；v0.19 APK pin最后一次直接读于15:22，当时匹配。无业务重跑、设备写入或调度/state变更。11月3日prepare根因未定，诊断候选只观测monitor，登录字段observer仍离线。
