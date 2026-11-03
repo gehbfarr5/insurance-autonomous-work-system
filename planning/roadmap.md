@@ -50,6 +50,8 @@
 
 > 2026-10-24：P1、P2、P3 已经用户确认完成，进入 P4。此文维护阶段定义与关口，不是承诺日期、预算或 KPI 的排期。
 
+> **P4接续状态｜2026-11-03 20:08 CST：** 私有prepare字段observer v2及证据collector/joiner的离线回归通过，未部署。当前Forest MUSE并发状态与Pixel操作锁UNKNOWN；现有collector需要`su`，不符合当前无root设备访问约束，非root采集路径尚待核实。11月4日自然运行和同轮证据未完成。P4继续开放，S1未验收，P50/月度/2U=2800挂起。详情见[交接](p4-next-session-handoff.md)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)和[运行手册](forest-diagnostics-operations-2026-11-04.md)。
+
 当前执行：P4-WP01已实施有限执行器、运行副本修复及证据恢复；本轮继续其余已授权项目的核查、候选实现与同步。跨日、月度规划/P50按用户要求挂起。旧版未实施叙述仅为历史。
 
 ## 1. 两套编号

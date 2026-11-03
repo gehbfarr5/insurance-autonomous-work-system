@@ -2,7 +2,15 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 19:10 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 20:08 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+
+### 最新接续与采集通道限制｜2026-11-03 20:08 CST
+
+截至19:45针对性界面检查，既有Forest MUSE线程发出的只读状态请求未见回复，本轮不重复发送。20:02 MUSE窗口打开在非目标对话，我停止继续交互，未取得Forest当前状态；scheduler/queue/in-flight与Pixel操作锁均UNKNOWN。本轮未连接Pixel。prepare字段observer v2仅在私有副本完成离线测试，未部署或构建APK。
+
+现有私有collector用`su`读取应用私有数据，不符合当前无root设备访问约束，因此本次窗口结束后**不可直接执行**该collector。先等待自然业务运行完成和原MUSE请求回复；取得新鲜无在途状态后，只有找到并验证了既有非root导出路径，才可做设备只读采集。无法验证时将监控/prepare证据标为UNKNOWN，不猜测导出路径、不改用其他主机或通道。observer尚未安装，所以即使获取v0.19原有marker，逐字段登录态仍为UNKNOWN。
+
+离线验证复用v0.19 one-shot逻辑、固定runGroup窗口和现有allowlist投影/segment joiner；仅适配私有observer及collector schema；避免旁路门禁、换设备通道和部署未固定APK。合成覆盖通过不构成实机或业务PASS。
 
 ### 最新MUSE/Pixel只读门禁｜2026-11-03 19:08—19:10 CST
 
@@ -132,13 +140,7 @@ CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；
 
 1. **先确认 MUSE 并发，再接触 Pixel。** 通过已有 MUSE 运行入口只读确认当前日程、运行/排队/在途任务及目标自然运行。只有确认没有其他设备任务占用、且目标任务身份明确后，才通过现有 Pixel 别名复读 monitor、设备操作锁及部署哈希。若 MUSE 当前任务或队列不可读/UNKNOWN，跳过 Pixel 连接和所有设备诊断；记录 UNKNOWN，等待可验证无并发后再继续。不手动启动、取消或改动原任务，不连接备用 SSH 路线。
 2. **只允许既有自然调度发生。** 不点击入口，不重放、不补跑、不登录，不清理 `state`、防重记录、attempt 或 audit 文件。已有授权只覆盖原每日范围，不因诊断窗口扩大业务权限。
-3. **窗口结束且确认无在途任务后只读采集。** 取得 MUSE 已脱敏的 `assistant` 与 `main` 两段唯一、非重叠起止时间，并确认任务已结束、没有其他设备任务运行，再通过本机私有 collector 从同一 Pixel 别名读取 sidecar 与 epoch 时间日志。若任务结束或设备独占状态无法确认，先不连接 Pixel、不采集；继续标记 UNKNOWN。使用本机私有包`auth-trigger-diagnostics-20261104-review-only/README.txt`中的输入契约；先在包目录执行`shasum -a 256 -c SHA256SUMS.txt`，14个成员均须为OK。该包要求仅输入脱敏的唯一assistant/main区间，collector命令为：
-
-   ```sh
-   python3 collect-run-diagnostics.py --segments <sanitized-segments.json> --output <private-result.json>
-   ```
-
-   在该私有包目录内运行。输入与输出均留在本机私有目录，不上传MUSE原始结果或Pixel日志。不要使用固定窗口已过期的`auth-trigger-diagnostics-keyguard-v3-bounded`部署包；也不要执行私有归档`delivery-package-v4/INSTRUCTIONS.txt`中的2026-11-02单次补跑指令，该次已按授权完成。当前只允许自然调度与此处说明的只读采集。
+3. **窗口结束后先核实可用的非root证据来源。** 取得MUSE已脱敏的`assistant`与`main`两段唯一、非重叠起止时间，并确认自然任务结束、无其他设备任务在途。当前私有collector仍通过`su`读取应用私有文件，按当前约束不可执行；因此不要运行该版本，也不要把`shasum`检查通过误当作设备通道已获批准。只可沿本机现有配置/文档确认并验证已存在的非root导出方式。若没有此路径，或MUSE/设备锁状态UNKNOWN，跳过Pixel和采集，记录UNKNOWN。任何后续合规collector都须有单独版本/哈希检查，使用脱敏唯一分段输入并将输入输出留在私有目录。不要使用固定窗口已过期的`auth-trigger-diagnostics-keyguard-v3-bounded`部署包，也不要执行私有归档`delivery-package-v4/INSTRUCTIONS.txt`中的2026-11-02单次补跑指令；当前只允许自然调度与授权范围内的只读核验。
 4. **缺失继续记 UNKNOWN。** 没有 sidecar、日志 marker 不在唯一分段内、MUSE 分段缺失/重叠、来源不可用时，不合成事件、不从空结果推出“未触发”，也不重试生产动作。`NOT_SENT`、`SENT`、`UNKNOWN`、页面完成和奖励确认分别保留。
 
 ## 异常停止与回滚

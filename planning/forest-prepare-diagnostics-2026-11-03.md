@@ -1,5 +1,11 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 私有字段observer v2离线复核｜2026-11-03 20:08 CST
+
+在新的私有review副本中修正登录字段观察：各登录前置字段的属性存在性独立记录，属性形状观察异常映射为UNKNOWN，原业务读取与门禁继续执行。Node合成对照确认原v0.19 one-shot状态、阻断原因、属性读取与业务调用轨迹不变；覆盖正常、延迟弹层、字段缺失/空值、accessor不额外执行、属性描述异常、未知reason、导航失败与stop路径。collector/joiner/monitor/assistant observer离线回归亦通过，补测重复marker只保留一条并降为`PARTIAL_UNKNOWN`。
+
+候选仅留在独立私有review副本，未构建/安装APK、未改live runner pin，未连接Pixel。其collector仍使用`su`，当前不可用于设备侧采集；非root导出方式须先从本机已有配置/文档确认，未确认前不运行collector、不切换设备通道。截至19:45最后一次针对性界面检查，原Forest线程的状态请求未见回复；20:02 MUSE窗口打开在非目标对话，我停止继续交互，未取得Forest当前状态。当前MUSE并发与Pixel设备操作锁均UNKNOWN；11月4日自然结果及其登录字段仍待读取。不得把本地合成验证写成实机诊断通过。
+
 ## assistant.py附件回读及本机静态核对｜2026-11-03 19:36 CST
 
 从既有Forest旁聊下载私有`assistant.py`候选附件，本机SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`与MUSE 19:08最后一次live哈希匹配；文件12,700字节、权限0600，仅保存在用户私有Downloads。没有进行19:36云端live重读。Python AST语法解析PASS，顶层函数为`is_eligible`、`_main_locked`、`main`，代码未执行。

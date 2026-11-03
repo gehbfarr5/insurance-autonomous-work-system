@@ -1787,5 +1787,98 @@
     "result": "No directly relevant current Forest task mapping, eligibility, completion flow, reward trigger, or repeat cycle surfaced for the five extension names. Some results were unrelated insurance risk pages or annual reports. A 2022 CPIC article describes 态幸福 as an NBS customer-needs/sales-support tool, which is historical product context only: https://m.cpic.com.cn/c/2022-04-07/1633278.shtml",
     "classification": "Bounded no-hit only; this does not establish that original/internal materials do not exist or were never confirmed.",
     "effect": "No change; all five extension items remain 仍待核实."
+  },
+  "prepareFieldPresenceObserverReview20261103": {
+    "recordedAt": "2026-11-03T20:08:08+08:00",
+    "scope": "Private offline review of an isolated v2 prepare/login-field observer and sanitized collector/joiner; no device or business action.",
+    "status": "OFFLINE_REVIEW_PASS; device-side collection BLOCKED by missing safe prerequisites; natural-run verification pending.",
+    "authorization": "Offline/diagnostic verification only. No Pixel connection, device write, APK build/install, runner pin change, schedule/state/credential change, or business replay.",
+    "reuseAdaptAvoid": {
+      "reuse": "Existing v0.19 one-shot prepare flow and gate; fixed run-group window; existing sanitized projector/joiner and observer regression suites.",
+      "adapt": "Independent login-prerequisite presence snapshots, explicit unknown status for observation errors, and allowlisted collector/joiner projection.",
+      "avoid": "Gate bypass, new dependency, root/su collector execution, alternate device route, and unpinned APK/runner integration."
+    },
+    "change": {
+      "candidate": "An isolated private observer records the presence of each login prerequisite independently. Property-shape inspection errors remain UNKNOWN and do not stop original value reads or gates.",
+      "deployment": "Not built, installed, deployed, or pinned; original review package and installed v0.19 artifact were not changed.",
+      "collectorConstraint": "Current local collector invokes su to read app-private files and is not usable under the current no-root constraint. A verified non-root export path is required before device collection."
+    },
+    "verification": {
+      "observerNodeSyntax": "PASS",
+      "observerOriginalControlFlowAndFieldReadOrder": "PASS",
+      "observerScenarios": [
+        "normal",
+        "delayed promotion",
+        "missing/empty fields",
+        "accessor not invoked when original path would not read it",
+        "descriptor/prototype inspection failure marked unavailable without blocking original path",
+        "unknown reason sanitization",
+        "navigation failure"
+      ],
+      "collectorAndJoinerSyntheticChecks": "PASS",
+      "collectorScenarios": [
+        "unique timestamped segment assignment",
+        "missing/out-of-window/unknown data",
+        "duplicate nonce omitted and correlation PARTIAL_UNKNOWN",
+        "private-field rejection",
+        "monitor .failure sentinel produces PARTIAL_UNKNOWN"
+      ],
+      "monitorAndAssistantObserverRegression": "PASS",
+      "monitorScenarios": [
+        "fixed window",
+        "trigger gates unchanged",
+        "stop before dispatch",
+        "diagnostic write failure",
+        "bounded event cap"
+      ],
+      "pythonAstParse": "PASS",
+      "manifest": {
+        "memberCount": 14,
+        "sha256": "dd67b045e15c2121895b551742fa614e270c4da0f4716214d45289fb63ec779f"
+      },
+      "privateReviewRecordSha256": "4b1769fb897aa303a53dadf3acc5bd5edbf20404831c762f0fe447d8dd0f088d",
+      "candidateSha256": "a978d0857f6a847dd2d7f84f0adb76f7387b0183cc2f99284ab02599da3177a7",
+      "collectorSha256": "9dda0b75cc2375c892a5ac3214debb5c6951205613d3ccbbab434e6c66d709ae",
+      "joinerSha256": "fce04fcdfb4785a8c04147b439d29d6d0cf3ccb0648fc1ec562fc6fd374b1b77"
+    },
+    "currentExternalState": {
+      "lastTargetedForestStatusCheck": "2026-11-03T19:45:00+08:00; no reply visible then",
+      "2026-11-03T20:02:34+08:00": "MUSE UI snapshot opened on a non-target conversation; stopped without further UI interaction or message. No fresh Forest state obtained.",
+      "forestSchedulerQueueInFlight": "UNKNOWN",
+      "pixelOperationLock": "UNKNOWN",
+      "pixelConnectedThisTurn": false
+    },
+    "remainingWork": [
+      {
+        "status": "BLOCKED",
+        "item": "Fresh MUSE no-inflight and target-run identity are not available; do not access Pixel until established."
+      },
+      {
+        "status": "BLOCKED",
+        "item": "No verified non-root reader/export path for private Pixel evidence; existing su-based collector is excluded."
+      },
+      {
+        "status": "PENDING",
+        "item": "2026-11-04 natural run and same-run evidence; do not replay business actions."
+      },
+      {
+        "status": "PENDING",
+        "item": "Underlying ready-marker, screen/Keyguard, login-state, and authentication-dispatch causes remain UNKNOWN."
+      },
+      {
+        "status": "PENDING",
+        "item": "Daily business results, receipts, AI answer/reward, and longer cross-day acceptance remain unresolved."
+      }
+    ],
+    "overallBoundary": "P4 remains open; S1 is not accepted. P50/monthly/2U=2800 remain suspended and excluded."
+  },
+  "museSurfaceCheck20261103_2002": {
+    "recordedAt": "2026-11-03T20:02:34+08:00",
+    "source": "CUA read-only application surface snapshot",
+    "targetForestConversationOpened": false,
+    "forestStatusResponseRead": false,
+    "messageSent": false,
+    "observation": "Surface opened on a non-target conversation; no further interaction/navigation. This did not update Forest scheduler, queue, in-flight, or device-lock state.",
+    "result": "Forest current state remains UNKNOWN; do not infer idle or proceed to Pixel."
   }
 }

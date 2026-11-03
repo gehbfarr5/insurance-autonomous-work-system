@@ -1,5 +1,11 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-03 20:08 CST更新：离线observer复核通过，设备侧采集路径未就绪
+
+私有review副本中的prepare字段观察器现独立记录各登录前置字段的属性存在性；属性形状读取异常输出UNKNOWN而不改变原门禁。针对原v0.19逻辑的Node对照和collector/joiner/monitor/assistant observer合成检查通过；重复marker被丢弃并使相关性降为`PARTIAL_UNKNOWN`，缺失/不明/重叠证据不推断。复用现有v0.19 one-shot路径、固定窗口及允许名单投影器；本地候选做适配；避免弱化Activity/assistant/认证门禁和部署未固定APK。候选不在Git，未安装/部署。
+
+现有collector需要`su`读取私有文件，当前不符合无root约束；截至19:45针对性检查的MUSE状态请求未见回复。20:02 MUSE窗口打开在非目标对话，未继续交互，因此当前MUSE与Pixel操作锁UNKNOWN。本轮没有连接Pixel。11月4日自然轮与设备证据采集继续待办；先等原MUSE线程回复，只有无在途状态新鲜确认且已核实非root读出方式才考虑只读采集。否则按UNKNOWN记录，不猜路径或切换通道。P4开放，S1未验收；P50/月度/2U=2800继续挂起。详细结果见[准备诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[交接](p4-next-session-handoff.md)、[运行手册](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
+
 ## 最新运行门禁｜2026-11-03 19:08—19:10 CST
 
 MUSE 19:08:09只读状态：Forest唯一每日Asia/Shanghai 09:00任务下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；`run.py`/`assistant.py`live SHA仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最新失败09:11:17、最近成功10月31日09:15:50；业务结果未读，其他聊天未探测。
