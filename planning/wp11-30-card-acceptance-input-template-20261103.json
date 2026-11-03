@@ -5,5 +5,23 @@
     "distinct_real_cards_verified": false,
     "reference_annotations_reviewed": false
   },
-  "sample_results": []
+  "sample_results": [
+    {
+      "eligible": null,
+      "auto_usable_draft": null,
+      "manual_review_required": null,
+      "released_for_confirmation": false,
+      "field_accuracy": {
+        "main_customer": "NOT_APPLICABLE",
+        "name": "NOT_APPLICABLE",
+        "mobile": "NOT_APPLICABLE",
+        "identity_number": "NOT_APPLICABLE",
+        "gender": "NOT_APPLICABLE",
+        "explicit_birthday": "NOT_APPLICABLE",
+        "address": "NOT_APPLICABLE",
+        "other_phone": "NOT_APPLICABLE"
+      },
+      "failure_reason_codes": []
+    }
+  ]
 }
