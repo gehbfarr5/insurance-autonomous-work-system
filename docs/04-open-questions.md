@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 11月3日prepare失败层级审计｜2026-11-03 19:02 CST
+
+只读复核既有Forest对话的三段脱敏摘要，确认08:57误触助理、09:00调度助理与主流程均以`PREPARE_TIMEOUT_NO_FALLBACK`结束，prepare事件最后到MainActivity、没有业务阶段且cleanup PASS。当前可将故障定位到runner Activity/就绪标记轮询超时层。三段`vueCheck`缺失，assistant页面门禁未运行；module登录态门禁没有登录事件、逐字段布尔值或采样时点，仍UNKNOWN。就绪标记未到达的底层原因、屏幕/Keyguard及认证输入原因仍UNKNOWN。没有读原始日志/业务state、设备访问或新任务运行。P4保持开放，等11月4日既有自然运行收集新鲜观察。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)与[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。
+
 ## 规则来源追加检索｜2026-11-03 18:55—18:56 CST
 
 Google Drive document metadata-only追加查询“森林 奖励说明”“阳光雨露 计量规则”“日上限 行为值”“CPIC 森林活动”均为0结果，未读取正文。仅限CPIC官方域的“阳光森林任务领取规则”“阳光雨露每日上限”“阳光值活动计分规则”检索未发现直接适用的森林规则；返回的保险购买介绍、机构目录等不作依据。此类有界无命中不表示原件不存在或历史上未确认。原始时点、重置/重复周期、限额与奖励触发依据仍待恢复；检索范围见[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。

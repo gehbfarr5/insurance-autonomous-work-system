@@ -1,5 +1,17 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 最新prepare失败层级审计｜2026-11-03 19:02 CST
+
+MUSE仅查本Forest对话中已存在的脱敏运行摘要，读取时间19:02:18 CST；未访问设备、未读业务state或原始日志、未运行代码/任务、未改文件/调度。
+
+| 运行段 | 开始→结果写出 | prepare事件（时刻 / 类型 / Activity） | 结果与阶段 | 业务与清理 |
+| --- | --- | --- | --- | --- |
+| 08:57误触助理 | 08:57:05→08:59:01 | 08:57:15模块产物→08:57:37 SplashActivity→08:57:51 MainActivity | `REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`；stages为空 | 未进入业务，`NOT_SENT`，`vueCheck`缺失；cleanup PASS |
+| 09:00调度助理 | 09:01:55→09:03:53 | 09:02:04模块产物→09:02:26 MainActivity | `REVIEW / PREPARE_TIMEOUT_NO_FALLBACK`；stages为空 | 未进入业务，`NOT_SENT`，`vueCheck`缺失；cleanup PASS |
+| 09:00调度主流程 | 09:04:16→09:06:17 | 09:04:26模块产物→09:04:47 MainActivity | `BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK`；无业务stage | `pendingAction`为空、业务字段未出现；cleanup PASS |
+
+**定位结论：** 三段事件均止于MainActivity、未出现BridgeWebActivity，且在准备阶段以timeout终止。现有证据支持定位到runner的Activity/就绪标记轮询超时层。assistant页面门禁没有被执行（`vueCheck`未生成），不能称为该门禁失败；module登录态门禁没有登录类事件、逐字段存在性布尔值或采样时间，保持UNKNOWN。具体为何就绪标记未到达、屏幕/Keyguard状态、认证派发或输入原因仍UNKNOWN。没有比既有脱敏摘要更细的可读证据，本结论不等于完整根因定位。下一步仍等11月4日自然运行；仅在新鲜MUSE无在途且授权设备锁门禁满足后只读采集。证据索引对象：`prepareTimeoutLayerAudit20261103_1902`。
+
 ## 最新集成与只读状态｜2026-11-03 18:56 CST
 
 18:40:26写前核验、18:40:41原子替换、18:40:48写后复核：已将唯一云端Forest runner的`assistant.py`更新为已审查的门禁诊断候选，live SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。原始备份SHA保持`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`；独立回滚副本字节匹配。只增加Vue存在、`onClickApp`存在、目标项数量、固定runGroup及门禁采样时间，原固定方法pin、唯一目标项、调用顺序和失败关闭行为未变。此次不执行代码/测试，不访问Pixel，不读写模块/APK/业务state；schedule、runner idle/lock、进程状态写后未变。树内消费者静态检查为中等兼容证据，外部消费者未知。11月3日prepare超时仍UNKNOWN，不能由这项诊断补改追溯；待11月4日自然运行结束后，再读取脱敏MUSE结果并按窗口规则采集关联证据。P4开放，S1未验收。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[证据索引](remaining-work-evidence-2026-10-29.json)。
