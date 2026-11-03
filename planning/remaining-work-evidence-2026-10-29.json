@@ -5158,6 +5158,47 @@
     "contentFetched": false,
     "scopeLimit": "No matching image metadata surfaced for these two terms. This bounded search does not establish source absence or negate D-029."
   },
+  "connectedSourceKeywordSearch20261104_0617": {
+    "recordedAt": "2026-11-04T06:17:49+08:00",
+    "googleDrive": {
+      "scope": "Default accessible-drive search using the legacy keyword path without item_type filtering",
+      "queries": [
+        "保单芯管家",
+        "态幸福 森林",
+        "三节一生 森林",
+        "E锦囊 激活",
+        "签单协同 森林",
+        "D-029 阳光森林 规则 时点 周期",
+        "阳光 雨露 上限 规则",
+        "客户保障需求分析 态幸福",
+        "生日检视 三节一生",
+        "保险超市 激活 E锦囊",
+        "签单 协同 业务"
+      ],
+      "resultCounts": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "bestEffortFetch": false,
+      "documentContentFetched": false
+    },
+    "gmail": {
+      "queries": [
+        "保单芯管家 + 阳光森林/任务/流程",
+        "态幸福 + 阳光森林/任务/流程",
+        "三节一生 + 阳光森林/任务/流程",
+        "E锦囊 + 阳光森林/激活/任务",
+        "签单协同 + 阳光森林/任务/流程",
+        "保单芯管家",
+        "态幸福",
+        "三节一生",
+        "E锦囊",
+        "签单协同"
+      ],
+      "resultCounts": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "messageIdSearchOnly": true,
+      "emailsOrAttachmentsOpened": false
+    },
+    "interpretation": "No candidate surfaced in these targeted connected-source searches. This does not establish source absence, negate D-029, or classify any extension as an external blocker. All five extension items remain 仍待核实; original Forest timing, cycle, reward-trigger, and source-pointer evidence remains unresolved.",
+    "actions": "Read-only search only. No Drive text hydration, email/thread/attachment reading, MUSE/Pixel access, business action, device/state/schedule change, deployment, or message mutation occurred."
+  },
   "gmailForestRuleSourceSearch20261104_0612": {
     "recordedAt": "2026-11-04T06:13:34+08:00",
     "source": "Connected Gmail targeted search for potentially original D-029 and Sunshine Forest rule-source correspondence",
