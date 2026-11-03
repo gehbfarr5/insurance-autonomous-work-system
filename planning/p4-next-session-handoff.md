@@ -12,6 +12,7 @@
 - 16:19 CST另对五个扩展任务名称做Drive metadata检索，均0结果；未增加完整流程/周期证据，五项分类继续“仍待核实”。受限私有摘要SHA-256 `d59661049f8d630d5e49ee6925db12652fa225ce312326de51a0887867d0d8eb`。
 - 16:28 CST再对五项搜索检视、测算/报告、联系/贺卡、激活入口、人员/业务等相关词面；Google Drive仅查文档metadata、未读取正文，仍全0结果。五项结论不变；受限私有摘要SHA-256 `cfae0b81774db4168ef739765d01acbff68a05b3d25d17ee15875284da51cb17`。
 - 16:23:26 CST MUSE只读回读确认唯一每日09:00任务仍启用、下次11月4日09:00、running/queued/in-flight 0/0/false、runner lock FREE、无forest-agent进程；调度失败/成功与连续失败数无变化。本次查询被输入问题截短；业务段状态是沿用此前读数，未重读。MUSE确认没有访问Pixel、业务state或改动；因此Pixel当前状态仍UNKNOWN。私有脱敏记录SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`。
+- 16:33 CST MUSE静态核对live runner hash匹配，`Device.prepare()`为resumed Activity轮询，70秒deadline/1秒间隔；`Device.event()`记录prepare事件，`Device.cleanup()`负责cleanup并有失败分支。worker报告未完成可解释调度层FAILED，但09:06:17—09:11:17五分钟间隔仍UNKNOWN，具体prepare timeout触发分支也未证实。MUSE称精确live源码可在私有路径只读导出，但本次未导出；不以旧脱敏runner作补丁基线。私有读回SHA-256 `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`。
 - 11月2日MUSE脱敏源码导出重新核哈：`run.py`本地脱敏哈希`93151ce3…`、其manifest报原始哈希`061f1878…`，都不等于11月3日live报告哈希`de9bd83c…`；`assistant.py`脱敏副本`fa7723ce…`不等于live原始哈希`a3a7de23…`。因此不能用这份旧脱敏源码作当前runner补丁基线。Mac解锁后先从MUSE只读导出完整当前runner至私有目录并核哈；现阶段不部署prepare observer、不更新APK pin。比对记录SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`。
 - P4开放、S1未验收；P50/月度规划挂起。
 

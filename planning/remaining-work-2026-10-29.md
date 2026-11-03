@@ -8,7 +8,7 @@ MUSE 15:54:29回读唯一每日09:00 CST任务，下次11月4日09:00，running/
 
 16:23:26 CST MUSE再次确认每日调度、next trigger、无运行/排队/在途任务、runner lock FREE及无forest-agent进程；最新调度失败/上次成功/连续失败数仍未变化。该回复来自输入被截短的只读关键词查询，MUSE确认未访问Pixel或business state、未修改；assistant/main状态是此前读数而非本次刷新。故Pixel当前状态UNKNOWN，且本轮未刷新设备操作锁与前台Activity。私有回读SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`。
 
-11月2日MUSE脱敏源码包中的runner不是当前基线：其本地脱敏哈希`93151ce3…`、manifest所报原始hash `061f1878…`都不同于11月3日MUSE报告的live runner `de9bd83c…`；assistant脱敏副本也不同于报告的原始字节。没有可核验的当前runner源码供配套更新pin。来源比对细节见[本地证据核查](local-evidence-audit-2026-10-29.md#v019运行源码来源再次核对2026-11-03-1620-cst)及私有比对记录SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`。
+11月2日MUSE脱敏源码包中的runner不是当前基线：其本地脱敏哈希`93151ce3…`、manifest所报原始hash `061f1878…`都不同于11月3日MUSE报告的live runner `de9bd83c…`；assistant脱敏副本也不同于报告的原始字节。16:33 MUSE静态重算live runner哈希匹配，并表示完整live源码仍可在私有位置读取/导出；但本轮未得到完整副本，当前本地仍无可核验的精确源码供配套更新pin。应先只读导出到私有目录并独立核哈，再决定是否需修复。来源比对细节见[本地证据核查](local-evidence-audit-2026-10-29.md#v019运行源码来源再次核对2026-11-03-1620-cst)及私有比对记录SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`；16:33 MUSE静态回读SHA-256 `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`。
 
 16:14 CST CUA无法读取MUSE，因为Mac已锁；当前并发状态未刷新，本轮未连接Pixel。下次设备访问前需解锁后重新从指定MUSE对话确认无并发；私有错误记录SHA-256 `80b65bfcb899569a4f5d0169e66effff268ba659427a4ce59538d01325c4595a`。
 

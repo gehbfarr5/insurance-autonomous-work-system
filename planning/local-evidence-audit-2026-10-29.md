@@ -6,6 +6,8 @@ MUSE正确的「阳光森林每日执行部署」对话于15:54:29回读：唯�
 
 16:23:26 CST在同一MUSE对话收到再次状态回读：唯一每日09:00任务仍启用、下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE、无forest-agent进程；调度最新失败仍为11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。live runner/assistant哈希仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。MUSE回复确认本次只读、未访问Pixel、未读业务state、未更改任何内容。需注明：发出的查询因输入问题被截短为关键词；回复中的assistant REVIEW/main BLOCKED、prepare timeout、cleanup PASS及无业务阶段/回执是沿用此前读数，并非本次重读。故Pixel当前设备状态仍UNKNOWN，且不能据此刷新设备操作锁/前台Activity。脱敏回读记录在仓库外私有文件`muse-access-readback-20261103-1623.json`，SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`；该记录不是原始UI导出。
 
+16:33 CST另由MUSE静态查看当前live `run.py`：实时重算哈希与部署读数一致。`Device.prepare()`按70秒deadline、1秒间隔轮询resumed Activity并检查deadline；事件通过`Device.event()`原子写入；`Device.cleanup()`由`main()`负责marker清理、应用停止及owner-checked锁释放，异常有FAIL fallback。MUSE将09:11:17调度失败归因于worker报告未完成（与两段不完整结果一致）；09:06:17至09:11:17的间隔因runner和调度元数据均无分项而保持UNKNOWN。当前静态读数未锁定本次prepare timeout的具体分支。MUSE表示完整匹配的live源码可私有导出，但未在本轮导出或附加；不能用11月2日脱敏副本作精确补丁源。受限私有读回SHA-256 `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`。
+
 ## v0.19运行源码来源再次核对｜2026-11-03 16:20 CST
 
 11月2日MUSE只读导出包虽含完整的脱敏runner/assistant副本，但其清单所报原始runner哈希为`061f18781525ad70e9d3b1906e3a547c1b11ad49a4313360fc734b1229be1154`，本机脱敏`run.py`哈希为`93151ce3a2477a3f9f1346ef474200e10c6b11fd0fe370d8aff0ba4546dbfaf5`；两者均不同于11月3日MUSE报告的live runner哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`。该导出不应作为当前runner补丁基线。assistant原始哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`与11月3日MUSE报告一致，但本机脱敏副本`fa7723ce21e85f060e797bd08797514da5bd66486ff78096f2f471a9897e9e71`字节不同；仍不能视作当前live原件。

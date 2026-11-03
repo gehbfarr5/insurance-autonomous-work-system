@@ -2,7 +2,7 @@
 
 ## 状态与范围
 
-记录更新时间：2026-11-03 16:27 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
+记录更新时间：2026-11-03 16:33 CST。此说明只覆盖既有每日任务自然运行及一次性诊断证据收集，不启动任何业务动作，不改变调度、防重状态或凭据。
 
 ### 访问门禁历史记录｜2026-11-03 16:14 CST
 
@@ -11,6 +11,10 @@ CUA inventory returned “Mac is locked”; MUSE UI was not read at that time. T
 ### 最新MUSE只读回读｜2026-11-03 16:23 CST
 
 MUSE confirmed the single enabled Asia/Shanghai 09:00 schedule, next trigger Nov 4, running/queued/in-flight `0/0/false`, runner lock `FREE`, no `forest-agent` process, latest scheduler failure Nov 3 09:11:17, last success Oct 31 09:15:50, and three consecutive failures. The query was accidentally truncated to keywords; MUSE stated this read was read-only and did not access Pixel, read business state, or change anything. The assistant/main status remains carried forward from earlier and was not reread. Pixel device state, device-operation lock, and foreground Activity remain UNKNOWN. Private sanitized readback `muse-access-readback-20261103-1623.json`, SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`; it is not a raw UI export.
+
+### Runner static read｜2026-11-03 16:33 CST
+
+MUSE recomputed the current live `run.py` hash and confirmed it matches the recorded deployment hash. Static flow: `Device.prepare()` polls resumed Activity with a 70-second deadline and 1-second interval; `Device.event()` writes prepare events; `Device.cleanup()` is called from `main()` and handles marker cleanup, app stop, and owner-checked lock release, with a failure branch on exception. MUSE attributed scheduler-level `FAILED` to the worker reporting unfinished work, consistent with the incomplete assistant/main segments. The 09:06:17–09:11:17 interval remains UNKNOWN because neither runner code nor scheduler metadata has a sub-step breakdown; this read also does not identify the specific prepare-timeout trigger. MUSE reported a private export of the exact live runner is available, but did not export or attach it. Private sanitized readback SHA-256: `fb4493eaf0f6161709225cb75940fecb5a3182806cc639e8829ffbd8d18605a0`.
 
 ### 最新只读复核｜2026-11-03 15:54—15:58 CST
 
