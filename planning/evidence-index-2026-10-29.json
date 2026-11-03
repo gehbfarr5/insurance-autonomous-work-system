@@ -231,6 +231,20 @@
       "source": "Existing pixel3a-kjgx alias, corrected non-root ps -A and installed APK hash read",
       "summary": "Corrected ps -A output filtered for autox|autojs|secureview|org.autojs returned no matching lines. This is limited to those process-name patterns and is not proof that all processes or the monitor are absent/stopped. The installed com.p4.secureview base APK SHA-256 was dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167, matching the known v0.19 pin. The corrected command exited 0.",
       "scopeLimit": "No overall device-lock or monitor read. The exact documented operation-lock marker was last checked absent at 02:53:06, not re-read in this checkpoint because no verified non-root private-data path is available. Overall device operation lock, monitor state/hash, screen, Keyguard, and foreground Activity remain UNKNOWN. No root/su, business-state/raw-log read, task/code execution, app action, device write, install/restart, deployment or schedule change."
+    },
+    {
+      "recordKey": "museReadonlyStatus20261104_033811",
+      "observedAt": "2026-11-04 03:38:11 Asia/Shanghai",
+      "source": "Existing Sunshine Forest MUSE thread, read-only scheduler/deployment status refresh",
+      "summary": "No active Forest task; running/queued/in-flight 0/0/false; MUSE runner lock FREE; no Forest process observed. One enabled daily 09:00:00 Asia/Shanghai schedule remains, next trigger 2026-11-04 09:00:00. Live run.py SHA-256 de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562; assistant.py SHA-256 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c. Latest scheduler result remains 2026-11-03 09:11:17 failed; last success remains 2026-10-31 09:15:50.",
+      "scopeLimit": "Point-in-time read-only scheduler/deployment metadata in the exact existing thread. No device connection, business-state/raw-log read, code/job/business run, file/deployment/cron/schedule/credential/state change, or task interruption. Does not establish Pixel operation lock, monitor state/hash, UI, device connectivity, or same-run outcome."
+    },
+    {
+      "recordKey": "pixelLocalAliasProcessCheck20261104_034007",
+      "observedAt": "Corrected local process check completed after 2026-11-04 03:40:00 UTC and before 03:40:07 UTC (Asia/Shanghai)",
+      "source": "Local macOS process inventory only; no SSH connection or ADB device query",
+      "summary": "A corrected filter requiring the executable basename ssh and the existing alias string pixel3a-kjgx found no active matching SSH process. A local adb fork-server process was present in an earlier same-turn inventory; no adb device list was queried and no Pixel association is inferred. An initial awk attempt failed on multibyte input, and a broader args match was invalid; the corrected executable-constrained result is the usable observation.",
+      "scopeLimit": "Local process presence only; does not establish Pixel reachability, lock, monitor state/hash, or UI. The last bounded non-root Pixel identity/APK read is 03:31:59; no device/private-data read occurred in this checkpoint. No credentials, endpoints, or raw process arguments were recorded."
     }
   ]
 }

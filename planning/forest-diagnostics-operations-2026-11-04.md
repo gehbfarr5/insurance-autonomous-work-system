@@ -337,11 +337,11 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 
 ## 自然运行顺序
 
-### 当前适用顺序｜更新至2026-11-04 03:32 CST
+### 当前适用顺序｜更新至2026-11-04 03:40 CST
 
 1. 只等待既有2026-11-04 09:00 Asia/Shanghai自然调度；不手动启动、补跑、取消或重放业务。
-2. 运行后先在精确Forest MUSE线程读取该自然轮的脱敏分段、prepare事件摘要、结果、stages、assistant派发状态和cleanup，保留每条数据自己的采样时间；同时重新读当时schedule、running/queued/in-flight、MUSE runner lock及live版本锚点。
-3. MUSE runner lock不是Pixel设备操作锁。本轮有限非root身份、窄进程过滤和APK pin读数不构成私有数据访问或设备锁核验。当前Pixel操作锁、monitor状态/hash、Keyguard和Activity均UNKNOWN；两个私有导出器静态使用`su -c`，无已验证的非root私有状态读取方法。因此不要读取monitor/prepare私有数据，不运行collector，不安装/重启候选；相应字段保持UNKNOWN。
+2. 运行后先在精确Forest MUSE线程读取该自然轮的脱敏分段、prepare事件摘要、结果、stages、assistant派发状态和cleanup，保留每条数据自己的采样时间；同时重新读当时schedule、running/queued/in-flight、MUSE runner lock及live版本锚点。03:38:11 MUSE只读仍为`0/0/false`、runner lock `FREE`，自然轮尚待。
+3. 截至03:40:07，修正本机进程盘点没有发现匹配既有alias的活动`ssh`可执行进程；本机ADB server未查询设备清单，该结果不证明Pixel离线或可达。本轮未连设备。最近Pixel基础非root读取为03:31:59设备时间；设备操作锁marker仅有02:53:06未发现的旧读数，未重读。当前Pixel操作锁、monitor状态/hash、Keyguard和Activity均UNKNOWN；无已验证的非root私有数据读取方法。因此不要读取monitor/prepare私有数据，不运行collector，不安装/重启候选；相应字段保持UNKNOWN。
 4. 若MUSE或目标自然轮状态不可读、仍有任务在途、来源/时间窗不唯一或版本锚点不匹配，停止并记录BLOCKED/UNKNOWN；不删除锁、状态、防重记录或原始结果。
 5. 只有发现既有、精确验证的非root导出方法后，才重新评估设备侧观测；届时仍须先读设备操作锁、live monitor哈希/状态、备份哈希与回滚路径，保持原门禁并以同一自然轮证据关联。
 
@@ -386,11 +386,11 @@ CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；
 
 ## 异常停止与回滚
 
-### 当前设备回滚就绪状态｜2026-11-04 03:32 CST
+### 当前设备回滚就绪状态｜2026-11-04 03:40 CST
 
-Runbook中的旧monitor备份路径/hash是历史候选事务记录，不是当前live monitor读数，也不证明当前设备操作锁FREE。03:29:58 MUSE显示runner lock `FREE`，但不覆盖Pixel锁。03:31—03:32的基础非root预检确认身份、boot、有限进程过滤无匹配和v0.19 APK pin；精确操作锁marker仍只有02:53:06的旧读数（当时未发现），本轮没有重读。当前monitor状态/hash与设备操作锁均UNKNOWN，非root私有数据读取路径未验证；因此停止/回滚**保持BLOCKED，不执行设备操作**。若后续满足授权与只读门禁，才按下列步骤恢复已核验备份并验证hash/heartbeat；若任一门禁读数不可得，停在BLOCKED，不启动或停止AutoX、不删标记、不恢复旧文件。
+Runbook中的旧monitor备份路径/hash是历史候选事务记录，不是当前live monitor读数，也不证明当前设备操作锁FREE。03:38:11 MUSE显示runner lock `FREE`，但不覆盖Pixel锁。03:40:07前的修正本机进程盘点未发现匹配alias的活动SSH进程；本机ADB server未查询设备清单，且本轮没有连接设备。最近基础Pixel读取仍是03:31:59设备时间；精确操作锁marker仍只有02:53:06的旧读数（当时未发现），未重读。当前monitor状态/hash与设备操作锁均UNKNOWN，非root私有数据读取路径未验证；因此停止/回滚**保持BLOCKED，不执行设备操作**。若后续满足授权与只读门禁，才按下列步骤恢复已核验备份并验证hash/heartbeat；若任一门禁读数不可得，停在BLOCKED，不启动或停止AutoX、不删标记、不恢复旧文件。
 
-03:29:58的MUSE空闲元数据和03:31—03:32的基础Pixel预检均不刷新设备侧锁或回滚前提；上述设备侧UNKNOWN保持有效，禁止据此执行回滚或停止操作。
+03:38 MUSE元数据及03:40本机进程盘点均未刷新设备侧锁或回滚前提；上述设备侧UNKNOWN保持有效，禁止据此执行回滚或停止操作。
 
 
 - 若哈希不符、stop/blocked 标记出现、monitor 状态异常、设备操作锁被占用或 MUSE 报告有并发运行：停止诊断动作；先读清在途状态，不启动另一个流程、不删锁或状态。当前只读检查不授权解除并发锁。

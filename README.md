@@ -1,5 +1,13 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 03:38–03:40 CST — refreshed MUSE status and local SSH inventory
+
+At 03:38:11, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and one enabled daily 09:00 Asia/Shanghai schedule. The live `run.py` and `assistant.py` hashes and latest scheduler records were unchanged. This is point-in-time scheduler metadata only.
+
+The corrected local process inventory found no active `ssh` executable matching `pixel3a-kjgx` by 03:40:07. A local ADB server process had been observed, but no device list was queried and no Pixel association is inferred. No device connection or private-data read occurred; the last bounded non-root Pixel identity/APK read was at device time 03:31:59. Pixel operation lock, monitor state/hash, screen, Keyguard, and foreground Activity remain UNKNOWN; stop/rollback remains BLOCKED.
+
+Keep the existing 09:00 natural run. After its window, refresh MUSE and inspect only sanitized same-run evidence and independent receipts. Do not replay, use root/`su`, read business state/raw logs, change the schedule, or write the device. P4 remains open and S1 is not accepted. Evidence: `museReadonlyStatus20261104_033811`, `pixelLocalAliasProcessCheck20261104_034007`.
+
 ## 2026-11-04 03:29–03:32 CST — fresh MUSE status and bounded Pixel read
 
 At 03:29:58, the existing Sunshine Forest MUSE thread reported no active work, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and one enabled daily 09:00 Asia/Shanghai schedule with the next trigger at 09:00 today. Runner and assistant hashes and the latest failure/success timestamps were unchanged.
@@ -260,7 +268,7 @@ S1 首个试点域是 **C：公司要求完成的细碎重复内部事务**；�
 | 新会话启动 | **[P4 交接 Prompt](planning/p4-next-session-handoff.md)** · [P4 Issue](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/3) |
 | P3 已确认框架与递延项 | **[P3 结项与 P4 接续](planning/p3-framework-and-p4-transition.md)** |
 | 项目目标与整体关系 | [愿景](docs/00-project-vision.md) · [原则](docs/01-philosophy-and-principles.md) · [总体框架 v0.2](docs/02-project-framework-v0.2.md) |
-| 正式决定与当前缺口 | [D-001—D-030 决策日志](docs/03-confirmed-decisions.md) · [开放问题](docs/04-open-questions.md) |
+| 正式决定与当前缺口 | [D-001—D-031 决策日志](docs/03-confirmed-decisions.md) · [开放问题](docs/04-open-questions.md) |
 | 人机职责、授权及验证 | [治理原则](docs/05-autonomy-governance.md) |
 | P1 业务事实基线 | [四领域地图](planning/p1-business-map.md)，下接各领域事实记录 |
 | P2 评估与试点选择 | [候选评估结项](planning/p2-s1-candidate-assessment.md) |

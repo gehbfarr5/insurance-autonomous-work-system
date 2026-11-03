@@ -1,5 +1,13 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 03:38–03:40 CST — refreshed status and local process inventory
+
+At 03:38:11, the existing Sunshine Forest MUSE thread reported no active work, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and the existing daily 09:00 Asia/Shanghai schedule. Live hashes and latest scheduler records were unchanged. This point-in-time scheduler read does not establish Pixel gates.
+
+By 03:40:07, a corrected local process inventory found no active `ssh` executable matching `pixel3a-kjgx`. A local ADB server had been observed, but no device list was queried and no Pixel reachability is inferred. No device connection or private-data read occurred; the last bounded Pixel identity/APK check was at 03:31:59 device time. Device operation lock, monitor/hash, and UI remain UNKNOWN; stop/rollback is BLOCKED.
+
+Preserve the 09:00 natural run. After its window, refresh MUSE and inspect only sanitized same-run evidence and independent receipts. Do not replay, use root/`su`, read business state/raw logs, or write the device. Daily receipts, extension workflows, and original time/cycle rules remain incomplete; cross-day and long-term validation stays suspended. P4 remains open, S1 is not accepted; P50/monthly/2U=2800 remain excluded. Evidence: `museReadonlyStatus20261104_033811`, `pixelLocalAliasProcessCheck20261104_034007`.
+
 ## 2026-11-04 03:29–03:32 CST — current status and bounded Pixel preflight
 
 At 03:29:58, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and one enabled daily 09:00 Asia/Shanghai schedule due at 09:00 today. The live runner/assistant hashes and latest scheduler failure/success timestamps were unchanged.
