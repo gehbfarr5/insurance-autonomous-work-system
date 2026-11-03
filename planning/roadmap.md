@@ -1,8 +1,10 @@
 # 工作阶段与能力路线图
 
-> **最新状态校正｜2026-11-03 16:04 CST：** MUSE 15:54:29已回读既有每日09:00调度、下一次11月4日09:00、无运行/排队/在途任务、runner lock FREE；连续调度失败3次，最近失败11月3日09:11:17，最近成功10月31日09:15:50。Pixel 15:58:24经配置别名只读回读为Android 15/Dozing，monitor正常watching、guard清、requests=0，设备操作锁及前台Activity为UNKNOWN；monitor、trigger、worker哈希见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。未触发业务或改动调度/state。11月3日prepare阻断仍未定位；五项日常和五项扩展均未满足本期验收，规则完整时点依据未恢复。P4开放，S1未验收，P50/月度规划挂起。下面15:43记录为历史快照，已由本段更新。
+> **当前P4门禁｜2026-11-03 17:00 CST：** CUA库存只确认MUSE进程运行，未提供Forest scheduler/task readback，浏览器控制不可用；最近Forest并发读数16:23已过时，当前状态UNKNOWN。本轮未连Pixel。最新结论、停止条件与下一步见[交接](p4-next-session-handoff.md)和[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。P4仍开放，S1未验收，P50/月度规划挂起。
 
-> **接续访问门禁｜2026-11-03 16:14 CST：** CUA当前因Mac已锁无法读取MUSE；15:54之后的队列/任务状态UNKNOWN，本轮未再连接Pixel。解锁Mac后先刷新MUSE当前任务和并发状态，再决定是否访问设备；不得沿用15:54读数作为明早设备preflight。私有失败读回SHA-256见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。
+> **历史状态校正｜2026-11-03 16:04 CST：** MUSE 15:54:29已回读既有每日09:00调度、下一次11月4日09:00、无运行/排队/在途任务、runner lock FREE；连续调度失败3次，最近失败11月3日09:11:17，最近成功10月31日09:15:50。Pixel 15:58:24经配置别名只读回读为Android 15/Dozing，monitor正常watching、guard清、requests=0，设备操作锁及前台Activity为UNKNOWN；monitor、trigger、worker哈希见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。未触发业务或改动调度/state。11月3日prepare阻断仍未定位；五项日常和五项扩展均未满足本期验收，规则完整时点依据未恢复。P4开放，S1未验收，P50/月度规划挂起。下面15:43记录为历史快照，已由本段更新。
+
+> **历史接续访问门禁｜2026-11-03 16:14 CST：** CUA当前因Mac已锁无法读取MUSE；15:54之后的队列/任务状态UNKNOWN，本轮未再连接Pixel。解锁Mac后先刷新MUSE当前任务和并发状态，再决定是否访问设备；不得沿用15:54读数作为明早设备preflight。私有失败读回SHA-256见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。
 
 > **前一时点状态｜2026-11-03 15:43 CST：** 11月3日自然调度assistant/main均prepare超时、无业务stage/receipt，cleanup由MUSE报告PASS；间隔缺失仍UNKNOWN。MUSE 14:09快照只证明当时下一次为11月4日09:00且队列为空；15:37 CUA仅确认MUSE应用进程运行，未打开界面，当前调度与队列仍UNKNOWN。因无法排除MUSE并发，本轮未复连Pixel；15:22 Pixel读数是最近历史读数，不是当前preflight。该读数当时显示monitor-only候选`watching`、guard清、heartbeat新鲜、requests=0；设备Dozing、Forest未在前台、操作锁与stop/blocked标记不存在，monitor自身锁存在；输入审计12条、最后写于10月31日。SecureView v0.19 APK哈希当时与runner pin一致，prepare observer离线。静态核对显示公开策略仅覆盖离线签到/领取；10月26日旧本地runner哈希不同于MUSE 11月3日报告的live `run.py`哈希，不能视作部署代码。固定窗口sidecar尚未到预期采集时段。未重跑或更改业务state、cron、调度。P4进行中，S1未验收，P50/月度规划挂起。详见[实现来源核查](local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)、[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)、[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)及[修复与补跑记录](forest-prepare-repair-2026-11-02.md)。
 

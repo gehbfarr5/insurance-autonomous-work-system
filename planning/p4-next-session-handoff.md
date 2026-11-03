@@ -1,6 +1,10 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
-## 当前访问门禁｜2026-11-03 16:52 CST
+## 当前访问门禁｜2026-11-03 17:03 CST
+
+17:00 CUA库存只确认MUSE应用进程运行，浏览器控制不可用，没有Forest任务/调度读回；最近并发读数仍为16:23，现已过时，当前状态UNKNOWN。17:03本机只读SSH配置检查确认既有别名存在、ControlMaster未启用、无对应socket或带别名的SSH进程，本轮未建立Pixel连接；设备锁及部署哈希仍UNKNOWN。先取得新鲜MUSE状态，确认无并发后才做Pixel只读核查。16:33 live runner静态读数仍未定位具体超时触发，精确源码尚未导出。无业务、设备、state/cron/调度或凭据变更。
+
+## 前次访问门禁｜2026-11-03 16:52 CST
 
 CUA库存只确认MUSE进程运行，未提供Forest任务/调度读回；浏览器控制不可用。最近一次Forest状态读数为16:23，当时MUSE报告单一每日09:00任务下次11月4日、running/queued/in-flight为0/0/false且runner lock FREE。该读数已不是当前设备门禁，本机当前MUSE并发状态为UNKNOWN。本轮未连接Pixel；既有SSH别名仍在本地配置，但未使用。下一步先取得新鲜MUSE并发状态，确认没有其他任务后才按[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)复核Pixel锁和哈希。16:33静态读回确认live runner哈希与部署记录相同，但没有定位具体prepare超时触发点；精确live源码尚未导出，不能构建补丁。无业务动作、设备写入、state/cron/调度或凭据变更。扩展来源补查及其限制见[来源与扩展核查](remaining-work-2026-10-29.md#扩展来源补查2026-11-03-1652-cst)。
 
