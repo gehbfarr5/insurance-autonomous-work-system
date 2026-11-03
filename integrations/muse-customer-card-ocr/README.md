@@ -146,21 +146,28 @@ Tests use generated fictional images, OCR payloads, Mock Vault placeholder subst
 
 ## WP11 MUSE staging and re-test
 
-WP11 changes extraction only. It does not require a new connector, OCR call, or iCloud MCP call. In MUSE, create a separate checkout and venv so the current runtime stays pinned:
+WP11 changes extraction only. It does not require a new connector, OCR call, or iCloud MCP call. The last exact-tested code commit is `180f6333046b830010d60338edb580b23c03927c` (package 0.11.0); its MUSE offline suite passed 127/127, but the protected replay remained `REVIEW_REQUIRED`. Do not repeat that passing run without a relevant code, dependency, or test change. For a new candidate, use a fresh checkout/worktree and venv, and pin the exact candidate SHA rather than the moving branch tip. Keep the current runtime pinned:
 
 ```bash
-git fetch origin codex/wp11-family-card-table-parser-20261103
-git worktree add ~/workspace/wp11-family-card-ocr origin/codex/wp11-family-card-table-parser-20261103
-python3.12 -m venv ~/workspace/.venvs/muse-customer-card-ocr-wp11
-source ~/workspace/.venvs/muse-customer-card-ocr-wp11/bin/activate
-python -m pip install --no-deps -e ~/workspace/wp11-family-card-ocr/integrations/muse-customer-card-ocr
-cd ~/workspace/wp11-family-card-ocr/integrations/muse-customer-card-ocr
+git fetch --no-tags origin codex/wp11-family-card-table-parser-20261103
+git cat-file -e '180f6333046b830010d60338edb580b23c03927c^{commit}'
+git worktree add ~/workspace/wp11-family-card-ocr-0.11.0 180f6333046b830010d60338edb580b23c03927c
+test "$(git -C ~/workspace/wp11-family-card-ocr-0.11.0 rev-parse HEAD)" = "180f6333046b830010d60338edb580b23c03927c"
+python3.12 -m venv ~/workspace/.venvs/muse-customer-card-ocr-wp11-0.11.0
+source ~/workspace/.venvs/muse-customer-card-ocr-wp11-0.11.0/bin/activate
+python -c 'import sys, PIL, setuptools; print(sys.version.split()[0], PIL.__version__, setuptools.__version__)'
+python -m pip install --no-index --no-build-isolation --no-deps -e ~/workspace/wp11-family-card-ocr-0.11.0/integrations/muse-customer-card-ocr
+cd ~/workspace/wp11-family-card-ocr-0.11.0/integrations/muse-customer-card-ocr
+python -c 'from importlib.metadata import version; assert version("muse-customer-card-ocr") == "0.11.0"'
+python -c 'import PIL, sys; assert sys.version_info[:3] == (3, 12, 3); assert PIL.__version__ == "10.2.0"'
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The MUSE VM's existing Pillow 10.2.0 satisfies the package requirement. Confirm `decision == "READY"` for a unique, valid table fixture and `decision == "REVIEW_REQUIRED"` for blank/overlapping cells, a first-character-candidate mismatch, conflicting values, a checksum-invalid identity number, or unavailable geometry. Differing lower-ranked character alternatives alone must not force review. If an approved WP10 structural payload already exists in MUSE's protected workspace, replay that existing OCR result locally and compare only the resulting field decisions there; do not request or copy the payload into the repository or ordinary logs. Verify `map_to_icloud_fields` still rejects review results and returns the same draft schema for ready results. Do not call Baidu or any iCloud tool during this parser re-test.
+The example is pinned to the already-tested commit for reproducibility; for a changed candidate, replace the SHA, path suffix, expected package version, and expected test count with the new task's exact values. Confirm Python 3.12.3 / Pillow 10.2.0 and the local build backend are available before installation. If any dependency would require another network fetch, stop instead of accessing PyPI. After the single authorized branch fetch, complete package install, tests, and any replay offline. Do not call Baidu or iCloud during parser re-tests.
 
-Rollback in MUSE by restoring the previously pinned package version 0.5.0 or the WP7 checkout, then rerun that version's offline suite. This rollback affects only the isolated MUSE package environment and does not touch attachments, connectors, or contacts.
+For synthetic fixtures, confirm `decision == "READY"` for a unique valid table and `decision == "REVIEW_REQUIRED"` for blank/overlapping cells, a first-character-candidate mismatch, conflicting values, a checksum-invalid identity number, or unavailable geometry. Differing lower-ranked character alternatives alone must not force review. For the protected WP10 result, reuse only the already-authorized structured payload, do not read/find a reference unless the task explicitly authorizes it, and return only field-presence booleans, decisions, reason codes, and aggregate counters. Never copy OCR data into the repository, ordinary logs, screenshots, or task reports.
+
+The current 0.11.0 candidate is not deployed, so no production rollback is needed. If a future isolated experiment changes only an isolated package pin, restore that isolated environment's recorded prior version and rerun its pinned offline suite. Production rollback requires a separate authorized deployment task; this section does not authorize it.
 
 ## WP11-B isolated retest handoff
 
