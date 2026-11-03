@@ -1,5 +1,18 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 02:33—02:46 CST：版本身份与诊断取舍
+
+MUSE 02:33:59报告无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`，原每日09:00 Asia/Shanghai schedule待触发。Pixel 02:35:36设备时钟的非root身份、系统、启动与APK pin读取通过。首次`ps`格式参数不受支持，已按“无有效观察”记录；随后修正命令的限定进程名过滤无匹配。精确文档marker缺失，整体设备操作锁、monitor/hash、UI仍UNKNOWN。没有读取业务状态或raw logs。
+
+MUSE已只读确认live核心模块与四项helper/navigation依赖的精确SHA及导入关系；本机静态审查未执行源码。业务路由在`Device.prepare()`后，退出路径执行cleanup。11月3日摘要仅支持“失败在认证派发之前”，没有说明为何停留在MainActivity。
+
+### 方案比较与当前选择
+
+- **早期/备用认证派发：** 可以绕过当前Activity条件，但会从未经确认的Activity进入认证，且现有证据未证明派发条件应改变；不采用。
+- **保留门禁并观测转换：** 继续使用现有fail-closed主路径，在09:00自然轮后读取同轮脱敏阶段布尔值，再定位具体失败层。执行较慢，但保持原有门禁并可按证据修复；当前采用。
+
+任何生产修改仍须新鲜设备锁、monitor状态、备份、离线审查及回滚门禁全部通过。运行后先刷新MUSE并确认已结束，再读取现有脱敏逐段摘要；字段缺失/歧义仍为UNKNOWN并停止后续动作，不重放。证据：`museReadonlyStatus20261104_023359`、`pixelReadonlyPreflight20261104_023536`、`liveSourceReview20261104_023725_024058`、`liveHelperDependencyReview20261104_024324`、`liveDailyControlFlowReview20261104_024638`、`acceptanceGateStatus20261104_024638`。
+
 ## 2026-11-04 02:30—02:31 CST：刷新自然运行前状态
 
 MUSE于02:30:46只读确认Forest空闲、runner lock `FREE`、唯一每日09:00 Asia/Shanghai schedule待触发，runner/assistant hashes及最新调度记录未变。Pixel于02:31:09通过既有alias以非root确认设备身份、时区、启动及APK v0.19 pin；窄进程名过滤无匹配，精确操作锁marker缺失。整体设备操作锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。未读取raw logs或业务状态，未使用`su`、运行代码/任务、写设备或改schedule。

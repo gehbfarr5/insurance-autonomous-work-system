@@ -1,5 +1,16 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 02:33—02:46 CST：当前门禁与来源缺口
+
+- **MUSE与自然运行：** 02:33:59无活动/排队/在途任务、runner lock `FREE`，现有09:00 Asia/Shanghai schedule待触发；运行结果待自然发生。
+- **Pixel：** 02:35:36非root身份/启动/APK v0.19 pin读取通过。受限进程过滤无匹配，精确文档marker缺失；整体操作锁、monitor/hash、屏幕/Keyguard/Activity仍UNKNOWN。
+- **失败层级：** live核心及helper哈希和依赖已确认。静态控制流表明业务路由位于prepare之后；11月3日证据停在认证派发之前。为何仍停留MainActivity仍UNKNOWN。
+- **方案：** 保留现有Activity/auth及assistant method-pin；自然轮只观察脱敏布尔值，之后按确切失败层选择修复层。绕过门禁风险高且没有证据支持。生产改动前需重新通过锁、备份、离线审查和回滚门禁。
+- **规则与扩展：** Drive metadata-only本轮所查文档和图像范围没有相关结果；这不证明原件或历史确认不存在。五项扩展资格、流程、奖励触发/周期仍待核实。
+- **验收：** 自然轮/同轮证据PENDING；设备诊断与修复、五项日常独立回执和五项扩展分类仍未闭环；规则恢复PARTIAL；跨日/长期观察SUSPENDED。P4开放、S1未验收；P50/月度/2U=2800排除。
+
+结构化记录：`museReadonlyStatus20261104_023359`、`pixelReadonlyPreflight20261104_023536`、`pixelProcessFilter20261104_023536`、`pixelDeviceLockMarkerRead20261104_023536`、`liveSourceReview20261104_023725_024058`、`liveHelperDependencyReview20261104_024324`、`liveDailyControlFlowReview20261104_024638`、`driveMetadataRecovery20261104_0236`、`acceptanceGateStatus20261104_024638`。
+
 ## 2026-11-04 02:30—02:31 CST：自然运行前状态
 
 - MUSE 02:30:46：无活动任务、runner lock `FREE`，每日09:00 schedule待触发；runner/assistant hashes与最近结果未变。

@@ -1,5 +1,13 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 02:33—02:46 CST — source audit and pending natural run
+
+MUSE's 02:33:59 read-only status showed no active/queued/in-flight work and runner lock `FREE`; the existing daily 09:00 Asia/Shanghai schedule remains pending. At Pixel device time 02:35:36, non-root identity/boot/APK-pin reads matched the known v0.19 device state. The narrow process filter had no matches and the exact documented lock marker was absent; overall device lock, monitor/hash, screen/Keyguard, and Activity remain UNKNOWN.
+
+Exact live core and helper import identities now match. Static review shows business routing follows `Device.prepare()` and cleanup is on the guarded exit path. Nov 3 evidence stops before authentication dispatch; why MainActivity persisted remains UNKNOWN. Keep the fail-closed Activity/auth and assistant method-pin checks. The chosen path is to reuse those gates, observe sanitized transition booleans in the natural run, then consider a fix for the observed failing layer only after current lock, backup, offline review, and rollback gates pass. Drive metadata searches had no result in their bounded scopes; original rule/source evidence remains open.
+
+After the existing 09:00 run, first refresh MUSE and confirm completion, then inspect only same-run sanitized summaries. No replay, `su`, raw logs, business-state reads, source/task execution, device write, or schedule change. P4 remains open; S1 is not accepted. P50, monthly planning, and 2U=2800 remain excluded. Evidence: `museReadonlyStatus20261104_023359`, `pixelReadonlyPreflight20261104_023536`, `liveSourceReview20261104_023725_024058`, `liveHelperDependencyReview20261104_024324`, `liveDailyControlFlowReview20261104_024638`, `driveMetadataRecovery20261104_0236`, `acceptanceGateStatus20261104_024638`.
+
 ## 2026-11-04 02:30—02:31 CST — latest pre-run read
 
 MUSE's 02:30:46 read-only status remains idle with runner lock `FREE` and the existing daily 09:00 Asia/Shanghai schedule pending; runner/assistant hashes and latest scheduler records are unchanged. At Pixel device time 02:31:09, the existing non-root alias confirmed UID 10249, Pixel 3a, Android 15, Asia/Shanghai, boot complete, and APK hash matching the v0.19 pin. The limited process filter had no matches and the exact documented lock marker was absent; overall device lock and monitor status/hash remain UNKNOWN.

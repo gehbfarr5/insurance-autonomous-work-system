@@ -1,5 +1,11 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 2026-11-04 02:33—02:46 CST：自然运行与版本门禁待观察
+
+MUSE 02:33:59无活动/排队/在途任务、runner lock `FREE`，原每日09:00 Asia/Shanghai schedule待触发。Pixel 02:35:36非root身份、系统、boot及v0.19 APK pin核验通过；限定进程过滤无匹配、精确文档marker缺失，但整体设备锁、monitor/hash及UI状态UNKNOWN。live核心/helper版本和依赖关系已确认，静态控制流表明签到等业务位于prepare gate之后；11月3日失败停在认证派发之前，停留MainActivity的根因未知。
+
+保留09:00自然轮；结束后先刷新MUSE并核对同轮脱敏阶段与独立业务回执。无回放、不放宽Activity/auth/assistant pin、不用`su`、不读raw logs/业务状态、不写设备。生产修复前仍需新鲜设备锁、备份、离线审查和回滚门禁。WP01尚未通过独立签到回执验收，P4开放、S1未验收。证据键：`museReadonlyStatus20261104_023359`、`pixelReadonlyPreflight20261104_023536`、`liveSourceReview20261104_023725_024058`、`liveHelperDependencyReview20261104_024324`、`liveDailyControlFlowReview20261104_024638`、`acceptanceGateStatus20261104_024638`。
+
 ## 2026-11-04 02:30—02:31 CST：自然运行前签到门禁
 
 MUSE 02:30:46无Forest在途任务、runner lock `FREE`、原09:00 schedule待触发；live hashes及最近结果未变。Pixel 02:31:09非root预检确认设备时区/启动和v0.19 APK pin，窄进程过滤无匹配、精确操作锁marker缺失，但整体设备锁和monitor状态仍UNKNOWN。保留自然轮；之后先刷新MUSE并以独立回执验收签到及其他日常项，不重试/重放。证据：`museReadonlyStatus20261104_023046`、`pixelReadonlyPreflight20261104_023109`、`pixelProcessFilter20261104_023109`、`pixelDeviceLockMarkerRead20261104_023109`、`acceptanceGateStatus20261104_023109`。

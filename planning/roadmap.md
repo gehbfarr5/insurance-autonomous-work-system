@@ -1,5 +1,13 @@
 # 工作阶段与能力路线图
 
+## 2026-11-04 02:33—02:46 CST：核心与helper版本身份闭环
+
+MUSE 02:33:59只读状态仍为无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`，原每日09:00 Asia/Shanghai schedule待自然触发。Pixel设备时钟02:35:36确认非root身份、Pixel 3a / Android 15 / boot完成及v0.19 APK pin；修正后的窄进程名过滤无匹配、精确文档marker缺失，但整体设备锁、monitor和UI状态仍UNKNOWN。
+
+当前live `run.py`、`assistant.py`、`policy.py`、`tasks.py`、`forest_cdp.py`及其`poll_utils.py`、`receipt_bridge.py`、`empty_query.py`、`navigation-pins.json`依赖身份均已按SHA/导入关系确认。静态控制流显示业务步骤在prepare gate之后，退出路径有cleanup；11月3日观察只定位到认证派发之前，停留在MainActivity的原因仍UNKNOWN。保留Activity/auth和assistant method-pin门禁。选择复用原fail-closed路径并在自然轮记录脱敏阶段布尔值；仅在门禁、备份、离线审查和回滚条件齐备后才针对已确认的失败层评估改动。驱动盘metadata搜索在所查范围无命中，原始规则或历史确认仍待核。
+
+保留09:00自然轮，结束后先刷新MUSE并按同轮脱敏矩阵核对。无root/`su`、raw log、业务状态、代码/任务执行、设备写入或调度更改。P4开放，S1未验收；P50/月度/2U=2800继续排除。证据键：`museReadonlyStatus20261104_023359`、`pixelReadonlyPreflight20261104_023536`、`liveSourceReview20261104_023725_024058`、`liveHelperDependencyReview20261104_024324`、`liveDailyControlFlowReview20261104_024638`、`driveMetadataRecovery20261104_0236`、`acceptanceGateStatus20261104_024638`。
+
 ## 2026-11-04 02:30—02:31 CST：自然运行前复核
 
 MUSE 02:30:46报告Forest无活动/排队/在途任务、runner lock `FREE`、既有09:00 schedule待触发；live hashes和最近运行记录未变。Pixel设备时钟02:31:09确认非root UID 10249、Pixel 3a / Android 15 / Asia/Shanghai / boot完成及v0.19 APK pin匹配。窄进程过滤无匹配、精确文档marker缺失；整体操作锁、monitor/hash和前台状态仍UNKNOWN。保留09:00自然轮，运行后先刷新MUSE并核对同轮脱敏矩阵；不重放、不放宽门禁、不部署候选。P4开放，S1未验收。证据键：`museReadonlyStatus20261104_023046`、`pixelReadonlyPreflight20261104_023109`、`pixelProcessFilter20261104_023109`、`pixelDeviceLockMarkerRead20261104_023109`、`acceptanceGateStatus20261104_023109`。
