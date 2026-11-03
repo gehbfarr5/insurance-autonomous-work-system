@@ -1,5 +1,12 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-03 21:47 CST：刷新运行门禁并校正源码映射
+
+MUSE 21:45:36只读状态仍为空闲，唯一Asia/Shanghai每日09:00任务下次11月4日，running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程，live哈希未变。约21:46 Pixel非root只读预检显示Android 15启动完成、无AutoX/AutoJS、APK hash匹配v0.19；设备操作锁及monitor/Keyguard/Activity仍UNKNOWN。没有设备/业务状态改动或部署。
+
+精确live依赖静态映射已经补到[本地证据审计](local-evidence-audit-2026-10-29.md)：签到/领取控制、时光轴helper、assistant门禁和特权CDP边界可区分；客温客价实现仍未映射，run.py适配器未完整逐项审阅。11月3日故障只定位到Activity/就绪标记轮询层，底因UNKNOWN。11月4日自然运行及业务回执仍待。
+
+
 ## 2026-11-03 21:35 CST：刷新运行状态及扩展证据边界
 
 MUSE在21:30:20报告当时唯一Forest schedule仍是Asia/Shanghai每日09:00、下一次11月4日09:00，running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程；live runner哈希匹配最近报告。约21:31本机通过既有Pixel别名以非root只读确认设备启动、v0.19 APK hash匹配；设备操作锁、monitor状态/hash、Keyguard和前台Activity未知。未用root/su、未写设备或业务state、未运行任务、未改schedule。

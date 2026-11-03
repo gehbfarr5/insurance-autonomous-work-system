@@ -1,5 +1,21 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 精确live源码映射与最新运行预检｜2026-11-03 21:45—21:47 CST
+
+MUSE 21:45:36在既有Forest线程只读确认当时无活动任务、唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00、running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程；live run.py/assistant.py SHA为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 / 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。约21:46经已有Pixel别名非root UID 10249只读确认Pixel 3a/Android 15/boot完成、AutoX/AutoJS未见、SecureView APK SHA匹配v0.19。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；没有root/su、业务state/raw log读取、任务运行、设备写入或部署。
+
+将本地15:43的历史源码对照与21:22完成的私有精确源码审阅分开记录，避免把旧状态当作现状：
+
+- live run.py：SHA-256 de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562；本机私有副本哈希匹配MUSE 19:08 live报告。prepare按resumed Activity/就绪标记轮询；只有精确GestureActivity且本轮未尝试时才派发一次auth_start。11月3日三段停在MainActivity并以PREPARE_TIMEOUT_NO_FALLBACK结束，足以定位到runner Activity/ready-marker轮询层，不足以解释标记未到的底因。
+- live assistant.py：SHA-256 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c；19:36本机精确附件SHA匹配MUSE此前19:08报告。Vue存在、固定onClickApp方法指纹匹配、唯一AI菜单项是独立调用门禁；18:40集成只增加脱敏诊断字段，未改门禁。11月3日prepare失败发生在该门禁之前，且vueCheck缺失，不能用来归因方法匹配。
+- live tasks.py：SHA-256 b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b；20:46私有附件字节匹配。只含run_timeline及辅助函数，是时光轴导航helper；返回路径含特权设备操作，当前约束下不执行。
+- live policy.py：SHA-256 6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e；20:56私有附件字节匹配。控制签到/领取的fresh-read、日期/前台/pin/控件门禁与未决journal协调，未发现重放路径；此模块不含温价或assistant实现。
+- live forest_cdp.py：SHA-256 a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148；21:04附件及本机复算匹配。其传输依赖特权shell路线，当前禁用，未执行；run.py适配器方法体没有完整本机独立审阅。
+- snapshot.js / refresh.js / action.js哈希分别为ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d / 9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5 / 6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e；21:11 MUSE对live唯一引用确认，本机SHA复算匹配。仅静态审阅：snapshot读取页面状态，refresh触发fresh-read校验，action在门禁后可点按但本身不证明完成。三者都未运行。
+
+复用当前精确live门禁与业务调用顺序，诊断遥测仅沿用既有受限、脱敏设计；避免root传输、原始Activity/页面数据和任何门禁放宽。五项日常代码映射仍不完整：签到/领取编排、时光轴helper与助理门禁已有来源；客温客价在已审阅任务/策略模块中的实现未定位，且独立收据不存在。run.py适配器没有完整逐项审阅，故不推断系统其他路径绝对没有实现。11月4日自然运行、同轮业务回执及登录字段证据继续待观察。
+
+
 ## 本轮部署、规则与扩展复核｜2026-11-03 21:30—21:35 CST
 
 MUSE 21:30:20只读状态回读确认当时Forest无运行/排队/在途任务、runner lock FREE、唯一每日Asia/Shanghai 09:00 schedule下次11月4日09:00；live run.py/assistant.py哈希与最近已知值一致。约21:31经现有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、AutoX/AutoJS进程未见、SecureView APK哈希匹配v0.19。设备操作锁、monitor私有状态/hash、Keyguard/屏幕/前台Activity仍UNKNOWN；未用root/su、未读业务state/raw logs、未安装/部署或写入。

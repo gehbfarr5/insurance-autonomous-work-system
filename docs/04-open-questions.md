@@ -1,5 +1,12 @@
 # 缺失内容与 P4 按需核查
 
+## P4最新状态与源码映射复核｜2026-11-03 21:45—21:47 CST
+
+MUSE 21:45:36只读回读：Forest当时无活动任务，唯一日程为Asia/Shanghai每日09:00、下次11月4日09:00；running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程，live run.py/assistant.py哈希仍为de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 / 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c。约21:46经既有Pixel别名非root只读确认Pixel 3a/Android 15/boot完成、v0.19 APK匹配；设备操作锁与monitor/Keyguard/Activity仍UNKNOWN，不进行设备写入。
+
+精确live源码的可复用映射已在[本地证据审计](../planning/local-evidence-audit-2026-10-29.md)补齐：policy.py负责签到/领取编排，tasks.py仅有时光轴导航helper，assistant.py有独立Vue/固定方法指纹/唯一菜单门禁；特权传输模块不在当前执行约束内。客温客价在已审阅模块中的实现尚未定位，独立收据仍缺。三段11月3日均在业务前prepare超时，底层原因仍UNKNOWN。11月3日窗口候选已过期不安装；11月4日自然运行及五项回执仍待。
+
+
 ## 最新P4状态与来源/扩展核对｜2026-11-03 21:30—21:35 CST
 
 MUSE 21:30:20在既有Forest线程报告当时无运行、排队或在途任务，唯一Asia/Shanghai每日09:00任务下次11月4日09:00；runner lock FREE，live run.py/assistant.py哈希仍为已记录值。约21:31经既有Pixel别名非root只读确认Android 15已启动、无AutoX/AutoJS进程，SecureView APK与v0.19 pin相符。设备操作锁和monitor私有状态、屏幕/Keyguard/前台Activity仍UNKNOWN，故没有设备写入或observer部署；11月3日08:55—09:55目标窗口已过期，不安装该候选。

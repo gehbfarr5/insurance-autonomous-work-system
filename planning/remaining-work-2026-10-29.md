@@ -1,5 +1,12 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-03 21:47 CST更新：刷新MUSE与Pixel状态并补齐源码映射
+
+21:45:36 MUSE现有Forest线程报告无活动/排队/在途任务，唯一Asia/Shanghai每日09:00任务下次11月4日09:00，runner lock FREE、Forest进程未见，live runner/assistant哈希保持已知值。21:46左右Pixel经既有别名非root只读确认设备身份与启动、APK pin和AutoX进程状态；设备操作锁、monitor/Keyguard/Activity仍UNKNOWN。没有设备写入、业务运行或部署。
+
+本轮整理精确live源码映射：run.py决定prepare/认证派发时序；assistant.py保留Vue/固定方法pin/唯一菜单门禁；tasks.py只含时光轴导航helper；policy.py负责编排签到/一键领取；CDP传输因root约束停用；页面action脚本只作静态检查。客温客价在已审阅模块中的实现仍未定位，run.py适配器未完整逐项审阅，不推断全系统绝对不存在；独立收据仍缺。源码摘要及限制详见[本地证据审计](local-evidence-audit-2026-10-29.md)和结构化索引。11月3日候选过期不部署，11月4日自然运行待观察。
+
+
 ## 2026-11-03 21:35 CST更新：MUSE与Pixel只读预检完成；设备写入门禁关闭
 
 21:30:20 MUSE在精确Forest线程报告当时无活动任务、唯一Asia/Shanghai每日09:00任务下次11月4日09:00，running/queued/in-flight 0/0/false、runner lock FREE、无Forest进程；live run.py/assistant.py哈希未变。约21:31本机经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、未见AutoX/AutoJS、SecureView APK匹配v0.19。设备操作锁与monitor私有状态/hash、屏幕/Keyguard/Activity仍UNKNOWN，因此没有设备写入或observer部署；旧11月3日08:55—09:55候选窗口不再适用、不安装。

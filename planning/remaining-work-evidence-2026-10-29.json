@@ -1507,8 +1507,8 @@
     "actions": "No device access, business-state read, job execution, schedule/code/file change, or interruption."
   },
   "pixelReadonlyPreflight20261103Latest": {
-    "recordedAt": "2026-11-03T21:39:23+08:00",
-    "deviceReadTime": "Approximately 2026-11-03 21:30–21:32 CST; individual remote commands were not timestamped.",
+    "recordedAt": "2026-11-03T21:50:14+08:00",
+    "deviceReadTime": "Approximately 2026-11-03 21:46:34–21:46:35 CST; local timestamp brackets the remote read.",
     "transport": "Only the existing configured alias pixel3a-kjgx; non-root remote UID 10249; read-only shell commands.",
     "remoteUid": 10249,
     "device": {
@@ -1517,15 +1517,15 @@
       "timezone": "Asia/Shanghai",
       "bootCompleted": true
     },
-    "autoxOrAutojsProcess": "NOT_FOUND in filtered process inventory",
+    "autoxOrAutojsProcess": "ABSENT in filtered process inventory.",
     "installedSecureViewPackage": "com.p4.secureview",
     "secureViewInstalledApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
     "secureViewHashMatchesKnownV019Artifact": true,
-    "deviceOperationLock": "UNKNOWN; no documented non-root reader was available in the checked repository/runbook.",
+    "deviceOperationLock": "UNKNOWN; the documented non-root method is unavailable.",
     "monitorStatusAndHash": "UNKNOWN; private app data not read.",
     "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
     "rootOrSuUsed": false,
-    "actions": "No business-state read, app/process start or stop, install/deploy, device or state write, task/code execution, schedule change, or credential/network change."
+    "actions": "No app/process start or stop, install/deploy, device or state write, business-state read, task/code execution, schedule change, or credential/network change."
   },
   "museReadonlyStatus20261103Latest": {
     "readAt": "2026-11-03T18:54:37+08:00",
@@ -2327,5 +2327,103 @@
     "status": "EXPIRED; do not install or deploy that window-specific candidate.",
     "deviceAction": "None. No candidate was installed or deployed in this turn.",
     "nextStep": "Preserve the existing 2026-11-04 09:00 schedule and use only the natural run plus safe, verified read-only evidence collection."
+  },
+  "museReadonlyStatus20261103_214536": {
+    "readAt": "2026-11-03T21:45:36+08:00",
+    "source": "Read-only current-status request/reply in the exact existing Sunshine Forest MUSE thread.",
+    "forestScopeTaskActive": false,
+    "schedule": {
+      "enabledCount": 1,
+      "timezone": "Asia/Shanghai",
+      "dailyAt": "09:00:00",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "otherChats": "Not inspected.",
+    "businessResults": "Not reread.",
+    "actions": "No device connection, job/business-code execution, business-state/raw-log read, file/deployment/cron/schedule/credential change, other-chat inspection, or task interruption."
+  },
+  "pixelReadonlyPreflight20261103_2146": {
+    "recordedAt": "2026-11-03T21:50:14+08:00",
+    "deviceReadTime": "Approximately 2026-11-03 21:46:34–21:46:35 CST; local timestamp brackets the remote read.",
+    "transport": "Only the existing configured alias pixel3a-kjgx; non-root remote UID 10249; read-only shell commands.",
+    "remoteUid": 10249,
+    "device": {
+      "model": "Pixel 3a",
+      "android": "15",
+      "timezone": "Asia/Shanghai",
+      "bootCompleted": true
+    },
+    "autoxOrAutojsProcess": "ABSENT in filtered process inventory.",
+    "installedSecureViewPackage": "com.p4.secureview",
+    "secureViewInstalledApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "secureViewHashMatchesKnownV019Artifact": true,
+    "deviceOperationLock": "UNKNOWN; the documented non-root method is unavailable.",
+    "monitorStatusAndHash": "UNKNOWN; private app data not read.",
+    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
+    "rootOrSuUsed": false,
+    "actions": "No app/process start or stop, install/deploy, device or state write, business-state read, task/code execution, schedule change, or credential/network change."
+  },
+  "liveSourceMapReview20261103_2147": {
+    "recordedAt": "2026-11-03T21:50:14+08:00",
+    "sources": {
+      "run.py": {
+        "sha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+        "match": "Local private source matched the MUSE live report at 19:08; MUSE again reported the same hash at 21:45:36.",
+        "review": "Prepare waits for resumed Activity/readiness. Only exact GestureActivity and an untried one-shot branch dispatches auth_start. The 2026-11-03 segments stop at MainActivity with PREPARE_TIMEOUT_NO_FALLBACK.",
+        "limit": "This locates the runner timeout layer but not why the readiness marker was absent."
+      },
+      "assistant.py": {
+        "sha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c",
+        "match": "Local private source matched the MUSE live report at 19:08; MUSE again reported the same hash at 21:45:36.",
+        "review": "Independent Vue-presence, fixed onClickApp source-pin, and exactly-one AI target gate. The 18:40 integration adds sanitized observations without relaxing the gate.",
+        "limit": "The 2026-11-03 prepare failures occurred before this page gate; vueCheck is missing."
+      },
+      "tasks.py": {
+        "sha256": "b991a1e0f8d264595ab8e4a6fd6ae90a2b66ab7c1d51e97f4c596f57d572091b",
+        "review": "Exact private attachment and local hash match; only run_timeline plus helpers, with privileged return navigation.",
+        "executed": false
+      },
+      "policy.py": {
+        "sha256": "6618cbba98080e32431f336e7dc35533251b66526e1f5e08ce024a9ccfc3643e",
+        "review": "Exact private attachment and local hash match; coordinates sign and collect with fresh reads, fixed gates, and pending-action reconciliation.",
+        "temperatureValueOrAssistantImplementationInModule": false,
+        "executed": false
+      },
+      "forest_cdp.py": {
+        "sha256": "a802d04ab3e7e4445cdbeacb29b20517993680c7213f13596bd0596f3998a148",
+        "review": "Exact private attachment and local hash match; transport requires a privileged shell route, excluded by current constraints.",
+        "executed": false
+      },
+      "pageScripts": {
+        "snapshot.js": "ab81c00785f0e35509e9f83c1b0b7c99852e085140a4ceb339a0bdcc1c3d982d",
+        "refresh.js": "9dc1c12f9f4694beca0a8d10a699e43c1dd7283f4f392c7ed30782d091ec02e5",
+        "action.js": "6d15b527e7eab85a8a0e4d498a4da35d9a6221baa0e5582e7341e09c18ec665e",
+        "review": "Hash-matched live references; static only. action.js can click after guards but does not establish completion.",
+        "executed": false
+      }
+    },
+    "dailyTaskMapping": {
+      "checkInAndCollect": "Policy orchestration reviewed; exact run.py adapter bodies were not fully audited.",
+      "timeline": "tasks.run_timeline helper reviewed.",
+      "assistant": "Separate assistant.py with fixed method/menu gates reviewed.",
+      "temperatureValue": "Not located in the reviewed task/policy modules; run.py adapter was not fully mapped; no independent receipt exists."
+    },
+    "reuseAdaptAvoid": {
+      "reuse": "Exact live call gates and one-shot/pending-action behavior.",
+      "adapt": "Bounded sanitized telemetry already integrated in assistant.py and offline-only observer/joiner review.",
+      "avoid": "Privileged device transport, raw Activity/page/customer data, gate bypass, and production replay."
+    },
+    "actions": "No source execution, code edit, deployment, device write, business-state read, or task run."
   }
 }
