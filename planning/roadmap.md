@@ -4,9 +4,9 @@
 
 Android 15 AOSP框架清单将android.permission.DUMP标为signature/privileged/development，并注明不供第三方应用使用；Android官方文档给出的dumpsys入口是adb shell。现有Pixel SSH UID的实际DUMP授权未核，未运行dumpsys或ADB探针。不能假定应用式SSH会话可以读取系统转储；屏幕、Keyguard和前台Activity继续记UNKNOWN，不切换访问通道或授予权限。这是诊断访问约束，不是森林故障根因。证据：androidDumpPermissionReview20261104_030429。[Android 15 AOSP清单](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934)；[Android dumpsys文档](https://developer.android.com/tools/dumpsys)。
 
-## 2026-11-04 03:07—03:10 CST：官方时点来源补查
+## 2026-11-04 03:07—03:16 CST：官方时点来源补查
 
-Google Drive三条时点定向metadata-only检索均无匹配且未取正文；CPIC官方域三条公开查询返回无关页面。精确来源指针仍未恢复；有界查询不否定D-029记录的“曾确认”。证据：`googleDriveTimingSourcePointerSearch20261104_0308`、`cpicOfficialRuleSearch20261104_0310`。最新可用MUSE状态仍是02:50:48报告的每日09:00自然调度；下次动作前须刷新并核对并发。
+Google Drive三条时点定向metadata-only检索均无匹配且未取正文；CPIC官方域三条公开查询返回无关页面。03:16的Drive best-effort全文搜索对重置时点、任务周期、奖励触发三类查询均无结果。精确来源指针仍未恢复；有界查询不否定D-029记录的“曾确认”。证据：`googleDriveTimingSourcePointerSearch20261104_0308`、`cpicOfficialRuleSearch20261104_0310`、`googleDriveRuleFullTextSearch20261104_0316`。最新可用MUSE状态仍是02:50:48报告的每日09:00自然调度；下次动作前须刷新并核对并发。
 
 
 ## 2026-11-04 02:58—02:59 CST：五项扩展历史证据原件复核

@@ -4,9 +4,9 @@
 
 The Android 15 AOSP framework manifest marks android.permission.DUMP as signature/privileged/development and says it is not for third-party apps; Android’s developer docs show dumpsys invoked through adb shell. The existing Pixel SSH UID’s specific DUMP grant was not checked, and no dumpsys or ADB probe was run. Treating the SSH session as able to read system dumps would be an unsupported assumption. Keep screen, Keyguard, and foreground Activity UNKNOWN; do not switch access paths or grant permissions. This constrains diagnosis but does not identify the Forest failure cause. Evidence: androidDumpPermissionReview20261104_030429. [AOSP Android 15 manifest](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934); [Android dumpsys documentation](https://developer.android.com/tools/dumpsys).
 
-## 2026-11-04 03:07–03:10 CST — official timing-source search
+## 2026-11-04 03:07–03:16 CST — official timing-source search
 
-Three timing-specific Google Drive metadata searches returned no matches and fetched no document contents. Three CPIC-domain public searches returned unrelated pages. The exact source pointer remains unrecovered; these bounded searches do not negate D-029's record that the official timepoint was previously confirmed. Evidence: `googleDriveTimingSourcePointerSearch20261104_0308` and `cpicOfficialRuleSearch20261104_0310`.
+Three timing-specific Google Drive metadata searches returned no matches and fetched no document contents. Three CPIC-domain public searches returned unrelated pages. A further best-effort Drive text search for reset time, task cycle, and reward trigger returned zero documents across three queries; no content was fetched. The exact source pointer remains unrecovered; these bounded searches do not negate D-029's record that the official timepoint was previously confirmed. Evidence: `googleDriveTimingSourcePointerSearch20261104_0308`, `cpicOfficialRuleSearch20261104_0310`, and `googleDriveRuleFullTextSearch20261104_0316`.
 
 
 ## 2026-11-04 02:58—02:59 CST — indexed extension evidence rechecked

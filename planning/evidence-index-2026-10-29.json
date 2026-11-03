@@ -161,6 +161,21 @@
       ],
       "summary": "Returned CPIC pages were unrelated to the Sunshine Forest app rule; no current workflow, timepoint, or reward rule was verified.",
       "scopeLimit": "Search-result scope only; does not establish that the official source is absent or that a prior confirmation did not occur."
+    },
+    {
+      "id": "X05",
+      "recordKey": "googleDriveRuleFullTextSearch20261104_0316",
+      "source": "Connected Google Drive best-effort text search",
+      "searchedAt": "2026-11-04 03:16 Asia/Shanghai",
+      "queries": [
+        "阳光森林 重置时间",
+        "阳光雨露 任务周期",
+        "阳光森林 任务规则 奖励触发"
+      ],
+      "topNPerQuery": 3,
+      "resultCount": 0,
+      "contentFetched": false,
+      "scopeLimit": "No matching file was returned for these queries; this does not establish that the source is absent or that the previously confirmed official timepoint was never confirmed."
     }
   ]
 }

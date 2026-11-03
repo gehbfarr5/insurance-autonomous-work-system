@@ -1,10 +1,10 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 2026-11-04 03:07—03:09 CST：官方时点来源定向检索
+## 2026-11-04 03:07—03:16 CST：官方时点来源定向检索
 
 Connected Drive metadata-only document searches for “阳光森林 官方 时间点”, “阳光森林 截止时间”, and “Forest official timepoint” returned zero results; no document content was fetched. This search did not recover the exact pointer. D-029 still records that the official timepoint was previously confirmed; this bounded empty search does not negate that record or prove the original source absent. Evidence key: `googleDriveTimingSourcePointerSearch20261104_0308` in the [evidence index](evidence-index-2026-10-29.json).
 
-CPIC public-site searches at 03:10 using the daily cap, sign-in, and 阳光/雨露 terms returned unrelated pages; no current Forest workflow or timing rule was verified. The search-result scope does not establish that the original source is absent or that the prior confirmation did not occur. Evidence key: `cpicOfficialRuleSearch20261104_0310` in the [evidence index](evidence-index-2026-10-29.json).
+CPIC public-site searches at 03:10 using the daily cap, sign-in, and 阳光/雨露 terms returned unrelated pages; no current Forest workflow or timing rule was verified. A separate Drive best-effort full-text search at 03:16 for reset time, task cycle, and reward trigger returned zero documents across three queries (top three per query); no content was fetched. The bounded searches do not establish source absence or negate the prior confirmation. Evidence keys: `cpicOfficialRuleSearch20261104_0310` and `googleDriveRuleFullTextSearch20261104_0316` in the [evidence index](evidence-index-2026-10-29.json).
 
 ## 2026-11-04 02:50—02:54 CST：签到自然轮待触发
 
