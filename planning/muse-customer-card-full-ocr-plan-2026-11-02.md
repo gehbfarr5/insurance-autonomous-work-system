@@ -9,9 +9,9 @@
 - **WP8-B / WP9：** MUSE 历史阶段报告称首尔 OCR 路径、Token 管理、合成查重/联系人创建、回读、幂等及清理通过。本轮未重新执行这些阶段。
 - **WP10：** MUSE 报告首张真实卡 OCR 成功，但自动解析为 `REVIEW_REQUIRED`；用户随后确认手工草稿并创建、回读一条真实联系人。这证明存在人工流程，不证明自动表格解析通过。
 - **WP11：** 0.7.0–0.11.0 隔离保护区回放均为 `REVIEW_REQUIRED`。0.11.0 精确代码提交 `180f6333046b830010d60338edb580b23c03927c` 的本地与 MUSE 离线测试均为 127/127；同一 89 项 WP10 结构化结果仍回放为 `REVIEW_REQUIRED`，原因码为 `table_layout_uncertain`、`main_customer_identity_unclear`、`mobile_missing`、`address_conflict`、`address_uncertain`，草稿映射被拒。姓名、手机号、生日、性别、地址和其他电话字段缺失；身份证字段存在，但本轮没有读取 reference 或做值匹配。MUSE 的同输入诊断确认唯一地址标签存在、救援已运行，行式地址 evidence 为 0；扩展集中有一个候选通过列和地址检查，另有一个不同值也通过地址长度与字符检查但因列中心近似并列而无法唯一归属。该有效歧义候选使救援保持 `uncertain`，不追加唯一代表；直接/下一行 evidence 中已有两个不同地址候选，因此最终仍为冲突并进入人工复核。现有证据支持保留拒配门禁，不支持放宽或过滤该有效歧义候选。输入、payload、worktree 和生产源码状态未变；未读 reference。
-- **生产：** MUSE 报告包版本 0.5.0、提交 `8336008d080387ab709d1e0ab9381683b1138e0f`、工作树干净。生产 `fields.py` SHA-256 已在 Git blob 上独立核对。四个 MUSE runtime 脚本已按 source-only 快照导入受控审阅分支，其中 MCP 客户端私有 host 值已在公开副本中脱敏；原始 owner 仓库/ref/commit 仍未知，快照不是可部署生产 checkout。详见 [WP11-E 审计](wp11e-production-path-audit-20261103.md)。
-- **操作员复核 UI：** 对公开 source-only snapshot 的静态检查显示，`wp8-seoul-ocr-service/muse_adapter.py` 调用字段映射后只输出状态、原因码、字段存在布尔值和草稿状态；没有字段值展示/编辑或把编辑后草稿送入确认流程的代码。`wp10-real-card/wp10_create_readback.py` 只从 stdin 接收已复核且已确认的 JSON。此结论仅针对脱敏审阅快照；它不证明 MUSE 生产会话是否另有 UI，但“字段级待确认草稿 → 用户修订 → 明确确认 → 写入”的 live 流程仍未验收。
-- **控制风险：** 快照静态审计确认旧 create 入口未强制确认状态、查重缺失结果可被当作空结果、MCP 通用重试覆盖写操作、结果/错误可打印原始内容；当前候选已加本地代码门禁。MCP 标准化服务端幂等能力未在目标 MUSE server 证实；本地 journal 仅阻止同一受保护状态目录下的盲重试。MUSE 首尔服务实际部署哈希仍未知。
+- **生产：** MUSE 报告包版本 0.5.0、提交 `8336008d080387ab709d1e0ab9381683b1138e0f`、工作树干净。生产 `fields.py` SHA-256 已在 Git blob 上独立核对。四个 MUSE runtime 脚本已按 source-only 快照导入受控审阅分支，其中 MCP 客户端私有 host 值已在公开副本中脱敏；原始 owner 仓库/ref/commit 仍未知，快照不是可部署生产 checkout。MUSE 后续静态审计确认生产 OCR 入口丢弃坐标；MUSE 报告的 Seoul 部署哈希仍未知。详见 [WP11-E 审计](wp11e-production-path-audit-20261103.md)。
+- **操作员复核 UI：** 对候选 source-only snapshot 的静态检查显示，`wp8-seoul-ocr-service/muse_adapter.py` 调用字段映射后只输出状态、原因码、字段存在布尔值和草稿状态；没有字段值展示/编辑或把编辑后草稿送入确认流程的代码。后续对生产工作流的静态审计也未发现专用字段复核 UI 或代码级确认门禁；MUSE 报告存在聊天层面的手动修正/回复能力，但没有证明这些更改会被代码强制确认。受审生产 `wp10-real-card/wp10_create_readback.py` 在调用者提供字段且查重放行时，可从 `REVIEW_REQUIRED` 状态继续到创建。live MUSE 会话是否另有字段复核流程仍未端到端验收。
+- **控制风险：** 生产只读审计报告：姓名和手机号查重在创建前执行，失败会停止；生产 create 入口本身没有显式确认门禁，可绕过 `REVIEW_REQUIRED`；`contacts_create` 在未知/会话错误或 404 后会由生产客户端重试一次；创建后执行逐字段回读，失败不自动回滚。服务端幂等性、MUSE schema 版本和实际服务器对缺失/空字段的处理均未验证。当前候选要求 `READY`/`MANUALLY_REVIEWED` 与 `USER_CONFIRMED`，写操作不自动重试并以待处理 journal 阻止盲目重开；候选 `mcp_client.py` 的现有测试已覆盖 create 会话错误不重试。MCP 标准化服务端幂等能力未在目标 MUSE server 证实；本地 journal 只覆盖共享同一受保护状态目录的运行时。
 - **验收门禁：** 30 卡集合少于 30、授权未确认、参考标注不完整；当前不得宣布 `v1.0 Stable`。生产未部署新解析器。
 
 ### 接续实施顺序
@@ -20,8 +20,8 @@
 2. **已实现，尚未生产验收：** 两个 OCR 入口在本地候选中复用 Seoul response adapter，保留 `location`、`probability`、`chars`，对缺失/损坏响应 fail-closed；不增加第二套 OCR 模型。
 3. **已完成 WP11-B 至 WP11-G 隔离验证：** 0.11.0 本地与 MUSE 离线套件 127/127；同一 WP10 结果仍 `REVIEW_REQUIRED`。地址字段没有提取，草稿映射被拒。不得放宽并列/重叠门槛、扩大任意跨行搜索、凭 ID 校验单独选值或推断空白框性别。
 4. **已完成：** 读取同一 MUSE 旁聊中的 WP11-G 诊断及补充分类，没有重试、换数据或运行 OCR。确认救援已触发；输入中存在两个不同且都通过地址内容检查的候选，其中一个的列几何近似并列，不能安全归属到其他字段。保留 `REVIEW_REQUIRED` 是当前证据支持的结果，WP11-G 没有安全解析器改动。
-5. **下一步：** 完成只读生产运行链路核对，重点确认操作员能否查看字段级建议、修订 `REVIEW_REQUIRED` 草稿并显式确认；同时核对 MUSE 实际 contacts schema 和 Seoul 服务部署哈希。未证实人工复核入口前，不将被拒字段当作可操作流程。
-6. **生产接入前：** 通过 MUSE 只读确认四个 runtime 文件的真实来源/ref/提交，确认 Seoul 服务部署哈希、MUSE 实际 `contacts_search/create/read` schema，以及操作员 UI 是否提供字段级编辑、复核与确认。当前公开快照 provenance 未知；静态候选源码没有字段级编辑 UI，live MUSE UI 和 search schema 尚未验收；不得部署候选覆盖未知来源。
+5. **已完成只读生产工作流审计：** MUSE 报告生产源码没有专用字段复核 UI 或代码级确认门禁，聊天层手动修正不等同于代码确认；`REVIEW_REQUIRED` 草稿在字段齐全且查重成功时仍可能创建，生产客户端对 `contacts_create` 会在会话错误/404 后重试一次。创建后虽有逐字段回读，失败不自动回滚。live 会话能否提供完整“查看—修订—确认—写入”流程仍未验收。
+6. **生产接入前：** 通过 MUSE 只读确认四个 runtime 文件的真实来源/ref/提交，确认 Seoul 服务部署哈希、MUSE 实际 `contacts_search/create/read` schema 及 schema 版本、服务端幂等性、服务器对空字段的处理，以及操作员 UI 是否提供字段级编辑、复核与确认。当前公开快照 provenance 未知；contacts schema 版本和 Seoul 部署哈希未知；不得部署候选覆盖未知来源。
 7. **端到端安全验收：** 以隔离环境证明不确定结果不可绕过复核、查重失败不会变成空结果、写入前要求用户明确确认、写入不自动重试、回读逐字段一致、待处理写入可人工对账；所有成功/失败路径的值不得进入普通日志。
 8. **数据验收继续门禁：** 30 卡集合少于 30、授权未确认、参考标注不完整；不得访问或处理新样本。只有用户明确授权且标注完整后才能计算准确率与人工复核率。
 9. **部署及回滚最后执行：** 仅在生产源 provenance、MUSE schema/UI、真实数据门槛和隔离端到端验收通过后，建立固定版本 pin，做生产部署与回滚演练，并核对生产版本/提交/哈希。当前生产仍为 0.5.0；如 30 卡门槛未满足，最多报告 `VALIDATION_PENDING`，不得称为 `v1.0 Stable`。

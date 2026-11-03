@@ -54,3 +54,22 @@ The MCP protocol has no generally interoperable server-side write idempotency gu
 - Production package remains 0.5.0 by MUSE report. No deployment, Baidu call, iCloud operation, or contact write was performed as part of this repair.
 
 The branch repair is reversible by reverting its commits; no production rollback or contact cleanup is needed because no production change/write occurred. Before any future MUSE deployment, confirm the package/runtime path configuration, MCP host in protected configuration, OAuth state directory, persistent journal location, actual MUSE tool schemas, and the tested package pin. Keep deployment and 30-card validation as separate gated tasks.
+
+## Follow-up MUSE workflow audit (2026-11-03)
+
+MUSE completed a separate read-only static audit of the reported production path. Production remained package 0.5.0 at `8336008d080387ab709d1e0ab9381683b1138e0f`. The audit was static only: no production code execution or change, OCR/Baidu request, iCloud MCP call, or contact operation was performed. The Seoul service's deployed version and hash remain unknown; reported contacts schema keys were inspected, but the live schema version and server behavior are not established.
+
+### Reported production findings
+
+- The production upload path runs the Seoul adapter, converts its result to `OcrResult`, and passes text-only blocks to the line-oriented parser. Coordinate data is not carried through.
+- The inspected production source has no dedicated operator UI for field-level review or editing and no code-level confirmation flag. MUSE reported that chat-level manual correction/reply exists, but the audit did not establish an enforced handoff from correction to confirmation.
+- The production create/readback path searches by name and mobile first and stops on reported search failure. It does not enforce the extraction status or a code-level user confirmation gate; a caller-supplied `REVIEW_REQUIRED` draft may reach create when required values are present and duplicate searches allow it. Missing required keys fail before create; handling of empty values by the server is unknown.
+- The production MCP client retries `contacts_create` once after an unknown/session/404 error. The script performs per-field readback after a returned contact ID; a failed readback does not automatically roll back. No server idempotency key or verified server-side idempotency contract was found.
+
+### Candidate comparison and release decision
+
+The local repair candidate differs: `parse_confirmed_draft` requires `READY` or `MANUALLY_REVIEWED` and `USER_CONFIRMED`; the pending-operation journal blocks a later create after an uncertain outcome; and the local MCP client's retry allowlist is limited to login, search, and read, with an existing regression test asserting a create session rejection is not retried. This is source-level candidate evidence, not proof of production deployment; the sanitized snapshot still lacks an operator review UI, and a complete live edit/confirm handoff has not been verified.
+
+Two write-retry approaches were considered: rely on a server idempotency key, or disable automatic retries for non-idempotent create calls and retain a pending local journal for reconciliation. The server's idempotency support is unknown and the inspected tool schema supplies no verified key, so the candidate reuses the second approach. The local journal only protects runs sharing its protected state directory and does not provide cross-host exactly-once behavior.
+
+**Release result: FAIL / blocked.** Before deployment, verify the production source owner/ref/commit, Seoul deployed hash, live `contacts_search/create/read` schema and version, server idempotency behavior, empty-field semantics, and a working field-level edit/confirm workflow. Then perform isolated end-to-end validation of fail-closed review, create retry suppression, duplicate search, and per-field readback. No new sample access is authorized by this audit; the 30-card gate remains closed.
