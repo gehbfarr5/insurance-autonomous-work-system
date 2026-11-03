@@ -37,6 +37,14 @@
 - 验证顺序：合成多样/同类输入的单元回归、完整离线套件、空模板 CLI，再在精确 pushed commit 上由 MUSE 隔离环境重复离线检查；不读取真实卡或标签。回滚路径为整体 revert schema、模板、测试和文档的同一提交；尚未创建或导出填充后的 1.1 数据。
 - 本机验证已完成：11 个验收指标单测及 144/144 完整离线测试通过（Python 3.14.7 / Pillow 12.2.0），空模板返回预期 `BLOCKED`。MUSE 在精确提交 `1d6b8302eef102aa71f34a4b70f67f73b856eb5a` 的隔离 worktree/venv 上独立通过 144/144，空模板 CLI smoke PASS；真实数据/图片/reference、OCR/Baidu、iCloud/contact、生产、部署、raw export 均为 0，详见[schema 1.1 脱敏复验结果](wp11-30-card-muse-result-20261103-schema-1.1.json)。旧 143/143 结果只验证 schema 1.0。真实卡授权仍未确认，状态保持 `VALIDATION_PENDING`。
 
+### WP11-M 当前候选 WP10 结构化结果复验（2026-11-03）
+
+- **已核对 WP11-B：** MUSE 已在 0.7.0 / `29771eb33b07bd43150dec0a236c2711b290c165` 执行了真实模板隔离复验。结果 `FAIL`：决策 `REVIEW_REQUIRED`，姓名与 reviewed reference 不匹配，手机号/生日/身份证/性别不正确或缺失，草稿映射被拒；Python 3.12.3 / Pillow 10.2.0，90/90 离线测试通过，生产报告为 0.5.0 且未改变。当前 branch 的 `TEST_REPORT.md` 及 WP11-C–J 后续回放记录保留完整边界和原因码。
+- **当前差距：** 最近一条 0.12.0 同输入回放为 `e9814eaee6b16d677ab06f0857fa2a5bd1f6a586`，仍 `REVIEW_REQUIRED`；缺少姓名/手机号等必需字段、地址冲突；身份证字段出现但没有 reviewed reference 核对，不能算准确。活动 MUSE 运行时与其 0.5.0 源 checkout 之间仍没有可验证的部署绑定。
+- **方案与选择：** 仅依赖历史 sanitized 报告不会读取受保护数据，但不能验证当前 branch HEAD；在 MUSE 隔离环境中重放同一份此前已授权 WP10 OCR 结构化结果，能核实当前 parser，且无需新 OCR、不接触联系人。采用第二种。任务和机器结果模板为 [`WP11-M MUSE 当前候选复验`](wp11m-muse-current-candidate-retest-20261103.md) 与 [`结果模板`](wp11m-muse-current-candidate-result-template-20261103.json)。只允许读取原有 WP10 结构化结果及原有 reviewed reference；缺任一项则 `BLOCKED`，不得从旧报告重建。
+- **有依赖顺序的后续工作：** (1) 先完成 WP11-M 当前代码+已有 WP10 结果隔离复验和只读部署来源核对；(2) 若能复现可定位 parser 缺陷，再做局部修复、合成回归、本机完整套件，并对同一旧结果复验；(3) 取得可验证 active-runtime/Seoul source-to-deployment provenance 和字段级 review/confirmation UI 证据后，才进行隔离端到端安全验收；(4) 只有用户明确授权后才打开 30 卡集合，先确认样本和 reviewed labels，再按 schema 1.1 运行多样性与准确率门禁；(5) 以上所有安全、真实数据和生产门禁 PASS 后才制定部署 pin、部署及回滚演练。不得跳步或把合成通过当真实准确率。
+- WP11-M 本身不改代码或生产。若后续候选改动未能通过同一 WP10 复验/合成回归，则 revert 该修复提交；部署前不改变生产。总状态仍为 `VALIDATION_PENDING`，30 卡授权未确认。
+
 ## 1. 业务决策
 
 - 用户确认客户与公司均已授权完整家庭卡照片交由百度 OCR 处理。**本流程不做图片敏感信息遮盖**，不得继续将旧遮盖器作为上线前置需求。
