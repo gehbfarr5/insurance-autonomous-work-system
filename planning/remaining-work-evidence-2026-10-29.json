@@ -2909,5 +2909,34 @@
     "deviceConnected": false,
     "businessStateOrLogsRead": false,
     "implementationChanged": false
+  },
+  "museReadonlyStatus20261103_233312": {
+    "readAt": "2026-11-03T23:33:12+08:00",
+    "source": "Read-only status request and reply in the exact existing Sunshine Forest MUSE thread; scheduler/deployment metadata only.",
+    "forestTaskActive": false,
+    "enabledSchedule": {
+      "count": 1,
+      "dailyAt": "09:00:00",
+      "timezone": "Asia/Shanghai",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestProcessPresence": "NONE_OBSERVED",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerResult": "2026-11-03T09:11:17+08:00 FAILED",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "pixelConnected": false,
+    "businessStateOrLogsRead": false,
+    "taskOrBusinessCodeExecuted": false,
+    "otherChatsInspected": false,
+    "filesOrScheduleOrDeploymentChanged": false,
+    "taskInterrupted": false,
+    "deviceOperationLock": "UNKNOWN; not read in this MUSE-only refresh."
   }
 }

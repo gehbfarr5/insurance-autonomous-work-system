@@ -1,8 +1,8 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
-## 最新Forest运行门禁｜2026-11-03 22:56:37 CST
+## 最新Forest运行门禁｜2026-11-03 23:33:12 CST
 
-在MUSE既有Forest线程完成只读刷新：当前无Forest活动任务，唯一Asia/Shanghai每日09:00调度下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`和`assistant.py` SHA分别仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败仍为11月3日09:11:17，最近成功为10月31日09:15:50；未重读业务结果或原始日志。当前失败层/底因结论不变；11月4日自然运行及同轮证据待观察，不手动补跑。
+在MUSE既有Forest线程完成只读刷新：当前无Forest活动任务，唯一Asia/Shanghai每日09:00调度下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`和`assistant.py` SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败仍为11月3日09:11:17，最近成功为10月31日09:15:50；本次只读scheduler/deployment metadata，未连接Pixel、重读业务结果或原始日志。Pixel设备操作锁与monitor/屏幕/Keyguard/Activity状态仍UNKNOWN，上次身份/APK只读读数约23:14，不作为本次设备门禁。当前失败层/底因结论不变；11月4日自然运行及同轮证据待观察，不手动补跑。
 
 ## live runner附件与prepare等待路径复核｜2026-11-03 22:03 CST
 
