@@ -29,6 +29,14 @@
 
 **Reuse / adapt / avoid：** reuse 首尔 OCR、Baidu block schema、`OcrBlock` 几何解析器、本仓库 atomic-JSON journal、现有 confirmed-draft 校验和逐字段 readback verifier；adapt 四个 source-only runtime caller、严格查重与 create gate，以及 journal 对已知待回读 contact ID 的临时保存/恢复读取；avoid改走 MUSE 直连百度、添加第二套图像模型、发送未经 server/schema 确认的幂等字段，或在无法将 delete token 绑定到 fresh read 时实现删除回滚。当前分支修复不包含生产部署。
 
+### WP11-L 多样性门禁补充（2026-11-03）
+
+- 缺口：schema 1.0 只要求 30 个合格样本与三项研究声明，没有测量手写、清晰度、表格布局的样本多样性。
+- 方案比较：全局操作员声明录入成本低，但不可从数据中复核；逐卡封闭类别码增加少量受保护输入，但能计算可审计的类别分布。选逐卡类别码；继续复用 Python 标准库聚合器和现有 unittest/CLI，不引入依赖。
+- MVP：schema 1.1 加 `handwriting_code` H1–H5、`clarity_code` CLEAR/MODERATE/LOW、`table_layout_code` L1–L5；三个维度各至少两个类别。类别定义、映射和逐卡分配仅留在 MUSE 受保护工作区；被排除样本使用 `NOT_APPLICABLE` 且不计入多样性。只输出汇总类别计数和不同类别数。任何样本数或多样性门禁失败都会阻断 OCR 验收指标。
+- 验证顺序：合成多样/同类输入的单元回归、完整离线套件、空模板 CLI，再在精确 pushed commit 上由 MUSE 隔离环境重复离线检查；不读取真实卡或标签。回滚路径为整体 revert schema、模板、测试和文档的同一提交；尚未创建或导出填充后的 1.1 数据。
+- 本机验证已完成：11 个验收指标单测及 144/144 完整离线测试通过（Python 3.14.7 / Pillow 12.2.0），空模板返回预期 `BLOCKED`。当前 schema 的 MUSE 独立复验待精确提交推送后进行；旧 143/143 结果只验证 schema 1.0。真实卡授权仍未确认，状态保持 `VALIDATION_PENDING`。
+
 ## 1. 业务决策
 
 - 用户确认客户与公司均已授权完整家庭卡照片交由百度 OCR 处理。**本流程不做图片敏感信息遮盖**，不得继续将旧遮盖器作为上线前置需求。

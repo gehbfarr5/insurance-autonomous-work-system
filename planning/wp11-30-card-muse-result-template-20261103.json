@@ -1,5 +1,6 @@
 {
   "schema_version": "1.0",
+  "acceptance_metrics_schema_version": "1.1",
   "task_id": "WP11L-MUSE-30CARD-ACCEPTANCE-20261103",
   "candidate": {
     "branch": "codex/wp11-family-card-table-parser-20261103",

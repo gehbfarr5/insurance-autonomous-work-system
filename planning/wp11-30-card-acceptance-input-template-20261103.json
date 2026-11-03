@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "study": {
     "authorization_confirmed": false,
     "distinct_real_cards_verified": false,
@@ -8,6 +8,9 @@
   "sample_results": [
     {
       "eligible": null,
+      "handwriting_code": "NOT_APPLICABLE",
+      "clarity_code": "NOT_APPLICABLE",
+      "table_layout_code": "NOT_APPLICABLE",
       "auto_usable_draft": null,
       "manual_review_required": null,
       "released_for_confirmation": false,

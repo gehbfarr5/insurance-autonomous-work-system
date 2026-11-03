@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 MINIMUM_ELIGIBLE_SAMPLES = 30
+MINIMUM_DIVERSITY_CATEGORIES = 2
 FIELD_NAMES = (
     "main_customer",
     "name",
@@ -57,6 +58,12 @@ FAILURE_REASON_CODES = frozenset(
 EXCLUSION_REASON_CODES = frozenset(
     {"OUT_OF_SCOPE_SAMPLE", "DUPLICATE_SAMPLE", "PRE_OCR_INPUT_CORRUPT"}
 )
+DIVERSITY_DIMENSIONS = {
+    "handwriting_code": frozenset({"H1", "H2", "H3", "H4", "H5"}),
+    "clarity_code": frozenset({"CLEAR", "MODERATE", "LOW"}),
+    "table_layout_code": frozenset({"L1", "L2", "L3", "L4", "L5"}),
+}
+NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
 class AcceptanceInputError(ValueError):
@@ -110,11 +117,13 @@ def _blocked_summary(blocking_reasons: list[str], study: dict[str, Any]) -> dict
             "distinct_real_cards_verified": study["distinct_real_cards_verified"],
             "reference_annotations_reviewed": study["reference_annotations_reviewed"],
             "minimum_eligible_samples": MINIMUM_ELIGIBLE_SAMPLES,
+            "minimum_distinct_categories_per_dimension": MINIMUM_DIVERSITY_CATEGORIES,
             "total_records": None,
             "eligible_samples": None,
             "excluded_samples": None,
             "blocking_reasons": blocking_reasons,
         },
+        "sample_diversity": _untested_diversity_summary(),
         "auto_usable_drafts": _empty_metric("NOT_TESTED"),
         "manual_review_required": _empty_metric("NOT_TESTED"),
         "released_drafts": None,
@@ -133,6 +142,21 @@ def _blocked_summary(blocking_reasons: list[str], study: dict[str, Any]) -> dict
         "failure_reason_counts": {},
         "contact_safety": _contact_safety_not_tested(),
         "v1_0_stable_status": "VALIDATION_PENDING",
+    }
+
+
+def _untested_diversity_summary() -> dict[str, Any]:
+    return {
+        "minimum_distinct_categories_per_dimension": MINIMUM_DIVERSITY_CATEGORIES,
+        "dimensions": {
+            dimension: {
+                "category_counts": {},
+                "distinct_category_count": None,
+                "status": "NOT_TESTED",
+            }
+            for dimension in DIVERSITY_DIMENSIONS
+        },
+        "status": "NOT_TESTED",
     }
 
 
@@ -156,6 +180,7 @@ def _validate_sample(value: Any, index: int) -> dict[str, Any]:
         path,
         {
             "eligible",
+            *DIVERSITY_DIMENSIONS,
             "auto_usable_draft",
             "manual_review_required",
             "released_for_confirmation",
@@ -164,6 +189,16 @@ def _validate_sample(value: Any, index: int) -> dict[str, Any]:
         },
     )
     eligible = _require_bool(sample["eligible"], f"{path}.eligible")
+    diversity_codes = {
+        dimension: _require_string(
+            sample[dimension],
+            f"{path}.{dimension}",
+            DIVERSITY_DIMENSIONS[dimension]
+            if eligible
+            else frozenset({NOT_APPLICABLE}),
+        )
+        for dimension in DIVERSITY_DIMENSIONS
+    }
     if type(sample["failure_reason_codes"]) is not list:
         raise AcceptanceInputError(f"{path}.failure_reason_codes must be a list.")
     failure_codes = [
@@ -216,6 +251,7 @@ def _validate_sample(value: Any, index: int) -> dict[str, Any]:
             }
         return {
             "eligible": True,
+            **diversity_codes,
             "auto_usable_draft": auto_usable,
             "manual_review_required": review_required,
             "released_for_confirmation": released,
@@ -241,6 +277,7 @@ def _validate_sample(value: Any, index: int) -> dict[str, Any]:
         raise AcceptanceInputError(f"{path} requires one documented exclusion reason.")
     return {
         "eligible": False,
+        **diversity_codes,
         "auto_usable_draft": None,
         "manual_review_required": None,
         "released_for_confirmation": False,
@@ -327,9 +364,37 @@ def aggregate_30_card_acceptance(payload: Any) -> dict[str, Any]:
     ]
     eligible_count = sum(sample["eligible"] for sample in samples)
     excluded_count = len(samples) - eligible_count
-    sample_gate_passed = eligible_count >= MINIMUM_ELIGIBLE_SAMPLES
-    gate_reasons = [] if sample_gate_passed else ["MINIMUM_ELIGIBLE_SAMPLE_COUNT_NOT_MET"]
     valid_samples = [sample for sample in samples if sample["eligible"]]
+    diversity_dimensions: dict[str, Any] = {}
+    diversity_reasons = []
+    for dimension, allowed_codes in DIVERSITY_DIMENSIONS.items():
+        counts = {
+            code: sum(sample[dimension] == code for sample in valid_samples)
+            for code in sorted(allowed_codes)
+        }
+        distinct_count = sum(count > 0 for count in counts.values())
+        diversity_passed = distinct_count >= MINIMUM_DIVERSITY_CATEGORIES
+        diversity_dimensions[dimension] = {
+            "category_counts": counts,
+            "distinct_category_count": distinct_count,
+            "status": "PASS" if diversity_passed else "BLOCKED",
+        }
+        if not diversity_passed:
+            diversity_reasons.append(
+                f"INSUFFICIENT_{dimension.upper()}_DIVERSITY"
+            )
+    diversity_passed = not diversity_reasons
+    diversity_summary = {
+        "minimum_distinct_categories_per_dimension": MINIMUM_DIVERSITY_CATEGORIES,
+        "dimensions": diversity_dimensions,
+        "status": "PASS" if diversity_passed else "BLOCKED",
+    }
+    sample_count_passed = eligible_count >= MINIMUM_ELIGIBLE_SAMPLES
+    gate_reasons = []
+    if not sample_count_passed:
+        gate_reasons.append("MINIMUM_ELIGIBLE_SAMPLE_COUNT_NOT_MET")
+    gate_reasons.extend(diversity_reasons)
+    sample_gate_passed = sample_count_passed and diversity_passed
     released_count = sum(sample["released_for_confirmation"] for sample in valid_samples)
     auto_usable_count = sum(sample["auto_usable_draft"] for sample in valid_samples)
     review_required_count = sum(
@@ -379,11 +444,13 @@ def aggregate_30_card_acceptance(payload: Any) -> dict[str, Any]:
                 "reference_annotations_reviewed"
             ],
             "minimum_eligible_samples": MINIMUM_ELIGIBLE_SAMPLES,
+            "minimum_distinct_categories_per_dimension": MINIMUM_DIVERSITY_CATEGORIES,
             "total_records": len(samples),
             "eligible_samples": eligible_count,
             "excluded_samples": excluded_count,
             "blocking_reasons": gate_reasons,
         },
+        "sample_diversity": diversity_summary,
         "auto_usable_drafts": {
             "numerator": auto_usable_count,
             "denominator": eligible_count,

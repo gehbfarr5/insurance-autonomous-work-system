@@ -1,6 +1,6 @@
 # WP11-L MUSE handoff: 30-card OCR acceptance
 
-**Current state:** `VALIDATION_PENDING`. MUSE completed only the data-free isolated checks on exact commit `376e0d251db3d93e111c973b9f0957c52a356e96`: 143/143 offline tests passed and the blank-template smoke returned the expected `BLOCKED`; see the [sanitized result](wp11-30-card-muse-result-20261103.json). The real-card authorization remains unanswered, and no sample inventory, image, or reference label was accessed.
+**Current state:** `VALIDATION_PENDING`. The evaluator input/output schema is now 1.1 and adds closed diversity codes for handwriting, clarity, and table layout. MUSE's earlier data-free check on commit `376e0d251db3d93e111c973b9f0957c52a356e96` passed 143/143 tests, before this schema change; it is historical evidence only. Re-run the data-free checks on the exact branch HEAD when executing this handoff. The real-card authorization remains unanswered, and no sample inventory, image, or reference label was accessed.
 
 The data-free section may be rerun if code changes. The real-card section may be executed only after the user explicitly authorizes that work; without authorization, MUSE must stop before inspecting any real-data inventory.
 
@@ -11,6 +11,7 @@ Candidate:
 - Repository: https://github.com/gehbfarr5/insurance-autonomous-work-system
 - Branch: codex/wp11-family-card-table-parser-20261103
 - Package: muse-customer-card-ocr 0.12.0
+- Acceptance metrics schema: 1.1
 - At execution, resolve the branch's current full HEAD SHA, record it, and use that exact SHA in a clean detached worktree.
 
 Safety boundary:
@@ -23,22 +24,24 @@ Data-free isolated checks (may be performed without real-data authorization):
 1. Fetch only the authorized feature branch, verify the exact commit above, and create a clean detached worktree and isolated virtual environment. Do not import the production environment or modify a MUSE production checkout.
 2. Record the Python and Pillow versions. Run the complete package suite from integrations/muse-customer-card-ocr:
    PYTHONPATH=src python3 -m unittest discover -s tests -q
-   Expected at this commit: 143 tests. Report actual counts; do not substitute the expected count for the observed result.
+   Report actual counts; do not substitute an expected count for the observed result.
 3. Run the aggregator against the blank template:
    PYTHONPATH=src python3 -m muse_customer_card_ocr.acceptance_metrics ../../planning/wp11-30-card-acceptance-input-template-20261103.json
-   Expected: exit 0, real_card_ocr_result = BLOCKED, authorization/distinctness/reference gates false, and all sample counts null. This must make zero OCR/provider/contact calls.
+   Expected: exit 0, real_card_ocr_result = BLOCKED, authorization/distinctness/reference gates false, sample counts null, and diversity status NOT_TESTED. This must make zero OCR/provider/contact calls.
 
 Real-card validation (do not start unless explicitly authorized):
 1. Before opening any sample, confirm the authorization covers the existing set, comparison against reviewed labels, and one Seoul/Baidu OCR pass per image only where no matching authorized OCR result already exists. If authorization is absent or ambiguous, stop with BLOCKED and no data access.
 2. In the protected workspace, confirm at least 30 different authorized in-scope cards and complete, human-reviewed reference annotations. If either condition fails, stop before OCR and return BLOCKED. Do not exclude a difficult or failed OCR sample after seeing its output; decide eligibility before OCR. Count all in-scope cards, including low-quality or parser-failing examples, as eligible. Exclude only duplicate, out-of-scope, or corrupt-before-OCR items using the fixed reason codes.
+   Before OCR, assign each eligible card one `handwriting_code` from H1–H5, one `clarity_code` from CLEAR/MODERATE/LOW, and one `table_layout_code` from L1–L5 using a codebook defined and retained only in the protected MUSE workspace. The codebook must distinguish the observed handwriting groups and table-layout groups and define the clarity levels consistently. Do not export category descriptions, per-card assignments, or the codebook; only the aggregator's category counts may leave that workspace. Excluded rows must use NOT_APPLICABLE for all three codes.
 3. Reuse a matching, previously authorized Seoul OCR response when available. Otherwise make one OCR request for that sample through the existing Seoul service path. Preserve the structured coordinates/confidence/character metadata and run the exact candidate parser from this branch. Do not change parser rules, add a line-text fallback, infer birthday from identity number, infer gender, or relax ambiguity gates during this validation.
-4. Compare output only with reviewed labels inside the protected workspace. For each eligible card, record only the booleans `auto_usable_draft`, `manual_review_required`, and `released_for_confirmation`; field accuracy states for main_customer, name, mobile, identity_number, gender, explicit_birthday, address, and other_phone; and closed failure codes from `acceptance_metrics.py`. Do not include sample IDs or field values. For a draft classified as ready for ordinary confirmation, compare its final candidate values with the reviewed labels; this classification does not claim that a live MUSE review UI was exercised. A missing optional value is PASS only when the reviewed label confirms it should be absent. Use NOT_TESTED when comparison was not made. The evaluation does not submit confirmation or create a contact.
+4. Compare output only with reviewed labels inside the protected workspace. For each eligible card, record only the three diversity codes; the booleans `auto_usable_draft`, `manual_review_required`, and `released_for_confirmation`; field accuracy states for main_customer, name, mobile, identity_number, gender, explicit_birthday, address, and other_phone; and closed failure codes from `acceptance_metrics.py`. Do not include sample IDs or field values. For a draft classified as ready for ordinary confirmation, compare its final candidate values with the reviewed labels; this classification does not claim that a live MUSE review UI was exercised. A missing optional value is PASS only when the reviewed label confirms it should be absent. Use NOT_TESTED when comparison was not made. The evaluation does not submit confirmation or create a contact.
 5. Save the populated boolean/status input only in the protected MUSE workspace. Run the aggregator from the package directory:
    PYTHONPATH=src python3 -m muse_customer_card_ocr.acceptance_metrics /protected/path/30-card-results.json
    Return its aggregate JSON in the result wrapper. Do not export the populated input.
 
 Acceptance interpretation:
-- Require at least 30 eligible distinct cards plus all authorization, distinctness, and reference-review gates.
+- Require at least 30 eligible distinct cards plus all authorization, distinctness, and reference-review gates. Among eligible cards, require at least two distinct codes in each of handwriting, clarity, and table layout; excluded rows never contribute. If any sample or diversity gate fails, the OCR result must remain BLOCKED.
+- The aggregate wrapper may contain only category counts and distinct-category totals; it must not include sample-level output, IDs, category descriptions, or the protected codebook.
 - Auto-usable draft rate = auto_usable_draft true / eligible samples; target >= 90%.
 - Manual-review-required rate = manual_review_required true / eligible samples; report exact numerator and denominator.
 - Main-customer selection, name, mobile, and identity-number accuracy each use every released-for-confirmation draft as the denominator; target 100%. NOT_TESTED stays in the denominator and cannot be counted correct.
