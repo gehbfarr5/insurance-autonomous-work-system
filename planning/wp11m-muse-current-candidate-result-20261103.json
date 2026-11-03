@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11M-MUSE-CURRENT-CANDIDATE-REPLAY-20261103",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "6d5e7d4b8bbf29e8e5b4b1bc9bf43fa2d344cb6b",
+    "package_version": "0.12.0"
+  },
+  "environment": {
+    "os_image": "Ubuntu 24.04.5 LTS (Linux x86_64)",
+    "python_version": "3.12.3",
+    "pillow_version": "12.3.0",
+    "isolated_worktree": true,
+    "isolated_virtualenv": true
+  },
+  "offline_suite": {
+    "status": "PASS",
+    "passed": 144,
+    "failed": 0,
+    "errors": 0
+  },
+  "wp10_replay": {
+    "structured_result_available": "YES",
+    "reviewed_reference_available": "NO",
+    "parser_replay_status": "FAIL",
+    "accuracy_comparison_status": "BLOCKED",
+    "decision": "REVIEW_REQUIRED",
+    "draft_mapping": "REJECTED",
+    "reason_codes": [
+      "table_layout_uncertain",
+      "main_customer_identity_unclear",
+      "mobile_missing",
+      "address_conflict",
+      "address_uncertain"
+    ],
+    "field_presence": {
+      "main_customer": "ABSENT",
+      "name": "ABSENT",
+      "mobile": "ABSENT",
+      "identity_number": "PRESENT",
+      "explicit_birthday": "ABSENT",
+      "gender": "ABSENT"
+    },
+    "field_match_to_reference": {
+      "main_customer": "NOT_CHECKED",
+      "name": "NOT_CHECKED",
+      "mobile": "NOT_CHECKED",
+      "identity_number": "NOT_CHECKED",
+      "explicit_birthday": "NOT_CHECKED",
+      "gender": "NOT_CHECKED",
+      "address": "NOT_CHECKED",
+      "other_phone": "NOT_CHECKED"
+    },
+    "source_envelope_integrity": "IN_MEMORY_ADAPTATION"
+  },
+  "production_readback": {
+    "status": "UNKNOWN",
+    "reported_package_version": "UNKNOWN",
+    "active_runtime_version": "UNKNOWN",
+    "active_runtime_commit_or_hash": "UNKNOWN",
+    "source_to_deployment_binding": "UNKNOWN",
+    "production_unchanged": "UNKNOWN"
+  },
+  "operation_counts": {
+    "branch_fetches": 2,
+    "wp10_structured_result_reads": 1,
+    "wp10_reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_creates": 0,
+    "contact_reads": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0
+  }
+}
