@@ -10,6 +10,10 @@ MUSE只读快照14:09 CST当时报告下一自然运行为11月4日09:00，且�
 
 15:37 CUA应用清单显示MUSE进程运行，但无可用MUSE连接器；为不碰此前WP1图片附件任务，本轮未打开MUSE界面。当前MUSE scheduler/queue/task仍UNKNOWN，且无法证明Pixel无并发，因此未新连Pixel；15:22 readback为最近历史数据，不作当前preflight。下一步的设备访问门禁和自然运行后采集前置条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 
+### 五项日常实现来源复核｜2026-11-03 15:43 CST
+
+公开`forest_policy`仅是签到/收取离线策略。私有本地10月26日执行器 `run.py` 哈希与11月3日MUSE脱敏包报告的live `run.py` 哈希不同；live源文件未随包交付，不能本机复算。时光轴有旧本地`run_timeline`路径；温价和助理仍分别缺独立温价收据、AI答案/奖励回执；详细来源级别与最近结果见[本地证据核查](local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)。未把历史代码或合成测试写成当前部署验收。
+
 Pixel 登录助手 EXIT 组件状态恢复会杀掉 AutoX 引擎的根因已通过脚本与 Android 退出记录定位。现使用 Android 15 root-only 固定组件调用，以 `DONT_KILL_APP` 恢复组件并读回；手动冷启动、与显式入口并发及重复启动的实机回归通过。11月2日只读读数与10月30日部署快照同 PID/锁 inode、心跳新鲜、组件默认态，跨日守护存活读数通过。公开源码及方法见[认证助手说明](../tools/pixel-auth/README.md)，原始安装/设备证据仍私存。
 
 10月31日与11月1日的只读脱敏原始记录包已从既有MUSE旁聊下载并独立核对：外层SHA-256 `02880354641ea9b216c3ee0d4b8d4c4b93a6811bb8eaa41a8eb30f568d60bea9`，ZIP 7个文件，`HASHES.txt`中的6个成员哈希均匹配。包保存在本机忽略的 `.private/continuation-20261030/`，公开仓库只写摘要与哈希索引。

@@ -1,6 +1,6 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
-## 当前接续状态｜2026-11-03 15:37 CST
+## 当前接续状态｜2026-11-03 15:43 CST
 
 - 最新事实与来源见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。MUSE 14:09快照曾报告每日09:00、下一次11月4日，且当时无运行/排队/在途任务；15:37 CUA仅确认MUSE应用进程运行，当前任务/调度/队列未读回，必须保留UNKNOWN。
 - 15:22通过既有`pixel3a-kjgx`别名及其`su`路径读到Pixel Dozing、Forest未在前台、monitor `watching`、guard清、heartbeat新鲜、requests=0；设备操作锁/stop/blocked标记不存在，monitor自身锁存在。SecureView v0.19 APK完整哈希仍匹配runner pin；原触发器/worker哈希未变。
@@ -11,6 +11,10 @@
 ### 并发门禁复核｜2026-11-03 15:37 CST
 
 当前 CUA 应用清单显示 MUSE 进程运行中，但没有可用 MUSE 工具连接器；本轮未打开 MUSE 界面，以免触碰此前正在处理的 WP1 图片附件任务。应用进程状态不等于 scheduler/queue/task readback，故当前运行、排队、在途状态继续 UNKNOWN。没有在确认无并发前重新连接 Pixel；15:22 Pixel 读数仅作为最近一次历史只读证据，不是当前 preflight。下次接手先通过 MUSE 原入口确认任务状态；若仍不能确认，则跳过 Pixel 诊断，维持 UNKNOWN。
+
+### 日常任务实现来源复核｜2026-11-03 15:43 CST
+
+公开`forest_policy`只含离线签到/领取策略，不是完整执行器；10月26日私有本地runner/任务代码与MUSE 11月3日报告的live `run.py`哈希不一致，不能将旧副本当作当前部署或据此直接修复。逐项源文件、最近业务回执及限制见[本地证据核查](local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)。
 
 ### 2026-11-03 五段运行只读对照（历史细节）
 

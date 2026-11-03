@@ -6,6 +6,8 @@
 
 - **同轮prepare登录态细项仍不可用：** 当前Pixel v0.19 APK SHA-256与MUSE runner精确工件pin一致；替换APK安装prepare观察器会触发runner哈希门禁。故`user`、`empNoAES`、`operateFlag`仍标为UNKNOWN。私有只读exporter会在自然运行后通过同一alias读取monitor sidecar与带epoch时间的模块marker，仅在唯一assistant/main区间匹配时关联；其采集与joiner合成验证通过。
 
+- **五项日常的当前实现来源仍不完整：** 本机公开`forest_policy`只覆盖离线签到/领取策略；10月26日私有本地执行器与11月3日MUSE报告的live `run.py`哈希不同，live源文件字节未随脱敏包交付。本机旧副本、历史实机回执和MUSE报告哈希不可互相替代；逐项映射和证据级别见[实现来源核查](../planning/local-evidence-audit-2026-10-29.md#日常五项实现与部署来源边界2026-11-03-1543-cst)。
+
 - **官方规则/时点原据：** 本机`rules.json` SHA-256与公开索引一致，原页面只证明阳光/雨露日上限10/20及“每人/次/单”计量，不证明重置时点、单项重复周期或到账时延。15:27前对Drive“保险”资料作了定向关键词复查，并对CPIC官方域名作公开检索，未命中可核验的完整时点原据；这只是本次有界查找未命中，不表示历史确认未发生或原件不存在。五项扩展仍按已核证据保持“仍待核实”，没有证据归为现实外部阻碍。详见[来源与扩展核查](../planning/remaining-work-2026-10-29.md)。
 
 
