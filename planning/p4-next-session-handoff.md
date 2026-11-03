@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-03 22:37—22:43 CST：最新自然运行门禁
+
+MUSE于22:37:51在既有Forest线程只读回读：Forest无活动任务，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；唯一启用schedule为Asia/Shanghai每日09:00、下次11月4日09:00，live `run.py`/`assistant.py`哈希与已记录值一致。随后22:43:04经既有Pixel别名、非root只读确认UID 10249、Pixel 3a、Android 15、boot完成；SecureView安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`匹配v0.19 pin。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，未猜路径或提权读取。没有运行任务/源码、设备写入、部署、业务状态读取或schedule变更。接续动作：保留既有09:00 schedule，11月4日自然轮结束后先读MUSE同轮脱敏prepare事件、结果、stages、assistant状态及cleanup；没有已验证的非root设备读取方法时，设备字段继续UNKNOWN。详见[运行手册](forest-diagnostics-operations-2026-11-04.md)与结构化证据`museReadonlyStatus20261103_223751` / `pixelReadonlyPreflight20261103_224304`。
+
 ## 2026-11-03 22:33 CST：助理点击、答案与奖励回执边界补核
 
 本机0600私有`assistant.py`副本12,700字节、SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，与MUSE 22:26:24 live值一致。AST/静态审阅、未执行：先写`DISPATCHING/UNKNOWN`防重，只有点击确认才转`SENT`；`receipt_bridge.poll`需要`ACCEPT`才追加`answer_confirmed`，失败则`REVIEW`且不重放。之后只回读Forest余额/待领项，`rewardPromised=false`，没有奖励确认字段。10月31日结果`SENT / REVIEW`、答案/奖励仍未证；11月3日`NOT_SENT`。代码含特权设备导航/清理路径，不运行或复用。证据键`assistantReceiptPathReview20261103_2233`。

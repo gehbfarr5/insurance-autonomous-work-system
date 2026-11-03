@@ -1,5 +1,9 @@
 # 缺失内容与 P4 按需核查
 
+## 当前自然运行与设备读取门禁｜2026-11-03 22:37—22:43 CST
+
+MUSE 22:37:51回读时Forest无活动/排队/在途任务、runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00，live哈希不变。22:43:04 Pixel经既有别名以非root只读确认Pixel 3a/Android 15/boot完成，SecureView安装APK hash匹配v0.19 pin。设备操作锁、monitor私有状态/hash及屏幕/Keyguard/前台Activity均UNKNOWN；当前没有已验证的非root读取方法。保留既有调度，等11月4日自然运行后先在MUSE读取同轮脱敏事件/结果/stages/cleanup；只有存在精确、已验证的非root路径才读取设备，否则保持UNKNOWN。无部署、重试、设备/业务状态或调度更改。结构化记录：`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。
+
 ## 智能助理答案与奖励回执边界｜2026-11-03 22:33 CST
 
 与MUSE 22:26:24 live哈希一致的私有`assistant.py`（12,700字节，SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`）经静态审阅显示：只有点击返回`clicked=true`才记`SENT`；随后必须由`receipt_bridge.poll`得到`ACCEPT`才记`answer_confirmed`，否则进入`REVIEW`并保持不可重放。答案确认后仅回读森林余额/待领项，明确`rewardPromised=false`，没有奖励确认字段。故发送、答案确认和奖励确认是三件不同的事；10月31日仍为`SENT / REVIEW`且无答案/奖励回执，11月3日`NOT_SENT`。源码未运行；完整结构化证据`assistantReceiptPathReview20261103_2233`。

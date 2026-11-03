@@ -1,5 +1,9 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## 最新自然运行与设备预检｜2026-11-03 22:37—22:43 CST
+
+MUSE 22:37:51在既有Forest线程报告无活动/排队/在途任务，runner lock FREE、无Forest进程，唯一schedule为Asia/Shanghai每日09:00、下次11月4日09:00；live `run.py`/`assistant.py`哈希未变。22:43:04经现有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成，SecureView安装APK SHA匹配v0.19 pin。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN。未部署、写设备、运行任务或读业务state；下一步等既有11月4日自然运行并先读同轮脱敏结果，设备侧仅在存在准确已验证的非root读取方法时继续。P4开放、S1未验收。证据键：`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。
+
 ## 助理答案/奖励回执边界｜2026-11-03 22:33 CST
 
 匹配MUSE 22:26:24 live hash的私有`assistant.py`已只读静态审阅：`SENT`只表示点击确认；独立答案回执需`ACCEPT`才记`answer_confirmed`，否则保留防重并进入`REVIEW`。后续虽读取Forest余额和待领项，仍明确`rewardPromised=false`，没有奖励确认字段。10月31日`SENT / REVIEW`不等于回答或奖励完成；11月3日`NOT_SENT`。源码未执行，特权设备路线不复用。详见[回执审计](local-evidence-audit-2026-10-29.md#智能助理答案与奖励回执边界2026-11-03-2233-cst)及`assistantReceiptPathReview20261103_2233`。

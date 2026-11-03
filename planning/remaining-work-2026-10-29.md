@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 最新Forest/Pixel只读预检｜2026-11-03 22:37—22:43 CST
+
+MUSE 22:37:51回读当时无Forest活动任务，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，live源码哈希不变。22:43:04经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成；SecureView安装APK SHA-256匹配v0.19 pin。设备操作锁、monitor私有状态/hash及显示/Keyguard/前台Activity仍UNKNOWN。没有设备写入、业务state读取、任务/源码运行、部署或调度变化。下一步保留09:00自然运行，先读取MUSE同轮脱敏结果与cleanup；无精确已验证的非root设备方法时不采设备私有状态。证据键`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。
+
 ## 智能助理答案与奖励回执边界｜2026-11-03 22:33 CST
 
 私有assistant源码静态调用链表明点击确认、答案确认和奖励确认互不等价：日状态先写`DISPATCHING/UNKNOWN`；只有点击ack才写`SENT`；答案回执`ACCEPT`才写`answer_confirmed`，否则`REVIEW`且防重。返回森林后只读balance/pending，并记录`rewardPromised=false`，没有奖励确认字段。因此10月31日`SENT / REVIEW`不能认定答案/奖励完成；现有结果显示答案回执超时，after回执缺失。11月3日`NOT_SENT`，不能当作完成或再次重放。私有来源哈希、回执路径和限制见`assistantReceiptPathReview20261103_2233`。

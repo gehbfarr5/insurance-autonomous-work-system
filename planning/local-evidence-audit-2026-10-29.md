@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## Forest与Pixel最新只读状态｜2026-11-03 22:37—22:43 CST
+
+MUSE 22:37:51在精确既有Forest线程回读无活动任务、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00，live `run.py`/`assistant.py` SHA仍为已核实值。22:43:04经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成，并对已安装SecureView APK重算SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`，匹配v0.19 pin。设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN；本机runbook无精确、已验证的非root读取方法。未使用root/su，未运行业务/源码、读取业务state/raw logs、安装/部署、写设备或修改schedule。时点字段与边界见结构化证据`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。
+
 ## 智能助理答案与奖励回执边界｜2026-11-03 22:33 CST
 
 本机用户私有Downloads副本`sunshine-forest-assistant-live-candidate-20261103.py`为12,700字节、0600权限；本机SHA-256 `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`，匹配MUSE 22:26:24只读状态报告的live `assistant.py` hash。用Python AST与静态源码审阅，未执行：

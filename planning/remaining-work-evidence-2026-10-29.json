@@ -2734,5 +2734,35 @@
     "actions": "No customer screenshots or private form contents opened; no customer contacted, form submitted, task completed, production action replayed, device/state changed, or automation deployed.",
     "recordedDate": "2026-11-03",
     "officialSearchApproximateLocalTime": "2026-11-03 about 22:12 Asia/Shanghai"
+  },
+  "museReadonlyStatus20261103_223751": {
+    "recordedAt": "2026-11-03T22:37:51+08:00",
+    "source": "Read-only status reply in the existing Sunshine Forest MUSE thread.",
+    "forestTaskActive": false,
+    "schedule": {"enabledCount": 1, "timezone": "Asia/Shanghai", "dailyAt": "09:00:00", "nextTrigger": "2026-11-04T09:00:00+08:00"},
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestAgentProcess": "ABSENT",
+    "liveHashes": {"runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562", "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"},
+    "latestSchedulerFailure": "2026-11-03T09:11:17+08:00",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "otherChats": "Not inspected.",
+    "businessResults": "Not reread.",
+    "actions": "No device connection, job/business-code execution, business-state/raw-log read, file/deployment/cron/schedule/credential change, other-chat inspection, or task interruption."
+  },
+  "pixelReadonlyPreflight20261103_224304": {
+    "readAt": "2026-11-03T22:43:04+08:00",
+    "transport": "Existing configured SSH alias only; non-root, read-only shell.",
+    "remoteUid": 10249,
+    "device": {"model": "Pixel 3a", "android": "15", "bootCompleted": true},
+    "installedSecureViewApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "secureViewHashMatchesKnownV019Artifact": true,
+    "deviceOperationLock": "UNKNOWN; no exact documented non-root read method was available.",
+    "monitorStatusAndHash": "UNKNOWN; private app data not read.",
+    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
+    "rootOrSuUsed": false,
+    "actions": "No app/process start or stop, install/deploy, device or state write, business-state read, task/code execution, schedule change, or credential/network change."
   }
 }

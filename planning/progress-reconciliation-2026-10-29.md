@@ -1,5 +1,9 @@
 # 保险项目进度与未同步成果核对｜2026-10-29
 
+## 2026-11-03 22:37—22:43 CST：同步最新Forest与Pixel只读门禁
+
+MUSE 22:37:51只读状态为无活动任务、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；每日09:00 schedule下次11月4日，live哈希未变。22:43:04 Pixel经既有别名以UID 10249非root只读确认Pixel 3a/Android 15/boot完成，SecureView APK SHA匹配v0.19 pin。设备锁、monitor私有状态、屏幕/Keyguard/Activity仍UNKNOWN；无已验证的非root读取路径。未运行业务/源码、写设备、部署或改调度。下一步等既有自然运行并先读MUSE同轮证据；P4仍开放、S1未验收。详见[运行手册](forest-diagnostics-operations-2026-11-04.md)、[交接](p4-next-session-handoff.md)及证据键`museReadonlyStatus20261103_223751`、`pixelReadonlyPreflight20261103_224304`。
+
 ## 2026-11-03 22:33 CST：助理答案/奖励回执状态静态核对
 
 本机0600私有`assistant.py`副本 SHA-256与MUSE 22:26:24 live值一致。代码只在点击返回`clicked=true`后记`SENT`，并另行轮询答案回执；仅`ACCEPT`记`answer_confirmed`，未知/失败进入`REVIEW`并防重。回到森林后读取balance/pending，但显式写`rewardPromised=false`，所以这条读取不是奖励确认。10月31日仍`SENT / REVIEW`，11月3日`NOT_SENT`；本轮未运行源码或设备。详情见[本地证据审计](local-evidence-audit-2026-10-29.md#智能助理答案与奖励回执边界2026-11-03-2233-cst)。
