@@ -1,11 +1,12 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
-## 当前接续状态｜2026-11-03 14:40 CST
+## 当前接续状态｜2026-11-03 15:08 CST
 
-- 最新事实、来源与授权边界见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。MUSE 14:09 CST本地调度快照报告每日09:00、下一次11月4日、当时无运行/排队任务。11月3日scheduled assistant/main止于prepare timeout，无业务stage/receipt，cleanup报告PASS；间隔缺失仍UNKNOWN。
-- Pixel仅经既有`pixel3a-kjgx`别名只读复核；14:40再次确认`sargo`/Android 15/boot完成，但允许路径的dumpsys过滤无焦点/Keyguard或resumed Activity输出，screen和app私有sidecar仍不可用。MUSE此前切换到非授权显式Termux SSH路由，已要求停止且不得复用；路线外设备字段作废，不作部署前置证据。
-- 11月4日有界诊断包仅在本机离线验证。当前没有经授权且无需root的sidecar收集路径，也没有Android/AutoX实机兼容证据。不得部署或重启候选。自然运行前只通过现有别名复查基本状态；若授权收集路径仍不可用，只读现有脱敏运行结果，设备字段继续标为UNKNOWN。
-- 不重跑/补跑，不修改state、cron或调度。P50/月度规划继续挂起，2U＝2800保留；P4/S1未整体验收。
+- 最新事实、来源与授权边界见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)。MUSE 14:09 CST快照报告每日09:00、下一次11月4日，当时无运行/排队任务。11月3日scheduled assistant/main止于prepare timeout，无业务stage/receipt，cleanup报告PASS；间隔缺失仍UNKNOWN。
+- 既有`pixel3a-kjgx`别名的`su`路径可读Pixel app-private状态；rootless `dumpsys`因缺Android `DUMP`权限失败。15:08 root read显示设备Dozing、Forest/gesture页未恢复。MUSE此前使用另一显式Termux路线的字段仍排除，不复用该路线。
+- Monitor-only固定窗口候选已安装，live SHA-256 `2b611ca1…`，状态`watching`、guard清、heartbeat新鲜、requests=0。重启使进程内计数从6重置为0；输入审计12条未变，最后写入10月31日。baseline SHA-256 `238d86a8…`有本地/设备备份，且回滚已实际验证。sidecar窗口外不存在。
+- Forest prepare observer和assistant gate expression仍离线。Pixel v0.19 APK hash与MUSE runner精确pin `dbada93c…`一致；改APK会使runner fail closed。私有exporter已准备并通过合成检查，11月4日自然运行后用脱敏MUSE segment intervals按logcat epoch/sidecar时间做唯一区间匹配。
+- 不重跑/补跑，不修改业务state、cron或调度。P50/月度规划继续挂起，2U＝2800保留；P4/S1未整体验收。
 
 ### 2026-11-03 五段运行只读对照（历史细节）
 
