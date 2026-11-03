@@ -186,6 +186,35 @@
       "privateFilenameScope": "../.private/p4-wp01; basenames only, matching rule/time/source/evidence/schedule/history/confirm",
       "summary": "D-029's prior-confirmation statement appears by fb148f2 without an official source title or URL; the contemporaneous audit says the original output was not located within its directed search. The bounded filename review found no distinct timing-source file. No private file contents, screenshots, or mixed customer forms were opened.",
       "scopeLimit": "Applies only to the reviewed public Git history and controlled private filenames. It excludes MUSE thread history, broad home-directory search, and private-file contents; it does not prove source absence or negate D-029's recorded prior confirmation."
+    },
+    {
+      "id": "X07",
+      "recordKey": "googleDriveTimingSourceSearch20261104_0351",
+      "source": "Connected Google Drive metadata-only document search",
+      "searchedAt": "2026-11-04 03:51:27–03:51:28 Asia/Shanghai",
+      "queries": [
+        "阳光森林 日重置 时间规则"
+      ],
+      "topN": 10,
+      "resultCount": 0,
+      "contentFetched": false,
+      "scopeLimit": "Viewed-document metadata result for this query only; does not prove the source absent or negate D-029."
+    },
+    {
+      "id": "X08",
+      "recordKey": "officialForestRuleSearch20261104_0351",
+      "source": "CPIC official-domain public search results",
+      "searchedAt": "2026-11-04 03:51:28–03:51:52 Asia/Shanghai",
+      "domains": [
+        "cpic.com.cn",
+        "m.cpic.com.cn",
+        "life.cpic.com.cn"
+      ],
+      "queries": [
+        "阳光森林 任务日重置时间 奖励触发 周期"
+      ],
+      "summary": "Returned results were unrelated insurance/health materials; no directly relevant Forest reset, reward trigger, or cycle source was found.",
+      "scopeLimit": "Bounded public search only; does not prove that the original source is absent or negate D-029."
     }
   ],
   "runtimeObservations": [
@@ -245,6 +274,34 @@
       "source": "Local macOS process inventory only; no SSH connection or ADB device query",
       "summary": "A corrected filter requiring the executable basename ssh and the existing alias string pixel3a-kjgx found no active matching SSH process. A local adb fork-server process was present in an earlier same-turn inventory; no adb device list was queried and no Pixel association is inferred. An initial awk attempt failed on multibyte input, and a broader args match was invalid; the corrected executable-constrained result is the usable observation.",
       "scopeLimit": "Local process presence only; does not establish Pixel reachability, lock, monitor state/hash, or UI. The last bounded non-root Pixel identity/APK read is 03:31:59; no device/private-data read occurred in this checkpoint. No credentials, endpoints, or raw process arguments were recorded."
+    },
+    {
+      "recordKey": "museReadonlyStatus20261104_034707",
+      "observedAt": "2026-11-04 03:47:07 Asia/Shanghai",
+      "source": "Existing Sunshine Forest MUSE thread; read-only scheduler/deployment status refresh",
+      "summary": "No active Forest task; running/queued/in-flight 0/0/false; MUSE runner lock FREE; no Forest process observed. One enabled daily 09:00:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00:00. Live run.py SHA-256 de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562 and assistant.py SHA-256 7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c. Latest scheduler result remains 2026-11-03 09:11:17 failed; last success 2026-10-31 09:15:50.",
+      "scopeLimit": "Point-in-time scheduler/deployment metadata in the exact existing thread only. Does not establish Pixel lock, monitor state/hash, UI, same-run result, or device connectivity. No business-state/raw-log read, task execution, or state/schedule/deployment change."
+    },
+    {
+      "recordKey": "pixelLocalAliasProcessCheck20261104_0350",
+      "observedAt": "Completed immediately before the Pixel preflight at device time 03:50:29 Asia/Shanghai; exact local second unavailable",
+      "source": "Corrected local macOS process inventory before SSH; no device query",
+      "summary": "Filter requiring executable basename ssh and existing alias pixel3a-kjgx found no active matching local SSH process. No process arguments or secrets were retained.",
+      "scopeLimit": "Preflight only. Does not establish Pixel reachability, offline status, operation lock, monitor, or UI."
+    },
+    {
+      "recordKey": "pixelReadonlyPreflight20261104_035029",
+      "observedAt": "2026-11-04 03:50:29 Asia/Shanghai (device clock)",
+      "source": "Existing pixel3a-kjgx SSH alias; non-root bounded read-only preflight after fresh MUSE status",
+      "summary": "UID 10249; Pixel 3a; Android 15; timezone Asia/Shanghai; boot completed; device clock 03:50:29. Installed com.p4.secureview base APK SHA-256 dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167 matches the known v0.19 pin.",
+      "scopeLimit": "Identity, boot, time, and installed APK only. No root/su, business-state/raw-log read, task/code execution, app launch/stop, device write, install/restart, deployment or schedule change. Device operation lock, monitor state/hash, screen, Keyguard and foreground Activity remain UNKNOWN."
+    },
+    {
+      "recordKey": "pixelProcessFilter20261104_035029",
+      "observedAt": "After the 03:50:29 device-clock preflight; exact process-query time unavailable",
+      "source": "Existing pixel3a-kjgx alias; corrected non-root ps -A name filter",
+      "summary": "Initial remote awk-based process filter failed on quoting and produced no valid observation. Corrected ps -A output filtered for autox|autojs|secureview|org.autojs returned NO_MATCH and the SSH command ended normally. This is limited to those name patterns.",
+      "scopeLimit": "No conclusion that all processes or the monitor are absent/stopped. No overall device-lock or monitor read; no private-data path verified. No root/su, business-state/raw-log read, task/code execution, app action, device write, install/restart, or schedule/deployment change."
     }
   ]
 }

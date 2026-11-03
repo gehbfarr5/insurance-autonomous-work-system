@@ -1,5 +1,13 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 03:47–03:52 CST — fresh scheduler, device, and rule-source checkpoint
+
+At 03:47:07, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, and no Forest process observed. The existing daily 09:00 Asia/Shanghai schedule remains enabled; its next trigger is today at 09:00. Live runner/assistant hashes and the latest failed/successful run timestamps are unchanged. This is point-in-time scheduler metadata only.
+
+Before connecting, a corrected local process inventory found no active `ssh` executable matching the existing `pixel3a-kjgx` alias. The subsequent bounded non-root read returned UID 10249, Pixel 3a, Android 15, Asia/Shanghai, boot complete, and device time 03:50:29. The installed SecureView APK SHA-256 still matches v0.19. An initial remote process-filter attempt failed on quoting and yielded no result; the corrected narrow `ps -A` name filter returned no matching lines. That does not establish monitor absence. Pixel operation lock, monitor state/hash, screen, Keyguard, and foreground Activity remain UNKNOWN; stop/rollback remains BLOCKED.
+
+A metadata-only Google Drive search for reset timing and a CPIC-domain public search returned no relevant source. These bounded misses do not negate D-029's prior-confirmation record. Preserve the existing 09:00 natural run; afterward refresh MUSE and inspect only sanitized same-run evidence plus independent receipts. No replay, root/`su`, business-state/raw-log read, or device write occurred. P4 remains open; S1 is not accepted. Evidence: `museReadonlyStatus20261104_034707`, `pixelReadonlyPreflight20261104_035029`, `pixelProcessFilter20261104_035029`, `acceptanceGateStatus20261104_0352`, `googleDriveTimingSourceSearch20261104_0351`, `officialForestRuleSearch20261104_0351`.
+
 ## 2026-11-04 03:38–03:40 CST — refreshed MUSE status and local SSH inventory
 
 At 03:38:11, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and one enabled daily 09:00 Asia/Shanghai schedule. The live `run.py` and `assistant.py` hashes and latest scheduler records were unchanged. This is point-in-time scheduler metadata only.

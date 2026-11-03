@@ -1,5 +1,13 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 03:47–03:52 CST — fresh pre-run and evidence-source checkpoint
+
+At 03:47:07, the existing Forest MUSE thread reported no active task, `0/0/false`, runner lock `FREE`, and no Forest process observed. The existing daily 09:00 Asia/Shanghai schedule remains enabled and is pending today. Live hashes and latest scheduler result times are unchanged.
+
+A corrected local process inventory found no active SSH process matching the existing Pixel alias before the connection. The subsequent non-root Pixel read at device time 03:50:29 confirmed UID 10249, Pixel 3a, Android 15, Asia/Shanghai, boot complete, and the expected v0.19 SecureView APK hash. The first remote process filter failed and yielded no result; the corrected narrow `ps -A` name filter found no matches. Device operation lock, monitor state/hash, screen/Keyguard, and foreground Activity remain UNKNOWN; stop/rollback is BLOCKED.
+
+Drive metadata-only and CPIC-domain searches at 03:51 found no relevant reset-time source. This bounded miss does not negate D-029. Keep the natural run pending; after 09:00 refresh MUSE and inspect same-run sanitized evidence and independent receipts. No task was replayed, and no business state/raw logs or device writes were used. P4 remains open; S1 is not accepted. See `acceptanceGateStatus20261104_0352` and the structured evidence file.
+
 ## 2026-11-04 03:38–03:40 CST — refreshed MUSE status and local SSH inventory
 
 At 03:38:11, the exact existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, no Forest process observed, and the one enabled daily 09:00 Asia/Shanghai schedule. Live runner/assistant hashes and latest scheduler records were unchanged. This is point-in-time scheduler metadata only.

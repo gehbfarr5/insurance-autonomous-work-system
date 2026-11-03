@@ -1,5 +1,14 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 03:47—03:52 CST：刷新MUSE并完成有限Pixel预检
+
+03:47:07在既有Forest MUSE线程只读确认无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、未观察到Forest进程；唯一启用schedule为每日09:00 Asia/Shanghai、下次触发今日09:00。live runner/assistant哈希和最近失败/成功时点未变。该读数仅是调度/部署元数据。
+
+连接前修正的本机进程盘点未发现活动`ssh`进程匹配既有`pixel3a-kjgx` alias；之后经此alias以非root只读确认UID 10249、Pixel 3a、Android 15、Asia/Shanghai、boot完成及设备时钟03:50:29，SecureView APK SHA-256仍匹配v0.19 pin。首次远端进程过滤因引号失败，没有有效结果；修正的窄`ps -A`名称过滤无匹配。该结果不证明monitor停止。Pixel整体操作锁、monitor状态/hash、屏幕/Keyguard/前台Activity仍UNKNOWN，无已验证非root私有数据路径。
+
+Drive metadata-only查询与CPIC官方域搜索未发现相关重置时点来源；此有界无命中不证明原据不存在或否定D-029。未读取业务state/raw logs、运行任务/代码、写设备或改调度。保留09:00自然轮；结束后先刷新MUSE，再读取同轮脱敏证据与独立收据。停止/回滚仍BLOCKED，P4开放、S1未验收。证据：`museReadonlyStatus20261104_034707`、`pixelReadonlyPreflight20261104_035029`、`pixelProcessFilter20261104_035029`、`acceptanceGateStatus20261104_0352`、`googleDriveTimingSourceSearch20261104_0351`、`officialForestRuleSearch20261104_0351`。
+
+
 ## 2026-11-04 03:29—03:32 CST：刷新MUSE并完成有限Pixel预检
 
 03:29:58在既有Forest MUSE线程只读确认无活动任务、running/queued/in-flight `0/0/false`、runner lock `FREE`、未观察到Forest进程；唯一启用schedule仍为每日09:00 Asia/Shanghai，下次触发今日09:00。live runner/assistant哈希、最近失败和最近成功时点不变。
@@ -337,11 +346,11 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 
 ## 自然运行顺序
 
-### 当前适用顺序｜更新至2026-11-04 03:40 CST
+### 当前适用顺序｜更新至2026-11-04 03:52 CST
 
 1. 只等待既有2026-11-04 09:00 Asia/Shanghai自然调度；不手动启动、补跑、取消或重放业务。
-2. 运行后先在精确Forest MUSE线程读取该自然轮的脱敏分段、prepare事件摘要、结果、stages、assistant派发状态和cleanup，保留每条数据自己的采样时间；同时重新读当时schedule、running/queued/in-flight、MUSE runner lock及live版本锚点。03:38:11 MUSE只读仍为`0/0/false`、runner lock `FREE`，自然轮尚待。
-3. 截至03:40:07，修正本机进程盘点没有发现匹配既有alias的活动`ssh`可执行进程；本机ADB server未查询设备清单，该结果不证明Pixel离线或可达。本轮未连设备。最近Pixel基础非root读取为03:31:59设备时间；设备操作锁marker仅有02:53:06未发现的旧读数，未重读。当前Pixel操作锁、monitor状态/hash、Keyguard和Activity均UNKNOWN；无已验证的非root私有数据读取方法。因此不要读取monitor/prepare私有数据，不运行collector，不安装/重启候选；相应字段保持UNKNOWN。
+2. 运行后先在精确Forest MUSE线程读取该自然轮的脱敏分段、prepare事件摘要、结果、stages、assistant派发状态和cleanup，保留每条数据自己的采样时间；同时重新读当时schedule、running/queued/in-flight、MUSE runner lock及live版本锚点。03:47:07 MUSE只读仍为`0/0/false`、runner lock `FREE`，自然轮尚待。
+3. 连接前修正的本机进程盘点未发现匹配既有alias的活动`ssh`进程；随后非root Pixel预检在设备时钟03:50:29确认设备身份、boot及v0.19 APK pin，修正窄进程名过滤无匹配。首次远端过滤因引号失败、没有有效结果。该预检没有读取设备操作锁marker或monitor私有状态；当前Pixel操作锁、monitor状态/hash、Keyguard和Activity均UNKNOWN，且没有已验证的非root私有数据读取方法。因此不要读取monitor/prepare私有数据，不运行collector，不安装/重启候选；相应字段保持UNKNOWN。
 4. 若MUSE或目标自然轮状态不可读、仍有任务在途、来源/时间窗不唯一或版本锚点不匹配，停止并记录BLOCKED/UNKNOWN；不删除锁、状态、防重记录或原始结果。
 5. 只有发现既有、精确验证的非root导出方法后，才重新评估设备侧观测；届时仍须先读设备操作锁、live monitor哈希/状态、备份哈希与回滚路径，保持原门禁并以同一自然轮证据关联。
 
@@ -386,11 +395,11 @@ CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；
 
 ## 异常停止与回滚
 
-### 当前设备回滚就绪状态｜2026-11-04 03:40 CST
+### 当前设备回滚就绪状态｜2026-11-04 03:52 CST
 
-Runbook中的旧monitor备份路径/hash是历史候选事务记录，不是当前live monitor读数，也不证明当前设备操作锁FREE。03:38:11 MUSE显示runner lock `FREE`，但不覆盖Pixel锁。03:40:07前的修正本机进程盘点未发现匹配alias的活动SSH进程；本机ADB server未查询设备清单，且本轮没有连接设备。最近基础Pixel读取仍是03:31:59设备时间；精确操作锁marker仍只有02:53:06的旧读数（当时未发现），未重读。当前monitor状态/hash与设备操作锁均UNKNOWN，非root私有数据读取路径未验证；因此停止/回滚**保持BLOCKED，不执行设备操作**。若后续满足授权与只读门禁，才按下列步骤恢复已核验备份并验证hash/heartbeat；若任一门禁读数不可得，停在BLOCKED，不启动或停止AutoX、不删标记、不恢复旧文件。
+Runbook中的旧monitor备份路径/hash是历史候选事务记录，不是当前live monitor读数，也不证明当前设备操作锁FREE。03:47:07 MUSE显示runner lock `FREE`，但不覆盖Pixel锁。连接前的修正本机盘点未发现匹配alias的活动SSH进程；之后03:50:29设备时钟的非root预检确认设备身份/APK，窄名称过滤无匹配。精确操作锁marker未重读，旧的02:53:06结果不能视作当前状态。当前monitor状态/hash与设备操作锁均UNKNOWN，非root私有数据读取路径未验证；因此停止/回滚**保持BLOCKED，不执行设备操作**。若后续满足授权与只读门禁，才按下列步骤恢复已核验备份并验证hash/heartbeat；若任一门禁读数不可得，停在BLOCKED，不启动或停止AutoX、不删标记、不恢复旧文件。
 
-03:38 MUSE元数据及03:40本机进程盘点均未刷新设备侧锁或回滚前提；上述设备侧UNKNOWN保持有效，禁止据此执行回滚或停止操作。
+03:47 MUSE元数据与03:50的有限Pixel身份/APK读取均未刷新设备侧锁或回滚前提；上述设备侧UNKNOWN保持有效，禁止据此执行回滚或停止操作。
 
 
 - 若哈希不符、stop/blocked 标记出现、monitor 状态异常、设备操作锁被占用或 MUSE 报告有并发运行：停止诊断动作；先读清在途状态，不启动另一个流程、不删锁或状态。当前只读检查不授权解除并发锁。
