@@ -1,8 +1,10 @@
 # 其余项目推进与证据边界｜2026-10-29
 
-## 最新接续状态｜2026-11-03 16:04 CST
+## 最新接续状态｜2026-11-03 17:12 CST
 
-### 自然运行与设备只读状态
+17:00 CUA库存仅确认MUSE应用进程运行，未读到Forest任务/调度，浏览器控制不可用。最近MUSE并发读数16:23已过时，当前为UNKNOWN，本轮未连接Pixel。17:12完成11月4日review-only采集链字段审计并修正本机collector忽略monitor `.failure`标记的缺陷：有标记时保留脱敏事件、记录source quality并将结果定为`PARTIAL_UNKNOWN`；无sidecar时仍标为UNAVAILABLE。合成collector路径通过，私有包14/14成员哈希通过；此项只验证本机导出逻辑，不是设备/窗口运行验收。P4继续开放，S1未验收，P50/月度规划挂起。
+
+### 最近已有只读读数（非当前访问门禁）
 
 MUSE 15:54:29回读唯一每日09:00 CST任务，下次11月4日09:00，running/queued/in-flight 0/0/false，runner lock FREE；最近失败11月3日09:11:17、最近成功10月31日09:15:50、连续失败3次。Pixel 15:58:24只读回读Android 15/Dozing、monitor `watching`、guard清、heartbeat新鲜、requests=0；设备操作锁和前台Activity UNKNOWN，v0.19 APK pin仅最后在15:22确认匹配。没有业务重跑、设备写入或调度/state变更。11月3日prepare根因仍UNKNOWN。
 
@@ -97,6 +99,10 @@ Drive metadata-only查询新增六组词面：“阳光森林 重置时点 官�
 ### 官方规则词面追加｜2026-11-03 17:06 CST
 
 在CPIC官方域对“阳光森林+阳光值”“阳光森林+雨露”“阳光雨露+太保”“行为值+阳光+科技个险”做4条定向网页查询，未命中官方任务规则；结果页仅含一条与本项目无关的普通保险知识文章。此为另一次有界公开检索未命中，不证明历史确认或其他目录原件不存在，也不改变日限额、重置、触发和周期的证据边界。
+
+### Review-only采集字段审计｜2026-11-03 17:12 CST
+
+已安装monitor只输出屏幕/Keyguard状态、目标app与手势Activity匹配、guard/account门禁及worker请求/返回布尔/枚举，不输出原始Activity/account标记。worker请求或返回不等于实际手势输入或成功认证。assistant/main阶段、业务回执和cleanup取自脱敏MUSE分段；prepare登录字段与assistant gate观察器仍离线，缺少同段匹配时间戳时继续记UNKNOWN。collector此前忽略monitor写失败`.failure`标记，可能让不完整日志显示为完整关联；现已修正为计数并强制`PARTIAL_UNKNOWN`，已保留可用的脱敏事件。详见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 
 ## 仍需证据及具体停止点
 
