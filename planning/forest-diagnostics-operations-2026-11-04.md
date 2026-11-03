@@ -4,7 +4,7 @@
 
 MUSE于02:24:46只读确认无Forest活动，running/queued/in-flight `0/0/false`、runner lock `FREE`、唯一每日09:00 Asia/Shanghai schedule仍待触发；runner/assistant hashes及最近成功/失败记录未变。之后Pixel在02:25:22设备时钟以既有alias、UID 10249非root确认Pixel 3a、Android 15、Asia/Shanghai、boot完成、SecureView APK hash匹配v0.19 pin。受限进程名过滤无匹配，精确已记录的设备操作锁marker缺失；整体设备锁、monitor状态/hash、屏幕/Keyguard/Activity仍UNKNOWN。未用`su`、未读原始日志/业务状态、未运行代码或任务、未写设备、未改schedule。
 
-保持既有自然09:00运行；运行后先刷新MUSE并读取同轮脱敏prepare/result/stages/assistant/cleanup，未知或不一致即停止。证据键：`museReadonlyStatus20261104_022446`、`pixelReadonlyPreflight20261104_022522`、`pixelProcessFilter20261104_022522`、`pixelDeviceLockMarkerRead20261104_022522`、`acceptanceGateStatus20261104_022522`。
+保持既有自然09:00运行；运行后先刷新MUSE并确认同轮已结束，再读取脱敏per-segment summary，不读取raw log或sidecar。按每段原始采样时间记录runner/module hash（若可得）、屏幕/Keyguard、前台Activity类别、各触发门禁布尔值、认证dispatch/return、`gesturePage` / `accountMatch`、`user` / `empNoAES` / `operateFlag`存在性与各自采样时间，以及业务stage、独立回执、assistant dispatch/answer/reward状态和cleanup。区分记录为false与字段缺失（UNKNOWN），分清`NOT_SENT`、`SENT`与`UNKNOWN`；缺失、歧义、越窗或版本不匹配均保留UNKNOWN并停止后续动作，不重放。证据键：`museReadonlyStatus20261104_022446`、`pixelReadonlyPreflight20261104_022522`、`pixelProcessFilter20261104_022522`、`pixelDeviceLockMarkerRead20261104_022522`、`acceptanceGateStatus20261104_022522`。
 
 ## 2026-11-04 02:15—02:17 CST：刷新MUSE/Pixel状态并界定collector可用性
 
