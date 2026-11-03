@@ -12,6 +12,8 @@ As of 2026-11-03, WP8-B Seoul OCR and the WP9 synthetic duplicate/create/readbac
 
 The standard-library evaluator in `src/muse_customer_card_ocr/acceptance_metrics.py` accepts only per-card booleans, closed status values, and closed failure reason codes. It rejects sample identifiers, OCR text, customer/reference values, free-text notes, and unknown fields; it writes aggregate-only JSON to stdout. The blank [input template](../../planning/wp11-30-card-acceptance-input-template-20261103.json) starts with authorization and annotation gates closed and contains one null-valued schema row. After authorization, replace it with one sanitized row per eligible or explicitly excluded sample; do not treat the placeholder as a result. The closed gates return `BLOCKED` before processing rows. Keep populated input and reviewed labels inside MUSE's protected validation workspace; do not commit them or copy them into ordinary logs/reports. The [copyable MUSE task](../../planning/wp11-30-card-acceptance-task-20261103.md) and [result template](../../planning/wp11-30-card-muse-result-template-20261103.json) separate data-free offline checks from the gated real-card work.
 
+MUSE independently verified exact commit `376e0d251db3d93e111c973b9f0957c52a356e96` in a fresh detached worktree and isolated venv (Python 3.12.3 / Pillow 12.3.0): 143/143 offline tests passed, and the blank-template CLI returned the expected `BLOCKED`. This run did not access real-card data or references and did not call OCR or contacts; see the [sanitized MUSE result](../../planning/wp11-30-card-muse-result-20261103.json). This verifies the local package and evaluator in isolation only, not the live MUSE runtime.
+
 Run from this package directory after authorization:
 
 ```bash

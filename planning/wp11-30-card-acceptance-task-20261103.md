@@ -1,8 +1,8 @@
 # WP11-L MUSE handoff: 30-card OCR acceptance
 
-**Current state:** `VALIDATION_PENDING`. The request for authorization to use the real-card set has not been answered. This handoff is prepared only; it has not been sent to MUSE or executed. No sample inventory, image, or reference label was accessed for this task.
+**Current state:** `VALIDATION_PENDING`. MUSE completed only the data-free isolated checks on exact commit `376e0d251db3d93e111c973b9f0957c52a356e96`: 143/143 offline tests passed and the blank-template smoke returned the expected `BLOCKED`; see the [sanitized result](wp11-30-card-muse-result-20261103.json). The real-card authorization remains unanswered, and no sample inventory, image, or reference label was accessed.
 
-Copy the task below to MUSE only after the user has explicitly authorized the real-card work. If it is forwarded before authorization, MUSE may run the isolated, data-free checks and must stop before inspecting any real-data inventory.
+The data-free section may be rerun if code changes. The real-card section may be executed only after the user explicitly authorizes that work; without authorization, MUSE must stop before inspecting any real-data inventory.
 
 ```text
 Task: WP11-L MUSE 30-card OCR acceptance preparation and gated validation
