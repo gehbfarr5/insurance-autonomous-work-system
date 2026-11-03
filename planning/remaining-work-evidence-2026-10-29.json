@@ -2938,5 +2938,172 @@
     "filesOrScheduleOrDeploymentChanged": false,
     "taskInterrupted": false,
     "deviceOperationLock": "UNKNOWN; not read in this MUSE-only refresh."
+  },
+  "museReadonlyStatus20261103_233855": {
+    "readAt": "2026-11-03T23:38:55+08:00",
+    "source": "Read-only status request and reply in the exact existing Sunshine Forest MUSE thread; scheduler/deployment metadata only.",
+    "forestTaskActive": false,
+    "enabledSchedule": {
+      "count": 1,
+      "dailyAt": "09:00:00",
+      "timezone": "Asia/Shanghai",
+      "nextTrigger": "2026-11-04T09:00:00+08:00"
+    },
+    "running": 0,
+    "queued": 0,
+    "inFlight": false,
+    "runnerLock": "FREE",
+    "forestProcessPresence": "NONE_OBSERVED",
+    "liveHashes": {
+      "runPySha256": "de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562",
+      "assistantPySha256": "7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c"
+    },
+    "latestSchedulerResult": "2026-11-03T09:11:17+08:00 FAILED",
+    "lastSuccessfulSchedulerRecord": "2026-10-31T09:15:50+08:00",
+    "pixelConnected": false,
+    "businessStateOrLogsRead": false,
+    "taskOrBusinessCodeExecuted": false,
+    "otherChatsInspected": false,
+    "filesOrScheduleOrDeploymentChanged": false,
+    "taskInterrupted": false,
+    "deviceOperationLock": "UNKNOWN; not read by this MUSE-only refresh."
+  },
+  "pixelReadonlyPreflight20261103_2342": {
+    "recordedAt": "2026-11-03T23:43:03+08:00",
+    "deviceReadTimeRange": "Bracketed by local clock reads at 2026-11-03 23:38:55 and 23:42:02 Asia/Shanghai; executed after the fresh MUSE no-inflight read.",
+    "transport": "Only the existing configured alias pixel3a-kjgx; non-root remote UID 10249; read-only shell commands.",
+    "remoteUid": 10249,
+    "device": {
+      "model": "Pixel 3a",
+      "android": "15",
+      "bootCompleted": true
+    },
+    "installedSecureViewPackage": "com.p4.secureview",
+    "secureViewInstalledApkSha256": "dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167",
+    "secureViewHashMatchesKnownV019Artifact": true,
+    "deviceOperationLock": "UNKNOWN; no exact documented non-root read method was available.",
+    "monitorStatusAndHash": "UNKNOWN; private app data not read.",
+    "screenKeyguardDeviceLockedAndForegroundActivity": "UNKNOWN; not read.",
+    "rootOrSuUsed": false,
+    "actions": "No app/process start or stop, install/deploy, device or state write, business-state read, task/code execution, schedule change, or credential/network change."
+  },
+  "offlineCandidateIntegrityReview20261103_234515": {
+    "recordedAt": "2026-11-03T23:45:15+08:00",
+    "source": "Read-only static review of two private offline candidate packages; verified each package SHA256SUMS manifest; no candidate code or tests executed in this turn.",
+    "candidatePackages": {
+      "fieldPresenceV2": {
+        "manifestEntriesVerified": 14,
+        "allManifestEntriesMatch": true,
+        "prepareObserverSha256": "a978d0857f6a847dd2d7f84f0adb76f7387b0183cc2f99284ab02599da3177a7",
+        "monitorCandidateSha256": "2b611ca16f49523c74e544b96e19a7931db6af7d1ea4787ecea708b25e56241a",
+        "collectorSha256": "9dda0b75cc2375c892a5ac3214debb5c6951205613d3ccbbab434e6c66d709ae",
+        "collectorTransport": "Static source explicitly runs the existing SSH alias with su -c; unusable under the current no-root constraint.",
+        "offlineTestEvidence": "Candidate review records report synthetic checks passing on 2026-11-03; not rerun this turn."
+      },
+      "activityCategoryV4": {
+        "manifestEntriesVerified": 11,
+        "allManifestEntriesMatch": true,
+        "monitorCandidateSha256": "1310672261f2851465c756287e9d60882526f8f25a14fcc9585043a2f02944b1",
+        "prepareObserverSha256": "027fbc5887deb269b39560c00202900edbe7d4af41e9542f8faeb10ae43fc483",
+        "collectorSha256": "fd01997ea87e6f6d14ff1a7eb60ebe62d57c98fb28121096dc64736b1644827e",
+        "collectorTransport": "Static source explicitly runs the existing SSH alias with su -c; unusable under the current no-root constraint.",
+        "offlineTestEvidence": "Candidate review records report five synthetic/offline checks passing on 2026-11-03 18:06 CST; not rerun this turn.",
+        "deviceRuntimeCompatibility": "NOT_ESTABLISHED; offline checks do not establish Android/AutoX runtime compatibility."
+      }
+    },
+    "currentDeviceFacts": {
+      "operationLock": "UNKNOWN; no verified non-root reader.",
+      "liveMonitorHashAndState": "UNKNOWN; the Pixel check in this turn read only device identity, boot status, and installed APK hash.",
+      "secureViewApkHashMatchesV019Pin": true,
+      "oldKeyguardV3Window": "Expired 2026-11-03 09:55 Asia/Shanghai; do not install for historical replay."
+    },
+    "decision": {
+      "reuse": "Existing exact one-shot prepare gates, fixed-window monitor structure, allowlisted evidence projection, and synthetic harnesses.",
+      "adapt": "Only fixed Activity categories and per-field presence/timestamps, with evidence joined to one unique natural-run segment.",
+      "avoid": "Do not weaken readiness/authentication/menu gates, persist raw Activity names or private values, or use su/another channel.",
+      "chosenApproach": "Evidence-first observation and later repair only at the specifically observed layer; direct gate bypass rejected because the failed layer is known but its cause is not.",
+      "deploymentStatus": "No install/restart or runner change. The operation lock, live monitor hash, and non-root exporter are not verified; preserve natural schedule."
+    },
+    "actions": "No device connection, code/test execution, source modification, installation, deployment, task replay, business-state access, or schedule/state change."
+  },
+  "googleDriveRuleMetadataSearch20261103_2347": {
+    "recordedAt": "2026-11-03T23:48:40+08:00",
+    "source": "Connected Google Drive metadata-only search using the Google Drive skill workflow.",
+    "searches": [
+      {
+        "queries": [
+          "阳光森林",
+          "阳光雨露",
+          "行为值"
+        ],
+        "itemType": "document",
+        "topn": 20,
+        "requireViewedByUser": true,
+        "results": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "queries": [
+          "阳光森林",
+          "阳光雨露",
+          "行为值",
+          "森林任务规则"
+        ],
+        "itemType": "document",
+        "topn": 20,
+        "requireViewedByUser": false,
+        "results": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "bestEffortFetch": false,
+    "contentFetched": false,
+    "interpretation": "No matching metadata surfaced for these terms in this search scope. This does not establish that the original source is absent, never confirmed, or unavailable under other titles/locations. Official reset time, repeat period, trigger, settlement delay, and current eligibility remain unresolved."
+  },
+  "privateRulePopupRecheck20261103_235006": {
+    "recordedAt": "2026-11-03T23:50:06+08:00",
+    "source": "Re-read of the private historical in-app rules popup artifact indexed as E07; current file SHA-256 recomputed and matched the existing evidence-index entry.",
+    "sourceSha256": "19dc81a6f4f4ababc5b572b05eec809a539246ed574cba3224786a9f2df91cc2",
+    "sourceBytes": 8079,
+    "supportedHistoricalRules": {
+      "dailyCaps": {
+        "sunshine": 10,
+        "raindrops": 20
+      },
+      "taskRewardUnits": {
+        "signIn": "+0.5 / 次",
+        "timelineViewAtLeastFiveSeconds": "+0.5 / 人",
+        "customerTemperatureAndValue": "+0.5 / 次",
+        "assistant": "+0.5 / 次",
+        "保单芯管家": "+2 / 人",
+        "态幸福": "+2 / 人",
+        "三节一生": "+0.5 / 人",
+        "E锦囊激活": "+0.5 / 人",
+        "签单协同业务": "+1 / 单"
+      },
+      "displayFilters": [
+        "第一周 1-7日",
+        "第二周 8-14日",
+        "第三周 15-21日",
+        "第四周 22日-月底"
+      ],
+      "behaviorValueNote": "The popup says behavior points are displayed through month-end, absence/surrender deductions are excluded, and the final result follows HR-system settlement."
+    },
+    "notEstablishedByThisArtifact": [
+      "Exact daily reset time for Sunshine Forest.",
+      "Per-task repeat or claim cycle.",
+      "The exact workflow step that triggers each listed reward.",
+      "Forest reward posting delay.",
+      "Current eligibility or current applicability."
+    ],
+    "interpretation": "Date-picker week ranges are display filters, not a reset or repeat schedule. The behavior-value HR settlement note does not define Forest reward settlement. The existing 09:00 automation schedule is not evidence of the product reset time.",
+    "actions": "No customer content or personal state was copied; only rule text and source hash were reviewed."
   }
 }

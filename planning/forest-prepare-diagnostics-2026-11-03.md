@@ -1,5 +1,21 @@
 # Forest prepare diagnostics checkpoint｜2026-11-03
 
+## 离线诊断候选完整性与集成门禁｜2026-11-03 23:43—23:45 CST
+
+对11月4日review-only的逐字段观察器包与固定Activity类别包做只读源码/文档检查，并逐项核对各自`SHA256SUMS.txt`：14/14与11/11条目匹配。包内既有记录报告合成离线检查通过；本轮没有重新运行已通过测试，也没有执行候选代码。固定类别方案只输出白名单枚举，不保存原始Activity类名；逐字段方案保留v0.19单次门禁并只记录字段存在布尔值与采样时点。该复核不证明Android/AutoX运行兼容。
+
+静态检查确认两份候选的导出器都通过既有Pixel SSH别名调用`su -c`读取应用私有目录/logcat，因此当前非root边界下不能运行；不得改用猜测的`run-as`或其他路由。MUSE 23:38:55无在途只读读数支持本轮此前进行的有限设备身份/APK读取，但Pixel操作锁、live monitor hash/状态仍未读取。11月3日Keyguard v3窗口已过期；其他候选未安装、未重启。
+
+选型：复用固定的一次性prepare门禁与受限证据投影；仅在可验证的设备锁、monitor备份/哈希、非root读取与逐步回滚条件都成立后，才考虑将固定Activity类别和逐字段存在性观察接入自然运行。直接绕过/放宽门禁被拒绝，因为已定位到prepare等待层但未定位未就绪原因。当前采用离线候选保留 + 11月4日自然运行后优先读MUSE脱敏同轮结果；缺失的设备侧观测继续标UNKNOWN。结构化记录：`offlineCandidateIntegrityReview20261103_234515`。
+
+## 2026-11-03 23:38—23:42 CST：刷新并发状态并完成有界Pixel只读预检
+
+23:38:55在既有Forest MUSE线程只读确认任务不活动，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无Forest进程。live `run.py` / `assistant.py` SHA-256为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该读数仅覆盖scheduler/deployment元数据，不代表Pixel操作锁。
+
+在该新鲜MUSE无在途读数后，经既有`pixel3a-kjgx`别名、非root UID 10249完成只读系统身份与APK核对（本机时钟括定于23:38:55—23:42:02）：Pixel 3a、Android 15、boot完成，SecureView已安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`，匹配已知v0.19 pin。设备操作锁、monitor私有状态/hash及屏幕/Keyguard/前台Activity仍UNKNOWN，没有精确、已验证的非root读取方法。未用root/su、未启动或停止应用、安装/部署、执行任务/业务代码、读取业务状态/日志、写设备或改变网络/凭据/调度。
+
+继续保留11月4日既有自然运行，运行后先从MUSE取同轮脱敏prepare/结果/stages/助手派发/cleanup证据；不重放、不放宽门禁、不安装过期候选。日常五项回执与扩展分类维持既有状态；P4开放、S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
+
 ## 最新Forest运行门禁｜2026-11-03 23:33:12 CST
 
 在MUSE既有Forest线程完成只读刷新：当前无Forest活动任务，唯一Asia/Shanghai每日09:00调度下次11月4日09:00，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`和`assistant.py` SHA分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`与`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`。最近调度失败仍为11月3日09:11:17，最近成功为10月31日09:15:50；本次只读scheduler/deployment metadata，未连接Pixel、重读业务结果或原始日志。Pixel设备操作锁与monitor/屏幕/Keyguard/Activity状态仍UNKNOWN，上次身份/APK只读读数约23:14，不作为本次设备门禁。当前失败层/底因结论不变；11月4日自然运行及同轮证据待观察，不手动补跑。

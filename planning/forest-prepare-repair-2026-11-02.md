@@ -1,5 +1,17 @@
 # 11月2日准备阻断修复与单次补跑记录｜2026-11-02
 
+## 离线候选完整性复核｜2026-11-03 23:43—23:45 CST
+
+11月4日逐字段和固定Activity类别两份候选的哈希清单分别14/14、11/11匹配；已有离线合成测试记录为PASS，本轮未重跑。导出器静态使用`su -c`，当前约束下不可用；Pixel操作锁与live monitor状态/hash仍UNKNOWN，候选未安装/重启。复用严格门禁与白名单投影、采用证据后修复、拒绝绕过；维持自然调度。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及结构化键`offlineCandidateIntegrityReview20261103_234515`。
+
+## 2026-11-03 23:38—23:42 CST：刷新并发状态并完成有界Pixel只读预检
+
+23:38:55在既有Forest MUSE线程只读确认任务不活动，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无Forest进程。live `run.py` / `assistant.py` SHA-256为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该读数仅覆盖scheduler/deployment元数据，不代表Pixel操作锁。
+
+在该新鲜MUSE无在途读数后，经既有`pixel3a-kjgx`别名、非root UID 10249完成只读系统身份与APK核对（本机时钟括定于23:38:55—23:42:02）：Pixel 3a、Android 15、boot完成，SecureView已安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`，匹配已知v0.19 pin。设备操作锁、monitor私有状态/hash及屏幕/Keyguard/前台Activity仍UNKNOWN，没有精确、已验证的非root读取方法。未用root/su、未启动或停止应用、安装/部署、执行任务/业务代码、读取业务状态/日志、写设备或改变网络/凭据/调度。
+
+继续保留11月4日既有自然运行，运行后先从MUSE取同轮脱敏prepare/结果/stages/助手派发/cleanup证据；不重放、不放宽门禁、不安装过期候选。日常五项回执与扩展分类维持既有状态；P4开放、S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
+
 ## 最新只读状态复核｜2026-11-03 22:51—22:57 CST
 
 Pixel 22:51:04经既有别名以UID 10249非root只读确认Pixel 3a/Android 15/boot完成、SecureView APK SHA匹配v0.19 pin。设备操作锁、monitor私有状态/hash、Keyguard和前台Activity仍UNKNOWN；没有使用root/su。MUSE 22:56:37在既有Forest线程确认无活动/排队/在途任务、runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00任务下次11月4日，live哈希及最近调度结果不变。没有读业务状态、重试、源码执行、设备写入、部署或调度变化。11月3日prepare失败仍定位于Activity/标记等待超时层，底因UNKNOWN；不放宽门禁或重放，等待11月4日自然运行。证据键：`museReadonlyStatus20261103_225637`、`pixelReadonlyPreflight20261103_225104`。

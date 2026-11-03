@@ -1,5 +1,17 @@
 # 保险规划师自主工作系统
 
+## E07应用内原规则弹层复核｜2026-11-03 23:49—23:50 CST
+
+重新读取证据索引E07对应的私存原始应用内规则弹层JSON，重算SHA-256与索引值完全匹配。原件支持历史阳光/雨露每日上限10/20，以及签到、时光轴≥5秒、客温客价、智能助理和五项扩展的页面计量单位；页面周选项为1–7、8–14、15–21、22日至月底。该弹层没有说明日重置时刻、单项重复/领取周期、奖励触发步骤、森林奖励到账延迟或当前资格。周范围是展示过滤；行为值月底统计/人管结算说明不等于森林奖励周期。09:00是自动化schedule，不据此推导产品重置时点。完整脱敏结论与哈希见结构化键`privateRulePopupRecheck20261103_235006`及[证据索引](planning/evidence-index-2026-10-29.json)中的E07。
+
+## 官方规则原件的最新有界Drive检索｜2026-11-03 23:47—23:48 CST
+
+连接Google Drive进行metadata-only document搜索：对“阳光森林”“阳光雨露”“行为值”搜索已浏览文档均0条；对全部可访问范围再搜“阳光森林”“阳光雨露”“行为值”“森林任务规则”亦均0条。未打开正文、未抓取文件内容。此结果只限定搜索词与Drive可见元数据，不证明原件不存在或历史上从未确认；时点、重置/重复周期、奖励触发、到账时延与当前资格仍需原据。证据键：`googleDriveRuleMetadataSearch20261103_2347`。
+
+> **诊断候选复核｜2026-11-03 23:43—23:45 CST：** 两份离线候选的哈希清单分别14/14、11/11匹配；已有合成测试记录为PASS，本轮未重跑。导出器静态使用`su -c`，Pixel操作锁与live monitor状态/hash仍UNKNOWN，未安装/重启。保留严格门禁与白名单观测，拒绝绕过；详细记录见[诊断检查点](planning/forest-prepare-diagnostics-2026-11-03.md)。
+
+> **最新并发与设备只读预检｜2026-11-03 23:38—23:42 CST：** MUSE 23:38:55在既有Forest线程确认当时无活动/排队/在途任务（`0/0/false`）、MUSE runner lock `FREE`、无Forest进程；唯一Asia/Shanghai每日09:00调度下次11月4日09:00，live runner/assistant哈希及最近运行记录未变。随后经既有Pixel别名以非root UID 10249只读确认Pixel 3a/Android 15/boot完成、SecureView安装APK哈希匹配v0.19。Pixel操作锁、monitor私有状态/hash及屏幕/Keyguard/Activity仍UNKNOWN。没有业务状态/日志读取、任务执行、设备写入、部署或调度更改。保留自然运行；P4开放，S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
+
 > **P4最新MUSE只读状态｜2026-11-03 23:33:12 CST：** 既有Forest线程回读无活动/排队/在途任务，runner lock FREE、无Forest进程；唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00。live `run.py`/`assistant.py` SHA-256分别为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`和`7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最近调度失败11月3日09:11:17，最近成功10月31日09:15:50。此轮未连接Pixel；设备操作锁、monitor私有状态及屏幕/Keyguard/前台Activity仍UNKNOWN，最近Pixel身份/APK只读读数约23:14。未读业务state或日志、执行源码/任务、改动设备/文件/调度。保留11月4日自然运行并优先读取同轮脱敏证据；P4开放、S1未验收。详情见[交接](planning/p4-next-session-handoff.md)、[诊断手册](planning/forest-diagnostics-operations-2026-11-04.md)和证据键`museReadonlyStatus20261103_233312`。
 
 > **当前live模块覆盖补核｜2026-11-03 23:05 CST：** MUSE只读确认 `policy.py`、`tasks.py`、`forest_cdp.py` 当前hash与唯一导入身份；本机五份精确源码副本均匹配对应live hash。限定词检索在 `run.py`、`policy.py`、`tasks.py`、`forest_cdp.py`、`assistant.py` 中没有发现客温客价术语或五项扩展名称。该结论仅限五模块，不表示整个部署没有相关实现，也不替代业务收据；客温客价仍缺独立回执。P4开放、S1未验收。详情见[本地审计](planning/local-evidence-audit-2026-10-29.md#当前live-helper模块与五文件限定词检索2026-11-03-2305-cst)和结构化键 `liveModuleSourceCoverage20261103_230512`。

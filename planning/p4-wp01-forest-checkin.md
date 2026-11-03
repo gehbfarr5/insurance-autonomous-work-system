@@ -1,5 +1,25 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
+## E07应用内原规则弹层复核｜2026-11-03 23:49—23:50 CST
+
+重新读取证据索引E07对应的私存原始应用内规则弹层JSON，重算SHA-256与索引值完全匹配。原件支持历史阳光/雨露每日上限10/20，以及签到、时光轴≥5秒、客温客价、智能助理和五项扩展的页面计量单位；页面周选项为1–7、8–14、15–21、22日至月底。该弹层没有说明日重置时刻、单项重复/领取周期、奖励触发步骤、森林奖励到账延迟或当前资格。周范围是展示过滤；行为值月底统计/人管结算说明不等于森林奖励周期。09:00是自动化schedule，不据此推导产品重置时点。完整脱敏结论与哈希见结构化键`privateRulePopupRecheck20261103_235006`及[证据索引](evidence-index-2026-10-29.json)中的E07。
+
+## 官方规则原件的最新有界Drive检索｜2026-11-03 23:47—23:48 CST
+
+连接Google Drive进行metadata-only document搜索：对“阳光森林”“阳光雨露”“行为值”搜索已浏览文档均0条；对全部可访问范围再搜“阳光森林”“阳光雨露”“行为值”“森林任务规则”亦均0条。未打开正文、未抓取文件内容。此结果只限定搜索词与Drive可见元数据，不证明原件不存在或历史上从未确认；时点、重置/重复周期、奖励触发、到账时延与当前资格仍需原据。证据键：`googleDriveRuleMetadataSearch20261103_2347`。
+
+## 离线候选完整性复核｜2026-11-03 23:43—23:45 CST
+
+11月4日逐字段和固定Activity类别两份候选的哈希清单分别14/14、11/11匹配；已有离线合成测试记录为PASS，本轮未重跑。导出器静态使用`su -c`，当前约束下不可用；Pixel操作锁与live monitor状态/hash仍UNKNOWN，候选未安装/重启。复用严格门禁与白名单投影、采用证据后修复、拒绝绕过；维持自然调度。详见[诊断检查点](forest-prepare-diagnostics-2026-11-03.md)及结构化键`offlineCandidateIntegrityReview20261103_234515`。
+
+## 2026-11-03 23:38—23:42 CST：刷新并发状态并完成有界Pixel只读预检
+
+23:38:55在既有Forest MUSE线程只读确认任务不活动，唯一Asia/Shanghai每日09:00 schedule下次11月4日09:00；running/queued/in-flight `0/0/false`、MUSE runner lock `FREE`、无Forest进程。live `run.py` / `assistant.py` SHA-256为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `7c6400b3900a2f4426ab2c3af4e4ebddfaacf5f82c4bf233ef24dc8b1c35121c`；最新调度失败仍为11月3日09:11:17，最近成功10月31日09:15:50。该读数仅覆盖scheduler/deployment元数据，不代表Pixel操作锁。
+
+在该新鲜MUSE无在途读数后，经既有`pixel3a-kjgx`别名、非root UID 10249完成只读系统身份与APK核对（本机时钟括定于23:38:55—23:42:02）：Pixel 3a、Android 15、boot完成，SecureView已安装APK SHA-256 `dbada93c1d0110fe86ef1c0cad77224e81c0f5939bd9462a3c0b9d5b72c48167`，匹配已知v0.19 pin。设备操作锁、monitor私有状态/hash及屏幕/Keyguard/前台Activity仍UNKNOWN，没有精确、已验证的非root读取方法。未用root/su、未启动或停止应用、安装/部署、执行任务/业务代码、读取业务状态/日志、写设备或改变网络/凭据/调度。
+
+继续保留11月4日既有自然运行，运行后先从MUSE取同轮脱敏prepare/结果/stages/助手派发/cleanup证据；不重放、不放宽门禁、不安装过期候选。日常五项回执与扩展分类维持既有状态；P4开放、S1未验收。证据键：`museReadonlyStatus20261103_233855`、`pixelReadonlyPreflight20261103_2342`。
+
 ## 自然运行前最新只读预检｜2026-11-03 23:13—23:21 CST
 
 MUSE 23:13:43确认既有每日09:00 Asia/Shanghai任务下次11月4日；Forest活动、排队、在途均为空，runner lock FREE、无Forest进程，live runner/assistant哈希及最近运行结果不变。约23:14经既有Pixel别名以非root UID 10249确认设备启动及v0.19 APK pin；设备操作锁、monitor私有状态/hash、显示/Keyguard/前台Activity仍UNKNOWN。Drive/CPIC本轮定向规则搜索未找到当前任务规则原件；Drive后续查询触发配额/内部错误后停止。无任务执行、业务状态读取或设备写入。保留11月4日自然运行，先核对同轮脱敏结果；P4开放、S1未验收。证据键：`museReadonlyStatus20261103_231343`、`pixelReadonlyPreflight20261103Late`、`boundedRuleSourceSearch20261103LateTurn`。
