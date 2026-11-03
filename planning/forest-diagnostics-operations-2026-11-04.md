@@ -212,7 +212,16 @@ MUSE recomputed the current live `run.py` hash and confirmed it matches the reco
 
 ## 自然运行顺序
 
-### 当前MUSE访问门禁｜2026-11-03 17:00 CST
+### 当前适用顺序｜2026-11-03 23:58 CST
+
+1. 只等待既有2026-11-04 09:00 Asia/Shanghai自然调度；不手动启动、补跑、取消或重放业务。
+2. 运行后先在精确Forest MUSE线程读取该自然轮的脱敏分段、prepare事件摘要、结果、stages、assistant派发状态和cleanup，保留每条数据自己的采样时间；同时重新读当时schedule、running/queued/in-flight、MUSE runner lock及live版本锚点。
+3. MUSE runner lock不是Pixel设备操作锁。当前Pixel操作锁、monitor状态/hash、Keyguard和Activity均UNKNOWN；两个私有导出器静态使用`su -c`，无已验证的非root私有状态读取方法。因此不要连接Pixel读取monitor/prepare私有数据，不运行collector，不安装/重启候选；相应字段保持UNKNOWN。
+4. 若MUSE或目标自然轮状态不可读、仍有任务在途、来源/时间窗不唯一或版本锚点不匹配，停止并记录BLOCKED/UNKNOWN；不删除锁、状态、防重记录或原始结果。
+5. 只有发现既有、精确验证的非root导出方法后，才重新评估设备侧观测；届时仍须先读设备操作锁、live monitor哈希/状态、备份哈希与回滚路径，保持原门禁并以同一自然轮证据关联。
+
+
+### 历史MUSE访问门禁｜2026-11-03 17:00 CST（不可作为当前状态）
 
 CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；浏览器控制不可用。最近并发读数仍为16:23，已过时，当前为UNKNOWN。未连接Pixel；不将16:23的0/0/false和runner lock FREE用作当前门禁。
 
@@ -251,6 +260,11 @@ CUA库存只确认MUSE应用进程运行，未提供Forest任务/调度读回；
 4. **缺失继续记 UNKNOWN。** 没有 sidecar、日志 marker 不在唯一分段内、MUSE 分段缺失/重叠、来源不可用时，不合成事件、不从空结果推出“未触发”，也不重试生产动作。`NOT_SENT`、`SENT`、`UNKNOWN`、页面完成和奖励确认分别保留。
 
 ## 异常停止与回滚
+
+### 当前设备回滚就绪状态｜2026-11-03 23:58 CST
+
+Runbook中的旧monitor备份路径/hash是历史候选事务记录，不是当前live monitor读数，也不证明当前设备操作锁FREE。当前monitor状态/hash与设备操作锁均UNKNOWN，非root读取路径未验证；因此本轮的停止/回滚**文档决策为BLOCKED，不执行设备操作**。MUSE runner lock `FREE`不能代替Pixel操作锁。若后续满足授权与只读门禁，才按下列步骤恢复已核验备份并验证hash/heartbeat；若任一门禁读数不可得，停在BLOCKED，不启动或停止AutoX、不删标记、不恢复旧文件。
+
 
 - 若哈希不符、stop/blocked 标记出现、monitor 状态异常、设备操作锁被占用或 MUSE 报告有并发运行：停止诊断动作；先读清在途状态，不启动另一个流程、不删锁或状态。当前只读检查不授权解除并发锁。
 - 若安全原因要求停止 monitor，先复读操作锁及是否存在 `input_requested` 在途阶段；确认没有在途认证后才可用原有 `stop` 标记使其自行退出，并读回停止状态。不要 `kill` AutoX，也不要在窗口内以清锁方式恢复。

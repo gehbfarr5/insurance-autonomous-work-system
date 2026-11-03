@@ -1,5 +1,7 @@
 # 缺失内容与 P4 按需核查
 
+> **运行与回滚就绪度｜2026-11-03 23:58 CST：** 11月4日自然运行顺序、停止条件和交接记录完整；设备级停止/回滚当前BLOCKED，因为Pixel操作锁与live monitor状态/hash UNKNOWN、collector需`su`。历史备份hash未当作当前状态；不会启动/停止/回滚设备。详见[操作手册](../planning/forest-diagnostics-operations-2026-11-04.md)及`runbookReadinessAudit20261103_235853`。
+
 > **验收关口状态｜2026-11-03 23:56 CST：** MUSE/Pixel有限预检PASS；11月3日故障仅定位到prepare等待层，底因UNKNOWN。完整同轮诊断、修复/集成、五项日常验收和五项扩展闭环仍BLOCKED；原规则恢复PARTIAL；跨日/长期样本SUSPENDED。P4不能收尾、S1未验收。详见[交接关口表](../planning/p4-next-session-handoff.md)及`acceptanceGateStatus20261103_235644`。
 
 ## 官方规则短语定向检索｜2026-11-03 23:54—23:55 CST
