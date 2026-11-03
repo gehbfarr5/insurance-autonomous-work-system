@@ -54,4 +54,6 @@ AutoX 7.0.4 launched the candidate and returned to `watching`; this verifies the
 
 For the 2026-11-04 natural run, preserve the one daily schedule and use only the existing Pixel alias. After the 08:55–09:55 window, pass sanitized MUSE assistant/main intervals to the private exporter; it reads the sidecar and timestamped prepare markers without writing to Pixel. Keep login-field booleans UNKNOWN because the v0.19 APK remains pinned and unchanged. Do not replay or duplicate any business action. The module prepare observer would change the v0.19 artifact hash and cause the current runner to fail closed; a coordinated APK-plus-runner-pin change has no complete source bundle and verified rollback path yet.
 
+16:20 CST追加核对：仓库外11月2日MUSE脱敏runner副本/原始manifest哈希均不等于11月3日报告的live runner哈希；不能用它替代当前源码来做配套pin更新。比对记录SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`。Mac解锁后先只读导出并独立核验完整当前runner源码，再评估是否需要可逆诊断集成；现有窗口的monitor-only路径不因该离线结果改变。
+
 Still pending: a verified same-run live evidence export, Android/AutoX compatibility, AI answer/reward confirmation, independent temperature/price receipts, five expansion-item completion/period evidence, the complete official timing basis, and natural cross-day reliability. P50/monthly planning remains paused; preserve 2U=2800 as pending.

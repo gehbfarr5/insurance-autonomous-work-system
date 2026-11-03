@@ -4,6 +4,14 @@
 
 MUSE正确的「阳光森林每日执行部署」对话于15:54:29回读：唯一既有Asia/Shanghai每日09:00任务，下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE，无forest-agent进程。最近调度失败11月3日09:11:17、最近成功10月31日09:15:50，连续失败3次。此前确认的11月3日assistant/main prepare timeout仍无业务阶段/回执、cleanup PASS；本次状态问询未重取业务结果。15:58:24经既有Pixel别名及原`su`路径只读回读Android 15/Dozing、monitor watching、guard清、heartbeat新鲜、requests=0；monitor/trigger/worker哈希一致于部署记录。设备操作锁和前台Activity UNKNOWN；APK pin最后一次直接核验在15:22且当时匹配。无设备写入、业务重跑或调度/state变更。
 
+16:23:26 CST在同一MUSE对话收到再次状态回读：唯一每日09:00任务仍启用、下次11月4日09:00；running/queued/in-flight 0/0/false，runner lock FREE、无forest-agent进程；调度最新失败仍为11月3日09:11:17，最近成功10月31日09:15:50，连续失败3次。live runner/assistant哈希仍为`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562` / `a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`。MUSE回复确认本次只读、未访问Pixel、未读业务state、未更改任何内容。需注明：发出的查询因输入问题被截短为关键词；回复中的assistant REVIEW/main BLOCKED、prepare timeout、cleanup PASS及无业务阶段/回执是沿用此前读数，并非本次重读。故Pixel当前设备状态仍UNKNOWN，且不能据此刷新设备操作锁/前台Activity。脱敏回读记录在仓库外私有文件`muse-access-readback-20261103-1623.json`，SHA-256 `984471e93c15f10ba975dd1c1ac93862192274b0111456591c576e5ec4dda3b9`；该记录不是原始UI导出。
+
+## v0.19运行源码来源再次核对｜2026-11-03 16:20 CST
+
+11月2日MUSE只读导出包虽含完整的脱敏runner/assistant副本，但其清单所报原始runner哈希为`061f18781525ad70e9d3b1906e3a547c1b11ad49a4313360fc734b1229be1154`，本机脱敏`run.py`哈希为`93151ce3a2477a3f9f1346ef474200e10c6b11fd0fe370d8aff0ba4546dbfaf5`；两者均不同于11月3日MUSE报告的live runner哈希`de9bd83cb8188151353c97d3e73071a50d2bfca8142d5a5774b00e94e3284562`。该导出不应作为当前runner补丁基线。assistant原始哈希`a3a7de236f8a3e3a4a29f73c55fce4161919d117e727ed550e46490c24260229`与11月3日MUSE报告一致，但本机脱敏副本`fa7723ce21e85f060e797bd08797514da5bd66486ff78096f2f471a9897e9e71`字节不同；仍不能视作当前live原件。
+
+来源比对抄录存仓库外私有文件`muse-source-hash-reconciliation-20261103.json`，SHA-256 `5bd77fbab0c4173ab098d94d7191a4e2f6717197e260e89b6390366b545a0a55`。Mac解锁且MUSE可读后，下一步应只读取得当前完整runner源码至私有目录并独立核哈；未取得精确当前源码前，不构建runner补丁、不更换APK pin、不部署准备观察器。
+
 该读数的仓库外受限私有抄录`status-readback-20261103-1554-1558.json`，SHA-256 `58d9f090792927caa636cb4d59bfa37ccc8401cf53dc3bafad9f59ce9164bfaf`，明确不是原始UI/stdout导出。为11月4日准备的私有review包SHA256SUMS于16:10 CST复算14/14匹配，并用原生`shasum`命令得到14/14 OK；collector、joiner与monitor候选的包内指纹有效，monitor候选与15:58 live值一致。对应私有校验记录`review-package-integrity-20261103.json` SHA-256 `89721b3f7b1b5761b1fd672dc994364a889a6b8854169568e2fa5ecb2a5c5e1a`。包完整性不升级AutoX/Keyguard或自然运行结论。
 
 规则源复核：本地历史UI快照`rules.json`（8079字节，SHA-256 `19dc81a6f4f4ababc5b572b05eec809a539246ed574cba3224786a9f2df91cc2`）支持阳光日上限10、雨露日上限20及每人/次/单计量。页面1–7、8–14、15–21、22至月底分段和“统计截止当月末/最终以HR结算”为行为值显示/账务说明，不能推导森林任务重置时刻、重复领奖周期或到账时延。针对Drive中阳光森林、阳光雨露结算周期、官方时点计算、规则、月末统计、日上限等查询本轮未命中；此前最多100条可访问元数据与“保险”目录检查也未命中。16:14追加的四组Drive metadata-only词面及CPIC两个官方域4条网页查询仍为0结果；私有查询摘要SHA-256 `0785f23a0c73283da62530f8bb8d2bfff09d123d46830a081ce1806aea47275d`。此为有界搜索结果，不等于历史从未确认或原件不存在。
