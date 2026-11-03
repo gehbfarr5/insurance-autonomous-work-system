@@ -2,11 +2,13 @@
 
 ## 最新接续核查｜2026-11-03
 
-### 当前Pixel与来源复核｜2026-11-03 15:27 CST
+### 最近Pixel读数与来源复核｜2026-11-03 15:37 CST
 
 15:22经既有Pixel SSH别名及已有`su`路径只读回读：Android 15、Dozing、Forest未在前台；monitor候选仍`watching`、guard清、heartbeat新鲜、requests=0；设备操作锁和stop/blocked标记不存在，monitor自身锁存在。触发器/worker哈希未变，v0.19 SecureView APK哈希仍匹配runner pin。输入审计仍12行、最后写于10月31日；`page_left`状态仍在，无新认证输入。11月4日固定窗口尚未开始，sidecar缺失符合当前时间。
 
-MUSE只读快照14:09 CST当时报告下一自然运行为11月4日09:00，且当时无运行/排队/在途任务；15:27未复读当前MUSE调度，因此当下队列/运行状态UNKNOWN。对Google Drive“保险”资料作定向时点/规则关键词复查及对CPIC官方域名检索，未找到可核验的完整官方时点依据；只更新“有界查找未命中”，不改写为从未确认。原始规则页索引哈希匹配，仍只支持已记录的上限/计量单位。日常五项当前逐项状态与扩展分类见[剩余工作与证据边界](remaining-work-2026-10-29.md)，自然窗口操作与恢复步骤见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+MUSE只读快照14:09 CST当时报告下一自然运行为11月4日09:00，且当时无运行/排队/在途任务；15:37仍未取得当前MUSE调度/task readback，因此当前队列/运行状态UNKNOWN。对Google Drive“保险”资料作定向时点/规则关键词复查及对CPIC官方域名检索，未找到可核验的完整官方时点依据；只更新“有界查找未命中”，不改写为从未确认。原始规则页索引哈希匹配，仍只支持已记录的上限/计量单位。日常五项当前逐项状态与扩展分类见[剩余工作与证据边界](remaining-work-2026-10-29.md)，自然窗口操作与恢复步骤见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+
+15:37 CUA应用清单显示MUSE进程运行，但无可用MUSE连接器；为不碰此前WP1图片附件任务，本轮未打开MUSE界面。当前MUSE scheduler/queue/task仍UNKNOWN，且无法证明Pixel无并发，因此未新连Pixel；15:22 readback为最近历史数据，不作当前preflight。下一步的设备访问门禁和自然运行后采集前置条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 
 Pixel 登录助手 EXIT 组件状态恢复会杀掉 AutoX 引擎的根因已通过脚本与 Android 退出记录定位。现使用 Android 15 root-only 固定组件调用，以 `DONT_KILL_APP` 恢复组件并读回；手动冷启动、与显式入口并发及重复启动的实机回归通过。11月2日只读读数与10月30日部署快照同 PID/锁 inode、心跳新鲜、组件默认态，跨日守护存活读数通过。公开源码及方法见[认证助手说明](../tools/pixel-auth/README.md)，原始安装/设备证据仍私存。
 

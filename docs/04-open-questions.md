@@ -1,8 +1,8 @@
 # 缺失内容与 P4 按需核查
 
-## 当前缺口校正｜2026-11-03 15:27 CST
+## 当前缺口校正｜2026-11-03 15:37 CST
 
-- **prepare根因仍UNKNOWN，设备观测路径已打通：** 11月3日scheduled assistant/main均prepare超时；MUSE 14:09快照报告下一自然运行11月4日09:00，但15:27未复读MUSE当前调度/运行/队列状态，均记UNKNOWN。15:22通过既有`pixel3a-kjgx`别名及其既有`su`路径读到Dozing、Forest未在前台、AutoX monitor健康，目标页未恢复；固定窗口monitor-only候选仍为部署哈希，backup与实际回滚验证已记录。当前requests=0是重启后的真实进程计数，不回填旧值。Keyguard细项与sidecar事件须等自然窗口。MUSE使用另一显式Termux SSH路线的历史字段仍排除，不复用该路径。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)。
+- **prepare根因仍UNKNOWN，设备观测路径已打通：** 11月3日scheduled assistant/main均prepare超时；MUSE 14:09快照报告下一自然运行11月4日09:00。15:37 CUA只确认MUSE应用进程运行；没有可用MUSE连接器，本轮未打开界面，因此当前日程、运行、排队、在途状态均UNKNOWN。为避免撞车，未复连Pixel；15:22读数只作为最近一次历史状态，不能充当当前preflight。该次`requests=0`是重启后的真实进程计数，不回填旧值；当前计数未知。下次先确认MUSE无并发再读Pixel，不能确认则继续UNKNOWN。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)和[接续手册](../planning/forest-diagnostics-operations-2026-11-04.md)。
 
 - **同轮prepare登录态细项仍不可用：** 当前Pixel v0.19 APK SHA-256与MUSE runner精确工件pin一致；替换APK安装prepare观察器会触发runner哈希门禁。故`user`、`empNoAES`、`operateFlag`仍标为UNKNOWN。私有只读exporter会在自然运行后通过同一alias读取monitor sidecar与带epoch时间的模块marker，仅在唯一assistant/main区间匹配时关联；其采集与joiner合成验证通过。
 
