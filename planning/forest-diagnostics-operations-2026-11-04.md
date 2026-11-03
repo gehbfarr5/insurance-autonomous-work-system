@@ -10,6 +10,8 @@ MUSE 19:08:09报告唯一Forest schedule每日09:00 Asia/Shanghai、下次11月4
 
 19:10通过唯一既有`pixel3a-kjgx`配置别名只读连接，远端`id -u`为10249；Pixel 3a、Android 15、时区Asia/Shanghai、boot completed；AutoX/AutoJS进程未见。当前设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity未读取，均为UNKNOWN；APK hash未在本次重读。未使用root/su、未部署/安装/启动/停止、未读写业务state或运行任务。由于缺少已记录的非root设备锁读取路径，保留UNKNOWN，不尝试猜路径；review-only observer未部署。自然运行前的设备写入/重启门禁仍未满足。
 
+19:13:37 MUSE侧只读检查显示其执行主机没有配置`pixel3a-kjgx`别名，因此未尝试任何设备连接、UID为UNKNOWN；MUSE表示已有锁读取方法要求提权，按本项目边界不执行。该结果仅描述MUSE执行主机，不能覆盖19:10本机Mac经同名既有别名成功的非root连接；本机当前设备锁仍UNKNOWN。无root/su、设备命令、文件或调度变更。后续Pixel采集必须由本机走现有别名及非root路径，且锁仍不可读时停止写入。
+
 ### 11月3日prepare失败层级审计｜2026-11-03 19:02 CST
 
 MUSE仅复核既有Forest对话的三段脱敏摘要，读取时间19:02:18 CST；未读raw logs或业务state、未访问设备、未运行代码/任务、未修改文件/调度。08:57助理误触、09:00调度助理和主流程均在prepare事件到达MainActivity后以`PREPARE_TIMEOUT_NO_FALLBACK`结束，未进入业务、cleanup均PASS；两段助理为`NOT_SENT`且`vueCheck`缺失，主流程无业务stage且`pendingAction`为空。

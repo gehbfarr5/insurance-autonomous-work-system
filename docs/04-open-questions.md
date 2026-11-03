@@ -4,6 +4,8 @@
 
 MUSE 19:08:09确认Forest每日Asia/Shanghai 09:00任务下次11月4日，running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程，部署哈希未变。19:10通过既有`pixel3a-kjgx`别名非root读取Pixel 3a/Android 15、Asia/Shanghai、boot完成、AutoX/AutoJS进程未见；本次未读取设备操作锁、monitor私有状态/hash、屏幕/Keyguard/前台Activity，均UNKNOWN。没有写设备或部署观察器；不得拿18:22锁读数作当前值。故障层仅定位到runner Activity/就绪标记轮询超时，具体未就绪原因仍待同轮自然证据。下一次既有自然运行前后仍须执行手册门禁。详见[诊断检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)和[运行手册](../planning/forest-diagnostics-operations-2026-11-04.md)。
 
+补充：19:13:37 MUSE侧检查发现其执行主机没有配置`pixel3a-kjgx`别名，未连接设备；MUSE报告其设备锁读取需提权，按约束未执行。这不影响本机Mac在19:10经既有别名进行的非root只读回读；本机设备操作锁仍UNKNOWN。
+
 ## 11月3日prepare失败层级审计｜2026-11-03 19:02 CST
 
 只读复核既有Forest对话的三段脱敏摘要，确认08:57误触助理、09:00调度助理与主流程均以`PREPARE_TIMEOUT_NO_FALLBACK`结束，prepare事件最后到MainActivity、没有业务阶段且cleanup PASS。当前可将故障定位到runner Activity/就绪标记轮询超时层。三段`vueCheck`缺失，assistant页面门禁未运行；module登录态门禁没有登录事件、逐字段布尔值或采样时点，仍UNKNOWN。就绪标记未到达的底层原因、屏幕/Keyguard及认证输入原因仍UNKNOWN。没有读原始日志/业务state、设备访问或新任务运行。P4保持开放，等11月4日既有自然运行收集新鲜观察。详见[检查点](../planning/forest-prepare-diagnostics-2026-11-03.md)与[证据索引](../planning/remaining-work-evidence-2026-10-29.json)。

@@ -1678,5 +1678,16 @@
     "secureViewApkHash": "NOT_RECHECKED; last read at 2026-11-03 18:48:55 matched the known v0.19 artifact.",
     "rootOrSuUsed": false,
     "actions": "No business-state read, install/deploy, device write, process start/stop, code/job execution, or schedule change."
+  },
+  "museDeviceLockPreflight20261103_191337": {
+    "readAt": "2026-11-03T19:13:37+08:00",
+    "source": "Existing Sunshine Forest MUSE conversation; status-only request.",
+    "museExecutionHostAliasConfigured": false,
+    "deviceConnectionAttempted": false,
+    "remoteUid": "UNKNOWN; no connection was established.",
+    "deviceOperationLock": "UNKNOWN; MUSE reports the documented read requires elevated access, which was not used.",
+    "monitorStatusAndHash": "UNKNOWN; no documented non-root alias-based read was available in the MUSE execution environment.",
+    "scopeBoundary": "This describes only the MUSE execution host. The local Mac's configured pixel3a-kjgx alias was independently confirmed and used non-root at approximately 19:10 CST.",
+    "actions": "No device connection or command, root/su, task/code execution, file/deployment/state/schedule/cron change, or other-chat inspection."
   }
 }

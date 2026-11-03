@@ -4,6 +4,8 @@
 
 MUSE 19:08:09只读回读唯一每日Asia/Shanghai 09:00任务下次11月4日09:00、running/queued/in-flight `0/0/false`、runner lock FREE、无Forest进程；live `run.py`/`assistant.py`哈希未变。19:10经唯一配置别名`pixel3a-kjgx`连接并核实UID 10249（非root）、Pixel 3a/Android 15、时区Asia/Shanghai、boot完成、AutoX/AutoJS进程未见。设备操作锁与monitor私有状态/hash没有可用的已记录非root读法，本次保留UNKNOWN；屏幕/Keyguard/Activity未读取。没有部署review-only候选、访问业务state、运行任务或写设备。需等自然运行并先有新鲜无并发/锁证据；P4开放、S1未验收。
 
+19:13:37 MUSE检查其自身执行主机时未发现已配置Pixel别名，因此未连接设备；其说明锁读取需提权，未执行。本机Mac 19:10的既有别名非root读取仍为独立有效事实，不将两台主机混为一谈；设备锁仍UNKNOWN。
+
 ## 最新诊断结论｜2026-11-03 19:02 CST
 
 MUSE仅查本Forest对话已有的脱敏摘要：11月3日08:57误触助理、09:00调度助理和主流程三段均以`PREPARE_TIMEOUT_NO_FALLBACK`结束；prepare事件都止于MainActivity，业务阶段未开始，cleanup均PASS。助理`vueCheck`缺失，故页面方法门禁未被求值、不能归因于其失败；module登录态门禁没有逐字段事件或采样记录，仍UNKNOWN。当前可定位到runner Activity/就绪标记轮询超时层，但未就绪的具体原因仍UNKNOWN。屏幕、Keyguard和认证输入层不作推断；未读raw log或业务state、未访问设备、未运行任务。11月4日自然运行与诊断字段验收仍待观察，P4开放，S1未验收。结构化记录见[证据索引](remaining-work-evidence-2026-10-29.json)。
