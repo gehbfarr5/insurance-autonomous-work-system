@@ -3,12 +3,14 @@
   "task_id": "WP11PQ-MUSE-EXPLICIT-ADDRESS-BOOK-AND-FIRST-REJECTION-HISTOGRAM-20261103",
   "candidate_q": {
     "branch": "codex/wp11-family-card-table-parser-20261103",
-    "commit": "66c8be00bf2305aa7194707c60740b2109103be1",
-    "package_version": "0.13.1",
+    "commit": "0b162686fe6a8cfa29cda7dfcd224976339746f4",
+    "package_version": "0.13.2",
+    "expected_test_count": 148,
     "files_sha256": {
       "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/runtime_safety.py": "09d8482839dd02002eb3f26456910de9ebaaf7cf1441c09143dd6a9c5922071f",
       "wp10-real-card/wp10_create_readback.py": "a85f6de5f7a3a758db1897bcb8bba724830771f13b46bd2573127f09a48cf3e7",
-      "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/contacts_create_adapter.py": "0aa33bb802b301ccb4b10269c2eb22214f82e8e1f232b8def45b84a4678b0c1b"
+      "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/contacts_create_adapter.py": "0aa33bb802b301ccb4b10269c2eb22214f82e8e1f232b8def45b84a4678b0c1b",
+      "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/acceptance_metrics.py": "45d7b265858acd67f15a32f25414f8b1d2f391808db4b48563418cbb3f0fc2ba"
     }
   },
   "wp11q_offline_retest": {
@@ -23,6 +25,7 @@
     "import_path_isolated": false,
     "test_suite": {
       "status": "BLOCKED",
+      "expected_tests": 148,
       "tests_run": 0,
       "failures": 0,
       "errors": 0
@@ -34,7 +37,9 @@
       "explicit_address_book_forwarded_to_serializer": false,
       "missing_address_book_stopped_before_mcp_call": false,
       "readback_resume_without_address_book_succeeded": false,
-      "readback_resume_did_not_issue_second_create": false
+      "readback_resume_did_not_issue_second_create": false,
+      "auto_usable_row_rejects_failure_reasons": false,
+      "manual_review_row_requires_failure_reason": false
     },
     "raw_values_returned": false
   },
