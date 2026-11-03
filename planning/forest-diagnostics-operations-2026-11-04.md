@@ -1,9 +1,21 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
-## 2026-11-04 00:29 CST — fresh MUSE status; device state remains gated
+## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
 
+By 00:36:49 CST, the existing thread returned a read-only readback of all three existing sanitized Nov 3 segment summaries; MUSE did not provide the underlying read time. Each segment stopped during prepare before business work. The two assistant segments recorded `has_login_event:false`, `stages:[]`, assistant `NOT_SENT`, and cleanup PASS; the main segment recorded `has_login_event:false`, a missing stages key (UNKNOWN), `pendingAction:null`, `automaticReplay:false`, and cleanup PASS. The per-field login guard, auth dispatch, gesturePage/accountMatch, and `user`/`empNoAES`/`operateFlag` presence and sample times are missing (UNKNOWN); the reason the ready marker did not arrive remains UNKNOWN. This refines the failure-stage evidence but does not establish a lower-level cause. Evidence: `nov3SanitizedSummaryReadback20261104_003649`. Keep the Nov 4 09:00 natural run and retrieve its same-run sanitized evidence first.
+
+
+## 2026-11-04 00:36 CST — 11月3日既有脱敏分段字段回读
+
+MUSE在既有阳光森林线程只读复核了三段已生成的脱敏摘要；回复未提供其底层读取时间，本地UI确认截至00:36:49 CST已返回。未访问Pixel、raw logs/sidecar或业务state，未运行代码/任务，未修改任何状态、文件、部署或调度，未检查其他聊天或附加文件。
+
+- **08:57:05—08:59:01，误触助理：** run ID `assistant-20261103-085705-******`（后缀已遮蔽）。标记为08:57:15 `moduleArtifactSha256`、08:57:37 `SplashActivity`、08:57:51 `MainActivity`；没有BridgeWebActivity记录。prepare原因为`UnsafeState: PREPARE_TIMEOUT_NO_FALLBACK`。`has_login_event:false`是明确记录值；逐字段guard结果和auth dispatch记录缺失，均为UNKNOWN；未记录gesture-page trigger，`gesturePage`与`accountMatch`缺失为UNKNOWN。`user`、`empNoAES`、`operateFlag` presence和sample time都缺失为UNKNOWN。`stages:[]`明确为空；assistant为`NOT_SENT`、`vueCheck`缺失（prepare未完成）、无问题派发。cleanup PASS（inspection closed和application stopped均true）。
+- **09:01:55—09:03:53，调度助理：** run ID `assistant-20261103-090155-******`（后缀已遮蔽）。标记为09:02:04 `moduleArtifactSha256`、09:02:26 `MainActivity`；无SplashActivity或BridgeWebActivity记录。prepare原因为`UnsafeState: PREPARE_TIMEOUT_NO_FALLBACK`。`has_login_event:false`为明确记录值；逐字段guard、auth dispatch、gesturePage、accountMatch、三个登录字段的presence与sample time均缺失为UNKNOWN。`stages:[]`明确为空；assistant为`NOT_SENT`、`vueCheck`缺失（prepare未完成）、无问题派发。cleanup PASS（inspection closed和application stopped均true）。
+- **09:04:16—09:06:17，主流程：** run ID `20261103-090416-******`（后缀已遮蔽）。标记为09:04:26 `moduleArtifactSha256`、09:04:47 `MainActivity`；无SplashActivity或BridgeWebActivity记录。prepare原因为`PREPARE_TIMEOUT_NO_FALLBACK`（没有`UnsafeState`前缀）。`has_login_event:false`为明确记录值；逐字段guard、auth dispatch、gesturePage、accountMatch、三个登录字段的presence与sample time均缺失为UNKNOWN。`stages`键不存在，故为UNKNOWN而非空列表。该主流程不适用assistant dispatch；没有dispatch记录。记录值为`pendingAction:null`、`automaticReplay:false`；sign/timeline/claim/balance字段未出现在摘要中。cleanup PASS（inspection closed和application stopped均true）。
+
+**结论与边界：** 三段均止于runner prepare的Activity/ready-marker等待；仅误触助理段记录SplashActivity，之后到MainActivity，另两段只记录MainActivity。没有任何段到达业务动作；两段助理没有派发问题。`has_login_event:false`不可改写为登录字段均为false：逐字段guard、auth dispatch及身份字段采样均缺记录。可定位的故障层仍是prepare timeout；marker未到达的底层原因、屏幕/Keyguard/设备前台状态和认证层原因仍UNKNOWN。不要放宽门禁或用该读数授权设备访问。结构化逐字段记录：`nov3SanitizedSummaryReadback20261104_003649`。
 
 ## 官方规则短语定向检索｜2026-11-03 23:54—23:55 CST
 

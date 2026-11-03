@@ -1,16 +1,18 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
-## 2026-11-04 00:29 CST — fresh MUSE status; device state remains gated
+## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
 
+By 00:36:49 CST, the existing thread returned a read-only readback of all three existing sanitized Nov 3 segment summaries; MUSE did not provide the underlying read time. Each segment stopped during prepare before business work. The two assistant segments recorded `has_login_event:false`, `stages:[]`, assistant `NOT_SENT`, and cleanup PASS; the main segment recorded `has_login_event:false`, a missing stages key (UNKNOWN), `pendingAction:null`, `automaticReplay:false`, and cleanup PASS. The per-field login guard, auth dispatch, gesturePage/accountMatch, and `user`/`empNoAES`/`operateFlag` presence and sample times are missing (UNKNOWN); the reason the ready marker did not arrive remains UNKNOWN. This refines the failure-stage evidence but does not establish a lower-level cause. Evidence: `nov3SanitizedSummaryReadback20261104_003649`. Keep the Nov 4 09:00 natural run and retrieve its same-run sanitized evidence first.
 
-## P4验收关口状态｜2026-11-03 23:56 CST
+
+## P4验收关口状态｜2026-11-04 00:36 CST
 
 | 关口 | 状态 | 当前证据与限制 |
 | --- | --- | --- |
-| 新鲜MUSE/Pixel预检 | PASS（仅元数据与身份/APK范围） | 23:38:55 MUSE无在途；Pixel已启动、v0.19 APK pin匹配。设备操作锁与monitor状态仍UNKNOWN。 |
-| 11月3日故障阶段定位 | PASS（仅定位到阶段） | 脱敏MUSE摘要显示三段停在prepare Activity/就绪标记等待，未进入业务、cleanup报告PASS；底层原因UNKNOWN，未取回独立原始文件。 |
+| 新鲜MUSE/Pixel预检 | PASS（仅MUSE元数据；Pixel锁/monitor未复核） | 00:29:15 MUSE无在途并回报live哈希；设备操作锁、monitor状态/hash仍UNKNOWN。00:36前完成既有摘要只读回读，没有设备接触。 |
+| 11月3日故障阶段定位 | PASS（仅定位到prepare阶段） | 新回读确认：两段assistant `stages:[]`、`NOT_SENT`；主流程stages键缺失（UNKNOWN）；三段cleanup PASS。`has_login_event:false`有记录；逐字段guard/auth dispatch/gesture门禁和登录字段采样均缺失。ready marker未到原因仍UNKNOWN；未取回raw files。 |
 | 同轮完整诊断矩阵 | BLOCKED | 屏幕/Keyguard/Activity、认证触发与手势门禁、逐字段存在性/采样时间仍缺；现有导出器需要`su -c`，设备操作锁无已验证非root读法。 |
 | 修复与诊断集成 | BLOCKED | 根因未证；live monitor状态/hash与设备锁UNKNOWN；不放宽门禁、不安装/重启候选。 |
 | 五项日常任务验收 | BLOCKED | 10月31日仅部分可信回执；11月1—3未进入业务阶段；客温客价无独立回执，助理答案/奖励未确认。 |
@@ -19,7 +21,7 @@ At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current sched
 | 跨日/长期稳定性 | SUSPENDED | 等待既有11月4日自然运行及后续跨日样本；不标PASS。 |
 | 运行/停止/回滚说明 | PASS（条件式说明已记录）；当前设备级停止/回滚BLOCKED | 自然运行只读顺序、失败停止条件和历史备份验证步骤可查；当前Pixel操作锁及live monitor hash/state UNKNOWN，非root读取方法未验证。 |
 
-因此P4目前不能完整收尾；S1及长期稳定性未验收。结构化关口记录：`acceptanceGateStatus20261103_235644`。
+因此P4目前不能完整收尾；S1及长期稳定性未验收。新读回详见`nov3SanitizedSummaryReadback20261104_003649`；当前关口快照为`acceptanceGateStatus20261104_003649`。
 
 ## 官方规则短语定向检索｜2026-11-03 23:54—23:55 CST
 

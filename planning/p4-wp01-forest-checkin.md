@@ -1,13 +1,15 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 2026-11-04 00:29 CST — fresh MUSE status; device state remains gated
+## 2026-11-04 00:36 CST — sanitized Nov 3 readback; natural run pending
 
 At 00:29:15 CST, the existing Sunshine Forest MUSE thread returned current scheduler/deployment metadata: no active task; one daily 09:00 Asia/Shanghai schedule, next trigger 2026-11-04 09:00; running/queued/in-flight `0/0/false`; runner lock `FREE`; no Forest process observed; live `run.py` and `assistant.py` hashes unchanged; latest scheduler failure 2026-11-03 09:11:17 and last success 2026-10-31 09:15:50. This satisfies the MUSE concurrency check only; it does not establish the Pixel operation lock or monitor state/hash. No Pixel connection/device command, business-state/log read, job/code execution, file/deployment/schedule change, or other-chat inspection occurred. Keep the 09:00 natural run. After its window, retrieve that run's sanitized MUSE evidence first. Device-side collection remains gated because the private exporters require `su` and no permitted, verified non-root lock/data path is documented. Evidence: `museReadonlyStatus20261104_002915`; the earlier failed UI read remains recorded as `currentStatusReadAttempt20261104_0020`.
 
+By 00:36:49 CST, the existing thread returned a read-only readback of all three existing sanitized Nov 3 segment summaries; MUSE did not provide the underlying read time. Each segment stopped during prepare before business work. The two assistant segments recorded `has_login_event:false`, `stages:[]`, assistant `NOT_SENT`, and cleanup PASS; the main segment recorded `has_login_event:false`, a missing stages key (UNKNOWN), `pendingAction:null`, `automaticReplay:false`, and cleanup PASS. The per-field login guard, auth dispatch, gesturePage/accountMatch, and `user`/`empNoAES`/`operateFlag` presence and sample times are missing (UNKNOWN); the reason the ready marker did not arrive remains UNKNOWN. This refines the failure-stage evidence but does not establish a lower-level cause. Evidence: `nov3SanitizedSummaryReadback20261104_003649`. Keep the Nov 4 09:00 natural run and retrieve its same-run sanitized evidence first.
 
-## 验收关口状态｜2026-11-03 23:56 CST
 
-有限预检PASS；11月3日故障阶段定位PASS（仅到prepare等待层，底因UNKNOWN）；完整诊断和修复/集成BLOCKED；五项日常与五项扩展验收BLOCKED；规则原据PARTIAL；跨日/长期稳定性SUSPENDED。不得据此关闭P4或声明S1完成。关口细项见[交接表](p4-next-session-handoff.md)与`acceptanceGateStatus20261103_235644`。
+## 验收关口状态｜2026-11-04 00:36 CST
+
+MUSE元数据预检PASS（00:29:15；不代表Pixel设备锁/monitor已复核）；11月3日故障阶段定位PASS（仅到prepare等待层，marker未到的原因UNKNOWN）。00:36读回确认三段`has_login_event:false`为记录值；两段assistant的`stages:[]`、主流程stages键缺失（UNKNOWN）；逐字段guard/auth dispatch/gesture门禁及登录字段采样仍缺失。完整设备诊断与修复/集成BLOCKED；五项日常与五项扩展验收BLOCKED；规则原据PARTIAL；跨日/长期稳定性SUSPENDED。不得据此关闭P4或声明S1完成。关口细项见[交接表](p4-next-session-handoff.md)与`acceptanceGateStatus20261104_003649`。
 
 ## 官方规则短语定向检索｜2026-11-03 23:54—23:55 CST
 

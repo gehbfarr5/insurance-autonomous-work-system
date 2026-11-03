@@ -3295,5 +3295,278 @@
     "deviceOperationLock": "UNKNOWN; MUSE metadata-only read does not expose the Pixel lock.",
     "monitorStatusAndHash": "UNKNOWN; not read.",
     "evidenceLimit": "Fresh MUSE concurrency/deployment metadata only; does not establish Pixel state or authorize root/private-data access."
+  },
+  "nov3SanitizedSummaryReadback20261104_003649": {
+    "recordedAt": "2026-11-04T00:36:49+08:00",
+    "museReadAt": "NOT_PROVIDED",
+    "source": "Read-only reply in the existing Sunshine Forest MUSE thread, captured in the native UI by the recordedAt time.",
+    "scope": "Only the three already-produced sanitized Nov 3 segment summaries; no raw logs or sidecars, Pixel/device access, business state, code/job execution, state/file/deployment/schedule change, other-chat inspection, or attachments.",
+    "segments": [
+      {
+        "interval": "2026-11-03 08:57:05—08:59:01 Asia/Shanghai",
+        "kind": "accidental assistant",
+        "runId": "assistant-20261103-085705-******",
+        "markers": [
+          {
+            "time": "08:57:15",
+            "category": "moduleArtifactSha256"
+          },
+          {
+            "time": "08:57:37",
+            "category": "activity.SplashActivity"
+          },
+          {
+            "time": "08:57:51",
+            "category": "activity.MainActivity"
+          }
+        ],
+        "activityCategory": {
+          "sequence": [
+            "SplashActivity",
+            "MainActivity"
+          ],
+          "bridgeWebActivityRecorded": false
+        },
+        "prepareReason": "UnsafeState: PREPARE_TIMEOUT_NO_FALLBACK",
+        "loginEvent": {
+          "has_login_event": false,
+          "status": "RECORDED_FALSE"
+        },
+        "guardPerFieldEvaluation": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "authDispatch": "UNKNOWN_NO_DISPATCH_RECORD",
+        "gesturePageTrigger": "NOT_RECORDED",
+        "gesturePage": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "accountMatch": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "loginFields": {
+          "user": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          },
+          "empNoAES": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          },
+          "operateFlag": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          }
+        },
+        "stages": {
+          "status": "RECORDED_EMPTY",
+          "value": []
+        },
+        "assistantDispatch": {
+          "status": "NOT_SENT",
+          "vueCheck": "UNKNOWN_MISSING_PREPARE_DID_NOT_COMPLETE",
+          "questionDispatched": false
+        },
+        "cleanup": {
+          "status": "PASS",
+          "inspectionClosed": true,
+          "applicationStopped": true
+        }
+      },
+      {
+        "interval": "2026-11-03 09:01:55—09:03:53 Asia/Shanghai",
+        "kind": "scheduled assistant",
+        "runId": "assistant-20261103-090155-******",
+        "markers": [
+          {
+            "time": "09:02:04",
+            "category": "moduleArtifactSha256"
+          },
+          {
+            "time": "09:02:26",
+            "category": "activity.MainActivity"
+          }
+        ],
+        "activityCategory": {
+          "sequence": [
+            "MainActivity"
+          ],
+          "splashActivityRecorded": false,
+          "bridgeWebActivityRecorded": false
+        },
+        "prepareReason": "UnsafeState: PREPARE_TIMEOUT_NO_FALLBACK",
+        "loginEvent": {
+          "has_login_event": false,
+          "status": "RECORDED_FALSE"
+        },
+        "guardPerFieldEvaluation": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "authDispatch": "UNKNOWN_NO_DISPATCH_RECORD",
+        "gesturePageTrigger": "NOT_RECORDED",
+        "gesturePage": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "accountMatch": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "loginFields": {
+          "user": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          },
+          "empNoAES": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          },
+          "operateFlag": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          }
+        },
+        "stages": {
+          "status": "RECORDED_EMPTY",
+          "value": []
+        },
+        "assistantDispatch": {
+          "status": "NOT_SENT",
+          "vueCheck": "UNKNOWN_MISSING_PREPARE_DID_NOT_COMPLETE",
+          "questionDispatched": false
+        },
+        "cleanup": {
+          "status": "PASS",
+          "inspectionClosed": true,
+          "applicationStopped": true
+        }
+      },
+      {
+        "interval": "2026-11-03 09:04:16—09:06:17 Asia/Shanghai",
+        "kind": "scheduled main flow",
+        "runId": "20261103-090416-******",
+        "markers": [
+          {
+            "time": "09:04:26",
+            "category": "moduleArtifactSha256"
+          },
+          {
+            "time": "09:04:47",
+            "category": "activity.MainActivity"
+          }
+        ],
+        "activityCategory": {
+          "sequence": [
+            "MainActivity"
+          ],
+          "splashActivityRecorded": false,
+          "bridgeWebActivityRecorded": false
+        },
+        "prepareReason": "PREPARE_TIMEOUT_NO_FALLBACK",
+        "loginEvent": {
+          "has_login_event": false,
+          "status": "RECORDED_FALSE"
+        },
+        "guardPerFieldEvaluation": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "authDispatch": "UNKNOWN_NO_DISPATCH_RECORD",
+        "gesturePageTrigger": "NOT_RECORDED",
+        "gesturePage": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "accountMatch": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+        "loginFields": {
+          "user": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          },
+          "empNoAES": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          },
+          "operateFlag": {
+            "presence": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY",
+            "sampleTime": "UNKNOWN_MISSING_FROM_SANITIZED_SUMMARY"
+          }
+        },
+        "stages": {
+          "status": "UNKNOWN_KEY_ABSENT",
+          "keyPresent": false
+        },
+        "assistantDispatch": {
+          "status": "NOT_APPLICABLE_TO_MAIN_FLOW",
+          "dispatchRecord": "NOT_RECORDED"
+        },
+        "businessValues": {
+          "pendingAction": null,
+          "automaticReplay": false,
+          "signTimelineClaimBalanceFields": "NOT_PRESENT_IN_SANITIZED_SUMMARY"
+        },
+        "cleanup": {
+          "status": "PASS",
+          "inspectionClosed": true,
+          "applicationStopped": true
+        }
+      }
+    ],
+    "commonConclusion": "All three segments stopped in runner prepare Activity/readiness-marker waiting before business actions. The 08:57 segment recorded SplashActivity then MainActivity; the other two recorded MainActivity only. This localizes the failure stage, not the lower-level reason the ready marker did not arrive.",
+    "explicitUnknowns": [
+      "lower-level ready-marker cause",
+      "screen and Keyguard state",
+      "device foreground state beyond recorded Activity categories",
+      "per-field login-guard results",
+      "auth dispatch outcome",
+      "gesturePage/accountMatch",
+      "presence and sample times of user/empNoAES/operateFlag"
+    ],
+    "actions": {
+      "pixelConnected": false,
+      "rawLogsOrSidecarsRead": false,
+      "businessStateRead": false,
+      "codeOrJobsRun": false,
+      "filesOrStateOrScheduleChanged": false,
+      "otherChatsInspected": false,
+      "attachmentsRequestedOrReceived": false
+    }
+  },
+  "acceptanceGateStatus20261104_003649": {
+    "asOf": "2026-11-04T00:36:49+08:00",
+    "sourceEvidence": [
+      "museReadonlyStatus20261104_002915",
+      "nov3SanitizedSummaryReadback20261104_003649"
+    ],
+    "gates": [
+      {
+        "name": "Fresh MUSE metadata preflight",
+        "status": "PASS (metadata only)",
+        "limit": "Pixel operation lock and monitor state/hash were not rechecked and remain UNKNOWN."
+      },
+      {
+        "name": "Nov 3 failure-stage localization",
+        "status": "PASS (prepare stage only)",
+        "finding": "Three sanitized summaries stop in prepare Activity/readiness-marker waiting before business work. has_login_event:false is recorded in each; assistant stages are recorded empty; main-flow stages key is absent. The lower-level marker cause remains UNKNOWN."
+      },
+      {
+        "name": "Complete device/field diagnostic matrix",
+        "status": "BLOCKED",
+        "missing": [
+          "screen/Keyguard and current device foreground state",
+          "per-field login guard results",
+          "auth dispatch outcome",
+          "gesturePage/accountMatch values",
+          "presence and sample time of user/empNoAES/operateFlag",
+          "verified non-root collector and fresh Pixel operation lock"
+        ]
+      },
+      {
+        "name": "Repair and device integration",
+        "status": "BLOCKED",
+        "reason": "Underlying cause is unconfirmed; Pixel operation lock and live monitor state/hash are UNKNOWN. No gate bypass, install, or restart."
+      },
+      {
+        "name": "Five daily task acceptance",
+        "status": "BLOCKED",
+        "reason": "Oct 31 receipts remain partial; Nov 1-3 did not reach business stages; temperature/value lacks an independent receipt and assistant answer/reward remains unconfirmed."
+      },
+      {
+        "name": "Five extension investigations",
+        "status": "BLOCKED (all classified 仍待核实)",
+        "reason": "Current eligibility, complete reward trigger, and repeat cycle remain unresolved."
+      },
+      {
+        "name": "Historical rule-source recovery",
+        "status": "PARTIAL",
+        "reason": "E07 supports historical daily caps and reward units; reset time, repeat cycle, exact trigger, posting delay, and current eligibility remain unknown."
+      },
+      {
+        "name": "Cross-day and long-term stability",
+        "status": "SUSPENDED",
+        "nextEvidencePoint": "Existing natural run scheduled for 2026-11-04 09:00 Asia/Shanghai; same-run sanitized evidence remains pending."
+      }
+    ],
+    "overall": "P4 remains open. Do not claim S1 or overall completion. P50, monthly planning, and 2U=2800 remain excluded.",
+    "actions": "No device access, code/job execution, business-state/log reads, state/schedule/deployment changes, replay, or gate relaxation."
   }
 }
