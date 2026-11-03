@@ -10,6 +10,8 @@
      is reported as level>=1, inherited, not own.
    - Cycles: WeakSet for instances, vnodes, and provides objects, per run.
    - Bounds: 5000 objects, 250 depth, 12000 queue, 160 metadata keys.
+   - Traversal fields are read from data descriptors only; accessor descriptors
+     are reported as ACCESSOR_BLOCKED without invoking their getter.
    - Ref rule: a ref object (__v_isRef true) is unwrapped to its _value ONLY
      when the field key is in the whitelist AND _value is boolean; otherwise
      only type is reported, never the value. Non-ref fields: whitelist boolean
@@ -30,7 +32,26 @@
     const queue = [], queuedInstances = new WeakSet(), queuedVnodes = new WeakSet();
     const truncationReasons = new Set();
     let visited = 0, truncated = false;
-    function read(o, k, path) { if (!o) return undefined; try { return o[k]; } catch (e) { errors.push({path, errorType: e.name}); return undefined; } }
+    function read(o, k, path) {
+      if (o === null || o === undefined) return undefined;
+      let cur = o;
+      const seen = new WeakSet();
+      let prototypeDepth = 0;
+      try {
+        while (cur !== null && (typeof cur === 'object' || typeof cur === 'function')) {
+          if (prototypeDepth++ >= 250) { truncated = true; truncationReasons.add('PROPERTY_PROTOTYPE_DEPTH'); return undefined; }
+          if (seen.has(cur)) { errors.push({path, errorType: 'PROTOTYPE_CYCLE'}); return undefined; }
+          seen.add(cur);
+          const descriptor = Object.getOwnPropertyDescriptor(cur, k);
+          if (descriptor) {
+            if (!('value' in descriptor)) { errors.push({path, errorType: 'ACCESSOR_BLOCKED'}); return undefined; }
+            return descriptor.value;
+          }
+          cur = Object.getPrototypeOf(cur);
+        }
+      } catch (_) { errors.push({path, errorType: 'READ_FAILED'}); }
+      return undefined;
+    }
     function budget(depth) {
       if (depth > 250) { truncated = true; truncationReasons.add('DEPTH'); return false; }
       if (visited++ >= 5000) { truncated = true; truncationReasons.add('OBJECT_COUNT'); return false; }
@@ -49,7 +70,7 @@
     }
     function fieldMeta(obj, path) {
       if (!obj || typeof obj !== 'object') return [];
-      let descs; try { descs = Object.getOwnPropertyDescriptors(obj); } catch (e) { errors.push({path, errorType: e.name}); return []; }
+      let descs; try { descs = Object.getOwnPropertyDescriptors(obj); } catch (_) { errors.push({path, errorType: 'READ_FAILED'}); return []; }
       const keys = Object.keys(descs);
       if (keys.length > 160) { truncated = true; truncationReasons.add('METADATA_KEYS'); }
       return keys.slice(0, 160).map(key => {
@@ -87,9 +108,10 @@
             const val = descriptor.value;
             symbols.push({description: s.description || null, type: typeof val, fields: (val !== null && typeof val === 'object') ? fieldMeta(val, path + '.provides-symbol') : []});
           }
-        } catch (e) { errors.push({path: path + '.provides-symbols', errorType: e.name}); }
+        } catch (_) { errors.push({path: path + '.provides-symbols', errorType: 'READ_FAILED'}); }
         levels.push({level, own: level === 0, stringKeys, symbols});
-        cur = Object.getPrototypeOf(cur); level++;
+        try { cur = Object.getPrototypeOf(cur); level++; }
+        catch (_) { errors.push({path: path + '.provides-prototype', errorType: 'READ_FAILED'}); break; }
       }
       if (level >= 20) { truncated = true; truncationReasons.add('PROVIDES_CHAIN_DEPTH'); }
       return levels;
@@ -142,6 +164,6 @@
     return {status: errors.length ? 'READ_ERROR' : truncated ? 'TRUNCATED' : nodes.length ? 'ROOTS_FOUND' : 'ROOT_NOT_EXPOSED',
       entries, nodes, errors, truncated, truncationReasons: [...truncationReasons], nodeCount: nodes.length,
       visitedObjects: visited, queuedObjects: queue.length,
-      limits: {visitedObjects: 5000, depth: 250, queueObjects: 12000, metadataKeysPerObject: 160, providesChainDepth: 20}};
+      limits: {visitedObjects: 5000, depth: 250, queueObjects: 12000, metadataKeysPerObject: 160, providesChainDepth: 20, propertyPrototypeDepth: 250}};
   };
 })();

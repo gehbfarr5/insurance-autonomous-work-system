@@ -1202,5 +1202,35 @@
     "latestNaturalResult": "2026-11-02 BLOCKED / PREPARE_TIMEOUT_NO_FALLBACK; five daily items NOT_EXECUTED; cleanup PASS.",
     "actionThisTurn": "Preserve the existing schedule; no manual rerun, no schedule/state/cron changes, no new persistent task, no new MUSE request.",
     "verificationPriority": "DEFERRED"
+  },
+  "receiptCollectorReview20261103": {
+    "recordedAt": "2026-11-03T17:35:21+08:00",
+    "scope": "Offline source review and synthetic verification only; no device, MUSE, business state, schedule, or deployment access.",
+    "finding": "ai-snapshot.js omitted empty recordId values from recordHashes, so an incomplete baseline could appear usable for new-record comparison.",
+    "change": "Require a non-empty string recordId for every answer before hashing; otherwise return REVIEW / RECORD_ID_UNKNOWN.",
+    "verification": {
+      "test": "node tools/receipt-collector/test-collector.cjs",
+      "result": "29/29 synthetic cases PASS; no device or business access"
+    },
+    "files": {
+      "tools/receipt-collector/ai-snapshot.js": "47ab31d7999deed029d7040c98c5c9bcc5f8a54100868925ed71d9aecb048cd4",
+      "tools/receipt-collector/test-collector.cjs": "b926cafa1b136fd2fefa9efef902c283d703f3a839e0af6ac8e99599d72f7280"
+    },
+    "installedMUSEVersion": "UNKNOWN",
+    "deploymentChanged": false,
+    "businessActionPerformed": false
+  },
+  "offlineTraversalReview20261103": {
+    "recordedAt": "2026-11-03T17:35:21+08:00",
+    "scope": "Standalone offline provides traversal candidate; not integrated or deployed.",
+    "change": "Traversal property reads now use property descriptors, block accessors as READ_ERROR, bound prototype lookup, and sanitize reflection failures without inspecting thrown error properties. Standard reflection may still invoke traps on arbitrary Proxy objects; candidate is limited to reviewed local page graphs.",
+    "verification": {
+      "test": "node tools/offline-receipt-review/test_provides_component_traversal.cjs",
+      "result": "PASS including accessor blocking, proxy-thrown error sanitization, and prototype-depth regression"
+    },
+    "files": {
+      "tools/offline-receipt-review/provides_component_traversal.js": "fd06d9ae74e833f9d2aa3aa2acc5c6b61ae8368b5075a06a321de70030bcc1e4",
+      "tools/offline-receipt-review/test_provides_component_traversal.cjs": "cd1e868df8ff1937061443679d8da821b24f9c0b2b5eaa129134ad801cff7a2e"
+    }
   }
 }
