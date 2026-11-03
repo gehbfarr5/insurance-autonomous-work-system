@@ -1,8 +1,8 @@
 # P4-WP01｜阳光森林每日签到：最小环境验证
 
-## 当前访问门禁｜2026-11-03 17:00 CST
+## 当前访问门禁与采集器审计｜2026-11-03 17:12 CST
 
-CUA库存再次确认MUSE应用进程运行，但没有Forest任务/调度读回且浏览器控制不可用。最近并发证据仍为16:23 MUSE状态读数，当前并发UNKNOWN；本轮未连接Pixel。16:33静态读回确认live runner哈希与部署值一致及70秒Activity准备轮询，但没有定位具体超时触发；完整live runner未导出，不能建立精确补丁基线。17:03本机只读配置检查确认既有SSH别名存在、ControlMaster未启用、无控制socket或带该别名的SSH进程；这不提供设备锁/运行哈希读数。只有在新鲜MUSE读数确认无其他任务在途后，才通过现有别名复核Pixel设备操作锁与部署哈希。没有业务动作、设备写入或state/cron/调度变更。诊断和窗口后采集停止条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
+CUA库存仅确认MUSE应用进程运行，浏览器控制不可用，未读到Forest任务/调度。最近并发证据仍为16:23 MUSE状态读数，当前并发UNKNOWN；本轮未连接Pixel。16:33静态读回确认live runner哈希与部署值一致及70秒Activity准备轮询，但没有定位具体超时触发；完整live runner未导出，不能建立精确补丁基线。17:03本机SSH配置复核未连接设备，也未读到设备锁或运行哈希。17:12对11月4日review-only包审计确认monitor只投影屏幕/Keyguard、目标Activity和account匹配布尔值、触发门禁及worker请求/返回；不提供原始Activity名，worker返回不等于认证成功。登录字段与assistant gate观察器离线。修正了collector忽略`.failure`标记的缺陷，新增计数与`PARTIAL_UNKNOWN`降级；合成采集检查通过、包哈希14/14通过。只有在新鲜MUSE读数确认无其他任务在途后，才通过现有别名复核Pixel设备操作锁与部署哈希。没有业务动作、设备写入或state/cron/调度变更。诊断和窗口后采集停止条件见[运行恢复说明](forest-diagnostics-operations-2026-11-04.md)。
 
 ## 最后一次MUSE状态读数｜2026-11-03 16:23 CST（Pixel最近读取15:58 CST）
 
