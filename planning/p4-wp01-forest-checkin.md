@@ -4,6 +4,8 @@
 
 Connected Drive metadata-only document searches for “阳光森林 官方 时间点”, “阳光森林 截止时间”, and “Forest official timepoint” returned zero results; no document content was fetched. This search did not recover the exact pointer. D-029 still records that the official timepoint was previously confirmed; this bounded empty search does not negate that record or prove the original source absent. Evidence key: `googleDriveTimingSourcePointerSearch20261104_0308` in the [evidence index](evidence-index-2026-10-29.json).
 
+CPIC public-site searches at 03:10 using the daily cap, sign-in, and 阳光/雨露 terms returned unrelated pages; no current Forest workflow or timing rule was verified. The search-result scope does not establish that the original source is absent or that the prior confirmation did not occur. Evidence key: `cpicOfficialRuleSearch20261104_0310` in the [evidence index](evidence-index-2026-10-29.json).
+
 ## 2026-11-04 02:50—02:54 CST：签到自然轮待触发
 
 MUSE 02:50:48确认无Forest活动任务、0/0/false、runner lock FREE、未观察到Forest进程；既有每日09:00 Asia/Shanghai schedule仍待今日触发。随后Pixel非root预检确认设备身份、Android 15、启动及v0.19 APK pin。限定进程过滤无匹配、精确文档marker缺失，但整体设备操作锁、monitor/hash和UI仍UNKNOWN。CPIC官方域限定搜索没有找到当前Forest规则或扩展流程；查询范围有限，不证明原件不存在。

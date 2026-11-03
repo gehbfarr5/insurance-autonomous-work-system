@@ -144,6 +144,23 @@
       "resultCount": 0,
       "contentFetched": false,
       "scopeLimit": "Applies only to these terms and the returned metadata search pages; does not establish that the source is absent or that the previously confirmed official timepoint was never confirmed."
+    },
+    {
+      "id": "X04",
+      "recordKey": "cpicOfficialRuleSearch20261104_0310",
+      "source": "CPIC public-site search results",
+      "searchedAt": "2026-11-04 03:10 Asia/Shanghai",
+      "domains": [
+        "cpic.com.cn",
+        "m.cpic.com.cn"
+      ],
+      "queries": [
+        "阳光森林 每日规则 10 阳光值 20 雨露",
+        "阳光森林 签到 每日 时间规则",
+        "森林 阳光雨露 规则 时点"
+      ],
+      "summary": "Returned CPIC pages were unrelated to the Sunshine Forest app rule; no current workflow, timepoint, or reward rule was verified.",
+      "scopeLimit": "Search-result scope only; does not establish that the official source is absent or that a prior confirmation did not occur."
     }
   ]
 }
