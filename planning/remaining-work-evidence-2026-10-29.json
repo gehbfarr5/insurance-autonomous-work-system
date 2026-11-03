@@ -5187,5 +5187,30 @@
     "change": "Evidence-index E11 description now identifies its v0.17 APK hash as historical from 2026-10-29, not the current installed version. Original artifact path, SHA-256, and byte count were preserved.",
     "limit": "The fresh v0.19 APK hash does not establish module runtime state or device lock/monitor/UI; those remain separately UNKNOWN.",
     "actions": "Documentation/index correction only; no device or app action, no tests run."
+  },
+  "cpicPublicRuleSourceSearch20261104_0428": {
+    "id": "X14",
+    "recordKey": "cpicPublicRuleSourceSearch20261104_0428",
+    "source": "Public web search; official-domain queries plus exact Forest terms",
+    "searchedAt": "2026-11-04 04:27–04:28 Asia/Shanghai (exact query times not captured)",
+    "queries": [
+      "site:cpic.com.cn 阳光森林 阳光雨露 行为值 重置 规则",
+      "\"阳光森林\" \"阳光雨露\" 任务 奖励 规则",
+      "site:cpic.com.cn \"阳光森林\" \"阳光雨露\"",
+      "太平洋保险 阳光森林 任务时间 奖励 触发",
+      "site:cpic.com.cn \"蛮好的森林\"",
+      "site:cpic.com.cn \"阳光森林\" \"签到\" \"行为值\"",
+      "site:cpic.com.cn \"森林榜单\" \"雨露值\"",
+      "\"蛮好的森林\" 阳光 雨露 中国太平洋保险 官方"
+    ],
+    "officialDomainResults": "No attributable CPIC official Forest rule page surfaced in the searched results.",
+    "secondaryLead": {
+      "title": "团队二早经营标准化流程三步骤现场检视客情辅导活动量管理31页.pptx - 早会组织",
+      "url": "https://www.wanyiwang.com/index.php/view/139759.html",
+      "searchSnippet": "The result snippet refers to “蛮好的森林” and mentions daily caps and task points.",
+      "pageFetch": "Failed with cache miss."
+    },
+    "scopeLimit": "The repost is not a primary source; its product identity, version, and provenance cannot be tied to this project. It supplies no verified reset time, repeat cycle, reward trigger/posting, or current eligibility. Exclude it as rule/workflow evidence. D-029 remains unchanged; no rule is inferred.",
+    "actions": "Public read-only search and documentation/evidence-index update only. No MUSE, Pixel/device, business-state, raw-log, code/job, or schedule access or changes."
   }
 }
