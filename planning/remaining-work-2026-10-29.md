@@ -1,5 +1,9 @@
 # 其余项目推进与证据边界｜2026-10-29
 
+## 2026-11-04 04:02 CST：Drive原始规则补查
+
+针对历史10/20上限和每日森林积分/奖励规则，对用户已查看文档做两条metadata-only检索，均无结果，未抓取正文。D-029保持不变；日重置时点、任务周期及奖励触发原据仍未恢复。证据：`googleDriveRuleSourceSearch20261104_0402`。
+
 ## 2026-11-04 04:00—04:01 CST：运行交接历史状态校准
 
 已把诊断交接中“monitor当前已运行、exporter就绪”的旧段落标注为11月3日历史部署快照。最新Pixel非root预检并未读设备锁、monitor状态/hash或UI；本地私有文件exporter依赖`su`，没有运行。assistant遥测源码hash仍匹配，但不代表monitor或同轮观测已验证。自然轮仍PENDING；设备锁/monitor/UI仍UNKNOWN。证据：`handoffStatusClarification20261104_0401`。

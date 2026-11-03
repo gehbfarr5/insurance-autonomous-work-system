@@ -1,5 +1,9 @@
 # 本地成果、证据恢复与同步核查｜2026-10-29
 
+## 2026-11-04 04:02 CST：Drive原规则补充检索
+
+两条限于用户已查看文档的metadata-only检索（10/20日上限、每日阳光森林奖励规则）均无结果，未读取文档正文。该结果不证明原件缺失或历史确认未发生。记录：`googleDriveRuleSourceSearch20261104_0402`。
+
 ## 2026-11-04 04:00—04:01 CST：手册历史monitor状态澄清
 
 复核运行诊断文档时发现其“monitor已安装/运行、exporter已就绪”段落是11月3日部署快照，不是11月4日当前读数；已将标题和正文改为历史状态。MUSE 03:47只确认assistant live hash匹配已集成遥测版本；Pixel 03:50非root预检未读设备锁、monitor/hash或UI。旧exporter访问私有数据需要`su`，本轮按当前非root边界未运行。故同轮证据仍PENDING，设备锁/monitor/UI继续UNKNOWN，不以历史快照放行。结构化记录：`handoffStatusClarification20261104_0401`。

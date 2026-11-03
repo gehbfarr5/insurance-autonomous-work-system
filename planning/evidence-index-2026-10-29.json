@@ -239,6 +239,28 @@
       ],
       "summary": "The restricted search returned historical technology-insurance/product context, including orphan-policy task improvements, E锦囊 references, and 态幸福 as an NBS sales-support tool. It did not return a current Sunshine Forest rule or directly relevant workflow for reset time, task cycle, reward trigger/posting, or current eligibility.",
       "scopeLimit": "Search-index results only. These historical product references do not establish current Forest mapping or rules; the bounded miss does not prove source absence or negate D-029."
+    },
+    {
+      "id": "X10",
+      "recordKey": "googleDriveRuleSourceSearch20261104_0402",
+      "source": "Connected Google Drive metadata-only document search",
+      "searchedAt": "2026-11-04 04:02:10–04:02:36 Asia/Shanghai",
+      "queries": [
+        "阳光雨露 日上限 10 20 行为值",
+        "阳光森林 每日积分 10 20 奖励规则"
+      ],
+      "limits": {
+        "itemType": "document",
+        "topN": 10,
+        "requireViewedByUser": true,
+        "bestEffortFetch": false
+      },
+      "resultCounts": [
+        0,
+        0
+      ],
+      "contentFetched": false,
+      "scopeLimit": "Only these viewed-document metadata searches. No hit does not prove the original source absent or negate D-029."
     }
   ],
   "runtimeObservations": [
