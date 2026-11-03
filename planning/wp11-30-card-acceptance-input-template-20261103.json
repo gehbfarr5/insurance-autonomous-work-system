@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "study": {
+    "authorization_confirmed": false,
+    "distinct_real_cards_verified": false,
+    "reference_annotations_reviewed": false
+  },
+  "sample_results": []
+}
