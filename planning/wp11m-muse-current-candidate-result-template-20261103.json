@@ -22,17 +22,18 @@
   "wp10_replay": {
     "structured_result_available": "YES|NO|NOT_CHECKED",
     "reviewed_reference_available": "YES|NO|NOT_CHECKED",
-    "status": "PASS|FAIL|BLOCKED|NOT_RUN",
+    "parser_replay_status": "PASS|FAIL|BLOCKED|NOT_RUN",
+    "accuracy_comparison_status": "PASS|FAIL|BLOCKED|NOT_RUN",
     "decision": "READY|REVIEW_REQUIRED|UNKNOWN",
     "draft_mapping": "ACCEPTED|REJECTED|NOT_RUN",
     "reason_codes": [],
-    "required_field_presence": {
-      "main_customer": false,
-      "name": false,
-      "mobile": false,
-      "identity_number": false,
-      "explicit_birthday": false,
-      "gender": false
+    "field_presence": {
+      "main_customer": "PRESENT|ABSENT|NOT_RUN",
+      "name": "PRESENT|ABSENT|NOT_RUN",
+      "mobile": "PRESENT|ABSENT|NOT_RUN",
+      "identity_number": "PRESENT|ABSENT|NOT_RUN",
+      "explicit_birthday": "PRESENT|ABSENT|NOT_RUN",
+      "gender": "PRESENT|ABSENT|NOT_RUN"
     },
     "field_match_to_reference": {
       "main_customer": "MATCH|MISMATCH|NOT_CHECKED",
