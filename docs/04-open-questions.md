@@ -295,7 +295,7 @@ CUA库存报告Mac已锁，未能读取MUSE界面；因此MUSE 15:54之后的队
 
 - **五项日常的当前实现来源仍不完整：** 精确live `run.py`已从既有MUSE私有附件下载并在本机独立重算SHA-256，与部署报告一致；与10月26日私有旧runner的AST比较确认`Device.prepare()`、`Device.read_fresh()`和`main()`不同，旧版不能充作当前基线。公开`forest_policy`仅覆盖部分离线签到/领取策略；与live runner配套的`tasks.py`和当前`assistant.py`原字节及五项云端任务映射尚未本机核实，历史业务回执不能替代当前实现/业务正例。详见[实现来源核查](../planning/local-evidence-audit-2026-10-29.md#精确live-runner源码及本地旧副本对照2026-11-03-1922-cst)。
 
-- **官方规则/时点原据：** 本机`rules.json` SHA-256与公开索引一致，原页面只证明阳光/雨露日上限10/20及“每人/次/单”计量，不证明重置时点、单项重复周期或到账时延。15:27前对Drive“保险”资料作了定向关键词复查，并对CPIC官方域名作公开检索，未命中可核验的完整时点原据；这只是本次有界查找未命中，不表示历史确认未发生或原件不存在。五项扩展仍按已核证据保持“仍待核实”，没有证据归为现实外部阻碍。详见[来源与扩展核查](../planning/remaining-work-2026-10-29.md)。
+- **官方规则/时点原据：** 本机`rules.json` SHA-256与公开索引一致，原页面只证明阳光/雨露日上限10/20及“每人/次/单”计量，不证明重置时点、单项重复周期或到账时延。15:27前对Drive“保险”资料作了定向关键词复查，并对CPIC官方域名作公开检索，未命中可核验的完整时点原据；2026-11-04 03:07—03:10再次对Drive做三条metadata-only时点查询、对CPIC官方域做三条公开搜索，仍未恢复准确来源指针。此为有界查找未命中，不表示历史确认未发生或原件不存在；D-029“官方时点曾确认”的记录保留。五项扩展仍按已核证据保持“仍待核实”，没有证据归为现实外部阻碍。证据：`googleDriveTimingSourcePointerSearch20261104_0308`、`cpicOfficialRuleSearch20261104_0310`；详见[来源与扩展核查](../planning/remaining-work-2026-10-29.md)和[证据索引](../planning/evidence-index-2026-10-29.json)。
 
 
 - **11月3日prepare超时的运行差异尚无根因：** 五段脱敏ZIP已下载且外层及7个成员哈希本机验证通过；MUSE提供五组原始result/prepare-events完整SHA-256，但源文件未入包，故本机无法对源字节重算。五段均报告使用同一v0.19 live runner/模块哈希；只有11月2日手动助理到达BridgeWeb并完成prepare，其余四段止于MainActivity；五段都没有`login`类prepare事件或认证入口调用回执。逐项登录态、`gesturePage`/`accountMatch`和采样时间均缺。现有信息不能区分启动方式、设备/应用状态或其他上下文原因，也不支持归咎密码/手势输入器。摘要及哈希见[五段对照记录](../planning/forest-prepare-repair-2026-11-02.md)。

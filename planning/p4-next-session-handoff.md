@@ -4,6 +4,10 @@
 
 The Android 15 AOSP framework manifest marks android.permission.DUMP as signature/privileged/development and says it is not for third-party apps; Android’s developer docs show dumpsys invoked through adb shell. The existing Pixel SSH UID’s specific DUMP grant was not checked, and no dumpsys or ADB probe was run. Treating the SSH session as able to read system dumps would be an unsupported assumption. Keep screen, Keyguard, and foreground Activity UNKNOWN; do not switch access paths or grant permissions. This constrains diagnosis but does not identify the Forest failure cause. Evidence: androidDumpPermissionReview20261104_030429. [AOSP Android 15 manifest](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-platform-15.0.0_r1/core/res/AndroidManifest.xml#4934); [Android dumpsys documentation](https://developer.android.com/tools/dumpsys).
 
+## 2026-11-04 03:07–03:10 CST — timing-source searches; natural run pending
+
+Three timing-specific Google Drive metadata searches returned zero matches without fetching contents; three CPIC-domain public searches returned unrelated pages. D-029 still records that the official timepoint was previously confirmed; its exact source pointer remains unrecovered. These bounded searches do not prove source absence. The latest available MUSE status is 02:50:48 and reports one daily 09:00 Asia/Shanghai schedule; refresh MUSE before any device read, then after the natural run retrieve only its sanitized same-run prepare/result/stages/assistant/cleanup and independent receipts. Do not replay or change the schedule. Evidence: `googleDriveTimingSourcePointerSearch20261104_0308`, `cpicOfficialRuleSearch20261104_0310`.
+
 
 ## 2026-11-04 02:58—02:59 CST — indexed extension evidence rechecked
 
