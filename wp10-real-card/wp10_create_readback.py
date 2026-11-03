@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,9 @@ import mcp_client  # noqa: E402
 from muse_customer_card_ocr import (  # noqa: E402
     CreateAttemptError,
     CreateAttemptJournal,
+    ICloudContactDraft,
     RuntimeContractError,
+    build_contacts_create_arguments,
     decide_contact_duplicate,
     decode_mcp_tool_result,
     parse_confirmed_draft,
@@ -68,22 +71,19 @@ def _contact_id(response: dict[str, Any]) -> str | None:
 
 
 def _create_contact(draft: dict[str, Any], session_id: str) -> dict[str, Any]:
-    phones: list[dict[str, Any]] = [
-        {"value": draft["mobile"], "type": ["cell"], "primary": True}
-    ]
-    phones.extend(
-        {"value": phone, "type": ["other"], "primary": False}
-        for phone in draft["other_phones"]
+    contact_draft = ICloudContactDraft(
+        name_full=draft["name"],
+        phone_mobile=draft["mobile"],
+        birthday=date.fromisoformat(draft["birthday"]),
+        address=draft["address"],
+        phone_other=tuple(draft["other_phones"]),
+        note=f"性别：{draft['gender']}\n身份证号：{draft['identity_number']}",
     )
-    contact: dict[str, Any] = {
-        "name": {"full": draft["name"]},
-        "phones": phones,
-        "birthday": draft["birthday"],
-        "note": f"性别：{draft['gender']}\n身份证号：{draft['identity_number']}",
-    }
-    if draft["address"] is not None:
-        contact["addresses"] = [{"street": draft["address"]}]
-    return {"session_id": session_id, "contact": contact}
+    return build_contacts_create_arguments(
+        contact_draft,
+        session_id=session_id,
+        address_book_id=draft["address_book_id"],
+    )
 
 
 def _resolve_pending(data: Any) -> int:

@@ -33,6 +33,14 @@ def parse_confirmed_draft(value: Any) -> dict[str, Any]:
         raise RuntimeContractError("USER_CONFIRMATION_REQUIRED")
     extraction_status = value["extraction_status"]
 
+    address_book_id = value.get("address_book_id")
+    if (
+        not isinstance(address_book_id, str)
+        or not address_book_id.strip()
+        or _has_control(address_book_id)
+    ):
+        raise RuntimeContractError("ADDRESS_BOOK_ID_REQUIRED")
+
     required = ("name", "mobile", "gender", "birthday", "identity_number")
     if any(key not in value for key in required):
         raise RuntimeContractError("REQUIRED_FIELD_MISSING")
@@ -96,6 +104,7 @@ def parse_confirmed_draft(value: Any) -> dict[str, Any]:
         "identity_number": identity,
         "address": address,
         "other_phones": tuple(other_phones),
+        "address_book_id": address_book_id,
     }
 
 

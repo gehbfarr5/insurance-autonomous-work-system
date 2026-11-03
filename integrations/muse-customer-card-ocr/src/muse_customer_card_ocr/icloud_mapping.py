@@ -11,10 +11,9 @@ from .fields import FieldExtractionResult
 class ICloudContactDraft:
     """Canonical, non-writing projection into native contact concepts.
 
-    This is not a serialized contacts_create tool payload. The current
-    repository does not document the production MCP schema for phone,
-    birthday, or address fields; a later MCP adapter must map these values to
-    its verified schema.
+    The local contacts_create serializer maps this draft to the repository's
+    documented MCP argument shape. This does not establish that the live MUSE
+    schema is current or bound to the active runtime.
     """
 
     name_full: str = field(repr=False)

@@ -39,6 +39,7 @@ def draft(**updates):
         "identity_number": synthetic_identity_number(),
         "address": "Synthetic Street",
         "other_phones": ["05710000001"],
+        "address_book_id": "synthetic-verified-address-book",
     }
     value.update(updates)
     return value
@@ -138,10 +139,23 @@ class RuntimeContractTests(unittest.TestCase):
             {"identity_number": "000000000000000000"},
             {"gender": "未知"},
             {"name": "\n"},
+            {"address_book_id": "  "},
+            {"address_book_id": "synthetic\u0000book"},
         ):
             with self.subTest(changes=changes):
                 with self.assertRaises(RuntimeContractError):
                     parse_confirmed_draft(draft(**changes))
+
+    def test_confirmed_draft_requires_explicit_address_book_id(self):
+        for value in (None, "", "   ", 42):
+            with self.subTest(value=value):
+                candidate = draft()
+                candidate.pop("address_book_id")
+                if value is not None:
+                    candidate["address_book_id"] = value
+                with self.assertRaises(RuntimeContractError) as caught:
+                    parse_confirmed_draft(candidate)
+                self.assertEqual(caught.exception.code, "ADDRESS_BOOK_ID_REQUIRED")
 
     def test_mcp_result_decoder_rejects_partial_and_error_envelopes(self):
         for envelope in (

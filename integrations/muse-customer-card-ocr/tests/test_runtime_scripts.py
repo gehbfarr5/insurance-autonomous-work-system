@@ -41,6 +41,7 @@ def confirmed_draft() -> dict[str, object]:
         "identity_number": synthetic_identity_number(),
         "address": "Synthetic Street",
         "other_phones": ["05710000001"],
+        "address_book_id": "synthetic-verified-address-book",
     }
 
 
@@ -201,6 +202,7 @@ class RuntimeSourceTests(unittest.TestCase):
         self.assertIn("FINAL_RESULT: PASS", output)
         self.assertEqual(sum(tool == "contacts_create" for tool, _ in calls), 1)
         create_args = next(args for tool, args in calls if tool == "contacts_create")
+        self.assertEqual(create_args["address_book_id"], "synthetic-verified-address-book")
         contact = create_args["contact"]
         self.assertEqual(len(contact["phones"]), 2)
         self.assertEqual(contact["addresses"][0]["street"], "Synthetic Street")
@@ -208,6 +210,16 @@ class RuntimeSourceTests(unittest.TestCase):
         self.assertNotIn("13800138000", output)
         state = json.loads((Path(self.temporary.name) / "contact-create-state.json").read_text())
         self.assertIsNone(state["pending"])
+
+    def test_create_requires_explicit_address_book_before_any_mcp_call(self):
+        calls = []
+        self.mcp_client._mcp_call_resilient = lambda *args: calls.append(args)
+        data = confirmed_draft()
+        del data["address_book_id"]
+        status, output = self._run_main(self.create, data)
+        self.assertNotEqual(status, 0)
+        self.assertIn("ADDRESS_BOOK_ID_REQUIRED", output)
+        self.assertEqual(calls, [])
 
     def test_pending_readback_can_resume_by_operation_id_without_recreating(self):
         calls = []
