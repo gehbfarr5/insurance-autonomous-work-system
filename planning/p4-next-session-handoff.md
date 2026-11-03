@@ -1,5 +1,9 @@
 # P4 新会话交接｜分批具体设计、实施与验证
 
+## 2026-11-04 04:40 CST — MUSE composer blocker before natural run
+
+In the exact Sunshine Forest thread, the latest visible assistant reply remains the 03:47:07 point-in-time status. The composer contains an older malformed status query with a duplicate trailing `READ`. `selectText` is unsupported for this field, a coordinate drag did not select the text, and native Edit > Select All was disabled. No message was sent, no draft was changed, and no other thread/resource was opened. Therefore current scheduler/queue/in-flight status, runner lock, and live hashes are UNKNOWN; do not use the 03:47 snapshot as a current concurrency gate. No Pixel connection occurred. Leave the draft unsent; do not send it or use another thread/interface. After 09:00, refresh only if a clean, verified composer path becomes available; otherwise record the same-run result as unavailable and do not connect to Pixel. P4 remains open; S1 is not accepted. Evidence: `museComposerBlocked20261104_0440`.
+
 ## 2026-11-04 04:32 CST — limited historical E锦囊 source
 
 CPIC's 2018-11-02 Tech Individual Insurance Plus phase-two notice lists repeated iterations of the E锦囊 (insurance-supermarket) product page. This establishes only historical product-page presence. It does not document today's activation steps, user eligibility, Forest task mapping, reward trigger/cycle, or external requirements. The targeted search found no current workflow evidence for the other four extensions; do not treat “AI保单管家” as the distinct “保单芯管家” task. All five remain “still needs verification”; no task is added to automation or excluded. Evidence: `officialEJinnangHistoricalSourceReview20261104_0432`; [CPIC notice](https://www.cpic.com.cn/c/2018-11-02/1562542.shtml).
