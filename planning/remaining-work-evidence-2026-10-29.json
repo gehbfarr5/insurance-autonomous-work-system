@@ -5044,5 +5044,29 @@
     ],
     "overall": "P4 remains open; no S1 or project-complete claim. P50, monthly planning, and 2U=2800 remain excluded.",
     "actions": "No replay, root/su, business-state/raw-log read, device write, task/code execution, schedule/deployment change, or credential/network change. Preserve the natural run and all UNKNOWN gates."
+  },
+  "officialForestRuleSearch20261104_0359": {
+    "id": "X09",
+    "recordKey": "officialForestRuleSearch20261104_0359",
+    "source": "Web search restricted to CPIC official domains",
+    "searchedAt": "2026-11-04 03:58:53–03:59:22 Asia/Shanghai",
+    "domains": [
+      "cpic.com.cn",
+      "m.cpic.com.cn",
+      "life.cpic.com.cn"
+    ],
+    "queries": [
+      "阳光森林 每日任务 阳光值 雨露值 规则 奖励",
+      "科技个险 阳光森林 重置时点 任务周期",
+      "阳光森林 签到 时光轴 客温客价 一键领取 奖励",
+      "保单芯管家 态幸福 三节一生 E锦囊 签单协同 森林任务"
+    ],
+    "returnedOfficialPages": [
+      "https://www.cpic.com.cn/c/2018-11-02/1562542.shtml",
+      "https://www.cpic.com.cn/upload/resources/file/2019/10/31/51069.pdf",
+      "https://sh.cpic.com.cn/c/2022-04-07/1633278.shtml"
+    ],
+    "summary": "The restricted search returned historical technology-insurance/product context, including orphan-policy task improvements, E锦囊 references, and 态幸福 as an NBS sales-support tool. It did not return a current Sunshine Forest rule or directly relevant workflow for reset time, task cycle, reward trigger/posting, or current eligibility.",
+    "scopeLimit": "Search-index results only. These historical product references do not establish current Forest mapping or rules; the bounded miss does not prove source absence or negate D-029."
   }
 }

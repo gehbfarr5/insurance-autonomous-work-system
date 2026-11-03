@@ -1,5 +1,9 @@
 # 保险规划师自主工作系统
 
+## 2026-11-04 03:58—03:59 CST — CPIC official-domain follow-up
+
+A fresh four-query search restricted to CPIC domains returned historical technology-insurance/product material, including a 2018 project notice, a 2019 E锦囊 reference, and a 2022 description of 态幸福 as an NBS sales-support tool. It found no current Sunshine Forest rule or direct workflow evidence for reset time, task cycle, reward trigger/posting, or current eligibility. These historical references do not resolve D-029's source gap. Evidence: `officialForestRuleSearch20261104_0359` in the structured evidence index.
+
 ## 2026-11-04 03:47–03:52 CST — fresh scheduler, device, and rule-source checkpoint
 
 At 03:47:07, the existing Sunshine Forest MUSE thread reported no active task, running/queued/in-flight `0/0/false`, runner lock `FREE`, and no Forest process observed. The existing daily 09:00 Asia/Shanghai schedule remains enabled; its next trigger is today at 09:00. Live runner/assistant hashes and the latest failed/successful run timestamps are unchanged. This is point-in-time scheduler metadata only.
