@@ -5147,6 +5147,17 @@
     "contentFetched": false,
     "scopeLimit": "No matching document metadata surfaced for the decision-reference or historical ledger/claim terms across accessible drives. This bounded miss does not establish source absence or negate D-029."
   },
+  "googleDriveForestRuleImageMetadataSearch20261104_0414": {
+    "id": "X13",
+    "recordKey": "googleDriveForestRuleImageMetadataSearch20261104_0414",
+    "source": "Connected Google Drive metadata-only image search across accessible drives",
+    "searchedAt": "2026-11-04 04:14 Asia/Shanghai (completed by 04:14:51; exact query times not captured)",
+    "queries": ["阳光森林 规则 时间", "阳光雨露 重置 10 20"],
+    "limits": {"itemType": "image", "topN": 10, "bestEffortFetch": false, "requireViewedByUser": false},
+    "resultCounts": [0, 0],
+    "contentFetched": false,
+    "scopeLimit": "No matching image metadata surfaced for these two terms. This bounded search does not establish source absence or negate D-029."
+  },
   "runbookHistoricalSnapshotClarification20261104_0405": {
     "recordedAt": "2026-11-04T04:05:53+08:00",
     "source": "Read-only audit of the historical device-state bullets in the recovery runbook against current MUSE/Pixel checkpoints.",
