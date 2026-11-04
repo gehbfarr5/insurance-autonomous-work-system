@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from datetime import date
 from typing import Any
 
-from .fields import is_valid_identity_number, normalize_mobile_number
+from .fields import FieldExtractionResult, is_valid_identity_number, normalize_mobile_number
 
 
 class RuntimeContractError(RuntimeError):
@@ -108,6 +108,34 @@ def parse_confirmed_draft(
         "address": address,
         "other_phones": tuple(other_phones),
         "address_book_id": address_book_id,
+    }
+
+
+def build_review_draft(
+    extraction: FieldExtractionResult,
+    *,
+    address_book_id: str | None = None,
+) -> dict[str, Any]:
+    """Construct an unconfirmed review draft payload from extraction results.
+
+    The returned payload uses extraction_status MANUALLY_REVIEWED and review_status
+    PENDING_USER_CONFIRMATION so parse_confirmed_draft will strictly reject it until
+    an operator has reviewed the fields and explicitly set review_status to
+    USER_CONFIRMED.
+    """
+    fields = extraction.fields
+    return {
+        "extraction_status": "MANUALLY_REVIEWED",
+        "review_status": "PENDING_USER_CONFIRMATION",
+        "address_book_id": address_book_id if address_book_id is not None else "",
+        "name": fields.name or "",
+        "mobile": fields.mobile or "",
+        "gender": fields.gender or "",
+        "birthday": fields.birthday.isoformat() if fields.birthday else "",
+        "identity_number": fields.identity_number or "",
+        "address": fields.address,
+        "other_phones": list(fields.other_phones),
+        "review_reasons": [reason.value for reason in extraction.review_reasons],
     }
 
 

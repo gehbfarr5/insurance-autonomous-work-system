@@ -458,6 +458,49 @@ class RuntimeSourceTests(unittest.TestCase):
                 self.mcp_client._save_state({"access_token": "replacement"})
             self.assertEqual(target.read_text(encoding="utf-8"), "keep")
 
+    def test_dedup_writes_unconfirmed_review_draft_safely(self):
+        image_path = Path(self.temporary.name) / "synthetic.png"
+        Image.new("RGB", (8, 8), "white").save(image_path)
+        draft_out = Path(self.temporary.name) / "review_draft.json"
+
+        def fake_runner(_bytes):
+            return {
+                "ok": True,
+                "words_result_num": 1,
+                "words_result": [
+                    {
+                        "words": "身份证号码：999999199002020013",
+                        "location": {"left": 0, "top": 0, "width": 100, "height": 20},
+                    }
+                ],
+            }
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            status = self.dedup.main(
+                [
+                    str(image_path),
+                    "--full-image-authorized",
+                    "--review-draft-out",
+                    str(draft_out),
+                ],
+                ocr_runner=fake_runner,
+            )
+        self.assertEqual(status, 0)
+        self.assertIn("REVIEW_DRAFT_WRITTEN: True", output.getvalue())
+        self.assertTrue(draft_out.is_file())
+        self.assertEqual(draft_out.stat().st_mode & 0o777, 0o600)
+
+        written_data = json.loads(draft_out.read_text(encoding="utf-8"))
+        self.assertEqual(written_data["extraction_status"], "MANUALLY_REVIEWED")
+        self.assertEqual(written_data["review_status"], "PENDING_USER_CONFIRMATION")
+        self.assertEqual(written_data["identity_number"], "999999199002020013")
+
+        # Feeding unconfirmed review draft to create script fails before any MCP call
+        create_status, create_output = self._run_main(self.create, written_data)
+        self.assertNotEqual(create_status, 0)
+        self.assertIn("USER_CONFIRMATION_REQUIRED", create_output)
+
 
 if __name__ == "__main__":
     unittest.main()

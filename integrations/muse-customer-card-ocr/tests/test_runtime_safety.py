@@ -6,9 +6,13 @@ import unittest
 from muse_customer_card_ocr import (
     BoundingBox,
     CharacterCandidate,
+    CustomerCardFields,
+    FieldExtractionResult,
     OcrCharacter,
     OcrBlock,
+    ReviewReason,
     RuntimeContractError,
+    build_review_draft,
     decide_contact_duplicate,
     decode_mcp_tool_result,
     is_valid_identity_number,
@@ -221,6 +225,45 @@ class RuntimeContractTests(unittest.TestCase):
         self.assertFalse(verify_contact_readback(expected, extra_address)["address"])
         wrong_other = readback(phones=[{"value": "13800138000", "primary": True}])
         self.assertFalse(verify_contact_readback(expected, wrong_other)["phones"])
+
+    def test_build_review_draft_creates_unconfirmed_payload_rejected_by_parse_confirmed(self):
+        extraction = FieldExtractionResult(
+            status="review_required",
+            fields=CustomerCardFields(
+                identity_number="999999199002020013",
+            ),
+            review_reasons=(
+                ReviewReason.TABLE_LAYOUT_UNCERTAIN,
+                ReviewReason.MOBILE_MISSING,
+            ),
+        )
+        unconfirmed = build_review_draft(extraction)
+        self.assertEqual(unconfirmed["extraction_status"], "MANUALLY_REVIEWED")
+        self.assertEqual(unconfirmed["review_status"], "PENDING_USER_CONFIRMATION")
+        self.assertEqual(unconfirmed["identity_number"], "999999199002020013")
+        self.assertEqual(unconfirmed["name"], "")
+        self.assertEqual(unconfirmed["mobile"], "")
+        self.assertIn("table_layout_uncertain", unconfirmed["review_reasons"])
+        self.assertIn("mobile_missing", unconfirmed["review_reasons"])
+
+        # Feeding unconfirmed draft directly to parse_confirmed_draft fails
+        with self.assertRaises(RuntimeContractError) as caught:
+            parse_confirmed_draft(unconfirmed)
+        self.assertEqual(caught.exception.code, "USER_CONFIRMATION_REQUIRED")
+
+        # After user manually reviews, provides missing fields, sets address_book_id, and confirms:
+        confirmed = dict(unconfirmed)
+        confirmed["review_status"] = "USER_CONFIRMED"
+        confirmed["address_book_id"] = "verified-address-book"
+        confirmed["name"] = "Synthetic Name"
+        confirmed["mobile"] = "13800138000"
+        confirmed["gender"] = "女"
+        confirmed["birthday"] = "1990-02-02"
+
+        parsed = parse_confirmed_draft(confirmed)
+        self.assertEqual(parsed["name"], "Synthetic Name")
+        self.assertEqual(parsed["mobile"], "13800138000")
+        self.assertEqual(parsed["identity_number"], "999999199002020013")
 
 
 if __name__ == "__main__":

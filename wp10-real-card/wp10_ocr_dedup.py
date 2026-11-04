@@ -9,6 +9,7 @@ stops before any create decision.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import uuid
@@ -38,6 +39,7 @@ import mcp_client  # noqa: E402
 from muse_customer_card_ocr import (  # noqa: E402
     OcrResult,
     RuntimeContractError,
+    build_review_draft,
     decide_contact_duplicate,
     decode_mcp_tool_result,
     extract_primary_customer,
@@ -77,6 +79,10 @@ def main(argv: list[str] | None = None, *, ocr_runner=run_seoul_ocr) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("image")
     parser.add_argument("--full-image-authorized", action="store_true")
+    parser.add_argument(
+        "--review-draft-out",
+        help="optional protected output file path for unconfirmed review draft JSON",
+    )
     args = parser.parse_args(argv)
     if not args.full_image_authorized:
         print("OCR_STOP: FULL_IMAGE_AUTHORIZATION_REQUIRED")
@@ -118,6 +124,18 @@ def main(argv: list[str] | None = None, *, ocr_runner=run_seoul_ocr) -> int:
         if extraction.status != "ready" or extraction.review_reasons:
             print("DEDUP_DECISION: MANUAL_REVIEW")
             print("ICLOUD_SEARCH_RUN: False")
+            if args.review_draft_out:
+                review_draft = build_review_draft(extraction)
+                out_path = Path(args.review_draft_out)
+                out_path.write_text(
+                    json.dumps(review_draft, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                try:
+                    os.chmod(out_path, 0o600)
+                except OSError:
+                    pass
+                print("REVIEW_DRAFT_WRITTEN: True")
             return 0
 
         login = mcp_call("apple_login", {}, 60)

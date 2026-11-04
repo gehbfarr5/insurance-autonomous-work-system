@@ -417,3 +417,25 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 - Visible application items included the iCloud bridge, CardDAV MCP, and unrelated web/helper containers. No service, container, or process name bound the target to Family Card OCR or WP8-B. This administration target is not verified as the production OCR host; the OCR service's presence/absence and actual route therefore remain `UNKNOWN`.
 - Operation counts: instance status 1, SSH/server status 1, running-service inventory 1, Docker inventory 1, process-name inventory 1. No production code execution, OCR/provider call, contact operation, configuration/source change, write, deployment, or export occurred.
 - This adds a current-state observation only; it does not replace the missing active MUSE/Seoul source pin or immutable deployment binding. No code changed and no tests were rerun.
+
+## WP11-R field-level review draft workflow and Seoul OCR target binding (2026-11-04)
+
+- **Candidate:** Package 0.13.3, branch `codex/wp11-family-card-table-parser-20261103`.
+- **Direction A (WP10 reviewed reference comparison):** Verified WP11-Q3 status. Within the authorized same-record scope of the protected workspace, the reviewed reference remains unavailable (reads: 0, association: NO, all 8 field comparisons: NOT_CHECKED). Comparison status remains `BLOCKED`. Per project discipline, no references were faked and no search was expanded to other records or workspaces.
+- **Direction B (Field-level review/confirmation workflow):**
+  - Problem profile: Automatic extraction correctly fails closed on ambiguous inputs (`REVIEW_REQUIRED`), but the workflow lacked a canonical bridge from `FieldExtractionResult` to an unconfirmed editable draft (`PENDING_USER_CONFIRMATION`).
+  - Implemented `build_review_draft(extraction, *, address_book_id=None)` in `runtime_safety.py` and exported it in `__init__.py`. It populates extracted candidate fields, defaults `review_status` to `"PENDING_USER_CONFIRMATION"`, and sets `extraction_status` to `"MANUALLY_REVIEWED"`.
+  - Calling `parse_confirmed_draft` on this unconfirmed draft strictly fails closed with `USER_CONFIRMATION_REQUIRED`.
+  - Added `--review-draft-out PATH` to `wp10-real-card/wp10_ocr_dedup.py` to write the unconfirmed draft with 0o600 permissions upon manual review stop, emitting only `REVIEW_DRAFT_WRITTEN: True` to stdout without printing any raw customer PII.
+  - Regression coverage: added 2 new tests covering draft unconfirmed rejection and safe file generation. Full offline test suite PASS: 150/150 tests, 0 failures, 0 errors.
+- **Direction C (Seoul OCR service target provenance audit):**
+  - Bounded read-only audit of `seoul-forge-01` (`lhins-84gffkd8`) via `seoul-forge-management`.
+  - Located `/home/ubuntu/baidu-ocr-service/baidu_ocr_service.py` on `seoul-forge-01`.
+  - Calculated SHA-256 digest: `804565db206a905c92380ebc266bf00d80e85b2f144ca7d30de4eaaa4ca0638e`.
+  - This digest is an EXACT byte-match to `wp8-seoul-ocr-service/baidu_ocr_service.py` recorded in WP11-O.
+  - CLI check confirmed options: `--stdin-image` option is supported, exactly matching `runtime_seoul.py`'s invocation (`python3 /home/ubuntu/baidu-ocr-service/baidu_ocr_service.py --stdin-image`).
+  - Root cause of earlier inventory uncertainty resolved: the OCR service runs as an on-demand CLI over SSH, not as a persistent systemd daemon or Docker container.
+- **Direction D & E (Architecture & 30-card gate):**
+  - Architecture maintained: MUSE → Seoul OCR → Parser → Dedup → Manual review & User confirmation → Create → Readback.
+  - 30-card sample validation remains gated (`VALIDATION_PENDING`), awaiting explicit user authorization, 30 distinct samples, and complete reviewed labels.
+- **Overall status:** `VALIDATION_PENDING`.
