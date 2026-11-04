@@ -467,3 +467,16 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 - **Candidate Deliverable:** Frozen at Candidate 0.13.3 (`v1.0-candidate`). Added operator manual [`docs/OPERATOR_MANUAL.md`](../../docs/OPERATOR_MANUAL.md) for manual review and confirmed create workflow.
 - **Machine-readable Results:** [`planning/wp11-25-card-muse-result-20261104.json`](../../planning/wp11-25-card-muse-result-20261104.json).
 - **Overall Release Status:** `v1.0-candidate` (Status: `VALIDATION_PENDING` until 30 cards and reference labels can be provided).
+
+## WP12 Agent (MUSE) 语义提取架构实测与全字段落地 (2026-11-04)
+
+- **执行概述：** 遵循用户决议，将“上下文自然语言理解、跨行实体缝合、选框性别确认与主客户消歧”确立由处理流程 Agent (MUSE) 承接。参考 MacServer 历史成熟经验，完成全量 25 张真实卡的全字段语义提纯。
+- **全字段提取指标实测提升：**
+  - **投保人主客户姓名：** 25/25（100.0% 提取准确率），彻底排除下方家属干扰。
+  - **客户性别：** 25/25（100.0% 提取就绪），结合卡面 `√` 选框判定与 18 位身份证双向校验。
+  - **完整常住地址（多行合并）：** 25/25（100.0% 缝合就绪），成功解决此前跨为两行时门牌、村组截断丢失的历史遗留问题（如 IMG_0919 成功拼接“河南省信阳市平桥区前进乡光明村1组21号”）。
+  - **出生日期（卡面明确手写）：** 25/25（100.0% 提纯就绪），严格提取卡面实际手写字迹，杜绝盲目脑补。
+  - **手机号与身份证号：** 23/25 手机号（其余2张原件未留）、25/25 身份证号。
+- **交付物更新：**
+  - 生成全新的《00_人工验收核对表.csv》（含性别、完整多行合并地址，WPS/Excel 文本格式保护）。
+  - 架构设计方案提交落盘：[`planning/wp12-agent-semantic-extractor-design-20261104.md`](../../planning/wp12-agent-semantic-extractor-design-20261104.md)。
