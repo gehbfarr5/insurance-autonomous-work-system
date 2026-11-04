@@ -1,5 +1,21 @@
 # 阳光森林有界诊断与恢复说明｜2026-11-04
 
+## 2026-11-04 18:25 CST：MUSE 09:05自然轮脱敏报告审计与路线校准
+
+- **自然轮报告结果：** MUSE于2026-11-04 09:05报告当日09:00自然轮运行结束，五项任务均未完成，全部在prepare阶段以`PREPARE_TIMEOUT_NO_FALLBACK`终止。助理段为`REVIEW / NOT_SENT`，`stages`为空，`vueCheck`缺失；主流程段为`BLOCKED`且`pendingAction=null`，今日余额与待领奖励未核实，未执行领取；正式轮清理报告PASS。
+- **并发与设备门禁：** 运行后当前任务、唯一`Asia/Shanghai 09:00`调度、下次触发、running/queued/in-flight状态、runner lock及live hashes尚未从MUSE线程刷新（保持`UNREFRESHED / UNKNOWN`）。严禁用旧快照（如03:47）或“设备锁已释放”的历史读数替代当前并发门禁。Pixel设备访问保持受阻（BLOCKED）。
+- **用户路线决定与任务体边界核对：** 用户已明确允许任务体中的显式注入桥/CDP应用交互路线，无需再次询问。严格区分应用交互方法（经由`@webview_devtools_remote_<pid>`抽象socket与页面交互）与设备传输方式（沿用既有批准的`pixel3a-kjgx` SSH别名、SSH校验与安全边界，不新开端口、不改凭据/网络、不绕过现有门禁）。此前将底层CDP应用交互与设备传输限制混同的说明已做最小校准。
+- **同轮脱敏证据定位prepare停止条件：**
+  - **Activity转移：** 唤醒/启动后resumed Activity从SplashActivity转到MainActivity，未进入`GestureActivity`。
+  - **认证派发门槛与时间戳：** runner仅在`GestureActivity`出现且尚未尝试时单次调用`auth_start()`；因未见该Activity，门槛未触发，`auth.dispatch=false`，明确记录`has_login_event: false`。
+  - **模块就绪事件：** logcat轮询未收到匹配本轮nonce且状态为`NAVIGATED`或`BLOCKED`的`P4ForestAuto:`事件，70秒deadline耗尽抛出`PREPARE_TIMEOUT_NO_FALLBACK`。
+  - **字段级真值区分：** `has_login_event: false`（确为false）；`vueCheck: missing / NOT_EVALUATED`；`userPresent`/`empNoAESPresent`/`operateFlagDefined`: `UNKNOWN / missing`（因未部署prepare登录态observer，APK hash保持pin）；`gesturePage`/`accountMatch`: `UNKNOWN / missing`；`screenOn`/`keyguardShowing`/`deviceLocked`: `UNKNOWN`。
+  - **根因判定：** 现有证据仅将失败精确收敛到runner Activity/就绪标记轮询等待超时层，底层就绪标记未到达的原因仍为`UNKNOWN`。不读客户内容、业务state或raw logs，不猜根因、不重放业务。
+- **最小修复与回退原则：** 因底层根因证据仍未取得，现阶段不盲目提出业务/模块修补方案，保留失败关闭，不用fallback掩盖错误；后续若有根因证据，修复需通过项目门禁并以自然调度（每日09:00）验证，禁止补跑或重放业务。
+- **五项日常任务独立收据：** 签到未执行、时光轴未执行、客温客价未执行、智能助理REVIEW/NOT_SENT、一键领取BLOCKED且pendingAction=null，均无独立完成回执。
+- **五项扩展与D-029依据：** 保单芯管家、态幸福、三节一生、E锦囊激活、签单协同业务均缺少完整资格、流程及奖励周期证据，继续保持`仍待核实`；D-029中E07历史快照支持日上限10/20及计量单位，重置时点/周期/到账时延原据继续待查。
+- **阶段验收结论：** P4开放，S1未验收；P50/月度规划/2U=2800不在本轮范围。结构化记录：`naturalRunAudit20261104_0905`。
+
 ## 2026-11-04 05:58 CST：自然轮仍待；验收快照已更新
 
 自然运行仍在09:00之后；最新P4关口状态见[交接表](p4-next-session-handoff.md#p4验收关口快照2026-11-04-0558-cst)与`acceptanceGateStatus20261104_0558`。CUA仍不能访问本地MUSE界面，故不得使用03:47读数作为当前并发/设备门禁。Pixel未查询/连接；设备操作与回滚仍BLOCKED，禁止重放或改动调度。
