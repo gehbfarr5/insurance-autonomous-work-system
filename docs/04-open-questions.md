@@ -1,5 +1,18 @@
 # 缺失内容与 P4 按需核查
 
+## 2026-11-04 19:46 CST：prepare 超时根因闭环与实机全流程执行
+
+- **底因确证与闭环：** prepare 超时的底层根因确证为 11-03 00:09 科技个险 OTA 下载的新 React Native bundle 导致 SHA-256 哈希变更（由 `ade689b5...` 变为 `12e3cf0f...`），触发模块中的硬编码哈希断言异常 `P4ForestAuto: PATCH_FAILED IllegalStateException: bundle hash changed`。
+- **模块修复与签名：** 构建 v0.20 模块（`0.20.0-forest-agent`），将 `HASH` 更新为当前 live bundle 哈希，使用原有私钥证书 `CN=P4 Local Debug, O=Local` 签名，生成工件 `p4-secureview-v0.20.0-forest-agent-signed.apk`（SHA-256: `a87ba6b0...`），部署至 Pixel 3a。
+- **Prepare 验证与页面导航：** logcat 输出 `PATCH_READY original source unchanged`，成功派发原生导航，进入阳光森林页面（`NAVIGATED`）。
+- **当日全流程实机业务执行：**
+  - 签到 (Check-in)：`signFlag: 0 -> 1`，余额 +0.5g（556.0 -> 556.5g）。
+  - 一键收集 (Batch 1)：收取 4 项待领能量球共 23.0g，余额增至 579.5g。
+  - 客温客价与时光轴：浏览首位客户时光轴 7 秒，成功激发 +0.5g 新能量球（ID 151852532）。
+  - 二次收集 (Batch 2)：收取时光轴能量，最终余额达到 580.0g，今日总收益 +24.0g。
+  - 清理验证：应用关闭，所有调试 socket 断开，设备锁释放（`LOCK_FREE`），清理状态 `PASS`。
+- **结构化证据：** `liveRunExecution20261104_1940`。
+
 ## 2026-11-04 18:25 CST：MUSE 09:05自然轮脱敏审计与prepare停止定位
 
 - **自然轮脱敏状态：** MUSE于09:05报告当日09:00 Asia/Shanghai自然运行结束，五项任务均未完成。两段（助理与主流程）均在prepare阶段以`PREPARE_TIMEOUT_NO_FALLBACK`终止：助理段为`REVIEW / NOT_SENT`，`stages`为空，`vueCheck`缺失；主流程段为`BLOCKED`且`pendingAction=null`，今日余额与待领奖励未核实，未执行领取；正式轮清理报告PASS。

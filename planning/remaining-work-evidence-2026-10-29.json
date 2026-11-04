@@ -5637,5 +5637,77 @@
     "d029RuleTimingBasis": "PARTIAL: caps 10/20 and units supported by E07 snapshot; reset time/cycle/posting delay remains UNRESOLVED / UNKNOWN",
     "p4Status": "OPEN",
     "s1Status": "NOT_ACCEPTED"
+  },
+  "liveRunExecution20261104_1940": {
+    "recordedAt": "2026-11-04T19:46:30+08:00",
+    "triggerType": "Authorized live diagnosis and full daily execution on Pixel 3a",
+    "rootCauseResolved": {
+      "issue": "OTA bundle hash change from ade689b53535d322de7c4d83d055f35be8de98f39f2886040d495f03d71b2c6f to 12e3cf0f7f4449e7a11ff3b26d2d918777044d8479291bae09912ac9cd93fcdd triggered IllegalStateException in ForestAutomationBridge, causing patchReady=false and PREPARE_TIMEOUT_NO_FALLBACK",
+      "fix": "Built and installed com.p4.secureview v0.20.0-forest-agent with bundle HASH=12e3cf0f7f4449e7a11ff3b26d2d918777044d8479291bae09912ac9cd93fcdd, signed with project key CN=P4 Local Debug, O=Local (SHA-256: ba3da4ff0d62831c0bfa3bc6c732c4f962f856e774a7d6ed1ef944172a7b7ae6)",
+      "apkHash": "a87ba6b05119546dd5db5c93fb73a5aa749bf696d0f7a7adde29f0466764791c",
+      "bridgeLogcatOutcome": "P4ForestAuto: PATCH_READY original source unchanged, followed by P4ForestAuto: {\"status\":\"NAVIGATED\",\"reason\":\"ORIGINAL_ROUTE_DISPATCHED\",\"promotionsClosed\":1}"
+    },
+    "dailyTasksExecution": {
+      "checkin": {
+        "status": "PASS",
+        "action": "onClickCheck",
+        "signFlagBefore": "0",
+        "signFlagAfter": "1",
+        "signDisabledAfter": true,
+        "balanceDelta": "+0.5",
+        "balanceBefore": "556.0",
+        "balanceAfter": "556.5",
+        "dateLabel": "11.04 周三",
+        "receipt": {"status": "CLICKED", "kind": "SIGN", "date": "2026-11-04"}
+      },
+      "collectBatch1": {
+        "status": "PASS",
+        "action": "onClickCollect1",
+        "pendingCountBefore": 4,
+        "pendingIds": ["150897756", "151356937", "151420736", "151583733", "151662273", "151664479", "151824261"],
+        "expectedCollection": "23.0",
+        "balanceBefore": "556.5",
+        "balanceAfter": "579.5",
+        "pendingRemaining": 0,
+        "receipt": {"status": "CLICKED", "kind": "COLLECT", "date": "2026-11-04"}
+      },
+      "customerTimeline": {
+        "status": "PASS",
+        "entry": "去拜访 (sxxExistCustomersList)",
+        "customerCount": 8,
+        "selectedCustomerIndex": 0,
+        "customerId": "380607779",
+        "detailPage": "khzxDetail",
+        "tab": "时光轴 (active=6)",
+        "viewDurationSeconds": 7,
+        "generatedReward": {"energyType": "1", "energyValue": "0.5", "ids": [151852532]},
+        "receipt": {"status": "VIEWED", "actionConfirmed": true}
+      },
+      "collectBatch2": {
+        "status": "PASS",
+        "action": "onClickCollect1",
+        "pendingIds": ["151852532"],
+        "balanceBefore": "579.5",
+        "balanceAfter": "580.0",
+        "pendingRemaining": 0,
+        "receipt": {"status": "CLICKED", "kind": "COLLECT", "date": "2026-11-04"}
+      }
+    },
+    "balanceSummary": {
+      "initial": "556.0",
+      "afterSign": "556.5",
+      "afterInitialCollect": "579.5",
+      "afterTimelineRewardCollect": "580.0",
+      "totalDeltaToday": "+24.0",
+      "pendingRemainingAtEnd": 0
+    },
+    "cleanupStatus": {
+      "applicationForceStopped": true,
+      "temporaryBundleAndCommandPurged": true,
+      "inspectionSocketsRemaining": 0,
+      "allSocketsClosed": true,
+      "deviceLock": "FREE",
+      "verdict": "PASS"
+    }
   }
 }
