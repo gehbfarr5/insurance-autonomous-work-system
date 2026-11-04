@@ -501,6 +501,48 @@ class RuntimeSourceTests(unittest.TestCase):
         self.assertNotEqual(create_status, 0)
         self.assertIn("USER_CONFIRMATION_REQUIRED", create_output)
 
+        # Operator manual review: completes missing required fields and explicitly confirms
+        reviewed_payload = dict(written_data)
+        reviewed_payload["name"] = "Reviewed Customer"
+        reviewed_payload["mobile"] = "13900139000"
+        reviewed_payload["gender"] = "男"
+        reviewed_payload["birthday"] = "1990-02-02"
+        reviewed_payload["address_book_id"] = "verified-address-book"
+        reviewed_payload["review_status"] = "USER_CONFIRMED"
+
+        calls = []
+
+        def fake_mcp(method, params, msg_id):
+            tool = params["name"]
+            calls.append((tool, params["arguments"]))
+            if tool == "apple_login":
+                return mcp_envelope({"session_id": "reviewed-session", "capabilities": {"contactsRead": True, "contactsWrite": True}})
+            if tool == "contacts_search":
+                return mcp_envelope(complete_search([]))
+            if tool == "contacts_create":
+                return mcp_envelope({"contact_id": "new-contact-id"})
+            if tool == "contacts_read":
+                return mcp_envelope(
+                    {
+                        "contact": {
+                            "name": {"full": "Reviewed Customer"},
+                            "phones": [{"value": "13900139000", "primary": True}],
+                            "birthday": "1990-02-02",
+                            "note": f"性别：男\n身份证号：{reviewed_payload['identity_number']}",
+                            "addresses": [],
+                        }
+                    }
+                )
+            raise AssertionError(f"unexpected tool {tool}")
+
+        self.mcp_client._mcp_call_resilient = fake_mcp
+        confirmed_status, confirmed_output = self._run_main(self.create, reviewed_payload)
+        self.assertEqual(confirmed_status, 0, confirmed_output)
+        self.assertIn("FINAL_RESULT: PASS", confirmed_output)
+        self.assertEqual(sum(tool == "contacts_create" for tool, _ in calls), 1)
+        self.assertNotIn("Reviewed Customer", confirmed_output)
+        self.assertNotIn("13900139000", confirmed_output)
+
 
 if __name__ == "__main__":
     unittest.main()

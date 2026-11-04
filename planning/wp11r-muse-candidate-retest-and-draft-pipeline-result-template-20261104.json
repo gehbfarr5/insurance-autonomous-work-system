@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11R-MUSE-0.13.3-CANDIDATE-RETEST-AND-DRAFT-PIPELINE-20261104",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "f7ec7759c22ce43580fde1907e028ee2f6288f18",
+    "package_version": "0.13.3",
+    "fields_sha256": "420a1b21d0df9d6f1f75460559d2fd8ee87cfec2805ca326928dd268b213d147",
+    "runtime_safety_sha256": "f0de7d031f0b96532badfbe65060dcb5d72b541c6f71e72850f3656d376e27e0",
+    "acceptance_metrics_sha256": "45d7b265858acd67f15a32f25414f8b1d2f391808db4b48563418cbb3f0fc2ba",
+    "wp10_ocr_dedup_sha256": "fd2f5ad1457ca84e3a8d6efe96566da90790bd8b94f2e37d8f7abaf1f789dd04"
+  },
+  "environment": {
+    "os_image": "",
+    "python_version": "",
+    "pillow_version": "",
+    "isolated_worktree": false,
+    "isolated_virtualenv": false,
+    "import_path_isolated": false
+  },
+  "offline_suite": {
+    "status": "NOT_RUN",
+    "tests_run": 0,
+    "failures": 0,
+    "errors": 0
+  },
+  "blank_template_smoke": {
+    "status": "NOT_RUN",
+    "expected_decision": "BLOCKED"
+  },
+  "same_record_wp10_reference": {
+    "structured_result_available": "UNKNOWN",
+    "structured_result_reads": 0,
+    "reviewed_reference_available": "NO",
+    "reviewed_reference_reads": 0,
+    "field_comparison_status": "BLOCKED",
+    "field_matches": {
+      "main_customer": "NOT_CHECKED",
+      "name": "NOT_CHECKED",
+      "mobile": "NOT_CHECKED",
+      "identity_number": "NOT_CHECKED",
+      "explicit_birthday": "NOT_CHECKED",
+      "gender": "NOT_CHECKED",
+      "address": "NOT_CHECKED",
+      "other_phone": "NOT_CHECKED"
+    }
+  },
+  "operation_counts": {
+    "branch_fetches": 0,
+    "structured_result_reads": 0,
+    "reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "mcp_tool_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_reads": 0,
+    "contact_creates": 0,
+    "contact_updates": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_files_modified": 0,
+    "muse_commits": 0,
+    "muse_pushes": 0
+  }
+}
