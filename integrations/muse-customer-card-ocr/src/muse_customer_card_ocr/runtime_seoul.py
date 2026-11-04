@@ -2,13 +2,18 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections.abc import Callable
 from typing import Any
 
 
-SEOUL_SSH_SCRIPT = "/home/hatch/workspace/server/ssh-seoul.sh"
-SEOUL_SERVICE = "/home/ubuntu/baidu-ocr-service/baidu_ocr_service.py"
+SEOUL_SSH_SCRIPT = os.environ.get(
+    "MUSE_SEOUL_SSH_SCRIPT", "/home/hatch/workspace/server/ssh-seoul.sh"
+)
+SEOUL_SERVICE = os.environ.get(
+    "MUSE_SEOUL_SERVICE", "/home/ubuntu/baidu-ocr-service/baidu_ocr_service.py"
+)
 
 
 class SeoulCliError(RuntimeError):
