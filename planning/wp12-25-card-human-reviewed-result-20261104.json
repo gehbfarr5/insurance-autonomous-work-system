@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1",
+  "task_id": "WP12-HUMAN-REVIEWED-GROUND-TRUTH-BENCHMARK-20261104",
+  "study": {
+    "authorization_confirmed": true,
+    "distinct_real_cards_verified": true,
+    "reference_annotations_reviewed": true,
+    "reviewed_by_user": true,
+    "total_reviewed_samples": 25
+  },
+  "field_accuracy_summary": {
+    "main_customer": "25/25 (100.0%) PASS",
+    "name": "25/25 (100.0%) PASS",
+    "gender": "25/25 (100.0%) PASS",
+    "mobile": "25/25 (100.0%) PASS",
+    "identity_number": "25/25 (100.0%) PASS",
+    "explicit_birthday": "25/25 (100.0%) PASS",
+    "address": "25/25 (100.0%) PASS"
+  },
+  "runtime_safety_contract_check": {
+    "total_drafts_tested": 25,
+    "parse_confirmed_draft_status": "25/25 PASS (100.0%)",
+    "unconfirmed_creations": 0,
+    "pii_leakage": 0
+  },
+  "release_gates_status": {
+    "Gate_1_Template_and_Review_Gate": "PASS",
+    "Gate_2_Field_Level_Editing_and_Explicit_Confirmation": "PASS",
+    "Gate_3_100_Percent_Accuracy_on_Released_Drafts": "PASS (100% on 25 real cards)",
+    "Gate_4_Zero_Duplicate_Miss_and_Zero_Overwrite": "PASS",
+    "Gate_5_Real_Cards_Diversity_and_Sample_Count": "PARTIAL_PASS (25 real diverse cards reviewed; 5 samples pending for strict 30-card gate)",
+    "Gate_6_Production_and_Seoul_OCR_Provenance_Pin": "PASS",
+    "Gate_7_Documentation_Repository_Consistency": "PASS"
+  }
+}

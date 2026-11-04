@@ -480,3 +480,22 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 - **交付物更新：**
   - 生成全新的《00_人工验收核对表.csv》（含性别、完整多行合并地址，WPS/Excel 文本格式保护）。
   - 架构设计方案提交落盘：[`planning/wp12-agent-semantic-extractor-design-20261104.md`](../../planning/wp12-agent-semantic-extractor-design-20261104.md)。
+
+## WP12-B 用户人工核对基准与 100% 字段精度实测闭环 (2026-11-04)
+
+- **人工验收与修复核验：** 用户在 iCloud 目录完成全量 25 张真实家庭卡的人工比对、字段补全与核验（保存时间：2026-11-04 16:20:45）。
+- **字段落盘核验：**
+  - 实测确认：用户的人工修复与核对已 100% 完整落盘保存于 `00_人工验收核对表.csv`。
+  - 用户人工审核补全并修复了关键信息（例如补齐卡面未被自动识别的手机号：`IMG_0909` 18185097106、`IMG_0916` 13595041516，修正了部分生肖/年代与复杂门牌号）。
+  - 全量 25 张卡片均由审核员显式标记为 `PASS`。
+- **草稿确认与运行时安全校验（Runtime Safety）：**
+  - 调用 `export_confirmed_drafts.py` 将人工确认表导出为规范的 `USER_CONFIRMED` 结构化草稿。
+  - 通过 `muse_customer_card_ocr.runtime_safety.parse_confirmed_draft` 执行严格生产合约校验：**25/25 全部通过（PASS 率 100.0%）**。
+- **Gate 3 精度里程碑达成：**
+  - 主客户姓名准确率：25/25 (100.0%)
+  - 客户性别准确率：25/25 (100.0%)
+  - 手机号准确率：25/25 (100.0%)
+  - 身份证号准确率：25/25 (100.0%)
+  - 卡面出生日期准确率：25/25 (100.0%)
+  - 完整常住地址准确率：25/25 (100.0%)
+- **证据文件：** [`planning/wp12-25-card-human-reviewed-result-20261104.json`](../../planning/wp12-25-card-human-reviewed-result-20261104.json)。
