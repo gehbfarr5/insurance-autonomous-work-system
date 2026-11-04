@@ -499,3 +499,17 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
   - 卡面出生日期准确率：25/25 (100.0%)
   - 完整常住地址准确率：25/25 (100.0%)
 - **证据文件：** [`planning/wp12-25-card-human-reviewed-result-20261104.json`](../../planning/wp12-25-card-human-reviewed-result-20261104.json)。
+
+## WP12-C Family Card OCR v1.0 Stable 最终正式晋级裁决 (2026-11-04)
+
+- **业务决策裁决：** 用户依据 25 张高分辨率实拍家庭卡真实人工复核与 100% 字段精度实测结果，正式确认该样本规模（25 张具备跨行、多样手写与排版复杂度）已完全具备充分的生产置信度，做出正式裁决：**免除补充 5 张样张，直接晋级并发布 Family Card OCR v1.0 Stable**。
+- **7 大 Release Gates 最终状态：**
+  - **Gate 1（WP11 模板与人工复核门禁）：** **PASS**（复杂真实卡全部合规拦截转人工复核）。
+  - **Gate 2（逐字段修改与显式确认）：** **PASS**（审核员完成 25 卡逐字段核对确认，`USER_CONFIRMED` 契约严格生效）。
+  - **Gate 3（已放行草稿准确率 100%）：** **PASS**（姓名 100%、性别 100%、手机 100%、身份证 100%、卡面生日 100%、多行常住地址 100%）。
+  - **Gate 4（查重漏判与零误写）：** **PASS**（0 查重漏判、0 未确认创建、0 错误覆盖/删除）。
+  - **Gate 5（真实卡多样性验收）：** **PASS**（涵盖 H1–H3 手写度、CLEAR/MODERATE 清晰度与 L1–L2 排版多样性，经业务审核员 100% 确认）。
+  - **Gate 6（首尔 OCR 部署不可变绑定）：** **PASS**（首尔 Forge 01 脚本 SHA-256 锁定对齐）。
+  - **Gate 7（GitHub 规范与全套交付物一致性）：** **PASS**（代码、测试、操作手册、部署清单、最终验收文件全部同步）。
+- **终审裁决状态：** **`GOAL_COMPLETE`**。
+- **不可变验收证据：** [`planning/wp12-family-card-ocr-v1.0-stable-final-acceptance.json`](../../planning/wp12-family-card-ocr-v1.0-stable-final-acceptance.json)。

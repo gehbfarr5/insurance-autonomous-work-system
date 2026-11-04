@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.1",
+  "target_release": "Family Card OCR v1.0 Stable",
+  "project_goal": "Family Card OCR -> iCloud Contacts v1.0 Stable",
+  "adjudication_date": "2026-11-04",
+  "adjudication_status": "GOAL_COMPLETE",
+  "executive_decision": "User explicitly accepted 25 real, highly diverse, human-verified samples as sufficient empirical evidence for v1.0 Stable release.",
+  "sample_evaluation": {
+    "total_eligible_samples": 25,
+    "reviewed_reference_labels_available": true,
+    "handwriting_diversity": {
+      "H1": 9,
+      "H2": 8,
+      "H3": 8,
+      "distinct": 3,
+      "target": 2,
+      "status": "PASS"
+    },
+    "clarity_diversity": {
+      "CLEAR": 17,
+      "MODERATE": 8,
+      "distinct": 2,
+      "target": 2,
+      "status": "PASS"
+    },
+    "layout_diversity": {
+      "L1": 17,
+      "L2": 8,
+      "distinct": 2,
+      "target": 2,
+      "status": "PASS"
+    },
+    "released_confirmed_drafts": 25
+  },
+  "field_accuracy_on_released_drafts": {
+    "main_customer": "100.0% (25/25 PASS)",
+    "name": "100.0% (25/25 PASS)",
+    "gender": "100.0% (25/25 PASS)",
+    "mobile": "100.0% (25/25 PASS)",
+    "identity_number": "100.0% (25/25 PASS)",
+    "explicit_birthday": "100.0% (25/25 PASS)",
+    "address": "100.0% (25/25 PASS)",
+    "status": "PASS"
+  },
+  "safety_and_integrity_gates": {
+    "duplicate_misses": 0,
+    "unconfirmed_creations": 0,
+    "erroneous_overwrites_or_deletions": 0,
+    "pii_leakage_to_git_or_logs": 0,
+    "runtime_safety_parse_confirmed_draft": "100.0% (25/25 PASS)"
+  },
+  "provenance_and_binding": {
+    "seoul_ocr_service_sha256": "804565db206a905c92380ebc266bf00d80e85b2f144ca7d30de4eaaa4ca0638e",
+    "seoul_host": "seoul-forge-01 (lhins-84gffkd8)",
+    "calling_protocol": "SSH stdin-image CLI (verified immutable)",
+    "agent_semantic_extractor": "Agent MUSE contextual LLM extraction (WP12)",
+    "status": "PINNED_AND_VERIFIED"
+  },
+  "release_gates_final_verdict": {
+    "Gate_1_Template_and_Manual_Review": "PASS",
+    "Gate_2_Field_Level_Review_and_Confirmation": "PASS",
+    "Gate_3_Accuracy_100_Percent": "PASS",
+    "Gate_4_Dedup_Miss_Zero_Unconfirmed_Create_Zero": "PASS",
+    "Gate_5_Real_Cards_Diversity_and_Acceptance": "PASS (25 diverse real cards human-reviewed and confirmed)",
+    "Gate_6_Seoul_OCR_Deployment_and_Provenance": "PASS",
+    "Gate_7_GitHub_Code_Docs_Tests_Consistency": "PASS"
+  }
+}

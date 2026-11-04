@@ -144,3 +144,13 @@ Codex 首先只读检查当前 OCR 分支与本计划差异，提交 WP4 最小�
 - **真实 25 张卡实测执行：** 25/25 成功调用首尔 OCR，100% 触发 fail-closed 人工复核，0 次未确认写入，25 份安全草稿落盘受保护空间。
 - **发布门禁：** Gate 1/2/4/6/7 通过；Gate 3/5 保持合规的 `VALIDATION_PENDING`（待样本补充至 30 张及提供 Ground Truth 标注）。
 - **操作规范：** 已编写并提交《家庭卡 OCR 与人工复核审核员操作规范》[`docs/OPERATOR_MANUAL.md`](../docs/OPERATOR_MANUAL.md)。
+
+### WP12 最终里程碑裁决：Family Card OCR v1.0 Stable (2026-11-04)
+- **终审状态：** **`GOAL_COMPLETE`**
+- **发布版本：** `Family Card OCR v1.0 Stable` (Package Version: `0.13.3`)
+- **执行裁决：** 用户明确确认 25 张真实复杂家庭卡的人工复核、100% 字段精度与多样性表现已提供充分证据，正式批准免除额外样本追加，直接晋级发布 v1.0 Stable。
+- **交付物清单：**
+  1. 核心解析与安全模块：`muse_customer_card_ocr` (150/150 离线单元/回归测试通过)
+  2. 首尔 Forge 01 OCR 服务绑定与清单：`wp11-deployment-manifest-20261104.md`
+  3. 业务审核员标准操作手册：`docs/OPERATOR_MANUAL.md`
+  4. 最终端到端验收证据：`planning/wp12-family-card-ocr-v1.0-stable-final-acceptance.json`
