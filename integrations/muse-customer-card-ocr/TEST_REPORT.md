@@ -420,7 +420,13 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 
 ## WP11-R field-level review draft workflow and Seoul OCR target binding (2026-11-04)
 
-- **Candidate:** Package 0.13.3, branch `codex/wp11-family-card-table-parser-20261103`.
+- **Candidate:** Package 0.13.3, branch `codex/wp11-family-card-table-parser-20261103`, exact commit `31c837e5447de1a35eba97e2bc4b78be1ee20352`.
+- **Isolated environment verification:**
+  - Performed in clean detached worktree (`/tmp/wp11r-worktree`) and isolated virtualenv (`/tmp/wp11r-venv`) on Python 3.12.14 / Pillow 12.3.0.
+  - Verified exact SHA-256 hashes of all 4 key files (`fields.py`: `420a1b21...`, `runtime_safety.py`: `f0de7d03...`, `acceptance_metrics.py`: `45d7b265...`, `wp10_ocr_dedup.py`: `fd2f5ad1...`).
+  - Full offline suite PASS: **150/150 tests, 0 failures, 0 errors**.
+  - Blank-template acceptance metrics CLI smoke PASS with expected `BLOCKED` and `VALIDATION_PENDING` status.
+  - Machine-readable result recorded in [`planning/wp11r-muse-candidate-retest-and-draft-pipeline-result-20261104.json`](../../planning/wp11r-muse-candidate-retest-and-draft-pipeline-result-20261104.json).
 - **Direction A (WP10 reviewed reference comparison):** Verified WP11-Q3 status. Within the authorized same-record scope of the protected workspace, the reviewed reference remains unavailable (reads: 0, association: NO, all 8 field comparisons: NOT_CHECKED). Comparison status remains `BLOCKED`. Per project discipline, no references were faked and no search was expanded to other records or workspaces.
 - **Direction B (Field-level review/confirmation workflow):**
   - Problem profile: Automatic extraction correctly fails closed on ambiguous inputs (`REVIEW_REQUIRED`), but the workflow lacked a canonical bridge from `FieldExtractionResult` to an unconfirmed editable draft (`PENDING_USER_CONFIRMATION`).
