@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11Q2-MUSE-CURRENT-CANDIDATE-WP10-REPLAY-20261104",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "0b162686fe6a8cfa29cda7dfcd224976339746f4",
+    "package_version": "0.13.2",
+    "parser_sha256": "420a1b21d0df9d6f1f75460559d2fd8ee87cfec2805ca326928dd268b213d147"
+  },
+  "environment": {
+    "os_image": "",
+    "python_version": "",
+    "pillow_version": "",
+    "isolated_worktree": false,
+    "isolated_virtualenv": false,
+    "import_path_isolated": false
+  },
+  "prior_offline_suite": {
+    "basis_task_id": "WP11PQ-MUSE-EXPLICIT-ADDRESS-BOOK-AND-FIRST-REJECTION-HISTOGRAM-20261103",
+    "status": "PASS",
+    "tests_run": 148,
+    "failures": 0,
+    "errors": 0,
+    "rerun_in_this_task": false
+  },
+  "wp10_replay": {
+    "structured_result_available": "UNKNOWN",
+    "structured_result_reads": 0,
+    "reviewed_reference_available": "NO",
+    "reviewed_reference_reads": 0,
+    "parser_replay_status": "BLOCKED",
+    "accuracy_comparison_status": "BLOCKED",
+    "decision": "UNKNOWN",
+    "draft_mapping": "NOT_RUN",
+    "reason_codes": [],
+    "field_presence": {
+      "main_customer": "NOT_RUN",
+      "name": "NOT_RUN",
+      "mobile": "NOT_RUN",
+      "identity_number": "NOT_RUN",
+      "explicit_birthday": "NOT_RUN",
+      "gender": "NOT_RUN",
+      "address": "NOT_RUN",
+      "other_phone": "NOT_RUN"
+    },
+    "field_match_to_reference": {
+      "main_customer": "NOT_CHECKED",
+      "name": "NOT_CHECKED",
+      "mobile": "NOT_CHECKED",
+      "identity_number": "NOT_CHECKED",
+      "explicit_birthday": "NOT_CHECKED",
+      "gender": "NOT_CHECKED",
+      "address": "NOT_CHECKED",
+      "other_phone": "NOT_CHECKED"
+    },
+    "source_envelope_integrity": "NOT_CHECKED",
+    "raw_values_returned": false
+  },
+  "operation_counts": {
+    "branch_fetches": 0,
+    "structured_result_reads": 0,
+    "reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "mcp_tool_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_reads": 0,
+    "contact_creates": 0,
+    "contact_updates": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_files_modified": 0,
+    "muse_commits": 0,
+    "muse_pushes": 0
+  }
+}

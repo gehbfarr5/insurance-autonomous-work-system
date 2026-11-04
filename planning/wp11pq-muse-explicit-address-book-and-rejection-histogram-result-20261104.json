@@ -1,0 +1,208 @@
+{
+  "schema_version": "1.0",
+  "task_id": "WP11PQ-MUSE-EXPLICIT-ADDRESS-BOOK-AND-FIRST-REJECTION-HISTOGRAM-20261103",
+  "candidate_q": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "commit": "0b162686fe6a8cfa29cda7dfcd224976339746f4",
+    "package_version": "0.13.2",
+    "expected_test_count": 148,
+    "files_sha256": {
+      "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/runtime_safety.py": "09d8482839dd02002eb3f26456910de9ebaaf7cf1441c09143dd6a9c5922071f",
+      "wp10-real-card/wp10_create_readback.py": "a85f6de5f7a3a758db1897bcb8bba724830771f13b46bd2573127f09a48cf3e7",
+      "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/contacts_create_adapter.py": "0aa33bb802b301ccb4b10269c2eb22214f82e8e1f232b8def45b84a4678b0c1b",
+      "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/acceptance_metrics.py": "45d7b265858acd67f15a32f25414f8b1d2f391808db4b48563418cbb3f0fc2ba"
+    }
+  },
+  "wp11q_offline_retest": {
+    "status": "PASS",
+    "timestamp": "2026-11-04T08:43:11+08:00",
+    "environment": "Ubuntu 24.04.5 LTS (Linux x86_64); Python 3.12.3; Pillow 12.3.0",
+    "exact_commit_verified": true,
+    "package_version_verified": true,
+    "file_hashes_verified": true,
+    "isolated_worktree": true,
+    "isolated_virtualenv": true,
+    "import_path_isolated": true,
+    "test_suite": {
+      "status": "PASS",
+      "expected_tests": 148,
+      "tests_run": 148,
+      "failures": 0,
+      "errors": 0
+    },
+    "synthetic_guard_checks": {
+      "missing_address_book_rejected": true,
+      "blank_address_book_rejected": true,
+      "control_character_address_book_rejected": true,
+      "explicit_address_book_forwarded_to_serializer": true,
+      "missing_address_book_stopped_before_mcp_call": true,
+      "readback_resume_without_address_book_succeeded": true,
+      "readback_resume_did_not_issue_second_create": true,
+      "auto_usable_row_rejects_failure_reasons": true,
+      "manual_review_row_requires_failure_reason": true
+    },
+    "raw_values_returned": false
+  },
+  "wp11p_first_rejection_histogram": {
+    "candidate": {
+      "branch": "codex/wp11-family-card-table-parser-20261103",
+      "commit": "e08e7f7b2748cd3a3c60e2769063dc2d26e1112b",
+      "package_version": "0.12.0",
+      "parser_path": "integrations/muse-customer-card-ocr/src/muse_customer_card_ocr/fields.py",
+      "parser_sha256": "420a1b21d0df9d6f1f75460559d2fd8ee87cfec2805ca326928dd268b213d147"
+    },
+    "diagnostic": {
+      "status": "PASS",
+      "timestamp": "2026-11-04T08:43:11+08:00",
+      "environment": "Ubuntu 24.04.5 LTS (Linux x86_64); Python 3.12.3; Pillow 12.3.0",
+      "method": "VALUE_FREE_FIRST_REJECTION_HISTOGRAM",
+      "exact_commit_verified": true,
+      "parser_hash_verified": true,
+      "isolated_worktree": true,
+      "isolated_virtualenv": true,
+      "import_path_isolated": true,
+      "structured_result_available": "YES",
+      "result_reads": 1,
+      "reviewed_reference_used": false,
+      "parser_replay_performed": true,
+      "decision": "REVIEW_REQUIRED",
+      "draft_mapping": "REJECTED",
+      "reason_codes": [
+        "table_layout_uncertain",
+        "main_customer_identity_unclear",
+        "mobile_missing",
+        "address_conflict",
+        "address_uncertain"
+      ],
+      "raw_values_returned": false
+    },
+    "first_rejection_reason_counts": [
+      {
+        "field": "address",
+        "candidate_source": "direct_right",
+        "terminal_gate": "FIELD_VALIDATION",
+        "reason": "FIELD_FORMAT_OR_LENGTH",
+        "count": 1
+      },
+      {
+        "field": "address",
+        "candidate_source": "next_visual_row",
+        "terminal_gate": "FIELD_VALIDATION",
+        "reason": "FIELD_FORMAT_OR_LENGTH",
+        "count": 1
+      },
+      {
+        "field": "address",
+        "candidate_source": "next_visual_row",
+        "terminal_gate": "GEOMETRY",
+        "reason": "CENTER_NEAR_TIE",
+        "count": 1
+      },
+      {
+        "field": "address",
+        "candidate_source": "same_row_nonadjacent",
+        "terminal_gate": "GEOMETRY",
+        "reason": "NOT_INSTRUMENTED",
+        "count": 1
+      },
+      {
+        "field": "explicit_birthday",
+        "candidate_source": "next_visual_row",
+        "terminal_gate": "GEOMETRY",
+        "reason": "LABEL_BOX_OVERLAP",
+        "count": 6
+      },
+      {
+        "field": "identity_number",
+        "candidate_source": "next_visual_row",
+        "terminal_gate": "GEOMETRY",
+        "reason": "LABEL_BOX_OVERLAP",
+        "count": 6
+      },
+      {
+        "field": "identity_number",
+        "candidate_source": "same_row_nonadjacent",
+        "terminal_gate": "PASS",
+        "reason": "PASS",
+        "count": 1
+      },
+      {
+        "field": "mobile",
+        "candidate_source": "line_format",
+        "terminal_gate": "FIELD_VALIDATION",
+        "reason": "FIELD_FORMAT_OR_LENGTH",
+        "count": 1
+      },
+      {
+        "field": "mobile",
+        "candidate_source": "next_visual_row",
+        "terminal_gate": "GEOMETRY",
+        "reason": "LABEL_BOX_OVERLAP",
+        "count": 2
+      },
+      {
+        "field": "name",
+        "candidate_source": "direct_right",
+        "terminal_gate": "GEOMETRY",
+        "reason": "CENTER_NEAR_TIE",
+        "count": 1
+      },
+      {
+        "field": "other_phone",
+        "candidate_source": "direct_right",
+        "terminal_gate": "GEOMETRY",
+        "reason": "LABEL_BOX_OVERLAP",
+        "count": 1
+      },
+      {
+        "field": "other_phone",
+        "candidate_source": "line_format",
+        "terminal_gate": "FIELD_VALIDATION",
+        "reason": "FIELD_FORMAT_OR_LENGTH",
+        "count": 1
+      },
+      {
+        "field": "other_phone",
+        "candidate_source": "next_visual_row",
+        "terminal_gate": "GEOMETRY",
+        "reason": "LABEL_BOX_OVERLAP",
+        "count": 2
+      }
+    ],
+    "gender_signals": {
+      "pure_label_count": 0,
+      "text_block_count": 2,
+      "structured_checked_state_signal_count": 0,
+      "selection_inferred": false
+    },
+    "reconciliation": {
+      "candidate_counts_reconciled_to_wp11n": "YES",
+      "distinct_block_rule_applied": true,
+      "terminal_outcome_counts_reconciled": "YES",
+      "unreconciled_count_reason": "NONE"
+    }
+  },
+  "operation_counts": {
+    "branch_fetches": 1,
+    "structured_result_reads": 1,
+    "reviewed_reference_reads": 0,
+    "new_sample_inventory_reads": 0,
+    "new_card_image_reads": 0,
+    "seoul_ocr_calls": 0,
+    "direct_baidu_calls": 0,
+    "mcp_tool_calls": 0,
+    "icloud_logins": 0,
+    "contact_searches": 0,
+    "contact_reads": 0,
+    "contact_creates": 0,
+    "contact_updates": 0,
+    "contact_deletes": 0,
+    "production_code_executions": 0,
+    "production_writes": 0,
+    "deployments": 0,
+    "raw_data_exports": 0,
+    "source_files_modified": 0,
+    "muse_commits": 0,
+    "muse_pushes": 0
+  }
+}

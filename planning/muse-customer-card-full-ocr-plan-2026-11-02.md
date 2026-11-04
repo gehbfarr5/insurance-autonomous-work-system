@@ -1,12 +1,14 @@
 # 家庭卡 OCR → MUSE → iCloud 联系人：2026-11-02 修订实施基线
 
-状态：本文是 2026-11-02 的历史实施基线；当前代码与运行状态以以下 2026-11-03 对账为准。
+状态：本文是 2026-11-02 的历史实施基线；当前代码与运行状态以以下 2026-11-04 对账为准。
 
-## 2026-11-03 当前状态对账
+## 当前状态对账（截至 2026-11-04）
 
 本节只更新执行证据，不改变下方已确认的业务规则。
 
 GitHub 阶段与 release gate 跟踪：[Family Card OCR v1.0 Stable issue #18](https://github.com/gehbfarr5/insurance-autonomous-work-system/issues/18)。
+
+- **WP11-P/Q MUSE 隔离复验（2026-11-04）：** 正确 Family Card 旁聊中的 Q 精确 0.13.2 提交 0b162686fe6a8cfa29cda7dfcd224976339746f4 验证 148/148 离线测试通过，九个合成安全断言全部通过。P 对精确 0.12.0 解析器提交 e08e7f7b2748cd3a3c60e2769063dc2d26e1112b 只读同一授权 WP10 结构化结果一次，未读参考；回放仍 REVIEW_REQUIRED / REJECTED，首个终止门计数与 WP11-N 对账。姓名近并列、手机/生日几何重叠、地址格式或几何拒绝、性别无结构化勾选信号，且身份证候选未获参考比对；证据不支持放宽解析器。无 OCR/provider、MCP/iCloud/contact、生产、部署或导出操作。完整脱敏结果见 [WP11-P/Q](wp11pq-muse-explicit-address-book-and-rejection-histogram-result-20261104.json)。精确 0.13.2 候选的独立 WP10 回放任务见 [WP11-Q2](wp11q-muse-current-candidate-wp10-replay-20261104.md) 与 [结果模板](wp11q-muse-current-candidate-wp10-replay-result-template-20261104.json)。仍需补齐部署 provenance、真实样本授权、review/confirmation、live duplicate/create/readback/recovery 与回滚关口。
 
 - **WP8-B / WP9：** MUSE 历史阶段报告称 MUSE 经现有 Seoul OCR service 调用首尔百度 OCR，Access Token 获取/缓存/刷新及 WP9 合成查重、联系人创建、回读、幂等和清理通过。本轮未重新执行这些阶段。WP6/WP7 package helper 是早期隔离 adapter，不是当前报告的 MUSE OCR 路径；active runtime/source 与 Seoul deployment binding 仍 UNKNOWN。
 - **WP10：** MUSE 报告首张真实卡 OCR 成功，但自动解析为 `REVIEW_REQUIRED`；用户随后确认手工草稿并创建、回读一条真实联系人。这证明存在人工流程，不证明自动表格解析通过。
