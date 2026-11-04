@@ -135,3 +135,12 @@ GitHub 阶段与 release gate 跟踪：[Family Card OCR v1.0 Stable issue #18](h
 ## 6. 下一步指令
 
 Codex 首先只读检查当前 OCR 分支与本计划差异，提交 WP4 最小接口设计和离线测试计划；优先确认 MUSE 真实连接器 helper 规范，避免把 Bearer Key 暴露给 Python。获得接口证据后实施 WP4，提交新分支和测试回执。MUSE 同步准备 WP5 的最小权限连接器配置清单，实际创建需单独确认。
+
+### WP11 最终推进状态更新（2026-11-04）
+- **候选版本状态：** `v1.0-candidate (0.13.3)`
+- **分支与提交：** `codex/wp11-family-card-table-parser-20261103` (Commit `69b92a1`)
+- **首尔 OCR 部署绑定：** 已完成不可变校验，按需 SSH CLI 架构对齐，哈希 `804565db...`。
+- **离线安全与复核测试：** 150/150 全部通过，支持 `--review-draft-out` 导出 `PENDING_USER_CONFIRMATION` 草稿，拒绝未确认创建。
+- **真实 25 张卡实测执行：** 25/25 成功调用首尔 OCR，100% 触发 fail-closed 人工复核，0 次未确认写入，25 份安全草稿落盘受保护空间。
+- **发布门禁：** Gate 1/2/4/6/7 通过；Gate 3/5 保持合规的 `VALIDATION_PENDING`（待样本补充至 30 张及提供 Ground Truth 标注）。
+- **操作规范：** 已编写并提交《家庭卡 OCR 与人工复核审核员操作规范》[`docs/OPERATOR_MANUAL.md`](../docs/OPERATOR_MANUAL.md)。

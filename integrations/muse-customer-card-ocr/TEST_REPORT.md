@@ -445,3 +445,25 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
   - Architecture maintained: MUSE → Seoul OCR → Parser → Dedup → Manual review & User confirmation → Create → Readback.
   - 30-card sample validation remains gated (`VALIDATION_PENDING`), awaiting explicit user authorization, 30 distinct samples, and complete reviewed labels.
 - **Overall status:** `VALIDATION_PENDING`.
+
+## WP11-S 25-card real acceptance and candidate freeze (2026-11-04)
+
+- **Execution Context:** User provided affirmative authorization for available real samples in the protected iCloud storage (`00_Inbox_临时收件箱/OCR 30 测试`). Exactly 25 high-resolution iPhone HEIF/HEIC card samples were available. No human-reviewed reference labels (Ground Truth) were present.
+- **Image Pipeline:** 25 HEIC images converted to normalized JPEG via `sips` (4000px max side, quality 92) into an isolated local protected workspace (`/tmp/wp11-real25-protected`).
+- **Seoul OCR Invocation:** All 25 cards processed on-demand through `seoul-forge-01` (`/home/ubuntu/baidu-ocr-service/baidu_ocr_service.py --stdin-image`). 25/25 succeeded (100% OCR success).
+- **Parser & Guardrail Metrics:**
+  - Automated ready-to-create drafts (`READY`): 0.
+  - Fail-closed manual review triggers (`REVIEW_REQUIRED`): 25 (100.0%).
+  - Unconfirmed creations: 0.
+  - Review drafts generated: 25 (all written with 0600 permissions, `review_status: "PENDING_USER_CONFIRMATION"`).
+  - Primary reasons: `table_layout_uncertain` (100%), `main_customer_identity_unclear` (92%), `birthday_uncertain` (92%), `address_uncertain` (88%), `address_conflict` (72%), `mobile_missing` (48%), `mobile_uncertain` (40%).
+- **Gate Evaluation:**
+  - Gate 1 (Template safety & manual review): PASS.
+  - Gate 2 (Field-level editing & explicit confirmation): PASS.
+  - Gate 3 & 5 (30 cards diversity & accuracy): BLOCKED / VALIDATION_PENDING (sample count 25 < 30, reviewed reference labels missing).
+  - Gate 4 (Zero duplicate miss, zero unconfirmed create, zero overwrite): PASS.
+  - Gate 6 (Production & Seoul OCR provenance pin): PASS.
+  - Gate 7 (Documentation & repository consistency): PASS.
+- **Candidate Deliverable:** Frozen at Candidate 0.13.3 (`v1.0-candidate`). Added operator manual [`docs/OPERATOR_MANUAL.md`](../../docs/OPERATOR_MANUAL.md) for manual review and confirmed create workflow.
+- **Machine-readable Results:** [`planning/wp11-25-card-muse-result-20261104.json`](../../planning/wp11-25-card-muse-result-20261104.json).
+- **Overall Release Status:** `v1.0-candidate` (Status: `VALIDATION_PENDING` until 30 cards and reference labels can be provided).
