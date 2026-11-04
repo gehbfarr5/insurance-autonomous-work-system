@@ -1,6 +1,6 @@
 # WP11-Q3: protected reviewed-reference comparison for the same WP10 card
 
-**Task state:** READY. Execute only in the existing Family Card MUSE conversation, 执行WP11离线验证任务.
+**Task state:** COMPLETED — MUSE returned a sanitized result, but field comparison is `BLOCKED` because the same-record reviewed reference was unavailable.
 
 ## Explicit authorization and scope
 
@@ -31,3 +31,11 @@ This approval does not include another card, sample inventory, the 30-card set, 
 - No OCR, Seoul/Baidu/provider, MCP, iCloud, contact, login, or production calls.
 - No source/config changes, tests, deployment, exports, MUSE commits, or pushes.
 - Do not mark v1.0 accuracy acceptance from a one-card comparison; the 30-card authorization and metrics gates remain separate.
+
+## Execution outcome (2026-11-04)
+
+- MUSE completed this task in the correct Family Card side conversation, `执行WP11离线验证任务`, and returned the required JSON result at `wp11q3-muse-wp10-reviewed-reference-compare-result-20261104.json`.
+- The same WP10 structured result was available and read once. The reviewed reference was not available in the authorized same-record scope and was not read; MUSE could not verify the reference association. It did not search other records, samples, or workspaces.
+- Exact-candidate replay remained `FAIL` / `REVIEW_REQUIRED` / rejected draft. All eight reference field comparisons are `NOT_CHECKED`; overall comparison is `BLOCKED`. No customer values, OCR text, image, screenshot, or geometry were returned.
+- One authorized branch fetch and one structured-result read were recorded. Reference reads, other samples, images, OCR/provider calls, contact/iCloud/production operations, deployments, exports, source changes, MUSE commits, and MUSE pushes were zero.
+- The authorization enabled a protected same-record lookup attempt, but did not resolve the evidence gap. Keep release `VALIDATION_PENDING`; a missing or inaccessible reference cannot be repaired by widening this task's scope.

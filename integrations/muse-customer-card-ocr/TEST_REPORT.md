@@ -401,6 +401,16 @@ WP11-N reported total geometry rejection/ambiguity counts but no specific reason
 - Separate workflow gap: `map_to_icloud_fields` rejects every non-ready extraction with `ManualReviewRequiredError`, so the current contact-mapping API produces no contact draft for `REVIEW_REQUIRED` (the extraction result still carries candidate fields and reasons). The create runtime only accepts a complete, user-confirmed draft, and WP11-O could not bind inspected MUSE source to the active UI. Track field-level review/edit/confirmation as an independent release gate; do not treat this parser replay as UI acceptance. Release remains `VALIDATION_PENDING`.
 - Complete sanitized machine result: [WP11-Q2 result JSON](../../planning/wp11q-muse-current-candidate-wp10-replay-result-20261104.json). No source change or test rerun was made in this documentation-only recording step.
 
+## WP11-Q3 protected reviewed-reference comparison (2026-11-04)
+
+- MUSE completed the task in the correct Family Card side conversation, `执行WP11离线验证任务`, after the user authorized a lookup limited to the same WP10 record in MUSE's protected workspace.
+- The same previously authorized structured result was available and read once. The corresponding reviewed reference was not available in that same-record scope and was not read; MUSE could not verify its association. The task stopped there without checking other records, samples, inventories, or workspaces.
+- The exact 0.13.2 candidate remained `FAIL` / `REVIEW_REQUIRED` / rejected draft. Since no reference annotations were available, all eight reviewed-annotation and field-match states are `NOT_CHECKED`; comparison status is `BLOCKED`. No raw values, OCR text, images, screenshots, or geometry were returned.
+- The prior 148/148 offline suite evidence was reused without a rerun. Environment pins remained Ubuntu 24.04.5 LTS / Python 3.12.3 / Pillow 12.3.0; isolated worktree, virtual environment, and import path were reported true.
+- Operation counts: one authorized branch fetch and one structured-result read. Reviewed-reference, other-reference/sample, image, OCR/provider, iCloud/contact, production, deployment, export, source modification, MUSE commit, and push counts were all zero.
+- This confirms the correct MUSE conversation can execute the task, but does not resolve the evidence blocker. The reviewed reference must be restored or explicitly associated with the original record before this comparison can continue; this task did not broaden its scope. Release remains `VALIDATION_PENDING`.
+- Complete sanitized result: [WP11-Q3 result JSON](../../planning/wp11q3-muse-wp10-reviewed-reference-compare-result-20261104.json). No source change or test rerun was made in this recording step.
+
 ### WP11-O current Seoul management target inventory (2026-11-04 09:16 CST)
 
 - Read-only status confirmed the connected `seoul-forge-01` instance is running. The bounded inventory listed running systemd service names, Docker container/image/status, and process names only; no process command arguments, environment, configuration, logs, or credentials were read.
