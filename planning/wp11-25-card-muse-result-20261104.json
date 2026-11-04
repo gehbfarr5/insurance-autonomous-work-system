@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "acceptance_metrics_schema_version": "1.1",
+  "task_id": "WP11-REAL25-CARD-ACCEPTANCE-20261104",
+  "candidate": {
+    "branch": "codex/wp11-family-card-table-parser-20261103",
+    "tested_commit": "2f18b75",
+    "package_version": "0.13.3"
+  },
+  "environment": {
+    "python_version": "3.12.14",
+    "pillow_version": "12.3.0",
+    "isolated_worktree": true,
+    "isolated_virtualenv": true
+  },
+  "real_card_execution": {
+    "source_folder": "00_Inbox_临时收件箱/OCR 30 测试",
+    "total_images_processed": 25,
+    "ocr_service": "seoul-forge-01 /home/ubuntu/baidu-ocr-service/baidu_ocr_service.py",
+    "ocr_calls_succeeded": 25,
+    "ocr_calls_failed": 0,
+    "review_drafts_generated": 25,
+    "direct_ready_count": 0,
+    "review_required_count": 25,
+    "unconfirmed_creations": 0,
+    "field_presence_summary": {
+      "identity_number": 20,
+      "address": 3,
+      "mobile": 3,
+      "name": 2
+    },
+    "review_reason_distribution": {
+      "table_layout_uncertain": 25,
+      "main_customer_identity_unclear": 23,
+      "birthday_uncertain": 23,
+      "address_uncertain": 22,
+      "address_conflict": 18,
+      "mobile_missing": 12,
+      "mobile_uncertain": 10,
+      "birthday_conflict": 9,
+      "identity_number_uncertain": 5
+    }
+  },
+  "acceptance_metrics_summary": {
+    "real_card_ocr_result": "BLOCKED",
+    "v1_0_stable_status": "VALIDATION_PENDING",
+    "sample_gate": {
+      "status": "BLOCKED",
+      "blocking_reasons": [
+        "REFERENCE_ANNOTATIONS_NOT_REVIEWED",
+        "MINIMUM_ELIGIBLE_SAMPLE_COUNT_NOT_MET"
+      ],
+      "minimum_eligible_samples": 30,
+      "actual_samples": 25,
+      "reference_annotations_reviewed": false
+    }
+  },
+  "operation_counts": {
+    "real_card_image_reads": 25,
+    "seoul_ocr_calls": 25,
+    "direct_baidu_calls": 0,
+    "contact_creates": 0,
+    "contact_reads": 0,
+    "contact_deletes": 0,
+    "raw_pii_exports": 0
+  }
+}
