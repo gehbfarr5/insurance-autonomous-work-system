@@ -1,7 +1,7 @@
 #!/bin/bash
 # install.sh — MacServer EventKit Bridge Installation Script
 # Target: Intel MacServer (macOS 13+, x86_64) | gui/$(id -u) domain
-# AG-02 Candidate Package | Version 1.2.0
+# AG-02 Candidate Package | Version 1.3.0
 
 set -euo pipefail
 
@@ -45,7 +45,7 @@ TARGET_BIN="$TARGET_BIN_DIR/EventKitBridgeServer"
 TARGET_PLIST="$TARGET_LAUNCHAGENTS_DIR/com.muse.macserver-eventkit.plist"
 TARGET_CONFIG="$TARGET_CONFIG_DIR/bridge.env"
 RECEIPT_FILE="$STATE_DIR/install_receipt.json"
-SNAPSHOT_FILE="$STATE_DIR/pre_install_snapshot.json"
+SNAPSHOT_FILE="$STATE_DIR/pre_install_snapshot.txt"
 
 CURRENT_UID=$(id -u)
 PORT="${EVENTKIT_BRIDGE_PORT:-18765}"
@@ -150,7 +150,7 @@ if [ "$SKIP_LAUNCHCTL" != "true" ]; then
 fi
 echo "  -> Verified clean install state: 0 existing binaries, 0 plists, 0 configs, 0 active services."
 
-# ZERO-WRITE DRY RUN EXIT
+# ZERO-WRITE DRY RUN EXIT (Guaranteed 100% zero disk writes)
 if [ "$DRY_RUN" = true ]; then
     echo ""
     echo "=== DRY RUN SUCCESSFUL (Zero Disk Writes) ==="
@@ -164,49 +164,89 @@ if [ "$DRY_RUN" = true ]; then
     exit 0
 fi
 
-# Track directory creation for exact rollback
-CONFIG_DIR_CREATED_BY_US=false
-STATE_DIR_CREATED_BY_US=false
-if [ ! -d "$TARGET_CONFIG_DIR" ]; then CONFIG_DIR_CREATED_BY_US=true; fi
-if [ ! -d "$STATE_DIR" ]; then STATE_DIR_CREATED_BY_US=true; fi
+# ---------------------------------------------------------------------------
+# Setup Robust Failure Cleanup via EXIT Trap with Success Flag
+# ---------------------------------------------------------------------------
+INSTALL_SUCCESS=false
 
-# Create state directory and snapshot
-mkdir -p -m 0700 "$TARGET_CONFIG_DIR" "$STATE_DIR"
-
-cat > "$SNAPSHOT_FILE" << SNAPSHOT_EOF
-{
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "uid": $CURRENT_UID,
-  "config_dir_created": $CONFIG_DIR_CREATED_BY_US,
-  "state_dir_created": $STATE_DIR_CREATED_BY_US,
-  "binary_path": "$TARGET_BIN",
-  "plist_path": "$TARGET_PLIST",
-  "config_path": "$TARGET_CONFIG"
+# Helper to inspect directory state before touching
+record_dir() {
+    local d="$1"
+    if [ -d "$d" ]; then
+        local mode
+        mode=$(stat -f "%OLp" "$d" 2>/dev/null || echo "")
+        echo "DIR_EXISTED|$d|$mode" >> "$SNAPSHOT_TMP"
+    else
+        echo "DIR_CREATED|$d|" >> "$SNAPSHOT_TMP"
+    fi
 }
-SNAPSHOT_EOF
-chmod 0600 "$SNAPSHOT_FILE"
 
-# Define mid-flight rollback handler to restore exact pre-install state
+SNAPSHOT_TMP=$(mktemp /tmp/pre_install_snap_XXXXXX.txt)
+
+# Record pre-existing state of relevant directories
+record_dir "$TARGET_BIN_DIR"
+record_dir "$TARGET_LOG_DIR"
+record_dir "$TARGET_LAUNCHAGENTS_DIR"
+record_dir "$TARGET_CONFIG_DIR"
+record_dir "$STATE_DIR"
+
+# Define unified rollback handler
 rollback_on_failure() {
-    echo "ERROR: Installation failed mid-flight! Rolling back to exact pre-install state..." >&2
+    local code="${1:-1}"
+    echo "ERROR: Installation failed (exit code: $code)! Rolling back to exact pre-install state..." >&2
+
+    # 1. Unload LaunchAgent daemon if registered
     if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         launchctl bootout "gui/$CURRENT_UID/com.muse.macserver-eventkit" > /dev/null 2>&1 || true
     fi
+
+    # 2. Remove files created by this install
     rm -f "$TARGET_BIN" "$TARGET_PLIST" "$TARGET_CONFIG" "$RECEIPT_FILE" "$SNAPSHOT_FILE"
-    if [ -d "$STATE_DIR" ]; then
-        rmdir "$STATE_DIR" 2>/dev/null || true
+
+    # 3. Restore directory permissions and remove created directories using snapshot records
+    local snap="$SNAPSHOT_FILE"
+    if [ ! -f "$snap" ] && [ -f "$SNAPSHOT_TMP" ]; then
+        snap="$SNAPSHOT_TMP"
     fi
-    if [ "$CONFIG_DIR_CREATED_BY_US" = true ] && [ -d "$TARGET_CONFIG_DIR" ]; then
-        rmdir "$TARGET_CONFIG_DIR" 2>/dev/null || true
+
+    if [ -f "$snap" ]; then
+        # Read from bottom to top so child directories are removed before parent
+        tail -r "$snap" 2>/dev/null | while IFS='|' read -r type path mode || [ -n "$type" ]; do
+            case "$type" in
+                DIR_CREATED)
+                    if [ -d "$path" ]; then
+                        rmdir "$path" 2>/dev/null || true
+                    fi
+                    ;;
+                DIR_EXISTED)
+                    if [ -d "$path" ] && [ -n "$mode" ]; then
+                        chmod "$mode" "$path" 2>/dev/null || true
+                    fi
+                    ;;
+            esac
+        done
     fi
+
+    rm -f "$SNAPSHOT_TMP"
     echo "Rollback completed. Exact pre-install clean state restored." >&2
 }
-trap rollback_on_failure ERR
 
-# 5. Restricted Credential Storage & Target Deployment
+cleanup_on_exit() {
+    local code=$?
+    if [ "$INSTALL_SUCCESS" != "true" ] && [ "$DRY_RUN" != "true" ]; then
+        rollback_on_failure "$code"
+    else
+        rm -f "$SNAPSHOT_TMP"
+    fi
+}
+
+trap cleanup_on_exit EXIT INT TERM
+
+# 5. Create directories & Deploy configuration
 echo "[5/6] Deploying restricted credentials and application artifacts..."
-mkdir -p -m 0700 "$TARGET_CONFIG_DIR"
-chmod 0700 "$TARGET_CONFIG_DIR"
+mkdir -p -m 0700 "$TARGET_CONFIG_DIR" "$STATE_DIR"
+cp -p "$SNAPSHOT_TMP" "$SNAPSHOT_FILE"
+chmod 0600 "$SNAPSHOT_FILE"
 
 SECURE_TOKEN=$(openssl rand -hex 32)
 cat > "$TARGET_CONFIG" << EOF_CONF
@@ -222,12 +262,21 @@ mkdir -p -m 0755 "$TARGET_BIN_DIR" "$TARGET_LOG_DIR" "$TARGET_LAUNCHAGENTS_DIR"
 cp -p "$BINARY_SRC" "$TARGET_BIN"
 chmod 0755 "$TARGET_BIN"
 
+# Check post-copy verification failure injection point
+if [ "$INJECT_FAILURE" = "post-copy-verify" ]; then
+    echo "INJECTED FAILURE: Tampering with destination binary to trigger post-copy verification failure..." >&2
+    echo "CORRUPTED_POST_COPY" >> "$TARGET_BIN"
+fi
+
 # Verify destination binary matches original digest exactly
 DEST_SHA256=$(shasum -a 256 "$TARGET_BIN" | awk '{print $1}')
 if [ "$DEST_SHA256" != "$EXPECTED_SHA256" ]; then
     echo "ERROR: Destination binary digest mismatch after copy!" >&2
+    echo "  Expected: $EXPECTED_SHA256" >&2
+    echo "  Actual:   $DEST_SHA256" >&2
     exit 1
 fi
+
 if ! codesign --verify --verbose=2 "$TARGET_BIN" > /dev/null 2>&1; then
     echo "ERROR: Destination binary signature invalid after copy!" >&2
     exit 1
@@ -244,20 +293,22 @@ sed -e "s|/Users/shared/bin/EventKitBridgeServer|$TARGET_BIN|g" \
 chmod 0644 "$TARGET_PLIST"
 echo "  -> Installed LaunchAgent configuration to $TARGET_PLIST (mode 0644)"
 
-# Check failure injection point
-if [ "$INJECT_FAILURE" = "pre-bootstrap" ]; then
-    echo "INJECTED FAILURE: Simulating unexpected failure prior to service bootstrap..." >&2
-    false
-fi
-
 # 6. Service Bootstrap & Health Verification
 echo "[6/6] Bootstrapping LaunchAgent daemon into gui/$CURRENT_UID..."
+
+# Check bootstrap failure injection point
+if [ "$INJECT_FAILURE" = "bootstrap" ]; then
+    echo "INJECTED FAILURE: Tampering plist with invalid XML to trigger bootstrap failure..." >&2
+    echo "<dict><malformed_xml" > "$TARGET_PLIST"
+fi
+
 if [ "$SKIP_LAUNCHCTL" != "true" ]; then
     launchctl bootstrap "gui/$CURRENT_UID" "$TARGET_PLIST"
 
-    if [ "$INJECT_FAILURE" = "post-bootstrap" ]; then
-        echo "INJECTED FAILURE: Simulating failure immediately after bootstrap..." >&2
-        false
+    # Check health failure injection point
+    if [ "$INJECT_FAILURE" = "health" ]; then
+        echo "INJECTED FAILURE: Simulating health check failure post-bootstrap..." >&2
+        exit 1
     fi
 
     # Wait for service to bind and respond to health check
@@ -279,6 +330,16 @@ if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         echo "ERROR: Service did not respond on http://127.0.0.1:$PORT/health within 6 seconds." >&2
         exit 1
     fi
+else
+    # In skipped launchctl testing, still test health injection if requested
+    if [ "$INJECT_FAILURE" = "health" ]; then
+        echo "INJECTED FAILURE: Simulating health check failure post-bootstrap..." >&2
+        exit 1
+    fi
+    if [ "$INJECT_FAILURE" = "bootstrap" ]; then
+        echo "ERROR: Simulated bootstrap failure in testing mode!" >&2
+        exit 1
+    fi
 fi
 
 # Write official installation receipt
@@ -296,8 +357,8 @@ cat > "$RECEIPT_FILE" << RECEIPT_EOF
 RECEIPT_EOF
 chmod 0600 "$RECEIPT_FILE"
 
-# Cancel rollback trap on success
-trap - ERR
+# Mark successful installation so EXIT trap does not trigger rollback
+INSTALL_SUCCESS=true
 
 echo ""
 echo "=== Installation completed successfully ==="
