@@ -1114,4 +1114,95 @@ final class HttpIntegrationTests: XCTestCase {
             }
         }
     }
+
+    func testUnauthorizedStatusThrowsPermissionDeniedAndNeverMasqueradesAsEmptyList() async throws {
+        // Offline test: when authorization status is notDetermined or denied,
+        // store MUST throw permissionDenied and HTTP server MUST return 403 Forbidden.
+        // It must NEVER return 200 OK with empty array []!
+
+        let statuses: [RemindersAuthorizationStatus] = [.notDetermined, .denied, .restricted, .writeOnly]
+
+        for status in statuses {
+            let mockStore = ProductionStoreAssembly.assemble(
+                isAuthorized: true,
+                sourceVerifier: SourceVerifier(listBindings: [:]),
+                requestLimiter: RequestLimiter(capacity: 10, refillPerSecond: 10),
+                callbackTimeoutSeconds: 5.0,
+                authorizedStoreProvider: { throw EventKitBridgeError.internalError("Should not reach store provider") },
+                authorizationStatusChecker: { status }
+            )
+
+            // 1. Direct store call verification
+            do {
+                _ = try await mockStore.fetchListsMetadata()
+                XCTFail("Status \(status) must throw permissionDenied, not return empty list")
+            } catch let err as EventKitBridgeError {
+                XCTAssertEqual(err, .permissionDenied, "Expected permissionDenied for status \(status)")
+            }
+
+            // 2. HTTP Server verification
+            let validToken = "test-auth-status-token"
+            let testConfig = BridgeConfig(
+                mode: .test,
+                host: "127.0.0.1",
+                port: 0,
+                timeoutSeconds: 3.0,
+                validTokens: [validToken],
+                rateLimitRPS: 50,
+                useFakeStore: false,
+                isProductionAuthorized: true
+            )
+
+            let testServer = EventKitBridgeServer(
+                store: mockStore,
+                authValidator: AuthValidator(allowedTokens: [validToken]),
+                allowlistValidator: AllowlistValidator(allowedIDs: ["some-list"]),
+                requestLimiter: RequestLimiter(capacity: 50, refillPerSecond: 50),
+                config: testConfig
+            )
+
+            try await testServer.start()
+            let port = await testServer.boundPort
+
+            let url = URL(string: "http://127.0.0.1:\(port)/reminders/lists")!
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(validToken)", forHTTPHeaderField: "Authorization")
+
+            let (data, res) = try await URLSession.shared.data(for: req)
+            let httpRes = try XCTUnwrap(res as? HTTPURLResponse)
+
+            // MUST be 403, NEVER 200 OK!
+            XCTAssertEqual(httpRes.statusCode, 403, "Status \(status) must return HTTP 403")
+
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertEqual(json["code"] as? String, "PERMISSION_DENIED")
+            XCTAssertEqual(json["success"] as? String, "false")
+
+            await testServer.stop()
+        }
+    }
+
+    func testConfigLoadingFromRestrictedConfigFile() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let envFilePath = tempDir.appendingPathComponent("bridge.env").path
+        let fileContent = """
+        # Restricted test configuration
+        EVENTKIT_BRIDGE_MODE=TEST
+        EVENTKIT_BRIDGE_PORT=19999
+        EVENTKIT_BRIDGE_ALLOWED_LIST_IDS="test-list-001,test-list-002"
+        EVENTKIT_BRIDGE_BEARER_TOKEN="secret-test-token-from-file"
+        EVENTKIT_BRIDGE_TIMEOUT=4.5
+        """
+        try fileContent.write(toFile: envFilePath, atomically: true, encoding: .utf8)
+
+        let loaded = try BridgeConfig.load(from: ["EVENTKIT_BRIDGE_CONFIG_FILE": envFilePath])
+        XCTAssertEqual(loaded.port, 19999)
+        XCTAssertEqual(loaded.timeoutSeconds, 4.5)
+        XCTAssertTrue(loaded.validTokens.contains("secret-test-token-from-file"))
+        XCTAssertTrue(loaded.allowedListIDs.contains("test-list-001"))
+        XCTAssertTrue(loaded.allowedListIDs.contains("test-list-002"))
+    }
 }

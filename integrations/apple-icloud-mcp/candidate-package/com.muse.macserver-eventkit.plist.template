@@ -6,12 +6,12 @@
 	<dict>
 		<key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
 		<string>TARGET_ICLOUD_LIST_UUID</string>
-		<key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
-		<string>GENERATE_SECURE_TOKEN_AT_INSTALL</string>
 		<key>EVENTKIT_BRIDGE_BINDINGS</key>
 		<string>TARGET_ICLOUD_LIST_UUID:TARGET_ICLOUD_SOURCE_UUID:calDAV:iCloud</string>
 		<key>EVENTKIT_BRIDGE_BODY_TIMEOUT</key>
 		<string>3.0</string>
+		<key>EVENTKIT_BRIDGE_CONFIG_FILE</key>
+		<string>/Users/jin/.config/muse-macserver/bridge.env</string>
 		<key>EVENTKIT_BRIDGE_HEADER_TIMEOUT</key>
 		<string>3.0</string>
 		<key>EVENTKIT_BRIDGE_MAX_BODY_SIZE</key>

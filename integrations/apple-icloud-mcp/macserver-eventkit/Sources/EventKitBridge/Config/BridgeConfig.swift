@@ -228,25 +228,58 @@ public struct BridgeConfig: Sendable {
         }
     }
 
-    /// Parses configuration from environment dictionary with support for bindings and mode.
+    /// Reads KEY=VALUE configuration from a specified file path.
+    /// Supports comments starting with # and trims quotes around values.
+    public static func parseConfigFile(at path: String) throws -> [String: String] {
+        let expandedPath = (path as NSString).expandingTildeInPath
+        guard FileManager.default.fileExists(atPath: expandedPath) else {
+            throw ConfigurationError.missingRequiredKey("Configuration file not found at \(path)")
+        }
+        let content = try String(contentsOfFile: expandedPath, encoding: .utf8)
+        var dict: [String: String] = [:]
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+            guard let eqIndex = trimmed.firstIndex(of: "=") else { continue }
+            let key = String(trimmed[..<eqIndex]).trimmingCharacters(in: .whitespaces)
+            var val = String(trimmed[trimmed.index(after: eqIndex)...]).trimmingCharacters(in: .whitespaces)
+            if (val.hasPrefix("\"") && val.hasSuffix("\"")) || (val.hasPrefix("'") && val.hasSuffix("'")) {
+                val = String(val.dropFirst().dropLast())
+            }
+            dict[key] = val
+        }
+        return dict
+    }
+
+    /// Parses configuration from environment dictionary with support for bindings, mode, and config file.
     public static func load(from environment: [String: String]) throws -> BridgeConfig {
-        let modeStr = (environment["EVENTKIT_BRIDGE_MODE"] ?? "TEST").uppercased()
+        var mergedEnv = environment
+        if let configFilePath = environment["EVENTKIT_BRIDGE_CONFIG_FILE"], !configFilePath.isEmpty {
+            let fileValues = try parseConfigFile(at: configFilePath)
+            for (k, v) in fileValues {
+                if mergedEnv[k] == nil || mergedEnv[k]?.isEmpty == true {
+                    mergedEnv[k] = v
+                }
+            }
+        }
+
+        let modeStr = (mergedEnv["EVENTKIT_BRIDGE_MODE"] ?? "TEST").uppercased()
         let mode = (modeStr == "PRODUCTION") ? BridgeOperationMode.production : BridgeOperationMode.test
 
-        let port = Int(environment["EVENTKIT_BRIDGE_PORT"] ?? "") ?? 18765
-        let timeout = Double(environment["EVENTKIT_BRIDGE_TIMEOUT"] ?? "") ?? 5.0
-        let rps = Int(environment["EVENTKIT_BRIDGE_RATE_LIMIT_RPS"] ?? environment["EVENTKIT_BRIDGE_RPS"] ?? "") ?? 10
-        let maxConcurrent = Int(environment["EVENTKIT_BRIDGE_MAX_CONCURRENT"] ?? "") ?? 10
+        let port = Int(mergedEnv["EVENTKIT_BRIDGE_PORT"] ?? "") ?? 18765
+        let timeout = Double(mergedEnv["EVENTKIT_BRIDGE_TIMEOUT"] ?? "") ?? 5.0
+        let rps = Int(mergedEnv["EVENTKIT_BRIDGE_RATE_LIMIT_RPS"] ?? mergedEnv["EVENTKIT_BRIDGE_RPS"] ?? "") ?? 10
+        let maxConcurrent = Int(mergedEnv["EVENTKIT_BRIDGE_MAX_CONCURRENT"] ?? "") ?? 10
 
-        let allowlistStr = environment["EVENTKIT_BRIDGE_ALLOWED_LIST_IDS"] ?? environment["EVENTKIT_BRIDGE_ALLOWLIST"] ?? ""
+        let allowlistStr = mergedEnv["EVENTKIT_BRIDGE_ALLOWED_LIST_IDS"] ?? mergedEnv["EVENTKIT_BRIDGE_ALLOWLIST"] ?? ""
         let allowlist = Set(allowlistStr.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
 
-        let tokensStr = environment["EVENTKIT_BRIDGE_BEARER_TOKEN"] ?? environment["EVENTKIT_BRIDGE_TOKENS"] ?? ""
+        let tokensStr = mergedEnv["EVENTKIT_BRIDGE_BEARER_TOKEN"] ?? mergedEnv["EVENTKIT_BRIDGE_TOKENS"] ?? ""
         let tokens = Set(tokensStr.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
 
         // Parse list bindings: format "listID:sourceID:sourceType:sourceTitle;..." or JSON
         var parsedBindings: [String: SourceIdentity] = [:]
-        if let bindingsStr = environment["EVENTKIT_BRIDGE_BINDINGS"], !bindingsStr.isEmpty {
+        if let bindingsStr = mergedEnv["EVENTKIT_BRIDGE_BINDINGS"], !bindingsStr.isEmpty {
             let entries = bindingsStr.split(separator: ";")
             for entry in entries {
                 let parts = entry.split(separator: ":").map { String($0).trimmingCharacters(in: .whitespaces) }
@@ -260,17 +293,17 @@ public struct BridgeConfig: Sendable {
             }
         }
 
-        let useFake = (mode == .test) ? ((environment["EVENTKIT_BRIDGE_USE_FAKE"] ?? environment["EVENTKIT_USE_FAKE"]) != "false") : false
-        let isAuthorized = (environment["EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED"] == "true" ||
-                            environment["EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED"] == "1" ||
-                            environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "true" ||
-                            environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "1")
+        let useFake = (mode == .test) ? ((mergedEnv["EVENTKIT_BRIDGE_USE_FAKE"] ?? mergedEnv["EVENTKIT_USE_FAKE"]) != "false") : false
+        let isAuthorized = (mergedEnv["EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED"] == "true" ||
+                            mergedEnv["EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED"] == "1" ||
+                            mergedEnv["EVENTKIT_PRODUCTION_AUTHORIZED"] == "true" ||
+                            mergedEnv["EVENTKIT_PRODUCTION_AUTHORIZED"] == "1")
 
-        let headerTimeout = Double(environment["EVENTKIT_BRIDGE_HEADER_TIMEOUT"] ?? "") ?? 3.0
-        let bodyTimeout = Double(environment["EVENTKIT_BRIDGE_BODY_TIMEOUT"] ?? "") ?? 3.0
-        let maxBody = Int(environment["EVENTKIT_BRIDGE_MAX_BODY_SIZE"] ?? "") ?? 1_048_576
-        let sendTimeout = Double(environment["EVENTKIT_BRIDGE_SEND_TIMEOUT"] ?? "") ?? 5.0
-        let maxStoreOps = Int(environment["EVENTKIT_BRIDGE_MAX_STORE_OPS"] ?? "") ?? maxConcurrent
+        let headerTimeout = Double(mergedEnv["EVENTKIT_BRIDGE_HEADER_TIMEOUT"] ?? "") ?? 3.0
+        let bodyTimeout = Double(mergedEnv["EVENTKIT_BRIDGE_BODY_TIMEOUT"] ?? "") ?? 3.0
+        let maxBody = Int(mergedEnv["EVENTKIT_BRIDGE_MAX_BODY_SIZE"] ?? "") ?? 1_048_576
+        let sendTimeout = Double(mergedEnv["EVENTKIT_BRIDGE_SEND_TIMEOUT"] ?? "") ?? 5.0
+        let maxStoreOps = Int(mergedEnv["EVENTKIT_BRIDGE_MAX_STORE_OPS"] ?? "") ?? maxConcurrent
 
         let config = BridgeConfig(
             mode: mode,
@@ -320,6 +353,7 @@ public struct BridgeConfig: Sendable {
             )
         ],
         bearerToken: String = "GENERATE_SECURE_TOKEN_AT_INSTALL",
+        configFile: String? = nil,
         maxConcurrent: Int = 10,
         maxStoreOps: Int = 10,
         timeout: Double = 5.0,
@@ -335,25 +369,32 @@ public struct BridgeConfig: Sendable {
         let bindingsString = bindings.map { "\($0.key):\($0.value.sourceID):\($0.value.sourceType):\($0.value.sourceTitle)" }.joined(separator: ";")
         let allowlistString = allowedListIDs.joined(separator: ",")
 
+        var envVariables: [String: String] = [
+            "EVENTKIT_BRIDGE_MODE": mode.rawValue,
+            "EVENTKIT_BRIDGE_PORT": String(port),
+            "EVENTKIT_BRIDGE_ALLOWED_LIST_IDS": allowlistString,
+            "EVENTKIT_BRIDGE_BINDINGS": bindingsString,
+            "EVENTKIT_BRIDGE_MAX_CONCURRENT": String(maxConcurrent),
+            "EVENTKIT_BRIDGE_MAX_STORE_OPS": String(maxStoreOps),
+            "EVENTKIT_BRIDGE_TIMEOUT": String(timeout),
+            "EVENTKIT_BRIDGE_HEADER_TIMEOUT": String(headerTimeout),
+            "EVENTKIT_BRIDGE_BODY_TIMEOUT": String(bodyTimeout),
+            "EVENTKIT_BRIDGE_MAX_BODY_SIZE": String(maxBodySize),
+            "EVENTKIT_BRIDGE_SEND_TIMEOUT": String(sendTimeout),
+            "EVENTKIT_BRIDGE_RATE_LIMIT_RPS": String(rateLimitRPS),
+            "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED": isProductionAuthorized ? "true" : "false"
+        ]
+
+        if let cfg = configFile, !cfg.isEmpty {
+            envVariables["EVENTKIT_BRIDGE_CONFIG_FILE"] = cfg
+        } else {
+            envVariables["EVENTKIT_BRIDGE_BEARER_TOKEN"] = bearerToken
+        }
+
         let plistDict: [String: Any] = [
             "Label": label,
             "ProgramArguments": [binaryPath],
-            "EnvironmentVariables": [
-                "EVENTKIT_BRIDGE_MODE": mode.rawValue,
-                "EVENTKIT_BRIDGE_PORT": String(port),
-                "EVENTKIT_BRIDGE_ALLOWED_LIST_IDS": allowlistString,
-                "EVENTKIT_BRIDGE_BINDINGS": bindingsString,
-                "EVENTKIT_BRIDGE_BEARER_TOKEN": bearerToken,
-                "EVENTKIT_BRIDGE_MAX_CONCURRENT": String(maxConcurrent),
-                "EVENTKIT_BRIDGE_MAX_STORE_OPS": String(maxStoreOps),
-                "EVENTKIT_BRIDGE_TIMEOUT": String(timeout),
-                "EVENTKIT_BRIDGE_HEADER_TIMEOUT": String(headerTimeout),
-                "EVENTKIT_BRIDGE_BODY_TIMEOUT": String(bodyTimeout),
-                "EVENTKIT_BRIDGE_MAX_BODY_SIZE": String(maxBodySize),
-                "EVENTKIT_BRIDGE_SEND_TIMEOUT": String(sendTimeout),
-                "EVENTKIT_BRIDGE_RATE_LIMIT_RPS": String(rateLimitRPS),
-                "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED": isProductionAuthorized ? "true" : "false"
-            ],
+            "EnvironmentVariables": envVariables,
             "RunAtLoad": true,
             "KeepAlive": true,
             "StandardOutPath": stdoutLogPath,
@@ -366,49 +407,36 @@ public struct BridgeConfig: Sendable {
         }
 
         // Fallback formatted XML
+        var fallbackEnvXml = ""
+        for (k, v) in envVariables.sorted(by: { $0.key < $1.key }) {
+            fallbackEnvXml += "        <key>\(k)</key>\n        <string>\(v)</string>\n"
+        }
+
         return """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>Label</key>
-            <string>\(label)</string>
-            <key>ProgramArguments</key>
-            <array>
-                <string>\(binaryPath)</string>
-            </array>
-            <key>EnvironmentVariables</key>
-            <dict>
-                <key>EVENTKIT_BRIDGE_MODE</key>
-                <string>\(mode.rawValue)</string>
-                <key>EVENTKIT_BRIDGE_PORT</key>
-                <string>\(port)</string>
-                <key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
-                <string>\(allowlistString)</string>
-                <key>EVENTKIT_BRIDGE_BINDINGS</key>
-                <string>\(bindingsString)</string>
-                <key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
-                <string>\(bearerToken)</string>
-                <key>EVENTKIT_BRIDGE_MAX_CONCURRENT</key>
-                <string>\(maxConcurrent)</string>
-                <key>EVENTKIT_BRIDGE_MAX_STORE_OPS</key>
-                <string>\(maxStoreOps)</string>
-                <key>EVENTKIT_BRIDGE_TIMEOUT</key>
-                <string>\(timeout)</string>
-                <key>EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED</key>
-                <string>\(isProductionAuthorized ? "true" : "false")</string>
-            </dict>
-            <key>RunAtLoad</key>
-            <true/>
-            <key>KeepAlive</key>
-            <true/>
-            <key>StandardOutPath</key>
-            <string>\(stdoutLogPath)</string>
-            <key>StandardErrorPath</key>
-            <string>\(stderrLogPath)</string>
-        </dict>
-        </plist>
-        """
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>\(label)</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>\(binaryPath)</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+\(fallbackEnvXml)    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>\(stdoutLogPath)</string>
+    <key>StandardErrorPath</key>
+    <string>\(stderrLogPath)</string>
+</dict>
+</plist>
+"""
     }
 
     /// Parses EnvironmentVariables from a LaunchAgent plist XML representation.

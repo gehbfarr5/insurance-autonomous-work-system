@@ -336,7 +336,7 @@ public actor EventKitBridgeServer {
             let workerTask = Task { [self] in
                 defer {
                     Task { [self] in
-                        await self.releaseStoreOperation(opID)
+                        self.releaseStoreOperation(opID)
                     }
                 }
                 let res = await self.handleRawHttpRequest(method: method, path: path, token: token)

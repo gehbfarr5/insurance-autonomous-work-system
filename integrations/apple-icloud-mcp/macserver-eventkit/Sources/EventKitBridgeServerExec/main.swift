@@ -18,12 +18,93 @@ import EventKit
 struct BridgeServerMain {
     static func main() async {
         if CommandLine.arguments.contains("--generate-plist-template") {
-            let template = BridgeConfig.generateLaunchAgentPlist()
+            let configPath = "\(NSHomeDirectory())/.config/muse-macserver/bridge.env"
+            let template = BridgeConfig.generateLaunchAgentPlist(configFile: configPath)
             print(template)
             return
         }
 
-        let env = ProcessInfo.processInfo.environment
+        if CommandLine.arguments.contains("--check-authorization") {
+            #if canImport(EventKit)
+            let status = EKEventStore.authorizationStatus(for: .reminder)
+            let isAuth: Bool
+            let statusStr: String
+            switch status.rawValue {
+            case 0:
+                statusStr = "notDetermined"
+                isAuth = false
+            case 1:
+                statusStr = "restricted"
+                isAuth = false
+            case 2:
+                statusStr = "denied"
+                isAuth = false
+            case 3:
+                statusStr = "authorized"
+                isAuth = true
+            case 4:
+                statusStr = "writeOnly"
+                isAuth = false
+            default:
+                statusStr = "unknown"
+                isAuth = false
+            }
+            print("{\"authorization_status\":\"\(statusStr)\",\"authorized\":\(isAuth)}")
+            if isAuth {
+                exit(0)
+            } else if status == .notDetermined {
+                exit(2)
+            } else {
+                exit(3)
+            }
+            #else
+            print("{\"authorization_status\":\"unsupported\",\"authorized\":false}")
+            exit(1)
+            #endif
+        }
+
+        if CommandLine.arguments.contains("--request-authorization") {
+            #if canImport(EventKit)
+            let status = EKEventStore.authorizationStatus(for: .reminder)
+            if status.rawValue == 3 {
+                print("[EventKitBridge] Reminders authorization already granted.")
+                exit(0)
+            }
+            if status == .denied || status == .restricted {
+                print("[EventKitBridge] Reminders authorization is currently denied or restricted.")
+                print("[EventKitBridge] Please grant access in macOS System Settings -> Privacy & Security -> Reminders.")
+                exit(3)
+            }
+            print("[EventKitBridge] Requesting Reminders authorization on Aqua GUI session...")
+            let store = EKEventStore()
+            let (authGranted, authError): (Bool, (any Error)?) = await withCheckedContinuation { continuation in
+                if #available(macOS 14.0, *) {
+                    store.requestFullAccessToReminders { granted, error in
+                        continuation.resume(returning: (granted, error))
+                    }
+                } else {
+                    store.requestAccess(to: .reminder) { granted, error in
+                        continuation.resume(returning: (granted, error))
+                    }
+                }
+            }
+            if authGranted {
+                print("[EventKitBridge] Authorization GRANTED by user.")
+                exit(0)
+            } else {
+                print("[EventKitBridge] Authorization DENIED by user: \(authError?.localizedDescription ?? "Access not granted")")
+                exit(3)
+            }
+            #else
+            print("[EventKitBridge] EventKit unavailable on this platform.")
+            exit(1)
+            #endif
+        }
+
+        var env = ProcessInfo.processInfo.environment
+        if let idx = CommandLine.arguments.firstIndex(of: "--config-file"), idx + 1 < CommandLine.arguments.count {
+            env["EVENTKIT_BRIDGE_CONFIG_FILE"] = CommandLine.arguments[idx + 1]
+        }
 
         // 1. Configuration loading and strict production validation
         let config: BridgeConfig

@@ -18,6 +18,17 @@ import EventKit
 import AppKit
 #endif
 
+/// Unified Reminders authorization status across macOS versions.
+public enum RemindersAuthorizationStatus: String, Sendable, Codable {
+    case notDetermined = "notDetermined"
+    case restricted = "restricted"
+    case denied = "denied"
+    case authorized = "authorized"
+    case fullAccess = "fullAccess"
+    case writeOnly = "writeOnly"
+    case unknown = "unknown"
+}
+
 /// Real EventKit read-only store adapter.
 ///
 /// Implements `EventKitStoreProtocol` using native macOS `EventKit` APIs.
@@ -38,18 +49,44 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     private let storeProvider: (@Sendable () throws -> EKEventStore)?
     private var cachedStore: EKEventStore?
 
+    /// Optional injected authorization status checker for offline testing without TCC prompts.
+    private let authorizationStatusChecker: (@Sendable () -> RemindersAuthorizationStatus)?
+
     public init(
         isProductionActivated: Bool = false,
         sourceVerifier: SourceVerifier = SourceVerifier(),
         requestLimiter: RequestLimiter = RequestLimiter(),
         callbackTimeoutSeconds: Double = 5.0,
-        storeProvider: (@Sendable () throws -> EKEventStore)? = nil
+        storeProvider: (@Sendable () throws -> EKEventStore)? = nil,
+        authorizationStatusChecker: (@Sendable () -> RemindersAuthorizationStatus)? = nil
     ) {
         self.isProductionActivated = isProductionActivated
         self.sourceVerifier = sourceVerifier
         self.requestLimiter = requestLimiter
         self.callbackTimeoutSeconds = callbackTimeoutSeconds > 0 ? callbackTimeoutSeconds : 5.0
         self.storeProvider = storeProvider
+        self.authorizationStatusChecker = authorizationStatusChecker
+    }
+
+    /// Checks Reminders authorization status without prompting TCC dialogs.
+    public func checkAuthorizationStatus() -> RemindersAuthorizationStatus {
+        if let checker = authorizationStatusChecker {
+            return checker()
+        }
+        #if canImport(EventKit)
+        let status = EKEventStore.authorizationStatus(for: .reminder)
+        switch status {
+        case .notDetermined: return .notDetermined
+        case .restricted:    return .restricted
+        case .denied:        return .denied
+        case .authorized:    return .authorized
+        case .fullAccess:    return .fullAccess
+        case .writeOnly:     return .writeOnly
+        @unknown default:    return .unknown
+        }
+        #else
+        return .denied
+        #endif
     }
 
     // MARK: — EventKitStoreProtocol
@@ -57,9 +94,19 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     /// FIX-R4A-01: Metadata-only query.
     /// Enumerates reminder calendars and projects ONLY list metadata.
     /// Strictly NEVER queries reminder items or counts.
+    /// Unconditionally rejects unauthorized status: never returns [] pretending empty list success!
     public func fetchListsMetadata() async throws -> [RemindersList] {
         guard isProductionActivated, let provider = storeProvider else {
             // Safety guard: Do not trigger TCC or access live store unless authorized.
+            throw EventKitBridgeError.permissionDenied
+        }
+
+        // TCC Permission verification:
+        // NEVER call store.calendars(for: .reminder) if status is not fullAccess/authorized!
+        // macOS EventKit returns empty array [] on unauthorized access, which must NEVER
+        // masquerade as a successful empty list result.
+        let status = checkAuthorizationStatus()
+        guard status == .fullAccess || status == .authorized else {
             throw EventKitBridgeError.permissionDenied
         }
 
@@ -87,6 +134,11 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     /// Checks source identity and type BEFORE executing any reminder predicate query.
     public func fetchReminders(listID: String) async throws -> [ReminderItem] {
         guard isProductionActivated, let provider = storeProvider else {
+            throw EventKitBridgeError.permissionDenied
+        }
+
+        let status = checkAuthorizationStatus()
+        guard status == .fullAccess || status == .authorized else {
             throw EventKitBridgeError.permissionDenied
         }
 
@@ -204,7 +256,8 @@ public enum ProductionStoreAssembly {
         sourceVerifier: SourceVerifier,
         requestLimiter: RequestLimiter,
         callbackTimeoutSeconds: Double = 5.0,
-        authorizedStoreProvider: (@Sendable () throws -> EKEventStore)? = nil
+        authorizedStoreProvider: (@Sendable () throws -> EKEventStore)? = nil,
+        authorizationStatusChecker: (@Sendable () -> RemindersAuthorizationStatus)? = nil
     ) -> ProductionEventKitStore {
         let isFullyAuthorized = isAuthorized && (authorizedStoreProvider != nil)
         return ProductionEventKitStore(
@@ -212,7 +265,8 @@ public enum ProductionStoreAssembly {
             sourceVerifier: sourceVerifier,
             requestLimiter: requestLimiter,
             callbackTimeoutSeconds: callbackTimeoutSeconds,
-            storeProvider: isFullyAuthorized ? authorizedStoreProvider : nil
+            storeProvider: isFullyAuthorized ? authorizedStoreProvider : nil,
+            authorizationStatusChecker: authorizationStatusChecker
         )
     }
 }
