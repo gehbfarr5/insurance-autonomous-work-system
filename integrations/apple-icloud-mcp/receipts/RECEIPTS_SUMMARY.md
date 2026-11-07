@@ -1,8 +1,7 @@
-# AG-02 MacServer 试运行回执汇总（B1 安装回执与 B2 授权及元数据回执）
+# AG-02 MacServer 试运行回执汇总（B1 安装、B2 授权元数据与 B3 绑定列表只读回执）
 
 - **归档日期**：2026-11-07
 - **归档 PR**：[PR #21](https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/21) (`feat/macserver-eventkit-readonly` → `reconcile/icloud-source-baseline`)
-- **归档 Commit 基线**：`97571d45e48b92608af122a628d74d3a744b82ec`
 - **目标宿主**：Intel MacServer (`macserver-ts` / `100.100.172.91`, macOS 15.7.7 x86_64, `gui/501`)
 
 ---
@@ -27,22 +26,44 @@
 1. **TCC 系统授权**：
    - 在 `gui/501` 环境触发原生授权请求，用户在系统弹窗中点击允许；
    - 验证 Reminders 权限状态已就绪（`authorized: true`）。
-2. **纯元数据探测**：
+2. **iCloud 同步打通**：
+   - 用户在系统设置中开启 Reminders 同步；
+   - 验证数据库底层同步就绪（`com.apple.Dataclass.Reminders: True`）。
+3. **纯元数据探测**：
    - 临时置激活开关为 `true`，通过受限本地 Bearer Token 调用 `GET /reminders/lists`；
    - **内容隔离证明**：读取条目数 = 0，读取条目计数 = 0，写入调用 = 0；
-   - **元数据发现（脱敏）**：发现 1 个列表（来源：`本地` / `local`，标题：`提****项`，标识：`3C8C****0D15`）；
-   - **iCloud 来源**：发现 0 个 iCloud 同步源（确认系统设置中 Apple 账户的 Reminders 同步开关未开启）。
-3. **即刻闭环与安全恢复**：
-   - 遵循指令，因未发现可用 iCloud 源，立即关闭激活开关（`PRODUCTION_AUTHORIZED=false`）并重启服务；
+   - **列表与测试列表定位**：发现 3 个 iCloud 来源列表，锁定专用测试列表 `M****试`（脱敏标识：`9D9A****03F3`），并写入本地受限配置 `bridge.env` (`0600`)。
+4. **即刻闭环与安全恢复**：
+   - 探测完成后立即将激活开关恢复为 `false` 并重启守护进程；
    - 再次校验未授权拒绝机制生效（HTTP 403 `PERMISSION_DENIED`）。
 
 ---
 
-## 三、状态更新：由“准入前零安装”转为“已受管安装、已授权、受限关闭”
+## 三、B3 绑定测试列表只读读取回执 (`B3_TEST_LIST_READ_RECEIPT.json`)
 
-- **过时状态纠正**：此前文档记录的“MacServer 零文件安装、零服务启动、零 TCC 授权”属于 AG-02 安装准入前的安全承诺。现已完成经过授权的全新安装与 TCC 授权流程。
-- **最新准确状态**：
-  - **安装状态**：已安装为受管 LaunchAgent (`gui/501/com.muse.macserver-eventkit`)，受限配置位于 `~/.config/muse-macserver/`。
-  - **TCC 状态**：Reminders 授权已由用户确认赋予。
-  - **Bridge 激活状态**：**关闭** (`PRODUCTION_AUTHORIZED=false`)，当前对外强制返回 403 `PERMISSION_DENIED`。
-  - **硬边界维持**：真实 Apple 提醒条目内容读取 = 0，写入 = 0，生产修改 = 0，凭据轮换 = 0，Seoul 网关保持隔离，PR #20 与 PR #21 维持 OPEN 未合并。
+经用户显式授权，执行针对已绑定测试列表的单次只读读取验证：
+1. **前置身份与绑定核查**：
+   - 严格核验目标列表 ID (`9D9A****03F3`) 与来源身份 (`iCloud / calDAV`)，确认与此前元数据 100% 一致。
+2. **单列表只读执行**：
+   - 临时启用激活开关，仅调用 `GET /reminders/lists/9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3/items`；
+   - 严格限制：读取其他列表数 = 0，写入调用 = 0，创建测试数据 = 0。
+3. **响应结构与真实状态核验**：
+   - HTTP 状态码：`200 OK`；
+   - 来源校验（SourceVerifier）：`PASSED`；
+   - 响应结构：有效 JSON Array；
+   - 是否为空：`true`（当前该测试列表内条目数为 0）；
+   - **保真度声明**：列表为空状态已如实记录；由于实际条目数为 0，**明确不据此宣称字段级内容保真通过**；
+   - 脱敏声明：零条目标题、备注或对象标识向外暴露。
+4. **即刻闭环与双端点 403 复验**：
+   - 执行完成后立即恢复激活开关为 `false`，并重启服务；
+   - 实测复验双业务端点均强制返回 `403 Forbidden` (`PERMISSION_DENIED`)：
+     - `GET /reminders/lists` -> 403 `PERMISSION_DENIED`
+     - `GET /reminders/lists/{bound_list_id}/items` -> 403 `PERMISSION_DENIED`
+
+---
+
+## 四、项目硬边界保持
+
+- **Seoul 主机与生产网关**：保持隔离，未做任何修改。
+- **PR 状态**：PR #20 与 PR #21 维持 **OPEN** 未合并。
+- **M5 实验环境**：保持原状，未执行退役。
