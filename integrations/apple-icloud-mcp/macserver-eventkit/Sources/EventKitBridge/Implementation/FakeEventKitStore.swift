@@ -123,6 +123,10 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
     // Diagnostic counters (FIX-R4A-01 test assertions)
     private var _contentAccessCount: Int = 0
 
+    // Fault injection for timeout & non-cooperative store tests
+    private var _shouldHangIndefinitely: Bool = false
+    private var _hangDurationSeconds: Double = 0.0
+
     public init(
         sourceVerifier: SourceVerifier = SourceVerifier(),
         seeds: [SeedList] = defaultSeedData
@@ -137,10 +141,59 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
         self.seeds = defaultSeedData
     }
 
+    /// Injects hanging behavior into store calls for chaos testing.
+    public func setHanging(indefinitely: Bool = true, durationSeconds: Double = 0.0) {
+        self._shouldHangIndefinitely = indefinitely
+        self._hangDurationSeconds = durationSeconds
+    }
+
+    /// Factory method for large dataset response testing (exercises partial send loop).
+    public static func makeWithLargeDataSet(itemCount: Int = 300, sourceVerifier: SourceVerifier? = nil) -> FakeEventKitStore {
+        var items: [ReminderItem] = []
+        for i in 1...itemCount {
+            items.append(
+                ReminderItem(
+                    itemID: "large-item-\(i)",
+                    title: "Large dataset reminder item \(i) with verbose padding to test chunking and partial socket writes across TCP frames.",
+                    isCompleted: i % 2 == 0,
+                    notes: "Detailed note content for item \(i) containing desensitized synthetic testing payloads.",
+                    listID: "fake-list-icloud-001"
+                )
+            )
+        }
+        let largeSeed = SeedList(
+            listID: "fake-list-icloud-001",
+            title: "Personal",
+            sourceID: "src-icloud-primary",
+            sourceType: "calDAV",
+            sourceName: "iCloud",
+            color: "#FF2D55",
+            reminders: items
+        )
+        let verifier = sourceVerifier ?? SourceVerifier(
+            allowedSourceTypes: ["caldav"],
+            allowedSourceTitles: ["iCloud"],
+            listBindings: [
+                "fake-list-icloud-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            requireExplicitBinding: true
+        )
+        return FakeEventKitStore(sourceVerifier: verifier, seeds: [largeSeed])
+    }
+
     // MARK: — EventKitStoreProtocol
 
     /// FIX-R4A-01: Returns ONLY list metadata. Does NOT touch reminders or counts.
     public func fetchListsMetadata() async throws -> [RemindersList] {
+        if _shouldHangIndefinitely {
+            // Uncooperative hang: sleeps ignoring Task cancellation
+            while true {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+            }
+        } else if _hangDurationSeconds > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(_hangDurationSeconds * 1_000_000_000))
+        }
+
         // Explicitly does NOT increment _contentAccessCount.
         return seeds.map { seed in
             RemindersList(
@@ -157,6 +210,14 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     /// FIX-R4A-02: Verifies source identity, type, and binding before returning reminders.
     public func fetchReminders(listID: String) async throws -> [ReminderItem] {
+        if _shouldHangIndefinitely {
+            while true {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+            }
+        } else if _hangDurationSeconds > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(_hangDurationSeconds * 1_000_000_000))
+        }
+
         guard let seed = seeds.first(where: { $0.listID == listID }) else {
             throw EventKitBridgeError.listNotFound
         }

@@ -452,4 +452,294 @@ final class HttpIntegrationTests: XCTestCase {
             XCTAssertEqual(error as? ConfigurationError, .missingListBinding(listID: "list-unbound-999"))
         }
     }
+
+    // MARK: — 12. Fault/Chaos Tests: Slow Headers, Slow Bodies, Hanging Stores, Large Responses, Restarts
+
+    func testSlowRequestHeaderDeadlineEnforced() async throws {
+        let tightConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 3.0,
+            maxConcurrentRequests: 10,
+            maxHeaderSizeBytes: 16384,
+            headerReadTimeoutSeconds: 0.8,
+            bodyReadTimeoutSeconds: 1.0,
+            allowedListIDs: ["fake-list-icloud-001"],
+            validTokens: ["test-valid-bearer-token"]
+        )
+        let tightServer = EventKitBridgeServer(
+            store: store,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: tightConfig
+        )
+        try await tightServer.start()
+        defer { Task { await tightServer.stop() } }
+        let port = await tightServer.boundPort
+
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        defer { Darwin.close(fd) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = in_port_t(UInt16(port).bigEndian)
+        inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr)
+        _ = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                Darwin.connect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+
+        let partial = "GET /reminders/lists HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+        _ = partial.withCString { ptr in
+            Darwin.write(fd, ptr, strlen(ptr))
+        }
+
+        try await Task.sleep(nanoseconds: 1_100_000_000)
+
+        var buf = [UInt8](repeating: 0, count: 1024)
+        let bytesRead = Darwin.read(fd, &buf, buf.count)
+        if bytesRead > 0 {
+            let resStr = String(decoding: buf[0..<bytesRead], as: UTF8.self)
+            XCTAssertTrue(resStr.contains("408") || resStr.contains("REQUEST_TIMEOUT"))
+        }
+
+        let healthURL = URL(string: "http://127.0.0.1:\(port)/health")!
+        let (_, healthRes) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((healthRes as? HTTPURLResponse)?.statusCode, 200)
+    }
+
+    func testSlowRequestBodyDeadlineEnforced() async throws {
+        let tightConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 3.0,
+            maxConcurrentRequests: 10,
+            maxHeaderSizeBytes: 16384,
+            headerReadTimeoutSeconds: 3.0,
+            bodyReadTimeoutSeconds: 0.8,
+            allowedListIDs: ["fake-list-icloud-001"],
+            validTokens: ["test-valid-bearer-token"]
+        )
+        let tightServer = EventKitBridgeServer(
+            store: store,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: tightConfig
+        )
+        try await tightServer.start()
+        defer { Task { await tightServer.stop() } }
+        let port = await tightServer.boundPort
+
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        defer { Darwin.close(fd) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = in_port_t(UInt16(port).bigEndian)
+        inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr)
+        _ = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                Darwin.connect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+
+        let req = "POST /reminders/lists HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 500\r\n\r\n0123456789"
+        _ = req.withCString { ptr in
+            Darwin.write(fd, ptr, strlen(ptr))
+        }
+
+        try await Task.sleep(nanoseconds: 1_100_000_000)
+
+        var buf = [UInt8](repeating: 0, count: 512)
+        let readAfterTimeout = Darwin.read(fd, &buf, buf.count)
+        XCTAssertTrue(readAfterTimeout <= 0)
+
+        let healthURL = URL(string: "http://127.0.0.1:\(port)/health")!
+        let (_, healthRes) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((healthRes as? HTTPURLResponse)?.statusCode, 200)
+    }
+
+    func testUncooperativeHangingStoreDoesNotBlockHttpTimeout() async throws {
+        await store.setHanging(indefinitely: true)
+
+        let tightConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 1.0,
+            maxConcurrentRequests: 10,
+            allowedListIDs: ["fake-list-icloud-001"],
+            listBindings: [
+                "fake-list-icloud-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            validTokens: ["test-valid-bearer-token"]
+        )
+        let hangServer = EventKitBridgeServer(
+            store: store,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: tightConfig
+        )
+        try await hangServer.start()
+        defer { Task { await hangServer.stop() } }
+        let port = await hangServer.boundPort
+
+        let url = URL(string: "http://127.0.0.1:\(port)/reminders/lists/fake-list-icloud-001/items")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        let startTime = Date()
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let elapsed = Date().timeIntervalSince(startTime)
+
+        let httpResponse = try XCTUnwrap(response as? HTTPURLResponse)
+        XCTAssertEqual(httpResponse.statusCode, 504, "Hanging store must result in 504 Gateway Timeout")
+        XCTAssertLessThan(elapsed, 2.5, "HTTP response must return around 1.0s timeout and not hang")
+
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["code"] as? String, "TIMEOUT")
+
+        let healthURL = URL(string: "http://127.0.0.1:\(port)/health")!
+        let (hData, hRes) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((hRes as? HTTPURLResponse)?.statusCode, 200)
+
+        let hJson = try XCTUnwrap(JSONSerialization.jsonObject(with: hData) as? [String: Any])
+        XCTAssertEqual(hJson["active_requests"] as? Int, 0, "Active request count must return to 0 after timeout")
+    }
+
+    func testLargeResponseFullSendLoop() async throws {
+        let largeStore = FakeEventKitStore.makeWithLargeDataSet(itemCount: 300)
+        let largeConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 5.0,
+            maxConcurrentRequests: 10,
+            allowedListIDs: ["fake-list-icloud-001"],
+            listBindings: [
+                "fake-list-icloud-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            validTokens: ["test-valid-bearer-token"]
+        )
+        let largeServer = EventKitBridgeServer(
+            store: largeStore,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: largeConfig
+        )
+        try await largeServer.start()
+        defer { Task { await largeServer.stop() } }
+        let port = await largeServer.boundPort
+
+        let url = URL(string: "http://127.0.0.1:\(port)/reminders/lists/fake-list-icloud-001/items")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let httpResponse = try XCTUnwrap(response as? HTTPURLResponse)
+        XCTAssertEqual(httpResponse.statusCode, 200)
+
+        let items = try JSONDecoder().decode([ReminderItem].self, from: data)
+        XCTAssertEqual(items.count, 300, "Full send loop must deliver all 300 items across multiple chunks")
+    }
+
+    func testStopAndRestartWithInFlightRequestsDoesNotPolluteCounter() async throws {
+        await store.setHanging(indefinitely: true)
+
+        let testConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 5.0,
+            maxConcurrentRequests: 10,
+            allowedListIDs: ["fake-list-icloud-001"],
+            listBindings: [
+                "fake-list-icloud-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            validTokens: ["test-valid-bearer-token"]
+        )
+        let stopServer = EventKitBridgeServer(
+            store: store,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: testConfig
+        )
+        try await stopServer.start()
+        let port = await stopServer.boundPort
+
+        let url = URL(string: "http://127.0.0.1:\(port)/reminders/lists/fake-list-icloud-001/items")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        Task {
+            _ = try? await URLSession.shared.data(for: request)
+        }
+
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        await stopServer.stop()
+        let isListeningAfterStop = await stopServer.isListening
+        XCTAssertFalse(isListeningAfterStop)
+
+        try await stopServer.start()
+        let isListeningAfterRestart = await stopServer.isListening
+        XCTAssertTrue(isListeningAfterRestart)
+
+        let activeCount = await stopServer.activeRequestsCount
+        XCTAssertEqual(activeCount, 0, "Restarted server must start with 0 active requests")
+
+        let restartedPort = await stopServer.boundPort
+        let healthURL = URL(string: "http://127.0.0.1:\(restartedPort)/health")!
+        let (hData, hRes) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((hRes as? HTTPURLResponse)?.statusCode, 200)
+
+        let hJson = try XCTUnwrap(JSONSerialization.jsonObject(with: hData) as? [String: Any])
+        XCTAssertEqual(hJson["active_requests"] as? Int, 0)
+        XCTAssertGreaterThan(hJson["generation"] as? Int ?? 0, 0, "Server generation must increment on restart")
+
+        await stopServer.stop()
+    }
+
+    func testProductionStoreAssemblyExplicitAuthorization() async {
+        let sourceVerifier = SourceVerifier()
+        let limiter = RequestLimiter()
+
+        let unauthStore = ProductionStoreAssembly.assemble(
+            isAuthorized: false,
+            sourceVerifier: sourceVerifier,
+            requestLimiter: limiter
+        )
+        do {
+            _ = try await unauthStore.fetchListsMetadata()
+            XCTFail("Unauthorized store assembly must throw permissionDenied")
+        } catch let err as EventKitBridgeError {
+            XCTAssertEqual(err, .permissionDenied)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let authStoreWithoutProvider = ProductionStoreAssembly.assemble(
+            isAuthorized: true,
+            sourceVerifier: sourceVerifier,
+            requestLimiter: limiter,
+            authorizedStoreProvider: nil
+        )
+        do {
+            _ = try await authStoreWithoutProvider.fetchListsMetadata()
+            XCTFail("Authorized store without injected provider must throw permissionDenied in offline candidate")
+        } catch let err as EventKitBridgeError {
+            XCTAssertEqual(err, .permissionDenied)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }

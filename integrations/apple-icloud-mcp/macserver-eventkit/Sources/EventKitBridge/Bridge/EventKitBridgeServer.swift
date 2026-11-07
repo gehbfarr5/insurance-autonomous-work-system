@@ -1,14 +1,17 @@
 // EventKitBridgeServer.swift
-// NEW_IMPLEMENTATION | ROBUST_HTTP_LISTENER | DEADLINE_AND_CONCURRENCY
+// NEW_IMPLEMENTATION | NON_BLOCKING_ASYNC_ENGINE | FULL_SEND_LOOP | FAULT_TOLERANT
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
 // Native POSIX loopback HTTP bridge server.
-// Features:
-// - Chunked/segmented HTTP header handling with 16KB size limit (431 on overflow).
-// - Graceful handling of partial sends and early client disconnects.
-// - Concurrency cap on business routes (health check is non-blocking).
-// - Request deadline enforcement (504 Gateway Timeout).
-// - Non-blocking graceful stop (cancels pending tasks cleanly).
+// Architectural Highlights:
+// 1. Raw socket I/O is completely decoupled from the server Actor into non-blocking workers.
+// 2. Chunked/fragmented HTTP header handling with overall deadline and 16KB limit (431 on overflow).
+// 3. Request body draining with overall deadline and 1MB capacity limit (413 on overflow).
+// 4. Full send loop handling partial writes, EINTR retries, client disconnects, and SO_NOSIGPIPE.
+// 5. Uncooperative hanging Store isolation: Request deadline triggers 504 Gateway Timeout without
+//    allowing hanging Store continuations to block HTTP response or drag out timeout.
+// 6. Graceful stop and restart: Closes all active connection sockets, terminates client tasks,
+//    and uses server generation tracking so old requests never pollute restarted counters.
 
 import Foundation
 
@@ -47,7 +50,7 @@ public enum BridgeRoute: Sendable, Equatable {
     }
 }
 
-/// Core bridge server with robust loopback HTTP listener.
+/// Core bridge server with robust loopback HTTP listener and decoupled socket I/O.
 public actor EventKitBridgeServer {
 
     private let store: any EventKitStoreProtocol
@@ -61,10 +64,12 @@ public actor EventKitBridgeServer {
     private var actualBoundPort: Int = 0
     private var listeningTask: Task<Void, Never>?
     private var _isListening: Bool = false
+    private var serverGeneration: Int = 0
     private var currentActiveBusinessRequests: Int = 0
 
-    // Track active client tasks for clean cancellation on stop
-    private var inFlightClientTasks: [UUID: Task<Void, Never>] = [:]
+    // Active connection tracking for graceful teardown on stop
+    private var activeClientSockets: [UUID: Int32] = [:]
+    private var activeClientTasks: [UUID: Task<Void, Never>] = [:]
 
     public init(
         store: any EventKitStoreProtocol,
@@ -83,6 +88,7 @@ public actor EventKitBridgeServer {
     public var isListening: Bool { _isListening }
     public var boundPort: Int { actualBoundPort }
     public var activeRequestsCount: Int { currentActiveBusinessRequests }
+    public var generation: Int { serverGeneration }
 
     // MARK: — Lifecycle
 
@@ -129,9 +135,13 @@ public actor EventKitBridgeServer {
         self.actualBoundPort = Int(UInt16(bigEndian: actualAddr.sin_port))
         self.serverSocketFd = fd
         self._isListening = true
+        self.currentActiveBusinessRequests = 0
 
-        // Background accept loop
-        self.listeningTask = Task.detached { [weak self, fd] in
+        let currentGen = self.serverGeneration
+        let capturedConfig = self.config
+
+        // Background accept loop detached outside actor
+        self.listeningTask = Task.detached { [weak self, fd, currentGen, capturedConfig] in
             while !Task.isCancelled {
                 var clientAddr = sockaddr_in()
                 var clientLen = socklen_t(MemoryLayout<sockaddr_in>.size)
@@ -145,26 +155,34 @@ public actor EventKitBridgeServer {
                     break
                 }
 
-                // Set 5-second socket read/write timeouts to prevent hanging slowloris
-                var tv = timeval(tv_sec: 5, tv_usec: 0)
-                setsockopt(clientFd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
-                setsockopt(clientFd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+                guard let server = self else {
+                    Darwin.close(clientFd)
+                    break
+                }
 
                 let taskID = UUID()
-                let task = Task<Void, Never> {
-                    if let strongSelf = self {
-                        await strongSelf.processClientConnection(fd: clientFd, taskID: taskID)
-                    }
+                let worker = SocketConnectionWorker(
+                    clientFd: clientFd,
+                    taskID: taskID,
+                    generationID: currentGen,
+                    config: capturedConfig
+                )
+
+                let clientTask = Task<Void, Never> {
+                    await worker.run(server: server)
                 }
-                await self?.registerClientTask(taskID: taskID, task: task)
+
+                await server.registerClientConnection(taskID: taskID, fd: clientFd, task: clientTask)
             }
         }
     }
 
-    /// Stops the HTTP listener and cancels all in-flight requests cleanly.
+    /// Stops the HTTP listener, closes active client sockets, and cancels all pending tasks.
     public func stop() {
         guard _isListening else { return }
         _isListening = false
+        serverGeneration += 1
+        currentActiveBusinessRequests = 0
 
         listeningTask?.cancel()
         listeningTask = nil
@@ -174,188 +192,54 @@ public actor EventKitBridgeServer {
             serverSocketFd = -1
         }
 
-        // Cancel all in-flight request tasks so stop() never hangs
-        for (_, task) in inFlightClientTasks {
+        // Close all active client connection sockets to instantly interrupt any blocking I/O
+        for (_, clientFd) in activeClientSockets {
+            Darwin.shutdown(clientFd, SHUT_RDWR)
+            Darwin.close(clientFd)
+        }
+        activeClientSockets.removeAll()
+
+        // Cancel all connection handler tasks
+        for (_, task) in activeClientTasks {
             task.cancel()
         }
-        inFlightClientTasks.removeAll()
-        currentActiveBusinessRequests = 0
+        activeClientTasks.removeAll()
     }
 
-    private func registerClientTask(taskID: UUID, task: Task<Void, Never>) {
+    // MARK: — Connection Registration
+
+    public func registerClientConnection(taskID: UUID, fd: Int32, task: Task<Void, Never>) {
         guard _isListening else {
+            Darwin.shutdown(fd, SHUT_RDWR)
+            Darwin.close(fd)
             task.cancel()
             return
         }
-        inFlightClientTasks[taskID] = task
+        activeClientSockets[taskID] = fd
+        activeClientTasks[taskID] = task
     }
 
-    private func unregisterClientTask(taskID: UUID) {
-        inFlightClientTasks.removeValue(forKey: taskID)
+    public func unregisterClientConnection(taskID: UUID) {
+        activeClientSockets.removeValue(forKey: taskID)
+        activeClientTasks.removeValue(forKey: taskID)
     }
 
-    // MARK: — Robust HTTP Connection Processing
+    // MARK: — Request Execution (Inside Actor)
 
-    private func processClientConnection(fd: Int32, taskID: UUID) async {
-        defer {
-            // Drain any pending socket receive bytes before close to prevent TCP RST
-            var drainBuffer = [UInt8](repeating: 0, count: 4096)
-            let flags = fcntl(fd, F_GETFL, 0)
-            if flags >= 0 {
-                _ = fcntl(fd, F_SETFL, flags | O_NONBLOCK)
-                while Darwin.read(fd, &drainBuffer, drainBuffer.count) > 0 {}
-            }
-            Darwin.close(fd)
-            unregisterClientTask(taskID: taskID)
-        }
-
-        // 1. Read HTTP request header with fragmentation & size limit handling
-        let readResult = await readCompleteHttpHeader(fd: fd, maxBytes: config.maxHeaderSizeBytes)
-
-        switch readResult {
-        case .headerTooLarge:
-            let body = Data("{\"success\":false,\"error\":\"Header too large\",\"code\":\"HEADER_TOO_LARGE\"}".utf8)
-            sendHttpResponse(fd: fd, statusCode: 431, body: body)
-            return
-
-        case .clientDisconnectedOrError:
-            // Early client disconnect or empty send; close gracefully without crash
-            return
-
-        case .complete(let headerString, let initialBodyBytes):
-            let lines = headerString.components(separatedBy: "\r\n")
-            guard let requestLine = lines.first, !requestLine.isEmpty else { return }
-
-            let reqTokens = requestLine.split(separator: " ")
-            guard reqTokens.count >= 2 else {
-                let body = Data("{\"success\":false,\"error\":\"Bad request line\",\"code\":\"BAD_REQUEST\"}".utf8)
-                sendHttpResponse(fd: fd, statusCode: 400, body: body)
-                return
-            }
-
-            let method = String(reqTokens[0])
-            let path = String(reqTokens[1])
-
-            // Parse Authorization and Content-Length headers
-            var token: String = ""
-            var contentLength: Int = 0
-            for line in lines.dropFirst() {
-                let lower = line.lowercased()
-                if lower.hasPrefix("authorization:") {
-                    let parts = line.split(separator: ":", maxSplits: 1)
-                    if parts.count == 2 {
-                        let headerVal = parts[1].trimmingCharacters(in: .whitespaces)
-                        if headerVal.lowercased().hasPrefix("bearer ") {
-                            token = String(headerVal.dropFirst(7)).trimmingCharacters(in: .whitespaces)
-                        }
-                    }
-                } else if lower.hasPrefix("content-length:") {
-                    let parts = line.split(separator: ":", maxSplits: 1)
-                    if parts.count == 2, let len = Int(parts[1].trimmingCharacters(in: .whitespaces)) {
-                        contentLength = len
-                    }
-                }
-            }
-
-            // Drain remaining request body if client specified Content-Length
-            if contentLength > initialBodyBytes {
-                var remaining = min(contentLength - initialBodyBytes, 10 * 1024 * 1024)
-                var tv = timeval(tv_sec: 1, tv_usec: 0)
-                setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
-                var drainBuf = [UInt8](repeating: 0, count: min(remaining, 4096))
-                while remaining > 0 {
-                    let bytesRead = Darwin.read(fd, &drainBuf, min(remaining, drainBuf.count))
-                    if bytesRead <= 0 { break }
-                    remaining -= bytesRead
-                }
-            }
-
-            // Execute request with concurrency limit & deadline enforcement
-            let (statusCode, responseBody) = await executeWithDeadlineAndConcurrency(
-                method: method,
-                path: path,
-                token: token
-            )
-            sendHttpResponse(fd: fd, statusCode: statusCode, body: responseBody)
-            Darwin.shutdown(fd, SHUT_WR)
-        }
-    }
-
-    private enum HeaderReadResult {
-        case complete(headerString: String, initialBodyBytes: Int)
-        case headerTooLarge
-        case clientDisconnectedOrError
-    }
-
-    /// Reads socket buffer in chunks until delimiter is found, enforcing maxBytes limit.
-    private func readCompleteHttpHeader(fd: Int32, maxBytes: Int) async -> HeaderReadResult {
-        var accumulated = Data()
-        var chunk = [UInt8](repeating: 0, count: 1024)
-        let crlfcrlf = Data([0x0D, 0x0A, 0x0D, 0x0A])
-        let lflf = Data([0x0A, 0x0A])
-
-        while accumulated.count <= maxBytes + 4096 {
-            let bytesRead = Darwin.read(fd, &chunk, chunk.count)
-            if bytesRead <= 0 {
-                // Client closed socket or read error
-                return .clientDisconnectedOrError
-            }
-
-            accumulated.append(contentsOf: chunk[0..<bytesRead])
-
-            let delimiterRange: Range<Data.Index>? = accumulated.range(of: crlfcrlf) ?? accumulated.range(of: lflf)
-            if let range = delimiterRange {
-                if range.lowerBound > maxBytes {
-                    return .headerTooLarge
-                }
-                let headerData = accumulated.subdata(in: 0..<range.lowerBound)
-                let headerString = String(data: headerData, encoding: .utf8) ?? ""
-                let initialBodyBytes = accumulated.count - range.upperBound
-                return .complete(headerString: headerString, initialBodyBytes: initialBodyBytes)
-            }
-
-            if accumulated.count > maxBytes {
-                return .headerTooLarge
-            }
-        }
-        return .headerTooLarge
-    }
-
-    private func sendHttpResponse(fd: Int32, statusCode: Int, body: Data) {
-        let statusMessage: String
-        switch statusCode {
-        case 200: statusMessage = "OK"
-        case 400: statusMessage = "Bad Request"
-        case 401: statusMessage = "Unauthorized"
-        case 403: statusMessage = "Forbidden"
-        case 404: statusMessage = "Not Found"
-        case 405: statusMessage = "Method Not Allowed"
-        case 429: statusMessage = "Too Many Requests"
-        case 431: statusMessage = "Request Header Fields Too Large"
-        case 500: statusMessage = "Internal Server Error"
-        case 503: statusMessage = "Service Unavailable"
-        case 504: statusMessage = "Gateway Timeout"
-        default:  statusMessage = "Response"
-        }
-
-        let header = "HTTP/1.1 \(statusCode) \(statusMessage)\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
-        let headerData = Data(header.utf8)
-
-        _ = headerData.withUnsafeBytes { ptr in
-            Darwin.write(fd, ptr.baseAddress, headerData.count)
-        }
-        _ = body.withUnsafeBytes { ptr in
-            Darwin.write(fd, ptr.baseAddress, body.count)
-        }
-    }
-
-    // MARK: — Concurrency & Request Deadline Enforcement
-
-    private func executeWithDeadlineAndConcurrency(
+    /// Executes the business logic for an HTTP request with concurrency and deadline enforcement.
+    public func executeRequest(
         method: String,
         path: String,
-        token: String
+        token: String,
+        generationID: Int
     ) async -> (Int, Data) {
+        // Drop requests belonging to an old server generation or if stopped
+        guard _isListening, self.serverGeneration == generationID else {
+            let body = RequestHandler.errorBody(for: .internalError("Server stopped or restarted"))
+            let data = (try? JSONSerialization.data(withJSONObject: body)) ?? Data()
+            return (503, data)
+        }
+
         // High priority: /health bypasses business concurrency limits
         if path == "/health" {
             let payload: [String: Any] = [
@@ -363,6 +247,7 @@ public actor EventKitBridgeServer {
                 "mode": "readonly",
                 "store": config.useFakeStore ? "fake" : "production",
                 "active_requests": currentActiveBusinessRequests,
+                "generation": self.serverGeneration,
                 "timestamp": ISO8601DateFormatter().string(from: Date())
             ]
             let data = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()
@@ -381,39 +266,40 @@ public actor EventKitBridgeServer {
         }
 
         currentActiveBusinessRequests += 1
-        defer { currentActiveBusinessRequests -= 1 }
-
-        // Execute route with timeout deadline
-        let timeoutSecs = config.timeoutSeconds
-        do {
-            return try await withThrowingTaskGroup(of: (Int, Data).self) { group in
-                // Worker task
-                group.addTask { [self] in
-                    return await self.handleRawHttpRequest(method: method, path: path, token: token)
-                }
-
-                // Timer task
-                group.addTask {
-                    try await Task.sleep(nanoseconds: UInt64(timeoutSecs * 1_000_000_000))
-                    throw EventKitBridgeError.timeout
-                }
-
-                guard let result = try await group.next() else {
-                    group.cancelAll()
-                    return (500, Data())
-                }
-                group.cancelAll()
-                return result
+        defer {
+            if self.serverGeneration == generationID {
+                currentActiveBusinessRequests = max(0, currentActiveBusinessRequests - 1)
             }
-        } catch EventKitBridgeError.timeout {
-            let body = RequestHandler.errorBody(for: .timeout)
-            let data = (try? JSONSerialization.data(withJSONObject: body)) ?? Data()
-            return (504, data)
-        } catch {
-            let body = RequestHandler.errorBody(for: .internalError("request processing failed"))
-            let data = (try? JSONSerialization.data(withJSONObject: body)) ?? Data()
-            return (500, data)
         }
+
+        // Execute route with deadline enforcement.
+        // Critical: The worker task is unstructured so an uncooperative/hanging Store cannot
+        // block continuation resumption or drag out the HTTP 504 response.
+        let timeoutSecs = config.timeoutSeconds
+
+        let response: (Int, Data) = await withCheckedContinuation { continuation in
+            let isResumed = StoreAtomicBool(false)
+
+            let workerTask = Task { [self] in
+                let res = await self.handleRawHttpRequest(method: method, path: path, token: token)
+                if !isResumed.getAndSet(true) {
+                    continuation.resume(returning: res)
+                }
+            }
+
+            // Watchdog timer
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeoutSecs * 1_000_000_000))
+                if !isResumed.getAndSet(true) {
+                    workerTask.cancel()
+                    let body = RequestHandler.errorBody(for: .timeout)
+                    let data = (try? JSONSerialization.data(withJSONObject: body)) ?? Data()
+                    continuation.resume(returning: (504, data))
+                }
+            }
+        }
+
+        return response
     }
 
     // MARK: — Business Route Processing
@@ -448,7 +334,7 @@ public actor EventKitBridgeServer {
 
         switch route {
         case .health:
-            return (200, Data()) // Handled above
+            return (200, Data())
 
         case .listReminders:
             // FIX-R4A-01: Metadata-only query. Strictly never touches reminder content or counts.
@@ -532,6 +418,301 @@ public actor EventKitBridgeServer {
             } catch {
                 return .failure(.internalError("fetch"))
             }
+        }
+    }
+}
+
+// MARK: — Decoupled Socket Connection Worker (Non-Actor POSIX Network Engine)
+
+struct SocketConnectionWorker: Sendable {
+    let clientFd: Int32
+    let taskID: UUID
+    let generationID: Int
+    let config: BridgeConfig
+
+    func run(server: EventKitBridgeServer) async {
+        defer {
+            // Drain socket receive buffer before closing to prevent TCP RST
+            var drainBuffer = [UInt8](repeating: 0, count: 4096)
+            let flags = fcntl(clientFd, F_GETFL, 0)
+            if flags >= 0 {
+                _ = fcntl(clientFd, F_SETFL, flags | O_NONBLOCK)
+                while Darwin.read(clientFd, &drainBuffer, drainBuffer.count) > 0 {}
+            }
+            Darwin.close(clientFd)
+            Task {
+                await server.unregisterClientConnection(taskID: taskID)
+            }
+        }
+
+        // 1. Configure socket: SO_NOSIGPIPE to prevent SIGPIPE signal crashes on broken pipe
+        var one: Int32 = 1
+        setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
+
+        // Set socket-level read/write timeouts (500ms chunk timeout)
+        var tv = timeval(tv_sec: 0, tv_usec: 500_000)
+        setsockopt(clientFd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(clientFd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+
+        // 2. Read HTTP headers with overall deadline & capacity limit
+        let headerResult = await readHeadersWithDeadline()
+        guard case .complete(let headerString, let initialBodyBytes) = headerResult else {
+            if case .headerTooLarge = headerResult {
+                let errBody = Data("{\"success\":false,\"error\":\"Header too large\",\"code\":\"HEADER_TOO_LARGE\"}".utf8)
+                _ = Self.sendHttpResponseFull(fd: clientFd, statusCode: 431, body: errBody, timeoutSeconds: config.sendTimeoutSeconds)
+            } else if case .timedOut = headerResult {
+                let errBody = Data("{\"success\":false,\"error\":\"Header read timed out\",\"code\":\"REQUEST_TIMEOUT\"}".utf8)
+                _ = Self.sendHttpResponseFull(fd: clientFd, statusCode: 408, body: errBody, timeoutSeconds: config.sendTimeoutSeconds)
+            }
+            return
+        }
+
+        // 3. Parse request line & headers
+        guard let request = parseHttpRequest(headerString) else {
+            let errBody = Data("{\"success\":false,\"error\":\"Bad request line\",\"code\":\"BAD_REQUEST\"}".utf8)
+            _ = Self.sendHttpResponseFull(fd: clientFd, statusCode: 400, body: errBody, timeoutSeconds: config.sendTimeoutSeconds)
+            return
+        }
+
+        // 4. Handle request body with deadline & capacity limit if Content-Length present
+        if request.contentLength > 0 {
+            if request.contentLength > config.maxBodySizeBytes {
+                let errBody = Data("{\"success\":false,\"error\":\"Payload too large\",\"code\":\"PAYLOAD_TOO_LARGE\"}".utf8)
+                _ = Self.sendHttpResponseFull(fd: clientFd, statusCode: 413, body: errBody, timeoutSeconds: config.sendTimeoutSeconds)
+                return
+            }
+            let bodySuccess = await drainBodyWithDeadline(
+                contentLength: request.contentLength,
+                initialBodyBytes: initialBodyBytes
+            )
+            if !bodySuccess {
+                // Timed out or disconnected during body read
+                return
+            }
+        }
+
+        // 5. Delegate business processing to server Actor
+        let (statusCode, responseBody) = await server.executeRequest(
+            method: request.method,
+            path: request.path,
+            token: request.token,
+            generationID: generationID
+        )
+
+        // 6. Send HTTP response using full send loop (handling partial writes, EINTR, broken pipes)
+        _ = Self.sendHttpResponseFull(
+            fd: clientFd,
+            statusCode: statusCode,
+            body: responseBody,
+            timeoutSeconds: config.sendTimeoutSeconds
+        )
+
+        Darwin.shutdown(clientFd, SHUT_WR)
+    }
+
+    // MARK: — Header and Body Reading
+
+    private enum HeaderReadResult {
+        case complete(headerString: String, initialBodyBytes: Int)
+        case headerTooLarge
+        case timedOut
+        case clientDisconnectedOrError
+    }
+
+    private func readHeadersWithDeadline() async -> HeaderReadResult {
+        var accumulated = Data()
+        var chunk = [UInt8](repeating: 0, count: 1024)
+        let crlfcrlf = Data([0x0D, 0x0A, 0x0D, 0x0A])
+        let lflf = Data([0x0A, 0x0A])
+        let deadline = Date().addingTimeInterval(config.headerReadTimeoutSeconds)
+
+        while accumulated.count <= config.maxHeaderSizeBytes + 4096 {
+            if Date() > deadline {
+                return .timedOut
+            }
+
+            let bytesRead = Darwin.read(clientFd, &chunk, chunk.count)
+            if bytesRead <= 0 {
+                let err = errno
+                if bytesRead < 0 && (err == EAGAIN || err == EWOULDBLOCK) {
+                    if Date() > deadline {
+                        return .timedOut
+                    }
+                    try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
+                    continue
+                }
+                return .clientDisconnectedOrError
+            }
+
+            accumulated.append(contentsOf: chunk[0..<bytesRead])
+
+            let delimiterRange: Range<Data.Index>? = accumulated.range(of: crlfcrlf) ?? accumulated.range(of: lflf)
+            if let range = delimiterRange {
+                if range.lowerBound > config.maxHeaderSizeBytes {
+                    return .headerTooLarge
+                }
+                let headerData = accumulated.subdata(in: 0..<range.lowerBound)
+                let headerString = String(data: headerData, encoding: .utf8) ?? ""
+                let initialBodyBytes = accumulated.count - range.upperBound
+                return .complete(headerString: headerString, initialBodyBytes: initialBodyBytes)
+            }
+
+            if accumulated.count > config.maxHeaderSizeBytes {
+                return .headerTooLarge
+            }
+        }
+        return .headerTooLarge
+    }
+
+    private func drainBodyWithDeadline(contentLength: Int, initialBodyBytes: Int) async -> Bool {
+        if contentLength <= initialBodyBytes {
+            return true
+        }
+        var remaining = min(contentLength - initialBodyBytes, config.maxBodySizeBytes)
+        let deadline = Date().addingTimeInterval(config.bodyReadTimeoutSeconds)
+        var drainBuf = [UInt8](repeating: 0, count: min(remaining, 4096))
+
+        while remaining > 0 {
+            if Date() > deadline {
+                return false
+            }
+            let bytesRead = Darwin.read(clientFd, &drainBuf, min(remaining, drainBuf.count))
+            if bytesRead > 0 {
+                remaining -= bytesRead
+            } else if bytesRead < 0 {
+                let err = errno
+                if err == EAGAIN || err == EWOULDBLOCK {
+                    if Date() > deadline {
+                        return false
+                    }
+                    try? await Task.sleep(nanoseconds: 10_000_000)
+                    continue
+                }
+                return false
+            } else {
+                return false
+            }
+        }
+        return true
+    }
+
+    // MARK: — Request Parsing
+
+    private struct ParsedHttpRequest {
+        let method: String
+        let path: String
+        let token: String
+        let contentLength: Int
+    }
+
+    private func parseHttpRequest(_ headerString: String) -> ParsedHttpRequest? {
+        let lines = headerString.components(separatedBy: "\r\n")
+        guard let requestLine = lines.first, !requestLine.isEmpty else { return nil }
+
+        let reqTokens = requestLine.split(separator: " ")
+        guard reqTokens.count >= 2 else { return nil }
+
+        let method = String(reqTokens[0])
+        let path = String(reqTokens[1])
+
+        var token = ""
+        var contentLength = 0
+
+        for line in lines.dropFirst() {
+            let lower = line.lowercased()
+            if lower.hasPrefix("authorization:") {
+                let parts = line.split(separator: ":", maxSplits: 1)
+                if parts.count == 2 {
+                    let headerVal = parts[1].trimmingCharacters(in: .whitespaces)
+                    if headerVal.lowercased().hasPrefix("bearer ") {
+                        token = String(headerVal.dropFirst(7)).trimmingCharacters(in: .whitespaces)
+                    }
+                }
+            } else if lower.hasPrefix("content-length:") {
+                let parts = line.split(separator: ":", maxSplits: 1)
+                if parts.count == 2, let len = Int(parts[1].trimmingCharacters(in: .whitespaces)) {
+                    contentLength = len
+                }
+            }
+        }
+
+        return ParsedHttpRequest(
+            method: method,
+            path: path,
+            token: token,
+            contentLength: contentLength
+        )
+    }
+
+    // MARK: — Full Response Sending Loop (Handles Partial Writes, EINTR, Broken Pipes)
+
+    public static func sendHttpResponseFull(
+        fd: Int32,
+        statusCode: Int,
+        body: Data,
+        timeoutSeconds: Double = 5.0
+    ) -> Bool {
+        let statusMessage: String
+        switch statusCode {
+        case 200: statusMessage = "OK"
+        case 400: statusMessage = "Bad Request"
+        case 401: statusMessage = "Unauthorized"
+        case 403: statusMessage = "Forbidden"
+        case 404: statusMessage = "Not Found"
+        case 405: statusMessage = "Method Not Allowed"
+        case 408: statusMessage = "Request Timeout"
+        case 413: statusMessage = "Payload Too Large"
+        case 429: statusMessage = "Too Many Requests"
+        case 431: statusMessage = "Request Header Fields Too Large"
+        case 500: statusMessage = "Internal Server Error"
+        case 503: statusMessage = "Service Unavailable"
+        case 504: statusMessage = "Gateway Timeout"
+        default:  statusMessage = "Response"
+        }
+
+        let header = "HTTP/1.1 \(statusCode) \(statusMessage)\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+        var fullData = Data(header.utf8)
+        fullData.append(body)
+
+        let totalBytes = fullData.count
+        var totalWritten = 0
+        let deadline = Date().addingTimeInterval(timeoutSeconds)
+
+        return fullData.withUnsafeBytes { rawBuffer -> Bool in
+            guard let baseAddress = rawBuffer.baseAddress else { return false }
+
+            while totalWritten < totalBytes {
+                if Date() > deadline {
+                    return false
+                }
+
+                let ptr = baseAddress.advanced(by: totalWritten)
+                let remaining = totalBytes - totalWritten
+                let bytesWritten = Darwin.write(fd, ptr, remaining)
+
+                if bytesWritten > 0 {
+                    totalWritten += bytesWritten
+                } else if bytesWritten < 0 {
+                    let err = errno
+                    if err == EINTR {
+                        // Interrupted by signal, retry immediately
+                        continue
+                    }
+                    if err == EAGAIN || err == EWOULDBLOCK {
+                        // Socket send buffer full, yield briefly
+                        usleep(5000) // 5ms
+                        continue
+                    }
+                    if err == EPIPE || err == ECONNRESET || err == ENOTCONN || err == EBADF {
+                        // Broken pipe or client disconnected
+                        return false
+                    }
+                    return false
+                } else {
+                    return false
+                }
+            }
+            return totalWritten == totalBytes
         }
     }
 }

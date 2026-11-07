@@ -62,6 +62,18 @@ public struct BridgeConfig: Sendable {
     /// Maximum permitted HTTP header size in bytes (e.g. 16384 = 16KB).
     public let maxHeaderSizeBytes: Int
 
+    /// Total deadline for reading HTTP request headers in seconds.
+    public let headerReadTimeoutSeconds: Double
+
+    /// Total deadline for reading/draining request body in seconds.
+    public let bodyReadTimeoutSeconds: Double
+
+    /// Maximum permitted HTTP body size in bytes (e.g. 1MB).
+    public let maxBodySizeBytes: Int
+
+    /// Total deadline for sending complete HTTP response in seconds.
+    public let sendTimeoutSeconds: Double
+
     /// Allowed list IDs (exact match only).
     public let allowedListIDs: Set<String>
 
@@ -83,6 +95,9 @@ public struct BridgeConfig: Sendable {
     /// Safety flag: true uses FakeEventKitStore; false uses ProductionEventKitStore.
     public let useFakeStore: Bool
 
+    /// Explicit production authorization gate. Default is false.
+    public let isProductionAuthorized: Bool
+
     // Known synthetic test tokens forbidden in production mode
     public static let forbiddenTestTokens: Set<String> = [
         "test-token-001",
@@ -100,6 +115,10 @@ public struct BridgeConfig: Sendable {
             timeoutSeconds: 5.0,
             maxConcurrentRequests: 10,
             maxHeaderSizeBytes: 16384,
+            headerReadTimeoutSeconds: 3.0,
+            bodyReadTimeoutSeconds: 3.0,
+            maxBodySizeBytes: 1_048_576,
+            sendTimeoutSeconds: 5.0,
             allowedListIDs: [
                 "fake-list-icloud-001",
                 "fake-list-icloud-002",
@@ -112,7 +131,8 @@ public struct BridgeConfig: Sendable {
             ],
             validTokens: ["test-token-001", "test-token-002"],
             rateLimitRPS: 50,
-            useFakeStore: true
+            useFakeStore: true,
+            isProductionAuthorized: false
         )
     }
 
@@ -123,13 +143,18 @@ public struct BridgeConfig: Sendable {
         timeoutSeconds: Double = 5.0,
         maxConcurrentRequests: Int = 10,
         maxHeaderSizeBytes: Int = 16384,
+        headerReadTimeoutSeconds: Double = 3.0,
+        bodyReadTimeoutSeconds: Double = 3.0,
+        maxBodySizeBytes: Int = 1_048_576,
+        sendTimeoutSeconds: Double = 5.0,
         allowedListIDs: Set<String> = [],
         allowedSources: Set<String> = ["iCloud"],
         allowedSourceTypes: Set<String> = ["caldav"],
         listBindings: [String: SourceIdentity] = [:],
         validTokens: Set<String> = [],
         rateLimitRPS: Int = 10,
-        useFakeStore: Bool = true
+        useFakeStore: Bool = true,
+        isProductionAuthorized: Bool = false
     ) {
         self.mode = mode
         self.host = (host == "127.0.0.1" || host == "localhost") ? "127.0.0.1" : "127.0.0.1"
@@ -137,6 +162,10 @@ public struct BridgeConfig: Sendable {
         self.timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 5.0
         self.maxConcurrentRequests = maxConcurrentRequests > 0 ? maxConcurrentRequests : 10
         self.maxHeaderSizeBytes = maxHeaderSizeBytes > 0 ? maxHeaderSizeBytes : 16384
+        self.headerReadTimeoutSeconds = headerReadTimeoutSeconds > 0 ? headerReadTimeoutSeconds : 3.0
+        self.bodyReadTimeoutSeconds = bodyReadTimeoutSeconds > 0 ? bodyReadTimeoutSeconds : 3.0
+        self.maxBodySizeBytes = maxBodySizeBytes > 0 ? maxBodySizeBytes : 1_048_576
+        self.sendTimeoutSeconds = sendTimeoutSeconds > 0 ? sendTimeoutSeconds : 5.0
         self.allowedListIDs = allowedListIDs
         self.allowedSources = allowedSources
         self.allowedSourceTypes = allowedSourceTypes
@@ -144,6 +173,7 @@ public struct BridgeConfig: Sendable {
         self.validTokens = validTokens
         self.rateLimitRPS = rateLimitRPS > 0 ? rateLimitRPS : 10
         self.useFakeStore = useFakeStore
+        self.isProductionAuthorized = isProductionAuthorized
     }
 
     /// Strict production validation. Must throw if any configuration requirement is missing.
@@ -218,6 +248,12 @@ public struct BridgeConfig: Sendable {
         }
 
         let useFake = (mode == .test) ? (environment["EVENTKIT_USE_FAKE"] != "false") : false
+        let isAuthorized = (environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "true" || environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "1")
+
+        let headerTimeout = Double(environment["EVENTKIT_BRIDGE_HEADER_TIMEOUT"] ?? "") ?? 3.0
+        let bodyTimeout = Double(environment["EVENTKIT_BRIDGE_BODY_TIMEOUT"] ?? "") ?? 3.0
+        let maxBody = Int(environment["EVENTKIT_BRIDGE_MAX_BODY_SIZE"] ?? "") ?? 1_048_576
+        let sendTimeout = Double(environment["EVENTKIT_BRIDGE_SEND_TIMEOUT"] ?? "") ?? 5.0
 
         let config = BridgeConfig(
             mode: mode,
@@ -226,13 +262,18 @@ public struct BridgeConfig: Sendable {
             timeoutSeconds: timeout,
             maxConcurrentRequests: maxConcurrent,
             maxHeaderSizeBytes: 16384,
+            headerReadTimeoutSeconds: headerTimeout,
+            bodyReadTimeoutSeconds: bodyTimeout,
+            maxBodySizeBytes: maxBody,
+            sendTimeoutSeconds: sendTimeout,
             allowedListIDs: allowlist,
             allowedSources: ["iCloud"],
             allowedSourceTypes: ["caldav"],
             listBindings: parsedBindings,
             validTokens: tokens,
             rateLimitRPS: rps,
-            useFakeStore: useFake
+            useFakeStore: useFake,
+            isProductionAuthorized: isAuthorized
         )
 
         // If in production mode, validate strictly immediately

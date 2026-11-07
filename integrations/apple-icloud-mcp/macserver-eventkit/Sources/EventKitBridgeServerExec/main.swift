@@ -54,14 +54,15 @@ struct BridgeServerMain {
             store = FakeEventKitStore(sourceVerifier: sourceVerifier)
 
         case .production:
-            print("[EventKitBridge] Assembling guarded ProductionEventKitStore...")
-            // Strictly guarded: isProductionActivated remains false until authorized Gate B deployment.
-            // Does NOT instantiate EKEventStore or prompt TCC.
-            store = ProductionEventKitStore(
-                isProductionActivated: false,
+            print("[EventKitBridge] Assembling guarded ProductionEventKitStore via ProductionStoreAssembly...")
+            // Strictly guarded: isProductionActivated remains false unless explicitly authorized with injection.
+            // In offline candidate verification, does NOT instantiate live EKEventStore or prompt TCC.
+            store = ProductionStoreAssembly.assemble(
+                isAuthorized: config.isProductionAuthorized,
                 sourceVerifier: sourceVerifier,
                 requestLimiter: requestLimiter,
-                callbackTimeoutSeconds: config.timeoutSeconds
+                callbackTimeoutSeconds: config.timeoutSeconds,
+                authorizedStoreProvider: nil
             )
         }
 

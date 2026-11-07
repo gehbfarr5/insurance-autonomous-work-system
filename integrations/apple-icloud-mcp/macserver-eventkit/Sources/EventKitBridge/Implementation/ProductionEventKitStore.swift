@@ -178,20 +178,23 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     public func resetCounters() { _contentAccessCount = 0 }
 }
 
-private final class StoreAtomicBool: @unchecked Sendable {
-    private let lock = NSLock()
-    private var _value: Bool
-
-    init(_ value: Bool) { self._value = value }
-
-    func compareAndExchange(expected: Bool, desired: Bool) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        if _value == expected {
-            _value = desired
-            return true
-        }
-        return false
+/// Explicit, default-off assembly path for ProductionEventKitStore.
+/// Only instantiated with EKEventStore when isAuthorized == true AND authorizedStoreProvider != nil.
+public enum ProductionStoreAssembly {
+    public static func assemble(
+        isAuthorized: Bool,
+        sourceVerifier: SourceVerifier,
+        requestLimiter: RequestLimiter,
+        callbackTimeoutSeconds: Double = 5.0,
+        authorizedStoreProvider: (@Sendable () throws -> EKEventStore)? = nil
+    ) -> ProductionEventKitStore {
+        return ProductionEventKitStore(
+            isProductionActivated: isAuthorized,
+            sourceVerifier: sourceVerifier,
+            requestLimiter: requestLimiter,
+            callbackTimeoutSeconds: callbackTimeoutSeconds,
+            storeProvider: isAuthorized ? authorizedStoreProvider : nil
+        )
     }
 }
 
