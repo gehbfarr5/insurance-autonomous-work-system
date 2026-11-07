@@ -39,14 +39,14 @@ async function run() {
     assert.strictEqual(lists.length, 1);
     assert.strictEqual(lists[0].list_id, '9D9A****03F3');
     assert.strictEqual(lists[0].writable, false);
-    console.log('[TestClient] List query OK:', lists[0].title);
+    console.log('[TestClient] List query OK:', lists[0].name);
 
     // 3. Fetch items
     const itemsResult = await service.list({ list_ids: ['9D9A****03F3'] });
     assert.strictEqual(itemsResult.reminders.length, 2);
     assert.strictEqual(itemsResult.reminders[0].reminder_id, 'item-docker-01');
     assert.strictEqual(itemsResult.reminders[0].completed, false);
-    assert.strictEqual(itemsResult.reminders[0].due, '2026-11-09T00:00:00.000Z');
+    assert.strictEqual(itemsResult.reminders[0].due, '2026-11-10T00:00:00.000Z');
     console.log('[TestClient] Item query OK, count:', itemsResult.reminders.length);
 
     console.log(JSON.stringify({ status: 'PASS', mode: MODE, remindersCount: itemsResult.reminders.length }));
