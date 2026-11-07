@@ -1,48 +1,53 @@
 /**
  * service.ts
- * ReminderService implementation routing read requests to MacServer EventKit Transport.
+ * MacServerReminderService implementation for Seoul -> MacServer Reminders Readonly Gateway.
+ * 
+ * Adapts MacServer EventKit Bridge HTTP endpoints to standard ReminderService interface:
+ * - listLists: maps to ReminderListSummary[] with writable: false
+ * - list: maps to ListRemindersResult with Reminder[]
+ * - create/update/remove: rejects client-side with PERMISSION_DENIED (zero write forwarding)
+ * 
+ * Invariants:
+ * 1. Strictly READ-ONLY: Rejects write operations with 0 forwarding and 0 VTODO fallback.
+ * 2. Strict Item Field Validation: itemID, listID, title, isCompleted are mandatory;
+ *    missing, empty, or mismatched listID is immediately rejected with UPSTREAM_ERROR.
+ * 3. Error objects are NEVER mapped into normal reminders.
+ * 4. Bound list verification: Only allowed and bound lists are returned or queried.
  */
 
 import { AppError } from '../../../core/errors.js';
-import type {
-  ReminderService,
-  ReminderListSummary,
-  ListRemindersParams,
-  ListRemindersResult,
-  Reminder,
-  ReminderInput,
-  UpdateOptions,
-  PartialFailure,
-  AccountConfig,
-} from './types.js';
+import { parseBridgeDate, EventKitReadonlyTransport } from './transport.js';
 import type {
   BoundListConfig,
+  ListRemindersParams,
+  ListRemindersResult,
   MacServerGatewayConfig,
-  RemindersList,
+  PartialFailure,
+  Reminder,
+  ReminderInput,
   ReminderItem,
+  ReminderListSummary,
+  ReminderService,
+  RemindersList,
+  UpdateOptions,
+  AccountConfig,
 } from './types.js';
-import { EventKitReadonlyTransport, parseBridgeDate } from './transport.js';
 
-const DEFAULT_LIMIT = 100;
-const MAX_LIMIT = 1000;
-
-function parseLimit(limit?: number): number {
-  const value = limit ?? DEFAULT_LIMIT;
-  if (!Number.isInteger(value) || value < 1 || value > MAX_LIMIT) {
-    throw new AppError('INVALID_INPUT', `limit 必须在 1 到 ${MAX_LIMIT} 之间`);
+function parseLimit(rawLimit?: number): number {
+  if (rawLimit === undefined) return 500;
+  if (!Number.isInteger(rawLimit) || rawLimit <= 0) {
+    throw new AppError('INVALID_INPUT', `limit 必须为正整数: ${rawLimit}`);
   }
-  return value;
+  return Math.min(rawLimit, 1000);
 }
 
 function parseDueBound(label: string, value?: string): Date | undefined {
-  if (value === undefined) return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw new AppError('INVALID_INPUT', `${label} 必须是 ISO 8601 时间`, {
-      hint: '例如 2026-09-01T00:00:00Z',
-    });
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    throw new AppError('INVALID_INPUT', `${label} 格式无法解析为有效日期: ${value}`);
   }
-  return date;
+  return d;
 }
 
 export interface MacServerReminderServiceDeps {
@@ -72,7 +77,7 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
 
     const verifiedLists: RemindersList[] = [];
     for (const list of rawLists) {
-      if (!list || typeof list !== 'object') {
+      if (!list || typeof list !== 'object' || Array.isArray(list)) {
         throw new AppError('UPSTREAM_ERROR', 'Bridge 返回的列表元数据不是有效对象');
       }
       if (typeof list.listID !== 'string' || !list.listID.trim()) {
@@ -98,8 +103,12 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
       const expType = binding.expectedSourceType || config.expectedSourceType || 'calDAV';
       const expName = binding.expectedSourceName || config.expectedSourceName || 'iCloud';
 
-      if (list.sourceType.toLowerCase() !== expType.toLowerCase()) continue;
-      if (list.sourceName.toLowerCase() !== expName.toLowerCase()) continue;
+      if (list.sourceType.toLowerCase() !== expType.toLowerCase()) {
+        continue;
+      }
+      if (list.sourceName.toLowerCase() !== expName.toLowerCase()) {
+        continue;
+      }
 
       verifiedLists.push(list);
     }
@@ -107,21 +116,23 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
     return verifiedLists;
   }
 
+  function rejectWriteOp(op: string): never {
+    throw new AppError(
+      'PERMISSION_DENIED',
+      `[WriteRejected] MacServer EventKit 网关运行于严格只读模式: 提醒事项 ${op} 写操作已在客户端拦截 (零转发/零VTODO回落/禁止写入并禁止回落旧 VTODO)`
+    );
+  }
+
   return {
     async listLists(): Promise<ReminderListSummary[]> {
       requireRead();
       const lists = await fetchAllowedICloudLists();
-      return lists.map((list) => {
-        const summary: ReminderListSummary = {
-          list_id: list.listID,
-          name: list.title,
-          writable: false,
-        };
-        if (list.color && list.color.trim()) {
-          summary.color = list.color.trim();
-        }
-        return summary;
-      });
+      return lists.map((list) => ({
+        list_id: list.listID,
+        name: list.title,
+        color: list.color,
+        writable: false,
+      }));
     },
 
     async list(params: ListRemindersParams): Promise<ListRemindersResult> {
@@ -140,7 +151,7 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
         if (missing.length > 0) {
           throw new AppError(
             'NOT_FOUND',
-            `指定的提醒列表不存在或未在白名单中: ${missing.join(', ')}`,
+            `指定的提醒列表不存在或不对应任何已显式绑定的 iCloud 提醒列表: ${missing.join(', ')}`,
             { hint: '调用 reminders_lists 查询当前可用的提醒列表' }
           );
         }
@@ -166,12 +177,42 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
           continue;
         }
 
-        for (const item of items) {
-          if (item.listID && item.listID !== targetList.listID) {
+        if (!Array.isArray(items)) {
+          throw new AppError('UPSTREAM_ERROR', 'Bridge 返回的提醒条目不是 JSON 数组');
+        }
+
+        for (const rawItem of items) {
+          if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) {
+            throw new AppError('UPSTREAM_ERROR', 'Bridge 返回条目数据结构非法: 期望为 Object');
+          }
+
+          const item = rawItem as unknown as Record<string, unknown>;
+
+          if ('error' in item || 'errorMessage' in item) {
+            throw new AppError('UPSTREAM_ERROR', `Bridge 返回错误对象响应而非正常条目: ${JSON.stringify(item)}`);
+          }
+
+          if (typeof item.itemID !== 'string' || !item.itemID.trim()) {
+            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 itemID 字段: ${JSON.stringify(item)}`);
+          }
+
+          if (typeof item.listID !== 'string' || !item.listID.trim()) {
+            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 listID 字段: itemID=${item.itemID}`);
+          }
+
+          if (item.listID.trim() !== targetList.listID) {
             throw new AppError(
               'UPSTREAM_ERROR',
-              `Bridge 返回条目归属列表不一致: 期望 ${targetList.listID}, 收到 ${item.listID}`
+              `Bridge 返回条目归属列表 (${item.listID}) 与请求的目标列表 (${targetList.listID}) 不匹配/不一致`
             );
+          }
+
+          if (typeof item.title !== 'string') {
+            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 title 字段: itemID=${item.itemID}`);
+          }
+
+          if (typeof item.isCompleted !== 'boolean') {
+            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 isCompleted 布尔字段: itemID=${item.itemID}`);
           }
 
           if (params.completed !== undefined && item.isCompleted !== params.completed) {
@@ -196,18 +237,30 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
           }
 
           const reminderObj: Reminder = {
-            reminder_id: item.itemID,
+            reminder_id: String(item.itemID),
             list_id: targetList.listID,
-            title: item.title,
-            completed: item.isCompleted,
-            priority: item.priority !== undefined ? item.priority : 0,
+            title: String(item.title),
+            completed: Boolean(item.isCompleted),
+            priority: typeof item.priority === 'number' ? item.priority : 0,
           };
 
-          if (item.notes !== undefined && item.notes !== null) {
+          if (typeof item.notes === 'string') {
             reminderObj.notes = item.notes;
           }
           if (dueIso) {
             reminderObj.due = dueIso;
+          }
+          if (item.completionDate) {
+            try {
+              const compIso = parseBridgeDate(item.completionDate);
+              if (compIso) reminderObj.completed_at = compIso;
+            } catch {}
+          }
+          if (item.creationDate) {
+            try {
+              const crIso = parseBridgeDate(item.creationDate);
+              if (crIso) reminderObj.created = crIso;
+            } catch {}
           }
 
           allReminders.push(reminderObj);
@@ -233,6 +286,7 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
       if (truncated) {
         result.truncated = true;
       }
+
       if (partialFailures.length > 0) {
         result.partial_failures = partialFailures;
       }
@@ -241,15 +295,15 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
     },
 
     async create(_input: ReminderInput, _listId?: string): Promise<Reminder> {
-      return transport.rejectWrite('create');
+      rejectWriteOp('create');
     },
 
     async update(_reminderId: string, _patch: Partial<ReminderInput>, _options?: UpdateOptions): Promise<Reminder> {
-      return transport.rejectWrite('update');
+      rejectWriteOp('update');
     },
 
     async remove(_reminderId: string, _options?: UpdateOptions): Promise<{ deleted: true }> {
-      return transport.rejectWrite('delete');
+      rejectWriteOp('remove');
     },
   };
 }

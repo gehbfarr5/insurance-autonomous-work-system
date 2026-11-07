@@ -1,7 +1,7 @@
 # AG-03: Seoul → MacServer 只读 Gateway 隔离集成测试证据与工程验收报告
 
-- **更新时间**：2026-11-08 02:25:00 CST
-- **当前 Git Commit**：`f9bc7c1340b9525db8f28886feea6c757cff5840`
+- **更新时间**：2026-11-08 03:15:00 CST
+- **当前 Git Commit**：`d047c04def640745fb01fe5e15091073997489f8`
 - **目标分支**：`feat/seoul-macserver-readonly-gateway` (PR #22)
 - **基线提交**：`92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7` (上游 `apple-icloud-mcp` 固定基线)
 
@@ -482,15 +482,15 @@ npm test
 
 ---
 
-## 九、真实共享服务候选外部验收与全模块离线回归 (11/11)
+## 九、真实共享服务候选外部验收与全模块离线回归 (13/13)
 
 ### 1. 架构接入与测试限制
 - **真实服务装配**：通过固定基线 `apple-icloud-mcp` 真实服务入口 `src/bin/http.ts` -> `dist/bin/http.js`，复用真实 OAuth 2.1 鉴权（`POST /register`, `GET /authorize`, `POST /access-login`, `POST /token`）、会话存储与所有权校验（`SessionStore`）、账户能力（`capabilities.remindersRead`）及统一 `/mcp` Streamable HTTP 协议端点。
 - **测试桩明确标识**：`src/server.ts` 已添加明确安全警告 Banner，仅保留为单组件协议级本地测试桩（Test Harness），严格禁止作为生产服务入口。
-- **全模块离线回归**：在固定源码基线执行 Vitest 21 个测试套件共 319 个单元测试（含 Mail、Calendar、Contacts、Groups、Session、Admin、Reminders 及 Reminders Gateway），**全部 319 测试 PASS，零回归**。
+- **全模块离线回归**：在固定源码基线执行 Vitest 21 个测试套件共 326 个单元测试（含 Mail、Calendar、Contacts、Groups、Session、Admin、Reminders 及 Reminders Gateway），**全部 326 测试 PASS，零回归**。
 
 ### 2. 外部验收实测证据 (`RECEIPT_SHARED_SERVICE_ACCEPTANCE.json`)
-在独立测试网络 `ag03_test_network (172.30.56.0/24)` 下，使用真实候选容器（监听 `127.0.0.1:17799`）与 Fake Bridge（监听 `172.30.56.1:18765`），从容器外部执行 11 项端到端验收断言：
+在独立测试网络 `ag03_test_network (172.30.56.0/24)` 下，使用真实候选容器（监听 `127.0.0.1:17799`）与 Fake Bridge（监听 `172.30.56.1:18765`），从容器外部执行 13 项端到端验收断言：
 
 | 验收编号 | 断言项目 | 预期行为 | 实测结果 | 证据 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -503,8 +503,10 @@ npm test
 | **07** | `apple_login_session_issued` | `apple_login` 调用并签发业务会话 ID | `PASS` (session_id 正常签发) | 会话管理中心 |
 | **08** | `bound_list_metadata_read_pass` | `reminders_lists` 读取绑定列表元数据 | `PASS` (`9D9A****03F3`, writable: false) | 业务只读读取 |
 | **09** | `bound_items_read_pass` | `reminders_list` 查询绑定列表条目 | `PASS` (`item-ag03-001`, completed: false) | 字段保真映射 |
-| **10** | `cross_session_tampering_rejected` | 跨令牌/非法会话 ID 调用严格拒绝 | `PASS` (拒绝跨用户会话串扰) | 会话所有权绑定 |
-| **11** | `write_operations_strictly_rejected` | `create/update/delete` 拦截且后端零转发 | `PASS` (客户端拒绝，Bridge 写计数=0) | 零转发 / 零 VTODO |
+| **10** | `stalled_body_stream_timeout_pass` | 响应头立即返回但响应体永久停顿，统一截止时间在限定时限内失败并释放连接 | `PASS` (耗时 1225ms 明确抛出 `UPSTREAM_ERROR` 超时，释放流读取锁) | 贯穿请求与流式响应体的统一定时器 |
+| **11** | `corrupted_item_validation_pass` | 严格校验条目必填字段及 `listID` 归属，缺失、空值、篡改或错误对象严格拒绝 | `PASS` (归属不匹配条目明确抛出 `UPSTREAM_ERROR`，严防错误对象转为正常提醒) | 字段必填性与归属一致性强断言 |
+| **12** | `cross_session_tampering_rejected` | 跨令牌/非法会话 ID 调用严格拒绝 | `PASS` (拒绝跨用户会话串扰) | 会话所有权绑定 |
+| **13** | `write_operations_strictly_rejected` | `create/update/delete` 拦截且后端零转发 | `PASS` (客户端拦截，Bridge 写计数=0) | 零转发 / 零 VTODO |
 
 ### 3. 可恢复回滚与生产服务零影响验证
 - **回滚验证**：停止候选容器后，拉起基线镜像（`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`）并挂载相同数据卷，验证 `/health` 返回 200 OK，证明配置与镜像可无缝双向恢复。

@@ -4,13 +4,13 @@
  * 
  * Invariants & Hardening:
  * 1. Strictly READ-ONLY: Never sends POST, PUT, PATCH, DELETE requests.
- * 2. Deadline covers full response read: Abort timer spans from connection start until
- *    response body is completely downloaded and decoded.
- * 3. Max response size enforcement: Body stream is monitored; exceeding maxResponseSizeBytes
- *    aborts immediately and throws UPSTREAM_ERROR.
- * 4. Explicit failures: Network failures, timeouts, 401, 403, 404, 5xx, or corrupted JSON
- *    MUST throw AppError loudly; never masquerade as an empty list or success.
- * 5. Supports both Swift default Cocoa reference dates (numeric) and ISO 8601 strings.
+ * 2. Unified Deadline: A single abort timer spans connection establishment, header parsing,
+ *    and streaming response body downloading until completion.
+ * 3. Connection & Socket Release: On timeout or abort, active body reader is cancelled and
+ *    released immediately to prevent socket exhaustion.
+ * 4. Max Response Size Enforcement: Byte stream is metered; exceeding limit aborts immediately.
+ * 5. Explicit Failures: Stalled streams, network errors, timeouts, 401, 403, 404, 5xx throw AppError;
+ *    never masquerading as empty arrays.
  */
 
 import {
@@ -21,106 +21,106 @@ import {
   type RemindersList,
 } from './types.ts';
 
-export interface TransportFetch {
-  (input: string | URL | Request, init?: RequestInit): Promise<Response>;
-}
+export const COCOA_OFFSET_SECONDS = 978307200;
 
-/**
- * Seconds between Unix Epoch (1970-01-01) and Cocoa Reference Date (2001-01-01).
- * Swift JSONEncoder() encodes Date as seconds since Cocoa Reference Date by default.
- */
-export const COCOA_TO_UNIX_OFFSET_SECONDS = 978307200;
-
-/**
- * Normalizes a bridge date field strictly according to the Swift EventKitBridge contract:
- * - Number: Cocoa Reference Date seconds (Double, seconds since 2001-01-01T00:00:00Z).
- * - String: Standard ISO 8601 format.
- * - null / undefined: omitted.
- * Any invalid type or unparseable value throws AppError explicitly (no silent fallback, no numeric threshold guessing).
- */
 export function parseBridgeDate(raw: unknown): string | undefined {
-  if (raw === null || raw === undefined) return undefined;
-
+  if (raw === undefined || raw === null) return undefined;
   if (typeof raw === 'number') {
     if (!Number.isFinite(raw)) {
-      throw new AppError('UPSTREAM_ERROR', `非法日期编码: 数值非有限浮点数 (${raw})`);
+      throw new AppError('UPSTREAM_ERROR', `Bridge 返回非法数值日期: ${raw}`);
     }
-    const unixMs = (raw + COCOA_TO_UNIX_OFFSET_SECONDS) * 1000;
-    const d = new Date(unixMs);
+    const epochMs = (raw + COCOA_OFFSET_SECONDS) * 1000;
+    const d = new Date(epochMs);
     if (Number.isNaN(d.getTime())) {
-      throw new AppError('UPSTREAM_ERROR', `非法日期编码: 无法解析的 Cocoa 时间戳 (${raw})`);
+      throw new AppError('UPSTREAM_ERROR', `Bridge 转换 Cocoa 纪元日期失败 (非法日期): ${raw}`);
     }
     return d.toISOString();
   }
-
   if (typeof raw === 'string') {
-    if (!raw.trim()) {
-      throw new AppError('UPSTREAM_ERROR', '非法日期编码: 空日期字符串');
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      throw new AppError('UPSTREAM_ERROR', 'Bridge 返回空日期字符串 (非法日期)');
     }
-    const d = new Date(raw.trim());
+    const d = new Date(trimmed);
     if (Number.isNaN(d.getTime())) {
-      throw new AppError('UPSTREAM_ERROR', `非法日期编码: 无法解析的 ISO 日期字符串 (${raw})`);
+      throw new AppError('UPSTREAM_ERROR', `Bridge 返回非法日期编码或格式字符串: ${raw}`);
     }
     return d.toISOString();
   }
-
-  throw new AppError('UPSTREAM_ERROR', `非法日期编码类型: 期望 number 或 string, 实际为 ${typeof raw}`);
+  throw new AppError('UPSTREAM_ERROR', `Bridge 返回非法日期数据类型: ${typeof raw}`);
 }
 
+export type TransportFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
 export class EventKitReadonlyTransport {
-  private readonly endpoint: string;
-  private readonly token: string;
-  private readonly timeoutMs: number;
-  private readonly maxResponseSizeBytes: number;
+  private readonly config: MacServerGatewayConfig;
   private readonly fetchFn: TransportFetch;
 
   constructor(config: MacServerGatewayConfig, customFetch?: TransportFetch) {
-    this.endpoint = config.macserverEndpoint.replace(/\/+$/, '');
-    this.token = config.authToken;
-    this.timeoutMs = config.timeoutMs;
-    this.maxResponseSizeBytes = config.maxResponseSizeBytes || 2 * 1024 * 1024;
+    this.config = config;
     this.fetchFn = customFetch || globalThis.fetch.bind(globalThis);
   }
 
-  /**
-   * Health check endpoint probe (GET /health).
-   */
   async healthCheck(): Promise<BridgeHealthResponse> {
-    return this.get<BridgeHealthResponse>('/health');
+    const url = `${this.config.macserverEndpoint}/health`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    try {
+      const res = await this.fetchFn(url, { method: 'GET', signal: controller.signal });
+      if (!res.ok) {
+        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 健康检查失败 (HTTP ${res.status})`);
+      }
+      return (await res.json()) as BridgeHealthResponse;
+    } catch (cause: any) {
+      if (cause instanceof AppError) throw cause;
+      throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 无法连接: ${cause?.message || cause}`, { cause });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  /**
-   * Fetch reminder lists metadata (GET /reminders/lists).
-   * FIX-R4A-01: Metadata-only, zero reminder content or counts.
-   */
   async fetchListsMetadata(): Promise<RemindersList[]> {
-    const data = await this.get<unknown>('/reminders/lists');
+    const url = `${this.config.macserverEndpoint}/reminders/lists`;
+    const headers = {
+      Authorization: `Bearer ${this.config.authToken}`,
+      Accept: 'application/json',
+      'User-Agent': 'Seoul-MCP-Gateway/1.0.0 (Readonly)',
+    };
+
+    const data = await this.getBoundedJson<unknown>(url, headers);
     if (!Array.isArray(data)) {
-      throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的列表元数据不是 JSON 数组');
+      throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的列表数据结构非法: 期望为 Array');
     }
     return data as RemindersList[];
   }
 
-  /**
-   * Fetch reminder items for a specific list (GET /reminders/lists/{listID}/items).
-   * FIX-R4A-02: Bound test/allowed list items only.
-   */
   async fetchReminders(listId: string): Promise<ReminderItem[]> {
-    if (!listId || typeof listId !== 'string' || !listId.trim()) {
-      throw new AppError('INVALID_INPUT', 'fetchReminders 必须指定非空 listId');
+    const trimmedId = listId.trim();
+    if (!trimmedId) {
+      throw new AppError('INVALID_INPUT', 'listId 不能为空');
     }
-    const cleanId = encodeURIComponent(listId.trim());
-    const data = await this.get<unknown>(`/reminders/lists/${cleanId}/items`);
+
+    const isAllowed = this.config.allowedLists.some((item) => item.listId === trimmedId);
+    if (!isAllowed) {
+      throw new AppError('PERMISSION_DENIED', `列表未在网关白名单中: ${trimmedId} (必须显式配置绑定)`, {
+        hint: '请在 MACSERVER_EVENTKIT_ALLOWED_LISTS 中配置该列表及来源 ID 绑定',
+      });
+    }
+
+    const url = `${this.config.macserverEndpoint}/reminders/lists/${encodeURIComponent(trimmedId)}/items`;
+    const headers = {
+      Authorization: `Bearer ${this.config.authToken}`,
+      Accept: 'application/json',
+      'User-Agent': 'Seoul-MCP-Gateway/1.0.0 (Readonly)',
+    };
+
+    const data = await this.getBoundedJson<unknown>(url, headers);
     if (!Array.isArray(data)) {
-      throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的提醒条目不是 JSON 数组');
+      throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的提醒条目数据结构非法: 期望为 Array');
     }
     return data as ReminderItem[];
   }
 
-  /**
-   * Explicit client-side write blocker.
-   * Rejects any attempt to forward write requests to MacServer EventKit.
-   */
   async rejectWrite(operationName: string): Promise<never> {
     throw new AppError(
       'PERMISSION_DENIED',
@@ -129,148 +129,139 @@ export class EventKitReadonlyTransport {
   }
 
   /**
-   * Core HTTP GET execution with:
-   * 1. Timeout spanning connection AND full body read.
-   * 2. Bounded body size streaming inspection.
-   * 3. Structured error mapping.
+   * Unified GET execution spanning request, headers, and full body stream download
+   * under a single deadline timer. Ensures prompt socket release on timeout/abort.
    */
-  private async get<T>(path: string): Promise<T> {
-    const url = `${this.endpoint}${path}`;
+  private async getBoundedJson<T>(url: string, headers: Record<string, string>): Promise<T> {
     const controller = new AbortController();
     let isTimedOut = false;
-
-    // Timeout spans from request start until body is completely downloaded
     const timer = setTimeout(() => {
       isTimedOut = true;
       controller.abort();
-    }, this.timeoutMs);
+    }, this.config.timeoutMs);
 
-    let response: Response;
+    let activeReader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    const onAbort = () => {
+      if (activeReader) {
+        try { activeReader.cancel(); } catch {}
+      }
+    };
+    controller.signal.addEventListener('abort', onAbort, { once: true });
+
     try {
-      response = await this.fetchFn(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          Accept: 'application/json',
-          'User-Agent': 'Seoul-MCP-Gateway/1.0.0 (Readonly)',
-        },
-        signal: controller.signal,
-      });
-
-      // Stream / read response body with size limit enforcement while timeout is still active!
-      const rawText = await this.readBodyWithLimit(response, controller);
-
-      const status = response.status;
-      let parsedBody: Record<string, unknown> | unknown[] | null = null;
-      if (rawText.trim().length > 0) {
-        try {
-          parsedBody = JSON.parse(rawText);
-        } catch (cause) {
-          if (status >= 200 && status < 300) {
-            throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的成功响应非有效 JSON', { cause });
-          }
+      let res: Response;
+      try {
+        res = await this.fetchFn(url, {
+          method: 'GET',
+          headers,
+          signal: controller.signal,
+        });
+      } catch (cause: any) {
+        if (isTimedOut || controller.signal.aborted || cause?.name === 'AbortError') {
+          throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
+            cause,
+            retryable: true,
+          });
         }
-      }
-
-      if (status === 200) {
-        if (parsedBody === null) {
-          throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回空响应体');
-        }
-        return parsedBody as T;
-      }
-
-      // Handle non-200 responses
-      let errorCode = 'UPSTREAM_ERROR';
-      let errorMessage = `MacServer EventKit Bridge 响应异常 (HTTP ${status})`;
-      if (parsedBody && typeof parsedBody === 'object' && !Array.isArray(parsedBody)) {
-        if (typeof parsedBody.code === 'string') errorCode = parsedBody.code;
-        if (typeof parsedBody.error === 'string') errorMessage = parsedBody.error;
-      }
-
-      switch (status) {
-        case 401:
-          throw new AppError('AUTH_FAILED', `MacServer EventKit 鉴权失败: ${errorMessage}`, {
-            hint: '核验 ~/.config/muse-macserver/bridge.env 中的 Bearer Token 是否与网关一致',
-          });
-        case 403:
-          throw new AppError('PERMISSION_DENIED', `MacServer EventKit 权限拒绝: ${errorMessage}`, {
-            hint: '核验 MacServer 激活开关 (EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED) 及列表允许名单',
-          });
-        case 404:
-          throw new AppError('NOT_FOUND', `MacServer EventKit 对象不存在: ${errorMessage}`, {
-            hint: '调用 reminders_lists 确认目标 list_id 是否有效',
-          });
-        case 405:
-          throw new AppError('PERMISSION_DENIED', `MacServer EventKit 拒绝非 GET 请求: ${errorMessage}`);
-        case 429:
-          throw new AppError('RATE_LIMITED', `MacServer EventKit 速率超限: ${errorMessage}`, { retryable: true });
-        case 504:
-          throw new AppError('UPSTREAM_ERROR', `MacServer EventKit 超时 (504 Gateway Timeout): ${errorMessage}`, { retryable: true });
-        default:
-          throw new AppError('UPSTREAM_ERROR', `MacServer EventKit 上游错误 (HTTP ${status}, code: ${errorCode}): ${errorMessage}`, {
-            retryable: status >= 500,
-          });
-      }
-    } catch (err: unknown) {
-      if (err instanceof AppError) {
-        throw err;
-      }
-      if (isTimedOut || (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('aborted')))) {
-        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.timeoutMs}ms): ${path}`, {
+        throw new AppError('UPSTREAM_ERROR', `无法连接到 MacServer EventKit Bridge: ${cause?.message || cause}`, {
+          cause,
           retryable: true,
-          cause: err,
         });
       }
-      throw new AppError(
-        'UPSTREAM_ERROR',
-        `无法连接到 MacServer EventKit Bridge: ${err instanceof Error ? err.message : String(err)}`,
-        { retryable: true, cause: err }
-      );
+
+      if (res.status === 401) {
+        throw new AppError('AUTH_FAILED', 'MacServer EventKit Bridge 鉴权失败: 提供的 Bearer Token 无效或已过期');
+      }
+      if (res.status === 403) {
+        throw new AppError('PERMISSION_DENIED', 'MacServer EventKit 权限拒绝: Bridge 生产授权开关关闭或无权限访问');
+      }
+      if (res.status === 404) {
+        throw new AppError('NOT_FOUND', `MacServer 提醒列表未找到: ${url}`);
+      }
+      if (!res.ok) {
+        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 响应异常 (HTTP ${res.status})`);
+      }
+
+      const contentLength = res.headers.get('content-length');
+      if (contentLength && parseInt(contentLength, 10) > this.config.maxResponseSizeBytes) {
+        throw new AppError(
+          'UPSTREAM_ERROR',
+          `MacServer EventKit Bridge 响应体大小 (${contentLength} bytes) 超出限制 (${this.config.maxResponseSizeBytes} bytes)`
+        );
+      }
+
+      let text = '';
+      if (!res.body) {
+        text = await res.text();
+      } else {
+        const reader = res.body.getReader();
+        activeReader = reader;
+        const chunks: Uint8Array[] = [];
+        let receivedBytes = 0;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              receivedBytes += value.length;
+              if (receivedBytes > this.config.maxResponseSizeBytes) {
+                controller.abort();
+                throw new AppError(
+                  'UPSTREAM_ERROR',
+                  `MacServer EventKit Bridge 响应体大小 (${receivedBytes} bytes) 超出限制 (${this.config.maxResponseSizeBytes} bytes)`
+                );
+              }
+              chunks.push(value);
+            }
+          }
+        } finally {
+          activeReader = undefined;
+          try { reader.releaseLock(); } catch {}
+        }
+
+        if (isTimedOut || controller.signal.aborted) {
+          throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
+            retryable: true,
+          });
+        }
+
+        const totalBuffer = new Uint8Array(receivedBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          totalBuffer.set(chunk, offset);
+          offset += chunk.length;
+        }
+        text = new TextDecoder('utf-8').decode(totalBuffer);
+      }
+
+      if (isTimedOut || controller.signal.aborted) {
+        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
+          retryable: true,
+        });
+      }
+
+      if (!text.trim()) {
+        throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回空响应体');
+      }
+
+      try {
+        return JSON.parse(text) as T;
+      } catch (cause) {
+        throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的成功响应非有效 JSON', { cause });
+      }
+    } catch (err: any) {
+      if (err instanceof AppError) throw err;
+      if (isTimedOut || controller.signal.aborted || err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
+          cause: err,
+          retryable: true,
+        });
+      }
+      throw new AppError('UPSTREAM_ERROR', `读取 MacServer EventKit 响应异常: ${err?.message || err}`, { cause: err });
     } finally {
+      controller.signal.removeEventListener('abort', onAbort);
       clearTimeout(timer);
     }
-  }
-
-  /**
-   * Reads response body with size limit inspection.
-   */
-  private async readBodyWithLimit(response: Response, controller: AbortController): Promise<string> {
-    if (!response.body) {
-      return response.text();
-    }
-
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          totalBytes += value.byteLength;
-          if (totalBytes > this.maxResponseSizeBytes) {
-            controller.abort();
-            throw new AppError(
-              'UPSTREAM_ERROR',
-              `MacServer EventKit Bridge 响应体大小 (${totalBytes} bytes) 超出限制 (${this.maxResponseSizeBytes} bytes)`
-            );
-          }
-          chunks.push(value);
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    // Concatenate chunks to UTF-8 string
-    const merged = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      merged.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-
-    return new TextDecoder('utf-8').decode(merged);
   }
 }

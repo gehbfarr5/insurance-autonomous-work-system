@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-11-07T19:13:20.934Z",
+  "verdict": "PASS",
+  "assertions": {
+    "healthcheck_200": true,
+    "unauthenticated_rejected_401": true,
+    "invalid_token_rejected_401": true,
+    "oauth2_auth_flow_pass": true,
+    "mcp_streamable_http_session_initialized": true,
+    "tool_discovery_all_modules_present": true,
+    "apple_login_session_issued": true,
+    "bound_list_metadata_read_pass": true,
+    "bound_items_read_pass": true,
+    "stalled_body_stream_timeout_pass": true,
+    "corrupted_item_validation_pass": true,
+    "cross_session_tampering_rejected": true,
+    "write_operations_strictly_rejected": true,
+    "bridge_received_zero_write_forwarding": true
+  },
+  "discoveredTools": [
+    "apple_accounts",
+    "apple_login",
+    "work_done",
+    "mail_folders",
+    "mail_search",
+    "mail_read",
+    "mail_send",
+    "mail_mark",
+    "mail_move",
+    "mail_delete",
+    "calendar_list",
+    "calendar_list_events",
+    "calendar_create_event",
+    "calendar_update_event",
+    "calendar_delete_event",
+    "reminders_lists",
+    "reminders_list",
+    "reminders_create",
+    "reminders_update",
+    "reminders_delete",
+    "contacts_search",
+    "contacts_read",
+    "contacts_create",
+    "contacts_update",
+    "contacts_delete",
+    "contacts_groups_list",
+    "contacts_groups_members",
+    "contacts_groups_create",
+    "contacts_groups_rename",
+    "contacts_groups_add_members",
+    "contacts_groups_remove_members",
+    "contacts_create_in_groups",
+    "contacts_groups_delete"
+  ],
+  "boundListDetails": {
+    "masked_list_id": "9D9A****03F3",
+    "name": "工作事项",
+    "writable": false
+  },
+  "stalledStreamDetails": {
+    "isError": true,
+    "elapsedMs": 1225,
+    "errorSnippet": "{\n  \"error\": {\n    \"code\": \"UPSTREAM_ERROR\",\n    \"message\": \"MacServer EventKit Bridge 请求/读取超时 (1200ms)\"\n  }\n}"
+  },
+  "itemValidationDetails": {
+    "isError": true,
+    "errorSnippet": "{\n  \"error\": {\n    \"code\": \"UPSTREAM_ERROR\",\n    \"message\": \"Bridge 返回条目归属列表 (foreign-unknown-list-id) 与请求的目标列表 (corrupted-list-id) 不匹配/不一致\"\n  }\n}"
+  },
+  "writeProbeDetails": {
+    "createBlocked": true,
+    "updateBlocked": true,
+    "deleteBlocked": true,
+    "bridgeRecordedWriteCount": 0,
+    "bridgeRecordedReadCount": 7
+  },
+  "crossSessionDetails": {
+    "invalidSessionRejected": true,
+    "crossTokenSessionRejected": true
+  }
+}
