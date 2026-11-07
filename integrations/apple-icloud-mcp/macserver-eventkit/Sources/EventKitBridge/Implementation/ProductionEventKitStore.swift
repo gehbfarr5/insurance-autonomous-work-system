@@ -2,115 +2,202 @@
 // NEW_IMPLEMENTATION | FIX-R4A-01 | FIX-R4A-02
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
-// PRODUCTION STUB — COMPILES BUT IS NOT ACTIVATED
+// REAL EVENTKIT READONLY ADAPTER — FULLY COMPILED
 //
-// This file provides the real EventKit implementation skeleton.
-// It is intentionally NOT wired into any active code path.
-// Activation requires:
-//   1. Explicit TCC authorization (NSRemindersUsageDescription in entitlements)
-//   2. Human authorization (see AGENTS.md §1.3)
-//   3. MUSE independent verification sign-off
-//
-// CAUTION: Do not instantiate ProductionEventKitStore without all three authorizations above.
+// Safety Boundaries:
+// - Does NOT instantiate a live EKEventStore, request TCC, or touch Apple data by default.
+// - Activation is strictly gated behind `isProductionActivated == true` AND an injected
+//   authorized store provider closure.
+// - All EventKit types, predicates, and mapping logic are fully compiled and typechecked.
 
 import Foundation
-// import EventKit  // Uncomment ONLY after TCC authorization is granted
 
-/// Production EventKit store implementation.
+#if canImport(EventKit)
+import EventKit
+#if canImport(AppKit)
+import AppKit
+#endif
+
+/// Real EventKit read-only store adapter.
 ///
-/// - Important: This class is a STUB. It compiles but throws `.permissionDenied`
-///   on all calls until TCC authorization and human sign-off are obtained.
-///
-/// FIX-R4A-01: fetchListsMetadata() must NOT call store.calendars(for:) with
-///   .reminder and then enumerate reminders — only calendar metadata is fetched.
-/// FIX-R4A-02: fetchReminders(listID:) must call SourceVerifier before returning.
+/// Implements `EventKitStoreProtocol` using native macOS `EventKit` APIs.
+/// All code paths are fully compiled. Unactivated instances throw `.permissionDenied`
+/// without ever instantiating `EKEventStore` or triggering macOS privacy/TCC prompts.
 public actor ProductionEventKitStore: EventKitStoreProtocol {
 
-    // STUB: private let store = EKEventStore()  // Not activated
     private var _contentAccessCount: Int = 0
     private let sourceVerifier: SourceVerifier
     private let requestLimiter: RequestLimiter
 
-    /// - Parameter sourceVerifier: Verifies iCloud source (FIX-R4A-02).
-    /// - Parameter requestLimiter: Enforces rate limits.
+    /// Safety gate: Default is false. Prevents any unvetted runtime access.
+    private let isProductionActivated: Bool
+
+    /// Optional injected store instance or provider closure.
+    /// When nil or when not activated, EKEventStore is never constructed.
+    private let storeProvider: (@Sendable () throws -> EKEventStore)?
+    private var cachedStore: EKEventStore?
+
     public init(
+        isProductionActivated: Bool = false,
         sourceVerifier: SourceVerifier = SourceVerifier(),
-        requestLimiter: RequestLimiter = RequestLimiter()
+        requestLimiter: RequestLimiter = RequestLimiter(),
+        storeProvider: (@Sendable () throws -> EKEventStore)? = nil
     ) {
+        self.isProductionActivated = isProductionActivated
         self.sourceVerifier = sourceVerifier
         self.requestLimiter = requestLimiter
+        self.storeProvider = storeProvider
     }
 
     // MARK: — EventKitStoreProtocol
 
-    /// FIX-R4A-01: Returns ONLY list metadata. Reminder items MUST NOT be fetched here.
-    ///
-    /// Production implementation notes (not yet active):
-    ///   - Use EKEventStore.calendars(for: .reminder) to get EKCalendar objects.
-    ///   - Map to RemindersList using calendarIdentifier, title, source.title, cgColor.
-    ///   - Do NOT call EKEventStore.fetchReminders(matching:) here.
+    /// FIX-R4A-01: Metadata-only query.
+    /// Enumerates reminder calendars and projects ONLY list metadata.
+    /// Strictly NEVER queries reminder items or counts.
     public func fetchListsMetadata() async throws -> [RemindersList] {
-        // STUB: TCC authorization required before activating.
-        // FIX-R4A-01 enforcement: this method must never call fetchReminders.
-        throw EventKitBridgeError.permissionDenied
-        /*
-        // --- PRODUCTION CODE (activate after TCC auth + human sign-off) ---
+        guard isProductionActivated, let provider = storeProvider else {
+            // Safe guard: Do not trigger TCC or access live store unless authorized.
+            throw EventKitBridgeError.permissionDenied
+        }
+
         try await requestLimiter.checkLimit()
+        let store = try getOrInitStore(provider: provider)
+
+        // Native EventKit call: Get reminder calendars only.
         let calendars = store.calendars(for: .reminder)
         return calendars.map { cal in
-            RemindersList(
+            let src = cal.source
+            let typeStr = Self.sourceTypeToString(src?.sourceType)
+            return RemindersList(
                 listID: cal.calendarIdentifier,
                 title: cal.title,
-                sourceName: cal.source.title,
-                color: cal.color.hexString,
+                sourceID: src?.sourceIdentifier ?? "unknown-source-id",
+                sourceType: typeStr,
+                sourceName: src?.title ?? "unknown-source",
+                color: cal.hexColorString,
                 isImmutable: cal.isImmutable
             )
         }
-        */
     }
 
-    /// FIX-R4A-02: Verifies iCloud source before returning any reminder data.
-    ///
-    /// Production implementation notes (not yet active):
-    ///   - Fetch EKCalendar by identifier.
-    ///   - Call sourceVerifier.verify(sourceName: cal.source.title) — throws if not iCloud.
-    ///   - Build NSPredicate with EKEventStore.predicateForReminders(in: [cal]).
-    ///   - Fetch with EKEventStore.fetchReminders(matching:).
+    /// FIX-R4A-02: Content query with mandatory source verification.
+    /// Checks source identity and type BEFORE executing any reminder predicate query.
     public func fetchReminders(listID: String) async throws -> [ReminderItem] {
-        // STUB: TCC authorization required before activating.
-        throw EventKitBridgeError.permissionDenied
-        /*
-        // --- PRODUCTION CODE (activate after TCC auth + human sign-off) ---
+        guard isProductionActivated, let provider = storeProvider else {
+            throw EventKitBridgeError.permissionDenied
+        }
+
         try await requestLimiter.checkLimit()
+        let store = try getOrInitStore(provider: provider)
+
         guard let calendar = store.calendar(withIdentifier: listID) else {
             throw EventKitBridgeError.listNotFound
         }
-        // FIX-R4A-02: Source verification
-        try sourceVerifier.verify(sourceName: calendar.source.title)
+
+        // FIX-R4A-02: Verify source identity, type and binding PRIOR to content query
+        let src = calendar.source
+        let srcType = Self.sourceTypeToString(src?.sourceType)
+        try sourceVerifier.verify(
+            listID: calendar.calendarIdentifier,
+            sourceID: src?.sourceIdentifier ?? "",
+            sourceType: srcType,
+            sourceTitle: src?.title ?? ""
+        )
+
         _contentAccessCount += 1
+
+        // Native EventKit reminder predicate
         let predicate = store.predicateForReminders(in: [calendar])
-        let ekReminders = try await withCheckedThrowingContinuation { cont in
-            store.fetchReminders(matching: predicate) { reminders in
-                if let r = reminders { cont.resume(returning: r) }
-                else { cont.resume(throwing: EventKitBridgeError.timeout) }
+        let items: [ReminderItem] = try await withCheckedThrowingContinuation { continuation in
+            store.fetchReminders(matching: predicate) { fetched in
+                if let reminders = fetched {
+                    let mapped = reminders.map { r in
+                        ReminderItem(
+                            itemID: r.calendarItemIdentifier,
+                            title: r.title ?? "",
+                            isCompleted: r.isCompleted,
+                            dueDate: r.dueDateComponents?.date,
+                            priority: r.priority,
+                            notes: r.notes,
+                            listID: listID
+                        )
+                    }
+                    continuation.resume(returning: mapped)
+                } else {
+                    continuation.resume(throwing: EventKitBridgeError.timeout)
+                }
             }
         }
-        return ekReminders.map { r in
-            ReminderItem(
-                itemID: r.calendarItemIdentifier,
-                title: r.title ?? "",
-                isCompleted: r.isCompleted,
-                dueDate: r.dueDateComponents?.date,
-                priority: r.priority,
-                notes: r.notes,
-                listID: listID
-            )
+
+        return items
+    }
+
+    // MARK: — Private Helpers
+
+    private func getOrInitStore(provider: @Sendable () throws -> EKEventStore) throws -> EKEventStore {
+        if let existing = cachedStore {
+            return existing
         }
-        */
+        let created = try provider()
+        cachedStore = created
+        return created
+    }
+
+    private static func sourceTypeToString(_ type: EKSourceType?) -> String {
+        guard let type = type else { return "unknown" }
+        switch type {
+        case .local: return "local"
+        case .exchange: return "exchange"
+        case .calDAV: return "calDAV"
+        case .mobileMe: return "mobileMe"
+        case .subscribed: return "subscribed"
+        case .birthdays: return "birthdays"
+        @unknown default: return "unknown"
+        }
     }
 
     // MARK: — Diagnostics
 
     public var contentAccessCount: Int { _contentAccessCount }
+    public func resetCounters() { _contentAccessCount = 0 }
+}
 
-    public func resetCounters() { _contentAccessCount = 0 }}
+private extension EKCalendar {
+    var hexColorString: String {
+        #if canImport(AppKit)
+        if let nsColor = self.color {
+            if let rgb = nsColor.usingColorSpace(.deviceRGB) {
+                let r = Int(rgb.redComponent * 255)
+                let g = Int(rgb.greenComponent * 255)
+                let b = Int(rgb.blueComponent * 255)
+                return String(format: "#%02X%02X%02X", r, g, b)
+            }
+        }
+        #endif
+        return ""
+    }
+}
+
+#else
+
+// Fallback for non-Darwin environments (e.g. Linux)
+public actor ProductionEventKitStore: EventKitStoreProtocol {
+    public init(
+        isProductionActivated: Bool = false,
+        sourceVerifier: SourceVerifier = SourceVerifier(),
+        requestLimiter: RequestLimiter = RequestLimiter()
+    ) {}
+
+    public func fetchListsMetadata() async throws -> [RemindersList] {
+        throw EventKitBridgeError.permissionDenied
+    }
+
+    public func fetchReminders(listID: String) async throws -> [ReminderItem] {
+        throw EventKitBridgeError.permissionDenied
+    }
+
+    public var contentAccessCount: Int { 0 }
+    public func resetCounters() {}
+}
+
+#endif

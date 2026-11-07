@@ -30,12 +30,28 @@ public struct RequestHandler: Sendable {
     /// Formats a desensitized error body for HTTP response.
     ///
     /// - Parameter error: The bridge error.
-    /// - Returns: A JSON-safe dictionary with `success`, `error` keys only.
+    /// - Returns: A JSON-safe dictionary with `success`, `error`, `code` keys.
     public static func errorBody(for error: EventKitBridgeError) -> [String: String] {
-        [
+        let code: String
+        switch error {
+        case .authenticationFailed:          code = "AUTHENTICATION_FAILED"
+        case .unauthorizedScope:             code = "UNAUTHORIZED_SCOPE"
+        case .permissionDenied:              code = "PERMISSION_DENIED"
+        case .listNotAllowed:                code = "LIST_NOT_ALLOWED"
+        case .sourceNotAllowed:              code = "SOURCE_NOT_ALLOWED"
+        case .sourceMismatch:                code = "SOURCE_MISMATCH"
+        case .listNotFound:                  code = "LIST_NOT_FOUND"
+        case .itemNotFound:                  code = "ITEM_NOT_FOUND"
+        case .writeOperationRejected:        code = "WRITE_OPERATION_REJECTED"
+        case .rateLimitExceeded:             code = "RATE_LIMIT_EXCEEDED"
+        case .timeout:                       code = "TIMEOUT"
+        case .internalError:                 code = "INTERNAL_ERROR"
+        }
+
+        return [
             "success": "false",
-            // localizedDescription is already desensitized (see EventKitBridgeError)
             "error": error.localizedDescription,
+            "code": code
         ]
     }
 
@@ -47,6 +63,7 @@ public struct RequestHandler: Sendable {
         case .permissionDenied:              return 403
         case .listNotAllowed:                return 403
         case .sourceNotAllowed:              return 403
+        case .sourceMismatch:                return 403
         case .listNotFound:                  return 404
         case .itemNotFound:                  return 404
         case .writeOperationRejected:        return 405
