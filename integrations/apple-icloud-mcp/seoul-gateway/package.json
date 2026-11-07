@@ -1,0 +1,17 @@
+{
+  "name": "seoul-macserver-readonly-gateway",
+  "version": "1.0.0",
+  "description": "Seoul to MacServer EventKit Readonly Gateway Transport and Service Adapter",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
+  },
+  "keywords": [
+    "mcp",
+    "eventkit",
+    "reminders",
+    "gateway"
+  ],
+  "author": "Antigravity",
+  "license": "UNLICENSED"
+}

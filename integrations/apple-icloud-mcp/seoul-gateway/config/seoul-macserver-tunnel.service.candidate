@@ -1,0 +1,48 @@
+# seoul-macserver-tunnel.service.candidate
+# AG-03 Candidate Systemd Unit File for Seoul Host (VM-0-10-ubuntu)
+#
+# PURPOSE:
+# Maintains a persistent, supervised SSH local port-forwarding tunnel
+# from Seoul Host (100.82.240.43) to Intel MacServer (100.100.172.91)
+# over private Tailscale WireGuard mesh network.
+#
+# SECURITY & ISOLATION BOUNDARIES:
+# 1. Seoul Host is the only entry point for MUSE.
+# 2. Intel MacServer Bridge listens strictly on 127.0.0.1:18765 (loopback).
+# 3. Port 18765 is mapped locally to 127.0.0.1:18765 on Seoul.
+# 4. Zero public internet exposure (Tailscale CGNAT 100.x only).
+# 5. ZERO dependency on M5 Pro.
+#
+# DEPLOYMENT NOTE:
+# This file is a candidate preparation only.
+# Deployment requires explicit user approval. DO NOT install or activate without authorization.
+
+[Unit]
+Description=Seoul to MacServer EventKit Bridge Tailscale Tunnel
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=root
+# SSH to MacServer over Tailscale WireGuard mesh, forwarding local 18765 to remote loopback 18765
+ExecStart=/usr/bin/ssh -NT \
+    -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=15 \
+    -o ServerAliveCountMax=3 \
+    -o StrictHostKeyChecking=accept-new \
+    -o IdentityFile=/root/.ssh/id_ed25519_macserver_tunnel \
+    -L 127.0.0.1:18765:127.0.0.1:18765 \
+    jin@100.100.172.91
+
+Restart=always
+RestartSec=5s
+
+# Security Hardening
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

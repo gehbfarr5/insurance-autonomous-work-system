@@ -1,0 +1,10 @@
+{
+  "macserverEndpoint": "http://127.0.0.1:18765",
+  "authToken": "REDACTED_LOCAL_TOKEN_FROM_MACSERVER_BRIDGE_ENV",
+  "timeoutMs": 5000,
+  "allowedListIds": [
+    "9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3"
+  ],
+  "expectedSourceType": "calDAV",
+  "expectedSourceName": "iCloud"
+}
