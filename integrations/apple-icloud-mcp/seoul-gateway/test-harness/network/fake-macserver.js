@@ -45,7 +45,7 @@ const server = http.createServer((req, res) => {
     isAuthorized = process.env.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED === 'true';
   }
 
-  if (url.pathname === '/healthz') {
+  if (url.pathname === '/health' || url.pathname === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', authorized: isAuthorized }));
     return;
