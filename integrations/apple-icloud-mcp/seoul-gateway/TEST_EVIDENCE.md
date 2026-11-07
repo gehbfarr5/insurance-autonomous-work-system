@@ -1,6 +1,7 @@
 # AG-03: Seoul → MacServer 只读 Gateway 隔离集成测试证据与工程验收报告
 
-- **更新时间**：2026-11-08 00:15:00 CST
+- **更新时间**：2026-11-08 00:20:00 CST
+- **当前 Git Commit**：`dd316280db454beae1604117b189ff4cce6cb538`
 - **目标分支**：`feat/seoul-macserver-readonly-gateway` (PR #22)
 - **基线提交**：`92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7` (上游 `apple-icloud-mcp` 固定基线)
 
