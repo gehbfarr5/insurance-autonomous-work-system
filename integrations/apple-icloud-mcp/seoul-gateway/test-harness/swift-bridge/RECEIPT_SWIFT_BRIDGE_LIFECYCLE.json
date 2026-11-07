@@ -1,0 +1,39 @@
+{
+  "receiptType": "AG03_SWIFT_BRIDGE_LIFECYCLE",
+  "timestamp": "2026-11-07T16:01:19Z",
+  "swiftBinary": "/Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system/integrations/apple-icloud-mcp/candidate-package/bin/EventKitBridgeServer",
+  "storeMode": "FakeEventKitStore (Native Swift)",
+  "configFile": "/tmp/ag03-swift-lifecycle-test/bridge.env",
+  "tests": [
+    {
+      "step": 1,
+      "description": "Initial startup with EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false",
+      "httpStatus": 403,
+      "expectedStatus": 403,
+      "result": "PASS"
+    },
+    {
+      "step": 2,
+      "description": "Config reload with EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true",
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "dataVerified": "listID: 9D9A****03F3 present",
+      "result": "PASS"
+    },
+    {
+      "step": 3,
+      "description": "Re-closing switch in config file and reloading",
+      "httpStatus": 403,
+      "expectedStatus": 403,
+      "result": "PASS"
+    },
+    {
+      "step": 4,
+      "description": "Process restart without modifying config file (persistent closed state)",
+      "httpStatus": 403,
+      "expectedStatus": 403,
+      "result": "PASS"
+    }
+  ],
+  "overallResult": "PASS"
+}

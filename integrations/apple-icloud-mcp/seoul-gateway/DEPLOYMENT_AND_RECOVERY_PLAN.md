@@ -66,13 +66,13 @@
    ```
 
 ### 步骤 2：启用 MacServer 临时业务访问开关
-1. 由用户在 MacServer 图形环境更新 `bridge.env`（保持受限权限 `0600`）：
+1. 由用户在 MacServer 图形环境更新 `bridge.env`（保持受限权限 `0600`，仅修改目标授权键，完整保留 Token 与绑定配置）：
    ```bash
-   EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true
+   sed -i '' 's/^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=.*/EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true/' ~/.config/muse-macserver/bridge.env
    ```
 2. 重启守护进程以加载生产授权：
    ```bash
-   launchctl kickstart -k gui/501/com.muse.macserver-eventkit
+   launchctl kickstart -k gui/$(id -u)/com.muse.macserver-eventkit
    ```
 
 ### 步骤 3：注入 Seoul MCP 网关配置并重启服务
@@ -107,25 +107,21 @@
 #### 步骤 A：恢复 Seoul MCP 容器与配置
 1. 还原环境配置中的提醒事项开关：
    ```bash
-   # 关闭 Reminders 读取开关
-   sed -i 's/ALLOW_REMINDERS_READ_1=true/ALLOW_REMINDERS_READ_1=false/' /opt/insurance-carddav-mcp/config/env
+   cd /opt/insurance-carddav-mcp
+   sed -i 's/^ALLOW_REMINDERS_READ_1=.*/ALLOW_REMINDERS_READ_1=false/' secrets.env
    ```
-2. 若涉及源码改动，检出基线提交：
+2. 若涉及镜像或源码改动，从全量预备份镜像 Tag 恢复基线服务：
    ```bash
-   cd /opt/insurance-carddav-mcp/source
-   git checkout 92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7
-   ```
-3. 重启容器恢复服务：
-   ```bash
-   docker restart insurance-carddav-mcp-carddav-1
+   docker tag insurance-carddav-mcp-carddav:backup-pre-ag03-[TIMESTAMP] insurance-carddav-mcp-carddav:latest
+   docker compose up -d --no-build carddav
    ```
    **恢复验证**：验证 Contacts 原生分组及 Calendar 日历功能完全恢复正常。
 
 #### 步骤 B：关闭 MacServer 业务激活开关
-在 MacServer 上恢复安全锁定状态：
+在 MacServer 上恢复安全锁定状态（仅修改目标业务开关，严格保留 Token、白名单与来源绑定）：
 ```bash
-launchctl setenv EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED false
-launchctl kickstart -k gui/501/com.muse.macserver-eventkit
+sed -i '' 's/^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=.*/EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false/' ~/.config/muse-macserver/bridge.env
+launchctl kickstart -k gui/$(id -u)/com.muse.macserver-eventkit
 ```
 验证业务接口恢复返回 HTTP 403 `PERMISSION_DENIED`。
 
