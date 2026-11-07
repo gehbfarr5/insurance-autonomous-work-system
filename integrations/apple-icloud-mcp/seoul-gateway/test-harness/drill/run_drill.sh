@@ -3,6 +3,11 @@ set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SEMAPHORE_DIR="$(cd "$DIR/../.." && pwd)"
+
+if [ -d "/opt/englishpod-runner/_work/_tool/node/22.23.3/x64/bin" ]; then
+  export PATH="/opt/englishpod-runner/_work/_tool/node/22.23.3/x64/bin:$PATH"
+fi
+
 DRILL_ROOT="/tmp/ag03-delivery-drill"
 TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
 BACKUP_DIR="$DRILL_ROOT/backup"
