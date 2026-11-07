@@ -5,3 +5,8 @@ __pycache__/
 *.pem
 state/
 node_modules/
+.build/
+.venv/
+.pytest_cache/
+*.swp
+.DS_Store

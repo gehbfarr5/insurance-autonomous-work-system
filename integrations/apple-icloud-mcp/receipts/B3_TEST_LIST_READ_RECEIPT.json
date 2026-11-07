@@ -1,0 +1,45 @@
+{
+  "receipt_type": "B3_TEST_LIST_READ_RECEIPT",
+  "task": "AG-02",
+  "component": "macserver-eventkit-readonly",
+  "executed_at": "2026-11-07T14:43:46Z",
+  "pre_flight_identity_check": {
+    "status": "PASSED",
+    "bound_list_id_masked": "9D9A****03F3",
+    "source_title": "iCloud",
+    "source_type": "calDAV",
+    "identity_and_binding_consistency": "100% matched prior metadata before execution"
+  },
+  "read_execution": {
+    "method": "GET",
+    "endpoint": "http://127.0.0.1:18765/reminders/lists/9D9A****03F3/items",
+    "other_lists_read": 0,
+    "write_operations_performed": 0,
+    "test_data_created": 0
+  },
+  "result_verification": {
+    "http_status": 200,
+    "source_verification": "PASSED (SourceVerifier accepted bound iCloud source)",
+    "response_structure": "Valid JSON Array",
+    "item_count": 0,
+    "is_empty": true,
+    "fidelity_statement": "The bound test list contains 0 items (empty). Empty status recorded accurately; field-level content fidelity is NOT claimed based on an empty list.",
+    "content_exposure_audit": "0 titles, 0 notes, 0 object identifiers exposed"
+  },
+  "post_execution_safety_restoration": {
+    "activation_switch_closed": true,
+    "production_authorized_value": "false",
+    "service_restarted": true,
+    "business_endpoints_403_reverified": {
+      "list_metadata_status": 403,
+      "list_metadata_code": "PERMISSION_DENIED",
+      "bound_items_status": 403,
+      "bound_items_code": "PERMISSION_DENIED"
+    }
+  },
+  "boundaries_maintained": {
+    "seoul_modified": false,
+    "pr_merged": false,
+    "m5_retired": false
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "receipt_type": "B1_INSTALL_RECEIPT",
+  "task": "AG-02",
+  "component": "macserver-eventkit-readonly",
+  "installed_at": "2026-11-07T13:56:36Z",
+  "target_environment": {
+    "host": "MacServer (macserver-ts)",
+    "os": "macOS 15.7.7 (BuildVersion 24G720, Darwin 24.6.0)",
+    "architecture": "x86_64",
+    "gui_session_domain": "gui/501 (Aqua)",
+    "port": 18765,
+    "listener_bind": "127.0.0.1:18765"
+  },
+  "source_control": {
+    "commit_sha": "97571d45e48b92608af122a628d74d3a744b82ec",
+    "branch": "feat/macserver-eventkit-readonly",
+    "pr": 21
+  },
+  "package_digests": {
+    "tarball_sha256": "6b7072ff60aac00122e8900bdbb7af8c16973637cd85a37f851fdedbc18134f7",
+    "binary_sha256": "7a507e8442a0c6ffecf0b67599ade980b71638d8d4cad0b418281907ff3ed2e9",
+    "binary_cdhash": "8f54f9a3571f7b4568c12b659d9e7ad6ae668ff9",
+    "hardened_runtime": "0x10002(adhoc,runtime)",
+    "re_signing_on_target": false
+  },
+  "file_system_artifacts": {
+    "binary": {
+      "path": "/Users/shared/bin/EventKitBridgeServer",
+      "permissions": "0755",
+      "owner": "jin:wheel"
+    },
+    "plist": {
+      "path": "/Users/jin/Library/LaunchAgents/com.muse.macserver-eventkit.plist",
+      "permissions": "0644",
+      "owner": "jin:staff"
+    },
+    "credential_store": {
+      "directory": "/Users/jin/.config/muse-macserver",
+      "directory_permissions": "0700",
+      "file": "/Users/jin/.config/muse-macserver/bridge.env",
+      "file_permissions": "0600",
+      "token_length_bytes": 32,
+      "owner": "jin:staff"
+    },
+    "state_receipt": {
+      "file": "/Users/jin/.config/muse-macserver/state/install_receipt.json",
+      "permissions": "0600",
+      "owner": "jin:staff"
+    }
+  },
+  "service_lifecycle_verification": {
+    "launchd_service": "gui/501/com.muse.macserver-eventkit",
+    "launchd_state": "running",
+    "health_check_status": 200,
+    "health_check_payload": {
+      "status": "ok",
+      "mode": "readonly",
+      "store": "production",
+      "active_requests": 0,
+      "active_store_operations": 0,
+      "max_store_operations": 10,
+      "generation": 0
+    },
+    "unauthorized_rejection_check": {
+      "status": 403,
+      "code": "PERMISSION_DENIED",
+      "mode": "PRODUCTION_AUTHORIZED=false"
+    },
+    "teardown_and_restart_verified": true
+  }
+}

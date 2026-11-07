@@ -1,0 +1,73 @@
+{
+  "receipt_type": "B2_TCC_AND_METADATA_RECEIPT",
+  "task": "AG-02",
+  "component": "macserver-eventkit-readonly",
+  "tcc_authorization": {
+    "subsystem": "com.apple.reminders",
+    "domain": "gui/501 (Aqua)",
+    "request_mechanism": "/Users/shared/bin/EventKitBridgeServer --request-authorization",
+    "user_action": "System authorization dialog handled and granted by user",
+    "status_after_grant": "authorized",
+    "authorized_boolean": true,
+    "tcc_reset_executed": false
+  },
+  "icloud_account_sync": {
+    "reminders_sync_enabled_by_user": true,
+    "database_sync_verified": true,
+    "source_type": "calDAV",
+    "source_name": "iCloud"
+  },
+  "metadata_query_probe": {
+    "endpoint": "GET http://127.0.0.1:18765/reminders/lists",
+    "http_status": 200,
+    "probe_executed_at": "2026-11-07T14:37:11Z",
+    "reminder_items_read": 0,
+    "reminder_counts_exposed": 0,
+    "write_operations_attempted": 0,
+    "lists_discovered_count": 3,
+    "sources_discovered": [
+      {
+        "source_name": "iCloud",
+        "source_type": "calDAV",
+        "masked_list_id": "B9F9****439C",
+        "masked_title": "提****️"
+      },
+      {
+        "source_name": "iCloud",
+        "source_type": "calDAV",
+        "masked_list_id": "2488****52EC",
+        "masked_title": "日****购"
+      },
+      {
+        "source_name": "iCloud",
+        "source_type": "calDAV",
+        "masked_list_id": "9D9A****03F3",
+        "masked_title": "M****试",
+        "is_dedicated_test_list": true
+      }
+    ],
+    "icloud_sources_count": 3,
+    "bound_target_test_list": {
+      "masked_title": "M****试",
+      "masked_list_id": "9D9A****03F3",
+      "source_name": "iCloud",
+      "source_type": "calDAV"
+    }
+  },
+  "post_probe_safety_closure": {
+    "activation_switch_closed": true,
+    "production_authorized_value": "false",
+    "service_restarted": true,
+    "unauthorized_rejection_reverified": {
+      "status": 403,
+      "code": "PERMISSION_DENIED"
+    }
+  },
+  "local_storage": {
+    "raw_metadata_path": "/Users/jin/.config/muse-macserver/real_lists_metadata.json",
+    "bound_config_path": "/Users/jin/.config/muse-macserver/bridge.env",
+    "permissions": "0600",
+    "owner": "jin:staff",
+    "public_reporting_desensitized": true
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "manifest_version": "1.1.0",
+  "component": "macserver-eventkit-readonly",
+  "task": "AG-02",
+  "created_at": "2026-11-07T16:21:00+08:00",
+  "target_platform": {
+    "os": "macOS 15.7.7 (Sequoia, build 24G720, Darwin 24.6.0)",
+    "architecture": "x86_64",
+    "gui_session_domain": "gui/501 (Aqua)",
+    "port": 18765,
+    "host": "127.0.0.1"
+  },
+  "binary": {
+    "name": "EventKitBridgeServer",
+    "relative_path": "bin/EventKitBridgeServer",
+    "format": "Mach-O thin (x86_64)",
+    "sha256": "7a507e8442a0c6ffecf0b67599ade980b71638d8d4cad0b418281907ff3ed2e9",
+    "code_signature": {
+      "identifier": "com.muse.macserver-eventkit",
+      "cdhash": "8f54f9a3571f7b4568c12b659d9e7ad6ae668ff9",
+      "flags": "0x10002(adhoc,runtime)",
+      "runtime_version": "13.0.0"
+    }
+  },
+  "storage_and_permissions": {
+    "credential_storage": {
+      "directory": "$HOME/.config/muse-macserver",
+      "directory_permissions": "0700",
+      "file": "$HOME/.config/muse-macserver/bridge.env",
+      "file_permissions": "0600",
+      "owner": "current_user:staff"
+    },
+    "binary_target": {
+      "path": "/Users/shared/bin/EventKitBridgeServer",
+      "permissions": "0755",
+      "owner": "current_user:staff"
+    },
+    "plist_target": {
+      "path": "$HOME/Library/LaunchAgents/com.muse.macserver-eventkit.plist",
+      "permissions": "0644",
+      "owner": "current_user:staff"
+    },
+    "log_directory": {
+      "path": "/Users/shared/log",
+      "permissions": "0755",
+      "owner": "current_user:staff"
+    }
+  },
+  "security_boundaries": {
+    "read_methods_only": true,
+    "real_apple_calls": 0,
+    "production_changes": 0,
+    "credential_rotations": 0,
+    "live_store_startup": "GATED_OFF (pending user approval)",
+    "re_signing_on_target": false
+  }
+}
