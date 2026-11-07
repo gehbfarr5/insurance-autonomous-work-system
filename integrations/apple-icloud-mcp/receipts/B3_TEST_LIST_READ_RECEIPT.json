@@ -12,7 +12,7 @@
   },
   "read_execution": {
     "method": "GET",
-    "endpoint": "http://127.0.0.1:18765/reminders/lists/9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3/items",
+    "endpoint": "http://127.0.0.1:18765/reminders/lists/9D9A****03F3/items",
     "other_lists_read": 0,
     "write_operations_performed": 0,
     "test_data_created": 0
