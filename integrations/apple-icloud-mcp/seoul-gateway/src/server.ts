@@ -1,12 +1,12 @@
 /**
  * server.ts
- * Real MCP HTTP Gateway Server for Seoul -> MacServer Reminders Readonly Gateway.
+ * [TEST HARNESS ONLY - NOT FOR PRODUCTION ENTRYPOINT]
  * 
- * Provides:
- * - Real /health endpoint answering HTTP 200 OK
- * - Real MCP Streamable HTTP / SSE endpoints (/sse and /message)
- * - Real ToolRegistrar assembly via registerReminderTools (Pinned commit 92bd313)
- * - Strict client-side write rejection (PERMISSION_DENIED)
+ * 警告：本文件仅作为独立协议级回归与离线验证的本地测试桩（Test Harness），
+ * 严格禁止作为生产候选或交付镜像的入口服务！
+ * 生产候选必须通过现有 Seoul MCP 的真实服务装配 (dist/bin/http.js)，
+ * 完整复用真实 OAuth 2.1、会话校验、账户权限体系与统一 /mcp 入口，
+ * 保留 Contacts、Groups、Calendar 原有装配。
  */
 
 import http from 'node:http';

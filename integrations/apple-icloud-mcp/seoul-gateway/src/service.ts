@@ -16,6 +16,7 @@
 
 import {
   AppError,
+  type AccountConfigLike,
   type BoundListConfig,
   type ListRemindersParams,
   type ListRemindersResult,
@@ -56,10 +57,19 @@ function parseDueBound(label: string, value?: string): Date | undefined {
 export interface MacServerReminderServiceDeps {
   transport: EventKitReadonlyTransport;
   config: MacServerGatewayConfig;
+  account?: AccountConfigLike;
 }
 
 export function createMacServerReminderService(deps: MacServerReminderServiceDeps): ReminderService {
-  const { transport, config } = deps;
+  const { transport, config, account } = deps;
+
+  const requireRead = (): void => {
+    if (account && account.capabilities && account.capabilities.remindersRead === false) {
+      throw new AppError('PERMISSION_DENIED', '该账号的提醒事项读取权限未开启', {
+        hint: 'ALLOW_REMINDERS_READ',
+      });
+    }
+  };
 
   // Build lookup index of explicit list-source bindings
   const bindingIndex = new Map<string, BoundListConfig>();
@@ -120,6 +130,7 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
      * Maps to standard ReminderListSummary with writable: false.
      */
     async listLists(): Promise<ReminderListSummary[]> {
+      requireRead();
       const lists = await fetchAllowedICloudLists();
       return lists.map((list) => {
         const summary: ReminderListSummary = {
@@ -139,6 +150,7 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
      * Strictly fails on errors, never masquerading as empty list.
      */
     async list(params: ListRemindersParams): Promise<ListRemindersResult> {
+      requireRead();
       const limit = parseLimit(params.limit);
       const dueAfter = parseDueBound('due_after', params.due_after);
       const dueBefore = parseDueBound('due_before', params.due_before);

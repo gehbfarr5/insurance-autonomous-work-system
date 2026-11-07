@@ -152,6 +152,16 @@ export interface ReminderService {
   remove(reminderId: string, options?: UpdateOptions): Promise<{ deleted: true }>;
 }
 
+export interface AccountConfigLike {
+  id: string;
+  label?: string;
+  capabilities: {
+    remindersRead?: boolean;
+    remindersWrite?: boolean;
+    [key: string]: unknown;
+  };
+}
+
 // ==========================================
 // Gateway Configuration Types
 // ==========================================

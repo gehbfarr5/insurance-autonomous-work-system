@@ -1,0 +1,83 @@
+diff --git a/src/modules/session/tools.ts b/src/modules/session/tools.ts
+index 1f3f034..53322f2 100644
+--- a/src/modules/session/tools.ts
++++ b/src/modules/session/tools.ts
+@@ -3,6 +3,7 @@ import { findAccount, type AccountConfig, type AppConfig } from '../../core/conf
+ import { AppError } from '../../core/errors.js';
+ import { accessKeyIdFrom, tokenFamilyIdFrom } from '../../core/session.js';
+ import { wrapTool } from '../../server/wrap.js';
++import { isMacServerGatewayConfigured } from '../reminders/gateway/index.js';
+ import type { ToolDeps, ToolRegistrar } from '../../server/types.js';
+ 
+ /**
+@@ -118,10 +119,12 @@ export function registerSessionTools(server: ToolRegistrar, deps: SessionToolDep
+       // 一个都用不了。CardDAV 则是另一个方向的同一个毛病：从来没被验证过。
+       const caps = account.capabilities;
+       const needsImap = caps.mailRead || caps.mailWrite;
+-      const needsCalDav = caps.calendarRead || caps.calendarWrite || caps.remindersRead || caps.remindersWrite;
++      const isGateway = isMacServerGatewayConfigured();
++      const needsCalDav = caps.calendarRead || caps.calendarWrite || (!isGateway && (caps.remindersRead || caps.remindersWrite));
+       const needsCardDav = caps.contactsRead || caps.contactsWrite;
++      const hasAnyCap = needsImap || needsCalDav || needsCardDav || (isGateway && (caps.remindersRead || caps.remindersWrite));
+ 
+-      if (!needsImap && !needsCalDav && !needsCardDav) {
++      if (!hasAnyCap) {
+         // 信封账号：变量在用户自己的 .env 里，「重启服务」既做不到也没用（与 capabilityHint 同一口径）；
+         // 消息也不带 label——它默认就是邮箱，而 wrapTool 会把这条消息记进日志。
+         if (account.origin === 'envelope') {
+diff --git a/src/server/createServer.ts b/src/server/createServer.ts
+index 99d25c8..b403771 100644
+--- a/src/server/createServer.ts
++++ b/src/server/createServer.ts
+@@ -8,7 +8,11 @@ import { registerMailTools } from '../modules/mail/tools.js';
+ import { registerCalendarTools } from '../modules/calendar/tools.js';
+ import { registerReminderTools } from '../modules/reminders/tools.js';
+ import { registerContactTools } from '../modules/contacts/tools.js';
++import { registerGroupTools } from '../modules/contacts/group-tools.js';
++import { createGroupsService } from '../modules/contacts/groups.js';
+ import { registerSessionTools, type RemoteLoginDeps } from '../modules/session/tools.js';
++import { getGatewayReminderService } from '../modules/reminders/gateway/index.js';
++import type { ReminderService } from '../modules/reminders/service.js';
+ import type { AppConfig } from '../core/config.js';
+ import type { Logger } from '../core/logger.js';
+ import type { Session, SessionStore } from '../core/session.js';
+@@ -22,6 +26,7 @@ export interface ServerDeps {
+   registerAllModules?: boolean;
+   /** 远程入口的登录规则（env 账号开关、信封）；stdio / CLI 不传，会话工具与以前逐字相同。 */
+   remote?: RemoteLoginDeps;
++  reminderFor?: (session: Session) => ReminderService;
+ }
+ 
+ export function registerAllTools(server: ToolRegistrar, deps: ServerDeps): void {
+@@ -68,8 +73,7 @@ export function registerAllTools(server: ToolRegistrar, deps: ServerDeps): void
+     registerReminderTools(server, {
+       sessions,
+       logger,
+-      reminderFor: (session: Session) =>
+-        createReminderService({ account: session.account, caldav: session.providers.caldav }),
++      reminderFor: deps.reminderFor ?? ((session: Session) => getGatewayReminderService(session)),
+     });
+   }
+ 
+@@ -86,6 +90,22 @@ export function registerAllTools(server: ToolRegistrar, deps: ServerDeps): void
+         });
+       },
+     });
++    registerGroupTools(server, {
++      sessions,
++      logger,
++      groupsFor: (session: Session) => createGroupsService({
++        account: session.account,
++        carddav: session.providers.carddav,
++      }),
++      contactFor: (session: Session) => {
++        session.contactsCache ??= createContactsCache({ carddav: session.providers.carddav, logger });
++        return createContactService({
++          account: session.account,
++          carddav: session.providers.carddav,
++          cache: session.contactsCache,
++        });
++      },
++    });
+   }
+ }
