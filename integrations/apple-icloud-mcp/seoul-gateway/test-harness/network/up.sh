@@ -60,6 +60,7 @@ echo "Starting Host SSH Tunnel bound to Docker Gateway ($GATEWAY_IP:18765)..."
 ssh -i test_id_ed25519 \
   -o StrictHostKeyChecking=yes \
   -o UserKnownHostsFile=known_hosts \
+  -o GatewayPorts=yes \
   -p 2222 \
   -N \
   -L "$GATEWAY_IP:18765:127.0.0.1:18765" \

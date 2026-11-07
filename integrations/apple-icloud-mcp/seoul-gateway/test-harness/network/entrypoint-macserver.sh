@@ -19,10 +19,6 @@ PrintMotd no
 Subsystem sftp internal-sftp
 EOF
 
-if [ -f /root/.ssh/authorized_keys ]; then
-  chmod 600 /root/.ssh/authorized_keys
-fi
-
 # Start sshd
 /usr/sbin/sshd -D -e &
 SSHD_PID=$!
