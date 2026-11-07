@@ -1,153 +1,97 @@
-# MacServer EventKit Readonly Candidate — Acceptance Request
+# MacServer EventKit Readonly Candidate — Formal Acceptance Protocol
 <!-- AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07 -->
 
-## Summary
+## 1. Summary & Scope
 
-This document is the formal acceptance request for the MacServer EventKit Read-Only Candidate
-(AG-01-B). It requests MUSE independent verification and human authorization to proceed
-with the next phase (production activation consideration).
+This document specifies the formal acceptance request and protocol for the **MacServer EventKit Read-Only Candidate**.
+It defines:
+1. Candidate build digests and target architecture (Intel MacServer x86_64 and M5 Pro arm64).
+2. Human review and installation approval criteria.
+3. MUSE independent verification task routed strictly through the **Seoul MCP** security gateway.
+4. Subsequent dependency tracking for the Seoul MCP Reminders Gateway adapter.
 
 ---
 
-## Delivery Identification
+## 2. Delivery & Build Verification
 
 | Field | Value |
 |-------|-------|
-| Task ID | AG-01-B |
-| Branch | `feat/macserver-eventkit-readonly` |
-| Base branch | `reconcile/icloud-source-baseline` |
-| Requesting agent | AG-01 Engineering Agent |
-| Date | 2026-11-07 |
+| Task ID | AG-01 (Phase B) |
+| Feature Branch | `feat/macserver-eventkit-readonly` |
+| Base Branch | `reconcile/icloud-source-baseline` (Stacked PR #21) |
+| arm64 Binary SHA-256 | `96741acbc054cbdef75431bbf9a40f52444ffe10304b95cfdbfecd877d02e119` |
+| x86_64 Binary SHA-256 (Intel MacServer) | `0c507fe946be20e23e2f30312ef324e80c0a35b2713fcc64c49401c89e50b872` |
+| Isolation Test Suite | **67 passed, 0 failed** (including 9 real loopback HTTP integration tests) |
+| Apple Live Writes | **0** (strictly read-only protocol, write methods return 405) |
+| Production Changes | **0** (no service restarted, no deployment applied) |
 
 ---
 
-## Commits (feat branch, in order)
+## 3. Review Fixes Confirmed
 
-1. `feat(eventkit): add EventKit protocol and type definitions [FIX-R4A-01 FIX-R4A-02]`
-   - Files: `Protocol/EventKitProtocol.swift`, `Protocol/RemindersList.swift`,
-     `Protocol/ReminderItem.swift`, `Protocol/EventKitBridgeError.swift`
-
-2. `feat(eventkit): add FakeEventKitStore and security layer`
-   - Files: `Implementation/FakeEventKitStore.swift`, `Implementation/ProductionEventKitStore.swift`,
-     `Security/AllowlistValidator.swift`, `Security/SourceVerifier.swift`,
-     `Security/RequestLimiter.swift`, `Security/AuthValidator.swift`
-
-3. `feat(eventkit): add bridge server and config templates`
-   - Files: `Bridge/EventKitBridgeServer.swift`, `Bridge/RequestHandler.swift`,
-     `Config/BridgeConfig.swift`, `Config/SessionConfig.swift`
-
-4. `test(eventkit): add full isolation test suite`
-   - Files: `Tests/EventKitBridgeTests/AllowlistValidatorTests.swift`,
-     `SourceVerifierTests.swift`, `MetadataOnlyTests.swift`,
-     `WriteIsolationTests.swift`, `ErrorHandlingTests.swift`, `AuthTests.swift`
-
-5. `docs(eventkit): add build evidence and acceptance request`
-   - Files: `BUILD_EVIDENCE.md`, `BUILD.md`, `SESSION_TEMPLATE.md`,
-     `m5-retirement/RETIREMENT_CHECKLIST.md`, this file
+| Item | Problem Addressed | Offline Verification Evidence |
+|------|-------------------|--------------------------------|
+| **FIX-R4A-01** | Metadata queries must never query reminder counts or items | `MetadataOnlyTests` + `HttpIntegrationTests.testRealHttpMetadataOnlyNeverQueriesReminderContent` (store query count = 0) |
+| **FIX-R4A-02** | Content query must enforce iCloud source identity & type | `SourceVerifierTests` (calDAV type, source UUID & list binding check) + `HttpIntegrationTests.testRealHttpContentQueryEnforcesICloudSource` |
+| **Write Isolation** | Non-GET HTTP methods must be rejected with 0 downstream calls | `WriteIsolationTests` + `HttpIntegrationTests.testRealHttpWriteOperationsRejectedWith405` (POST/PUT/DELETE/PATCH -> 405) |
+| **Listener & Shutdown** | Real HTTP loopback server with graceful stop/restart | `HttpIntegrationTests.testRealHttpGracefulStopAndRecovery` (verified socket lifecycle) |
 
 ---
 
-## Permissions Requested
+## 4. MUSE Independent Acceptance Protocol (Via Seoul MCP)
 
-| Permission | Scope | Required For |
-|-----------|-------|-------------|
-| Merge `feat/macserver-eventkit-readonly` → `main` | This PR only | Human reviewer |
-| MUSE independent verification run | EventKit candidate functionality | MUSE verifier |
-| M5 retirement authorization | Each Group A–E item | Named authorizers (see RETIREMENT_CHECKLIST.md) |
-| Production activation (future) | `ProductionEventKitStore` only | Requires separate authorization after MUSE sign-off |
+### Architecture Contract
+- **Seoul Host**: Serves as the unified entry point, OAuth 2.1 layer, and write gatekeeper.
+- **MacServer EventKit**: Serves as the resident read-only helper daemon for modern Reminders lists.
+- **MUSE Client**: Must be triggered independently by the user in the MUSE client UI. Antigravity direct terminal or SSH calls **cannot substitute** for MUSE acceptance.
 
----
+### Dependency Gate: Seoul Gateway Adapter
+> [!IMPORTANT]
+> If Seoul MCP does not yet have the updated gateway adapter routing Reminders requests to MacServer EventKit, the MUSE end-to-end acceptance is marked **`PENDING_SEOUL_GATEWAY_ADAPTER`**. Acceptance must wait until the Seoul MCP router is deployed under a separate maintenance window.
 
-## Review Fixes Addressed
-
-| Fix ID | Description | Evidence |
-|--------|-------------|---------|
-| FIX-R4A-01 | Metadata-only paths never access reminder content or counts | `MetadataOnlyTests` — 8 tests, 0 failures; `RemindersList` type has no count field |
-| FIX-R4A-02 | Content reads verify iCloud source before returning data | `SourceVerifierTests` — 10 tests; `FakeEventKitStore.fetchReminders` calls source check before content access |
-
----
-
-## Build Evidence Summary
-
-| Item | Result |
-|------|--------|
-| `swift build` exit code | 0 ✅ |
-| `swift test` exit code | 0 ✅ |
-| Total tests | 56 |
-| Passed | 56 |
-| Failed | 0 |
-| Binary SHA-256 | `a0bc6f0f4e6ef2cc1ab8c873e0a5538bac1861400bc726a84bd44b03dd5b35ee` |
-
-See `BUILD_EVIDENCE.md` for complete output.
-
----
-
-## Test Matrix (All Acceptance Criteria)
-
-| Criterion | Test Suite | Result |
-|-----------|-----------|--------|
-| metadata_only: Fake asserts content/count queries = 0 | MetadataOnlyTests | ✅ PASS |
-| Invalid authentication rejected | AuthTests | ✅ PASS |
-| Non-allowlisted list rejected | AllowlistValidatorTests, AuthTests | ✅ PASS |
-| Non-iCloud source rejected (FIX-R4A-02) | SourceVerifierTests, AuthTests | ✅ PASS |
-| All write requests rejected | WriteIsolationTests | ✅ PASS |
-| Downstream write calls = 0 | WriteIsolationTests | ✅ PASS |
-| Timeout → explicit failure | ErrorHandlingTests | ✅ PASS |
-| Permission revocation → explicit failure | ErrorHandlingTests | ✅ PASS |
-| Missing object → explicit failure | ErrorHandlingTests | ✅ PASS |
-| Desensitized error messages | ErrorHandlingTests | ✅ PASS |
-
----
-
-## Desensitization Confirmation
-
-- ✅ No Apple ID, iCloud credential, or real account data in any file.
-- ✅ All test data uses synthetic identifiers and `@example.invalid` emails.
-- ✅ `ProductionEventKitStore` compiles but is not activated (throws `permissionDenied`).
-- ✅ All error messages desensitized (no real IDs in `localizedDescription`).
-- ✅ `BridgeConfig.productionTemplate` contains only `<PLACEHOLDER>` values.
-
----
-
-## Items Not Run (Deferred)
-
-| Item | Reason | Required Authorization |
-|------|--------|----------------------|
-| `ProductionEventKitStore` live activation | TCC permission not granted | Human + MUSE |
-| M5 Retirement (Groups A–E) | RETIREMENT_PENDING_AUTHORIZATION | Named authorizers per RETIREMENT_CHECKLIST.md |
-| Production HTTP server activation | Stub only in this candidate | Separate authorization required |
-
----
-
-## MUSE Independent Verification Task
-
-**Task format for MUSE verifier:**
-
+### User Prompt for Independent MUSE Acceptance (Read-Only)
+```text
+请通过已连接的 Seoul MCP 实例执行只读提醒事项验收：
+1. 列表元数据核验：调用 reminders_lists，验证返回的列表中仅包含列表 ID、名称和颜色，绝不包含任何未完成数量或提醒内容。
+2. 白名单读取核验：读取指定白名单测试列表中的待办事项，验证条目结构与 iCloud 来源校验一致。
+（注意：本轮为纯只读验收，严禁发送任何新建、修改或删除指令）
 ```
-MUSE_VERIFICATION_TASK: AG-01-B
-Branch: feat/macserver-eventkit-readonly
-SHA: [to be filled after final commit]
 
-Verify:
-1. FIX-R4A-01: fetchListsMetadata() does not increment contentAccessCount.
-   Test: MetadataOnlyTests.testListsMetadataDoesNotAccessContent
-   
-2. FIX-R4A-02: fetchReminders(listID:) with Local source throws sourceNotAllowed.
-   Test: SourceVerifierTests.testLocalSourceRejected + MetadataOnlyTests.testLocalListAppearsInMetadataButContentRejected
-   
-3. Write isolation: POST/PUT/PATCH/DELETE all return writeOperationRejected.
-   Test: WriteIsolationTests (all 8 tests)
-   
-4. Auth: Unknown token returns authenticationFailed; scope mismatch returns unauthorizedScope.
-   Test: AuthTests.testInvalidTokenThrows, AuthTests.testValidTokenMissingScopeThrows
-   
-5. ProductionEventKitStore is a stub: fetchListsMetadata() throws permissionDenied.
-   Test: ErrorHandlingTests.testProductionStoreStubThrowsPermissionDenied
-
-Expected result: 56 tests pass, 0 fail.
-Command: swift test (from integrations/apple-icloud-mcp/macserver-eventkit/)
+### Expected Structured Verification Receipt
+```json
+{
+  "task": "MUSE_EVENTKIT_READONLY_ACCEPTANCE",
+  "gateway": "SEOUL_MCP",
+  "backend": "MACSERVER_EVENTKIT",
+  "metadata_only_verified": {
+    "status": "PASS",
+    "reminder_counts_exposed": false,
+    "items_exposed": false
+  },
+  "source_integrity_verified": {
+    "status": "PASS",
+    "source_type": "calDAV",
+    "source_title": "iCloud"
+  },
+  "downstream_writes": 0,
+  "timestamp": "<ISO-8601>"
+}
 ```
 
 ---
 
-*Acceptance request prepared by AG-01 Engineering Agent | 2026-11-07*
+## 5. MacServer Sandboxed Installation Protocol (When Authorized)
+
+When Gate B is granted by human approval:
+1. Target Host: Intel MacServer (x86_64), logged-in user graphical session.
+2. Deploy Binary: Copy x86_64 binary (`0c507fe94...`) to `~/bin/EventKitBridgeServer`.
+3. Configure `com.muse.macserver-eventkit.plist` in `~/Library/LaunchAgents/` with `127.0.0.1` and explicit allowlist.
+4. Enable LaunchAgent:
+   ```bash
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
+   ```
+5. Rollback:
+   ```bash
+   launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
+   rm -f ~/bin/EventKitBridgeServer
+   ```
