@@ -220,18 +220,23 @@ docker rm "$DRILL_CONTAINER" >/dev/null 2>&1 || true
 ROLLBACK_CONTAINER="ag03-drill-rollback-verify"
 docker rm -f "$ROLLBACK_CONTAINER" >/dev/null 2>&1 || true
 
+SYN_KEY=$(openssl rand -base64 32)
+SYN_HASH='scrypt$32768$8$1$4r0qRHoupx4UFmvMRZPJ5A$yzTbwOxDvF5-DlWF91dwqS-36lowtskUOp0omPmqUgM'
+
 docker run -d \
   --name "$ROLLBACK_CONTAINER" \
   -p 127.0.0.1:17798:17733 \
   -v "$DATA_DIR:/app/data" \
   -e PORT=17733 \
+  -e PUBLIC_URL="http://127.0.0.1:17798" \
+  -e ADMIN_PASSWORD_HASH="$SYN_HASH" \
   -e TOKEN_STORE_PATH=/app/data/tokens.json.enc \
-  -e TOKEN_ENCRYPTION_KEY="c3ludGhldGljLWVuY3J5cHRpb24ta2V5LTMyLWJ5dGVzISE=" \
+  -e TOKEN_ENCRYPTION_KEY="$SYN_KEY" \
   -e TRUST_PROXY=true \
   "$BACKUP_IMAGE_TAG"
 
 # Wait for rollback container response
-sleep 2
+sleep 3
 ROLLBACK_STATUS=$(docker inspect "$ROLLBACK_CONTAINER" --format '{{.State.Status}}')
 RESTORED_IMAGE_ID=$(docker inspect "$ROLLBACK_CONTAINER" --format '{{.Image}}')
 echo "Rollback Container Status: $ROLLBACK_STATUS"
