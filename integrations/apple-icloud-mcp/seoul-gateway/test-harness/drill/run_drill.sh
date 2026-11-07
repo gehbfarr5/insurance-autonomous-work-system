@@ -153,6 +153,9 @@ docker run -d \
   -e TRUST_PROXY=true \
   -e ALLOW_REMINDERS_READ_1=true \
   -e ALLOW_REMINDERS_WRITE_1=false \
+  -e MACSERVER_EVENTKIT_ENDPOINT="http://$DOCKER_GW_IP:18765" \
+  -e MACSERVER_EVENTKIT_TOKEN="$TOKEN" \
+  -e MACSERVER_EVENTKIT_ALLOWED_LISTS='[{"listId":"9D9A****03F3","expectedSourceId":"src-icloud-test-01"}]' \
   -e EVENTKIT_GATEWAY_ENDPOINT="http://$DOCKER_GW_IP:18765" \
   -e EVENTKIT_BRIDGE_AUTH_TOKEN="$TOKEN" \
   -e EVENTKIT_ALLOWED_LISTS='[{"listId":"9D9A****03F3","expectedSourceId":"src-icloud-test-01"}]' \

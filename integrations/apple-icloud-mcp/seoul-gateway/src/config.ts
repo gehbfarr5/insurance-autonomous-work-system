@@ -138,22 +138,24 @@ export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
  * or colon-delimited string: 'listId:sourceId,listId2:sourceId2'
  */
 export function loadGatewayConfigFromEnv(env: Record<string, string | undefined> = process.env): MacServerGatewayConfig {
-  const endpoint = env.MACSERVER_EVENTKIT_ENDPOINT || 'http://127.0.0.1:18765';
-  const token = env.MACSERVER_EVENTKIT_TOKEN || '';
-  const timeoutMs = env.MACSERVER_EVENTKIT_TIMEOUT_MS ? Number(env.MACSERVER_EVENTKIT_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
-  const maxResponseSizeBytes = env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE
-    ? Number(env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE)
+  const endpoint = env.MACSERVER_EVENTKIT_ENDPOINT || env.EVENTKIT_GATEWAY_ENDPOINT || env.EVENTKIT_BRIDGE_ENDPOINT || 'http://127.0.0.1:18765';
+  const token = env.MACSERVER_EVENTKIT_TOKEN || env.EVENTKIT_BRIDGE_AUTH_TOKEN || env.EVENTKIT_BRIDGE_TOKEN || '';
+  const timeoutMs = env.MACSERVER_EVENTKIT_TIMEOUT_MS || env.EVENTKIT_BRIDGE_TIMEOUT_MS
+    ? Number(env.MACSERVER_EVENTKIT_TIMEOUT_MS || env.EVENTKIT_BRIDGE_TIMEOUT_MS)
+    : DEFAULT_TIMEOUT_MS;
+  const maxResponseSizeBytes = (env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE || env.EVENTKIT_BRIDGE_MAX_RESPONSE_SIZE)
+    ? Number(env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE || env.EVENTKIT_BRIDGE_MAX_RESPONSE_SIZE)
     : DEFAULT_MAX_RESPONSE_SIZE;
 
   let allowedLists: BoundListConfig[] = [];
-  const rawLists = env.MACSERVER_EVENTKIT_ALLOWED_LISTS;
+  const rawLists = env.MACSERVER_EVENTKIT_ALLOWED_LISTS || env.EVENTKIT_ALLOWED_LISTS;
   if (rawLists && rawLists.trim()) {
     const trimmed = rawLists.trim();
     if (trimmed.startsWith('[')) {
       try {
         allowedLists = JSON.parse(trimmed);
       } catch (cause) {
-        throw new AppError('INVALID_INPUT', '环境变量 MACSERVER_EVENTKIT_ALLOWED_LISTS JSON 解析失败', { cause });
+        throw new AppError('INVALID_INPUT', '环境变量 MACSERVER_EVENTKIT_ALLOWED_LISTS / EVENTKIT_ALLOWED_LISTS JSON 解析失败', { cause });
       }
     } else {
       allowedLists = trimmed.split(',').map((entry) => {
@@ -173,7 +175,7 @@ export function loadGatewayConfigFromEnv(env: Record<string, string | undefined>
     timeoutMs,
     maxResponseSizeBytes,
     allowedLists,
-    expectedSourceType: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_TYPE || 'calDAV',
-    expectedSourceName: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_NAME || 'iCloud',
+    expectedSourceType: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_TYPE || env.EVENTKIT_EXPECTED_SOURCE_TYPE || 'calDAV',
+    expectedSourceName: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_NAME || env.EVENTKIT_EXPECTED_SOURCE_NAME || 'iCloud',
   });
 }
