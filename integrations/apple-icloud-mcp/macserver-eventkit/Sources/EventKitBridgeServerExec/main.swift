@@ -1,11 +1,12 @@
 // main.swift
 // EventKitBridgeServerExec — Entry point
-// NEW_IMPLEMENTATION
+// NEW_IMPLEMENTATION | EXPLICIT_ASSEMBLY_PATHS
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
 // Native entry point for EventKitBridgeServer.
-// Defaults strictly to loopback (127.0.0.1) and FakeEventKitStore (no TCC required).
-// Supports graceful shutdown on SIGINT/SIGTERM.
+// Gated: Production mode strictly validates configuration and rejects startup on missing fields.
+// Never silently falls back to test tokens or fake data.
+// In this offline candidate phase, live EKEventStore instantiation remains deactivated.
 
 import Foundation
 import EventKitBridge
@@ -13,33 +14,58 @@ import EventKitBridge
 @main
 struct BridgeServerMain {
     static func main() async {
-        let config = BridgeConfig.load(from: ProcessInfo.processInfo.environment)
+        let env = ProcessInfo.processInfo.environment
 
-        print("[EventKitBridge] Starting server on \(config.host):\(config.port)...")
-        print("[EventKitBridge] Store Mode: \(config.useFakeStore ? "FAKE (Safe offline)" : "PRODUCTION (Guarded)")")
-        print("[EventKitBridge] Allowlisted list IDs: \(config.allowedListIDs.count)")
+        // 1. Configuration loading and strict production validation
+        let config: BridgeConfig
+        do {
+            config = try BridgeConfig.load(from: env)
+        } catch let configError as ConfigurationError {
+            print("[EventKitBridge] FATAL CONFIGURATION ERROR: \(configError.localizedDescription)")
+            print("[EventKitBridge] Startup aborted. Missing configuration will never fall back to test data in production.")
+            exit(1)
+        } catch {
+            print("[EventKitBridge] FATAL ERROR: Failed to load configuration: \(error)")
+            exit(1)
+        }
 
+        print("[EventKitBridge] Mode: \(config.mode.rawValue)")
+        print("[EventKitBridge] Host: \(config.host):\(config.port)")
+        print("[EventKitBridge] Allowlisted List IDs: \(config.allowedListIDs.count)")
+        print("[EventKitBridge] Registered Source Bindings: \(config.listBindings.count)")
+
+        // 2. Security layers
         let sourceVerifier = SourceVerifier(
             allowedSourceTypes: config.allowedSourceTypes,
             allowedSourceTitles: config.allowedSources,
-            listBindings: config.listBindings
+            listBindings: config.listBindings,
+            requireExplicitBinding: true // Strict binding mandatory
         )
-
-        let store: any EventKitStoreProtocol
-        if config.useFakeStore {
-            store = FakeEventKitStore(sourceVerifier: sourceVerifier)
-        } else {
-            // Production store remains guarded (isProductionActivated: false)
-            store = ProductionEventKitStore(
-                isProductionActivated: false,
-                sourceVerifier: sourceVerifier
-            )
-        }
 
         let authValidator = AuthValidator(allowedTokens: config.validTokens)
         let allowlistValidator = AllowlistValidator(allowedIDs: config.allowedListIDs)
         let requestLimiter = RequestLimiter(capacity: config.rateLimitRPS, refillPerSecond: config.rateLimitRPS)
 
+        // 3. Store Assembly
+        let store: any EventKitStoreProtocol
+        switch config.mode {
+        case .test:
+            print("[EventKitBridge] Assembling safe offline FakeEventKitStore...")
+            store = FakeEventKitStore(sourceVerifier: sourceVerifier)
+
+        case .production:
+            print("[EventKitBridge] Assembling guarded ProductionEventKitStore...")
+            // Strictly guarded: isProductionActivated remains false until authorized Gate B deployment.
+            // Does NOT instantiate EKEventStore or prompt TCC.
+            store = ProductionEventKitStore(
+                isProductionActivated: false,
+                sourceVerifier: sourceVerifier,
+                requestLimiter: requestLimiter,
+                callbackTimeoutSeconds: config.timeoutSeconds
+            )
+        }
+
+        // 4. Server assembly & startup
         let server = EventKitBridgeServer(
             store: store,
             authValidator: authValidator,
@@ -51,21 +77,20 @@ struct BridgeServerMain {
         do {
             try await server.start()
             let bound = await server.boundPort
-            print("[EventKitBridge] Listening on http://\(config.host):\(bound)")
-            print("[EventKitBridge] Ready for read-only requests. Press Ctrl+C to terminate.")
+            print("[EventKitBridge] Bound successfully to http://\(config.host):\(bound)")
+            print("[EventKitBridge] Read-only candidate ready. Press Ctrl+C to terminate.")
 
-            // Setup signal handling for graceful shutdown
+            // Signal handlers for graceful shutdown
             let sigintSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
             let sigtermSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
 
             let isRunning = ManagedAtomicBool(true)
-
             let shutdownHandler = {
                 if isRunning.compareAndExchange(expected: true, desired: false) {
-                    print("\n[EventKitBridge] Received termination signal. Shutting down gracefully...")
+                    print("\n[EventKitBridge] Received termination signal. Stopping listener gracefully...")
                     Task {
                         await server.stop()
-                        print("[EventKitBridge] Server stopped cleanly.")
+                        print("[EventKitBridge] Listener stopped cleanly. Exiting.")
                         exit(0)
                     }
                 }
@@ -80,12 +105,11 @@ struct BridgeServerMain {
             sigintSource.resume()
             sigtermSource.resume()
 
-            // Keep main loop alive
             while isRunning.value {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         } catch {
-            print("[EventKitBridge] Failed to start server: \(error)")
+            print("[EventKitBridge] Server startup failed: \(error)")
             exit(1)
         }
     }

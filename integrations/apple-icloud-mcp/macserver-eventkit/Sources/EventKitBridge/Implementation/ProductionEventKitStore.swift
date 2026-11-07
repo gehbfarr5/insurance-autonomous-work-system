@@ -1,14 +1,14 @@
 // ProductionEventKitStore.swift
-// NEW_IMPLEMENTATION | FIX-R4A-01 | FIX-R4A-02
+// NEW_IMPLEMENTATION | TIMEOUT_GATED_CALLBACK | FIX-R4A-01 | FIX-R4A-02
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
-// REAL EVENTKIT READONLY ADAPTER — FULLY COMPILED
+// REAL EVENTKIT READONLY ADAPTER — FULLY COMPILED WITH CALLBACK TIMEOUT
 //
 // Safety Boundaries:
 // - Does NOT instantiate a live EKEventStore, request TCC, or touch Apple data by default.
 // - Activation is strictly gated behind `isProductionActivated == true` AND an injected
 //   authorized store provider closure.
-// - All EventKit types, predicates, and mapping logic are fully compiled and typechecked.
+// - All EventKit types, predicates, timeout handling, and mapping logic are fully compiled.
 
 import Foundation
 
@@ -28,6 +28,7 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     private var _contentAccessCount: Int = 0
     private let sourceVerifier: SourceVerifier
     private let requestLimiter: RequestLimiter
+    private let callbackTimeoutSeconds: Double
 
     /// Safety gate: Default is false. Prevents any unvetted runtime access.
     private let isProductionActivated: Bool
@@ -41,11 +42,13 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
         isProductionActivated: Bool = false,
         sourceVerifier: SourceVerifier = SourceVerifier(),
         requestLimiter: RequestLimiter = RequestLimiter(),
+        callbackTimeoutSeconds: Double = 5.0,
         storeProvider: (@Sendable () throws -> EKEventStore)? = nil
     ) {
         self.isProductionActivated = isProductionActivated
         self.sourceVerifier = sourceVerifier
         self.requestLimiter = requestLimiter
+        self.callbackTimeoutSeconds = callbackTimeoutSeconds > 0 ? callbackTimeoutSeconds : 5.0
         self.storeProvider = storeProvider
     }
 
@@ -56,7 +59,7 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     /// Strictly NEVER queries reminder items or counts.
     public func fetchListsMetadata() async throws -> [RemindersList] {
         guard isProductionActivated, let provider = storeProvider else {
-            // Safe guard: Do not trigger TCC or access live store unless authorized.
+            // Safety guard: Do not trigger TCC or access live store unless authorized.
             throw EventKitBridgeError.permissionDenied
         }
 
@@ -80,7 +83,7 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
         }
     }
 
-    /// FIX-R4A-02: Content query with mandatory source verification.
+    /// FIX-R4A-02: Content query with mandatory source verification and callback timeout.
     /// Checks source identity and type BEFORE executing any reminder predicate query.
     public func fetchReminders(listID: String) async throws -> [ReminderItem] {
         guard isProductionActivated, let provider = storeProvider else {
@@ -94,7 +97,7 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
             throw EventKitBridgeError.listNotFound
         }
 
-        // FIX-R4A-02: Verify source identity, type and binding PRIOR to content query
+        // FIX-R4A-02: Verify source identity, type, and list binding PRIOR to content query
         let src = calendar.source
         let srcType = Self.sourceTypeToString(src?.sourceType)
         try sourceVerifier.verify(
@@ -106,25 +109,38 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
 
         _contentAccessCount += 1
 
-        // Native EventKit reminder predicate
         let predicate = store.predicateForReminders(in: [calendar])
+        let timeoutNanos = UInt64(callbackTimeoutSeconds * 1_000_000_000)
+
         let items: [ReminderItem] = try await withCheckedThrowingContinuation { continuation in
-            store.fetchReminders(matching: predicate) { fetched in
-                if let reminders = fetched {
-                    let mapped = reminders.map { r in
-                        ReminderItem(
-                            itemID: r.calendarItemIdentifier,
-                            title: r.title ?? "",
-                            isCompleted: r.isCompleted,
-                            dueDate: r.dueDateComponents?.date,
-                            priority: r.priority,
-                            notes: r.notes,
-                            listID: listID
-                        )
-                    }
-                    continuation.resume(returning: mapped)
-                } else {
+            let resumed = StoreAtomicBool(false)
+
+            // Timeout watchdog
+            Task {
+                try? await Task.sleep(nanoseconds: timeoutNanos)
+                if resumed.compareAndExchange(expected: false, desired: true) {
                     continuation.resume(throwing: EventKitBridgeError.timeout)
+                }
+            }
+
+            store.fetchReminders(matching: predicate) { fetched in
+                if resumed.compareAndExchange(expected: false, desired: true) {
+                    if let reminders = fetched {
+                        let mapped = reminders.map { r in
+                            ReminderItem(
+                                itemID: r.calendarItemIdentifier,
+                                title: r.title ?? "",
+                                isCompleted: r.isCompleted,
+                                dueDate: r.dueDateComponents?.date,
+                                priority: r.priority,
+                                notes: r.notes,
+                                listID: listID
+                            )
+                        }
+                        continuation.resume(returning: mapped)
+                    } else {
+                        continuation.resume(throwing: EventKitBridgeError.timeout)
+                    }
                 }
             }
         }
@@ -162,6 +178,23 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     public func resetCounters() { _contentAccessCount = 0 }
 }
 
+private final class StoreAtomicBool: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value: Bool
+
+    init(_ value: Bool) { self._value = value }
+
+    func compareAndExchange(expected: Bool, desired: Bool) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if _value == expected {
+            _value = desired
+            return true
+        }
+        return false
+    }
+}
+
 private extension EKCalendar {
     var hexColorString: String {
         #if canImport(AppKit)
@@ -185,7 +218,8 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     public init(
         isProductionActivated: Bool = false,
         sourceVerifier: SourceVerifier = SourceVerifier(),
-        requestLimiter: RequestLimiter = RequestLimiter()
+        requestLimiter: RequestLimiter = RequestLimiter(),
+        callbackTimeoutSeconds: Double = 5.0
     ) {}
 
     public func fetchListsMetadata() async throws -> [RemindersList] {

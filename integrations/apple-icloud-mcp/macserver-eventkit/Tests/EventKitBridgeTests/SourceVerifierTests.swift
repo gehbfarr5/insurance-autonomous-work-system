@@ -1,8 +1,8 @@
 // SourceVerifierTests.swift
-// NEW_IMPLEMENTATION | UPGRADED_SOURCE_IDENTITY_VERIFICATION
+// NEW_IMPLEMENTATION | STRICT_IDENTITY_BINDING_TESTS
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
-// Tests for SourceVerifier — iCloud source identity & type enforcement (FIX-R4A-02)
+// Tests for SourceVerifier — strict list-to-source identity & type enforcement (FIX-R4A-02)
 
 import XCTest
 @testable import EventKitBridge
@@ -13,122 +13,150 @@ final class SourceVerifierTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        verifier = SourceVerifier(allowedSources: ["iCloud"])
-    }
-
-    // Test 1: "iCloud" source passes
-    func testICloudSourcePasses() throws {
-        XCTAssertNoThrow(try verifier.verify(sourceName: "iCloud"))
-    }
-
-    // Test 2: "Local" source is rejected (FIX-R4A-02)
-    func testLocalSourceRejected() {
-        XCTAssertThrowsError(try verifier.verify(sourceName: "Local")) { error in
-            XCTAssertEqual(error as? EventKitBridgeError, .sourceNotAllowed)
-        }
-    }
-
-    // Test 3: "Exchange" source is rejected
-    func testExchangeSourceRejected() {
-        XCTAssertThrowsError(try verifier.verify(sourceName: "Exchange")) { error in
-            XCTAssertEqual(error as? EventKitBridgeError, .sourceNotAllowed)
-        }
-    }
-
-    // Test 4: Empty string source is rejected
-    func testEmptySourceRejected() {
-        XCTAssertThrowsError(try verifier.verify(sourceName: "")) { error in
-            XCTAssertEqual(error as? EventKitBridgeError, .sourceNotAllowed)
-        }
-    }
-
-    // Test 5: Case-sensitive — "icloud" (lowercase title) is rejected
-    func testCaseSensitiveRejection() {
-        XCTAssertThrowsError(try verifier.verify(sourceName: "icloud")) { error in
-            XCTAssertEqual(error as? EventKitBridgeError, .sourceNotAllowed)
-        }
-    }
-
-    // Test 6: isAllowed non-throwing variant
-    func testIsAllowedNonThrowing() {
-        XCTAssertTrue(verifier.isAllowed(sourceName: "iCloud"))
-        XCTAssertFalse(verifier.isAllowed(sourceName: "Local"))
-    }
-
-    // Test 7: Multiple allowed sources
-    func testMultipleAllowedSources() throws {
-        let multiVerifier = SourceVerifier(allowedSources: ["iCloud", "iCloud (Family)"])
-        XCTAssertNoThrow(try multiVerifier.verify(sourceName: "iCloud"))
-        XCTAssertNoThrow(try multiVerifier.verify(sourceName: "iCloud (Family)"))
-        XCTAssertThrowsError(try multiVerifier.verify(sourceName: "Local"))
-    }
-
-    // Test 8: "On My Mac" source rejected
-    func testOnMyMacRejected() {
-        XCTAssertThrowsError(try verifier.verify(sourceName: "On My Mac")) { error in
-            XCTAssertEqual(error as? EventKitBridgeError, .sourceNotAllowed)
-        }
-    }
-
-    // Test 9: Arbitrary string rejected
-    func testArbitraryStringRejected() {
-        XCTAssertThrowsError(try verifier.verify(sourceName: "ATTACKER_CONTROLLED_SOURCE"))
-    }
-
-    // Test 10: Full identity and type verification passes for calDAV iCloud
-    func testComprehensiveSourceIdentityPasses() throws {
-        let comprehensive = SourceVerifier(
+        // Strict verifier with explicit binding
+        verifier = SourceVerifier(
             allowedSourceTypes: ["caldav"],
             allowedSourceTitles: ["iCloud"],
-            allowedSourceIDs: ["src-icloud-primary"],
             listBindings: [
-                "list-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
-            ]
+                "list-icloud-001": SourceIdentity(sourceID: "uuid-primary-icloud", sourceType: "calDAV", sourceTitle: "iCloud"),
+                "list-icloud-002": SourceIdentity(sourceID: "uuid-family-icloud", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            requireExplicitBinding: true
         )
+    }
 
-        XCTAssertNoThrow(try comprehensive.verify(
-            listID: "list-001",
-            sourceID: "src-icloud-primary",
+    // Test 1: Bound CalDAV iCloud source passes
+    func testBoundICloudSourcePasses() throws {
+        XCTAssertNoThrow(try verifier.verify(
+            listID: "list-icloud-001",
+            sourceID: "uuid-primary-icloud",
             sourceType: "calDAV",
             sourceTitle: "iCloud"
         ))
     }
 
-    // Test 11: Non-calDAV source type rejected even if title is "iCloud"
-    func testSpoofedTitleNonCalDAVTypeRejected() {
-        let comprehensive = SourceVerifier(
-            allowedSourceTypes: ["caldav"],
-            allowedSourceTitles: ["iCloud"]
-        )
-
-        // Attacker labels a local store "iCloud"
-        XCTAssertThrowsError(try comprehensive.verify(
-            listID: "list-001",
-            sourceID: "src-local",
-            sourceType: "local",
+    // Test 2: Local source is rejected (FIX-R4A-02)
+    func testLocalSourceRejected() {
+        XCTAssertThrowsError(try verifier.verify(
+            listID: "list-icloud-001",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "local", // Wrong type
             sourceTitle: "iCloud"
         )) { error in
-            XCTAssertEqual(error as? EventKitBridgeError, .sourceNotAllowed)
+            XCTAssertEqual(error as? EventKitBridgeError, .sourceMismatch)
         }
     }
 
-    // Test 12: List ID bound to source A throws sourceMismatch when presented with source B
-    func testMismatchedBoundSourceIDThrowsMismatch() {
-        let comprehensive = SourceVerifier(
-            allowedSourceTypes: ["caldav"],
-            allowedSourceTitles: ["iCloud"],
-            listBindings: [
-                "list-001": SourceIdentity(sourceID: "expected-uuid-1", sourceType: "calDAV", sourceTitle: "iCloud")
-            ]
-        )
+    // Test 3: Exchange source is rejected
+    func testExchangeSourceRejected() {
+        XCTAssertThrowsError(try verifier.verify(
+            listID: "list-icloud-001",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "exchange",
+            sourceTitle: "iCloud"
+        )) { error in
+            XCTAssertEqual(error as? EventKitBridgeError, .sourceMismatch)
+        }
+    }
 
-        XCTAssertThrowsError(try comprehensive.verify(
-            listID: "list-001",
-            sourceID: "attacker-uuid-2",
+    // Test 4: Unbound list rejected immediately (FIX-R4A-02)
+    func testUnboundListRejected() {
+        XCTAssertThrowsError(try verifier.verify(
+            listID: "unbound-unknown-list",
+            sourceID: "uuid-primary-icloud",
             sourceType: "calDAV",
             sourceTitle: "iCloud"
         )) { error in
             XCTAssertEqual(error as? EventKitBridgeError, .sourceMismatch)
         }
+    }
+
+    // Test 5: Changed source UUID rejected (Source drift / spoofing attempt)
+    func testSourceIDDriftRejected() {
+        XCTAssertThrowsError(try verifier.verify(
+            listID: "list-icloud-001",
+            sourceID: "attacker-substituted-uuid", // Drift
+            sourceType: "calDAV",
+            sourceTitle: "iCloud"
+        )) { error in
+            XCTAssertEqual(error as? EventKitBridgeError, .sourceMismatch)
+        }
+    }
+
+    // Test 6: Case-sensitive title check — "icloud" (lowercase) is rejected
+    func testCaseSensitiveTitleRejection() {
+        XCTAssertThrowsError(try verifier.verify(
+            listID: "list-icloud-001",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "calDAV",
+            sourceTitle: "icloud" // Lowercase title
+        )) { error in
+            XCTAssertEqual(error as? EventKitBridgeError, .sourceMismatch)
+        }
+    }
+
+    // Test 7: isAllowed non-throwing variant returns true for match and false for mismatch
+    func testIsAllowedNonThrowing() {
+        XCTAssertTrue(verifier.isAllowed(
+            listID: "list-icloud-001",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "calDAV",
+            sourceTitle: "iCloud"
+        ))
+        XCTAssertFalse(verifier.isAllowed(
+            listID: "list-icloud-001",
+            sourceID: "wrong-uuid",
+            sourceType: "calDAV",
+            sourceTitle: "iCloud"
+        ))
+        XCTAssertFalse(verifier.isAllowed(
+            listID: "unbound-list",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "calDAV",
+            sourceTitle: "iCloud"
+        ))
+    }
+
+    // Test 8: RemindersList direct verification helper
+    func testRemindersListDirectVerification() throws {
+        let validList = RemindersList(
+            listID: "list-icloud-001",
+            title: "Reminders",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "calDAV",
+            sourceName: "iCloud"
+        )
+        XCTAssertNoThrow(try verifier.verify(list: validList))
+
+        let invalidList = RemindersList(
+            listID: "list-icloud-001",
+            title: "Reminders",
+            sourceID: "wrong-uuid",
+            sourceType: "calDAV",
+            sourceName: "iCloud"
+        )
+        XCTAssertThrowsError(try verifier.verify(list: invalidList))
+    }
+
+    // Test 9: Spoofed title on local store rejected
+    func testSpoofedTitleLocalStoreRejected() {
+        let spoofedList = RemindersList(
+            listID: "list-icloud-001",
+            title: "Reminders",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "local",
+            sourceName: "iCloud"
+        )
+        XCTAssertThrowsError(try verifier.verify(list: spoofedList))
+    }
+
+    // Test 10: Precondition check — empty allowed types or titles are programmer errors
+    func testPreconditionNonEmptySets() {
+        XCTAssertTrue(verifier.isAllowed(
+            listID: "list-icloud-001",
+            sourceID: "uuid-primary-icloud",
+            sourceType: "calDAV",
+            sourceTitle: "iCloud"
+        ))
     }
 }

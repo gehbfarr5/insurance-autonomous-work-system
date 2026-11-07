@@ -17,8 +17,8 @@
 
 | Resource Category | Description | Scope Boundary | Unverified Status |
 |-------------------|-------------|----------------|-------------------|
-| M5 Local Bridge Process | Experimental HTTP bridge on local loopback | M5 Pro host only | `RESOURCE_STATUS_UNKNOWN` (not scanned) |
-| M5 LaunchAgent Plist | Local user LaunchAgent for A4 experiment | `~/Library/LaunchAgents/` on M5 Pro | `RESOURCE_STATUS_UNKNOWN` (not scanned) |
+| M5 Local Bridge Process | Historical experimental HTTP bridge (port 18443) | M5 Pro host only | `RESOURCE_STATUS_UNKNOWN` (not scanned) |
+| M5 LaunchAgent Plist | Local user LaunchAgent for A4 experiment (unverified plist name) | `~/Library/LaunchAgents/` on M5 Pro | `RESOURCE_STATUS_UNKNOWN` (not scanned) |
 | Local Build Artifacts | Swift build caches and debug logs | Isolated scratch workspace only | Verified in scratch workspace |
 | Tailscale M5 Test ACLs | Any experimental direct route to M5 Pro | Shared network layer | **OUT OF SCOPE** (managed upstream) |
 | PyiCloud Mainline | Linux PyiCloud candidate | **PROTECTED / PRESERVED** | Not subject to M5 retirement |
@@ -32,8 +32,8 @@
 
 | # | Item | Status | Verification Method | Action (Upon Approval) |
 |---|------|--------|---------------------|------------------------|
-| A1 | Check if experimental A4 bridge listener is active on M5 Pro | `RETIREMENT_PENDING_AUTHORIZATION` | `lsof -nP -iTCP:18765` on M5 Pro | Graceful SIGTERM; no wild kill |
-| A2 | Check for resident launchd plist `com.muse.m5-bridge` on M5 Pro | `RETIREMENT_PENDING_AUTHORIZATION` | `launchctl list | grep muse` | `launchctl bootout` if present |
+| A1 | Check if historical experimental A4 bridge listener is active on M5 Pro | `RETIREMENT_PENDING_AUTHORIZATION` | `lsof -nP -iTCP:18443` on M5 Pro (historical port 18443; 18765 is candidate port) | Graceful SIGTERM; no wild kill |
+| A2 | Check for unverified resident launchd plist on M5 Pro | `RESOURCE_STATUS_UNKNOWN` / `RETIREMENT_PENDING_AUTHORIZATION` | `launchctl list | grep -i muse` (exact plist name unverified) | `launchctl bootout` if present |
 | A3 | Check local crontab or automated test hooks on M5 Pro | `RETIREMENT_PENDING_AUTHORIZATION` | `crontab -l` inspection | Pause experimental cron |
 
 ### Group B — Experimental Workspace & State Archival
@@ -42,7 +42,7 @@
 |---|------|--------|---------------------|------------------------|
 | B1 | Snapshot M5 Pro experimental configuration and notes | `RETIREMENT_PENDING_AUTHORIZATION` | Tarball local config into secure archive | Preserve rollback tarball |
 | B2 | Archive experimental branch state if divergent from main | `RETIREMENT_PENDING_AUTHORIZATION` | `git status` check | Tag as `archive/m5-experiment-20261107` |
-| B3 | Confirm no active MUSE production traffic targets M5 Pro | `RETIREMENT_PENDING_AUTHORIZATION` | Audit Seoul gateway routing config | Verify Seoul points to MacServer |
+| B3 | Confirm whether any Seoul production traffic targets M5 Pro | `PENDING_SEOUL_CONFIG_AUDIT` | Audit Seoul gateway routing config | Verify routing dependencies prior to retirement |
 
 ### Group C — Dependency & Protection Enforcement
 
@@ -62,11 +62,11 @@
 
 ---
 
-## 3. Rollback & Recovery Procedure
+## 3. Rollback & Recovery Procedure (Provisional / Pending Authorization)
 
 If Seoul MCP requires fallback to M5 Pro A4 development bridge during staging:
-1. Reload archived LaunchAgent on M5 Pro:  
-   `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.muse.m5-bridge.plist`
-2. Validate local loopback health:  
-   `curl -s http://127.0.0.1:18765/health`
-3. Recovery SLA: < 15 minutes.
+1. Reload identified LaunchAgent on M5 Pro (exact plist to be confirmed from inspection):  
+   `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<verified-plist-name>.plist`
+2. Validate local loopback health on historical port 18443:  
+   `curl -s http://127.0.0.1:18443/health`
+3. Recovery SLA: Pending live verification (not established as fixed fact).

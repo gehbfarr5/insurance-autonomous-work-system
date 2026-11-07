@@ -1,100 +1,105 @@
 // SourceVerifier.swift
-// NEW_IMPLEMENTATION | FIX-R4A-02
+// NEW_IMPLEMENTATION | STRICT_IDENTITY_BINDING | FIX-R4A-02
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
-// Verifies that a reminder list's source identity and type meet the iCloud requirements
-// and match bound list configurations.
-//
-// FIX-R4A-02: Content reads MUST call verify(...) before returning data.
-//             Lists from Local, Exchange, or with mismatched source IDs are rejected
-//             prior to any item retrieval.
+// Enforces exact list-to-source identity bindings.
+// Name-only fallback is strictly prohibited. Missing bindings, unknown sources,
+// or changed source UUIDs trigger immediate rejection prior to content access.
 
 import Foundation
 
-/// Verifies that a reminder list's underlying source identity, source type, and list binding
-/// satisfy strict iCloud integrity requirements.
+/// Verifies that a reminder list possesses an explicit, verified SourceIdentity binding
+/// and satisfies strict iCloud CalDAV protocol requirements.
 ///
-/// - Upgraded in AG-01: Validates actual source identity (sourceID UUID), source type (e.g. calDAV),
-///   and explicit binding to listID, rejecting unknown, local, or inconsistent sources.
+/// - Important: Name-only fallback is explicitly removed. Every list accessed for content
+///   MUST have an explicit pre-registered binding matching sourceID, sourceType, and title.
 public struct SourceVerifier: Sendable {
 
-    /// Permitted underlying source types (e.g. "calDAV", "iCloud"). Case-insensitive.
+    /// Permitted underlying source types (e.g. "caldav"). Case-insensitive.
     private let allowedSourceTypes: Set<String>
 
     /// Permitted source titles (e.g. "iCloud"). Case-sensitive.
     private let allowedSourceTitles: Set<String>
 
-    /// Permitted explicit source identifiers (UUIDs). If empty, any valid calDAV source is allowed.
-    private let allowedSourceIDs: Set<String>
-
     /// Explicit list ID to expected SourceIdentity binding map.
     private let listBindings: [String: SourceIdentity]
 
-    /// Whether strict list binding is enforced (every accessed list must have a pre-registered binding).
+    /// Enforces that EVERY list accessed must have an explicit pre-registered binding.
+    /// In production and offline verification, this is strictly true.
     private let requireExplicitBinding: Bool
 
-    /// Initializes a comprehensive SourceVerifier.
+    /// Initializes a strict SourceVerifier.
+    ///
+    /// - Parameters:
+    ///   - allowedSourceTypes: Permitted types (defaults to `["caldav"]`).
+    ///   - allowedSourceTitles: Permitted titles (defaults to `["iCloud"]`).
+    ///   - listBindings: Mandatory mapping of listID -> expected SourceIdentity.
+    ///   - requireExplicitBinding: Defaults to `true`. Disallows unmapped lists.
     public init(
-        allowedSourceTypes: Set<String> = ["caldav", "icloud"],
+        allowedSourceTypes: Set<String> = ["caldav"],
         allowedSourceTitles: Set<String> = ["iCloud"],
-        allowedSourceIDs: Set<String> = [],
         listBindings: [String: SourceIdentity] = [:],
-        requireExplicitBinding: Bool = false
+        requireExplicitBinding: Bool = true
     ) {
         precondition(!allowedSourceTypes.isEmpty, "allowedSourceTypes must not be empty")
         precondition(!allowedSourceTitles.isEmpty, "allowedSourceTitles must not be empty")
         self.allowedSourceTypes = Set(allowedSourceTypes.map { $0.lowercased() })
         self.allowedSourceTitles = allowedSourceTitles
-        self.allowedSourceIDs = allowedSourceIDs
         self.listBindings = listBindings
         self.requireExplicitBinding = requireExplicitBinding
     }
 
-    /// Convenience initializer taking allowed source titles for backward compatibility.
-    public init(allowedSources: Set<String>) {
-        precondition(!allowedSources.isEmpty, "allowedSources must not be empty")
-        self.allowedSourceTypes = ["caldav", "icloud"]
-        self.allowedSourceTitles = allowedSources
-        self.allowedSourceIDs = []
-        self.listBindings = [:]
-        self.requireExplicitBinding = false
-    }
-
-    /// Verifies source identity, source type, and list ID binding before content access.
+    /// Verifies that a list has an exact, registered SourceIdentity binding and that
+    /// its presented source properties strictly match the binding.
+    ///
+    /// - Parameters:
+    ///   - listID: The list's identifier.
+    ///   - sourceID: The UUID/identifier of the source (e.g. EKSource.sourceIdentifier).
+    ///   - sourceType: The underlying source type (e.g. "calDAV", "local").
+    ///   - sourceTitle: The human-readable title (e.g. "iCloud").
+    /// - Throws:
+    ///   - ``EventKitBridgeError.sourceMismatch`` if binding is missing or source properties deviate.
+    ///   - ``EventKitBridgeError.sourceNotAllowed`` if type or title is inherently disallowed.
     public func verify(
         listID: String,
         sourceID: String,
         sourceType: String,
         sourceTitle: String
     ) throws {
-        // 1. Check Source Type (calDAV vs local/exchange/etc.)
-        let normalizedType = sourceType.lowercased()
-        guard allowedSourceTypes.contains(normalizedType) else {
-            throw EventKitBridgeError.sourceNotAllowed
-        }
-
-        // 2. Check Source Title
-        guard allowedSourceTitles.contains(sourceTitle) else {
-            throw EventKitBridgeError.sourceNotAllowed
-        }
-
-        // 3. Check Source ID allowlist if configured
-        if !allowedSourceIDs.isEmpty && !allowedSourceIDs.contains(sourceID) {
-            throw EventKitBridgeError.sourceNotAllowed
-        }
-
-        // 4. Verify explicit list binding
-        if let expectedBinding = listBindings[listID] {
-            if expectedBinding.sourceID != sourceID ||
-               expectedBinding.sourceType.lowercased() != normalizedType {
+        // 1. Enforce explicit binding presence (no implicit unmapped access)
+        guard let expected = listBindings[listID] else {
+            if requireExplicitBinding {
                 throw EventKitBridgeError.sourceMismatch
             }
-        } else if requireExplicitBinding {
+            // If explicit binding not required, basic sanity check
+            let normType = sourceType.lowercased()
+            guard allowedSourceTypes.contains(normType), allowedSourceTitles.contains(sourceTitle) else {
+                throw EventKitBridgeError.sourceNotAllowed
+            }
+            return
+        }
+
+        // 2. Strict exact binding match
+        let normalizedType = sourceType.lowercased()
+        let expectedNormType = expected.sourceType.lowercased()
+
+        // Source ID check
+        guard expected.sourceID == sourceID else {
+            throw EventKitBridgeError.sourceMismatch
+        }
+
+        // Source type check (e.g. must be calDAV, not local or exchange)
+        guard expectedNormType == normalizedType && allowedSourceTypes.contains(normalizedType) else {
+            throw EventKitBridgeError.sourceMismatch
+        }
+
+        // Source title check
+        guard expected.sourceTitle == sourceTitle && allowedSourceTitles.contains(sourceTitle) else {
             throw EventKitBridgeError.sourceMismatch
         }
     }
 
-    /// Helper verifying a RemindersList value directly.
+    /// Verifies a RemindersList directly using its embedded metadata.
     public func verify(list: RemindersList) throws {
         try verify(
             listID: list.listID,
@@ -104,19 +109,7 @@ public struct SourceVerifier: Sendable {
         )
     }
 
-    /// Legacy convenience verification by title only.
-    public func verify(sourceName: String) throws {
-        guard allowedSourceTitles.contains(sourceName) else {
-            throw EventKitBridgeError.sourceNotAllowed
-        }
-    }
-
-    /// Non-throwing check for source title.
-    public func isAllowed(sourceName: String) -> Bool {
-        allowedSourceTitles.contains(sourceName)
-    }
-
-    /// Non-throwing check for full identity and binding.
+    /// Non-throwing verification predicate.
     public func isAllowed(
         listID: String,
         sourceID: String,

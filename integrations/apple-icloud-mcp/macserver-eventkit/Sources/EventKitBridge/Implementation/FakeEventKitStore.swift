@@ -76,14 +76,45 @@ public let defaultSeedData: [SeedList] = [
             ReminderItem(itemID: "r-005", title: "Local task", listID: "fake-list-local-001"),
         ]
     ),
+    SeedList(
+        listID: "fake-list-unbound-001",
+        title: "Unbound List",
+        sourceID: "src-icloud-primary",
+        sourceType: "calDAV",
+        sourceName: "iCloud",
+        color: "#5856D6",
+        reminders: [
+            ReminderItem(itemID: "r-006", title: "Unbound secret item", listID: "fake-list-unbound-001")
+        ]
+    ),
+    SeedList(
+        listID: "fake-list-wrong-source-001",
+        title: "Wrong Source ID List",
+        sourceID: "src-attacker-modified-id",
+        sourceType: "calDAV",
+        sourceName: "iCloud",
+        color: "#AF52DE",
+        reminders: [
+            ReminderItem(itemID: "r-007", title: "Wrong source secret item", listID: "fake-list-wrong-source-001")
+        ]
+    ),
+    SeedList(
+        listID: "fake-list-spoofed-001",
+        title: "Spoofed Title List",
+        sourceID: "src-local-store",
+        sourceType: "local",
+        sourceName: "iCloud", // Spoofed name
+        color: "#FF3B30",
+        reminders: [
+            ReminderItem(itemID: "r-008", title: "Spoofed title secret item", listID: "fake-list-spoofed-001")
+        ]
+    )
 ]
 
 // MARK: — Fake store
 
 /// Fake EventKit store with deterministic seed data for testing.
 /// Conforms to EventKitStoreProtocol — safe to use in all test targets.
-///
-/// Thread-safety: actor-isolated for Swift 6 strict concurrency.
 public actor FakeEventKitStore: EventKitStoreProtocol {
 
     private let sourceVerifier: SourceVerifier
@@ -102,7 +133,7 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     /// Convenience init taking allowed source names for backward compatibility.
     public init(allowedSources: Set<String>) {
-        self.sourceVerifier = SourceVerifier(allowedSourceTitles: allowedSources)
+        self.sourceVerifier = SourceVerifier(allowedSourceTitles: allowedSources, requireExplicitBinding: false)
         self.seeds = defaultSeedData
     }
 
