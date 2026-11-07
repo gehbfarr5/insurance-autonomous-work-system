@@ -401,10 +401,14 @@ final class HttpIntegrationTests: XCTestCase {
         request.httpMethod = "GET"
 
         let expectation = expectation(description: "Health check responds after client disconnect")
-        Task {
-            let (_, res) = try await URLSession.shared.data(for: request)
-            XCTAssertEqual((res as? HTTPURLResponse)?.statusCode, 200)
-            expectation.fulfill()
+        _ = Task {
+            do {
+                let (_, res) = try await URLSession.shared.data(for: request)
+                XCTAssertEqual((res as? HTTPURLResponse)?.statusCode, 200)
+                expectation.fulfill()
+            } catch {
+                XCTFail("Health check failed after client disconnect: \(error)")
+            }
         }
         wait(for: [expectation], timeout: 2.0)
     }
