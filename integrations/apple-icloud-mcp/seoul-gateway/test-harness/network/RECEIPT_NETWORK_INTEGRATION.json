@@ -1,0 +1,40 @@
+{
+  "receiptType": "AG03_REAL_NETWORK_INTEGRATION",
+  "timestamp": "2026-11-07T15:39:36Z",
+  "gitCommit": "d24e12ec1d577e2ac8505902b13702bcd6a323b5",
+  "environment": {
+    "network": "ag03_test_network",
+    "subnet": "172.30.55.0/24",
+    "gatewayIp": "172.30.55.1",
+    "sshPort": 2222,
+    "forwardTarget": "127.0.0.1:18765",
+    "isolation": "Real Docker container + Real OpenSSH client/server + Fake Bridge"
+  },
+  "tests": [
+    {
+      "testId": "T1_NORMAL_READ",
+      "description": "Container reading through Docker bridge gateway & SSH port forward",
+      "status": "PASS",
+      "assertion": "HTTP 200, items length == 2, field fidelity preserved"
+    },
+    {
+      "testId": "T2_WRONG_HOSTKEY",
+      "description": "Mismatched host key in known_hosts",
+      "status": "PASS",
+      "assertion": "SSH client strictly refuses connection; container fails with UPSTREAM_ERROR"
+    },
+    {
+      "testId": "T3_BROKEN_TUNNEL",
+      "description": "SSH tunnel terminated / port unreachable",
+      "status": "PASS",
+      "assertion": "Container request aborts and throws UPSTREAM_ERROR; zero fake empty array"
+    },
+    {
+      "testId": "T4_PERMISSION_DENIED",
+      "description": "Bridge EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false",
+      "status": "PASS",
+      "assertion": "HTTP 403 throws PERMISSION_DENIED; zero fallback to empty array"
+    }
+  ],
+  "overallResult": "PASS"
+}
