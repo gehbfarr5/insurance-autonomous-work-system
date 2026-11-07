@@ -72,7 +72,7 @@ echo ""
 echo "--- Step 2: Building Candidate Image with Real MCP Gateway Entrypoint ---"
 CANDIDATE_TAG="insurance-carddav-mcp-carddav:candidate-ag03-drill-$TIMESTAMP"
 
-docker build -t "$CANDIDATE_TAG" -f "$SEMAPHORE_DIR/Dockerfile.candidate" "$SEMAPHORE_DIR"
+docker build --no-cache -t "$CANDIDATE_TAG" -f "$SEMAPHORE_DIR/Dockerfile.candidate" "$SEMAPHORE_DIR"
 
 CANDIDATE_IMAGE_ID=$(docker inspect "$CANDIDATE_TAG" --format '{{.Id}}')
 echo "Candidate Image Built: $CANDIDATE_TAG (ID: $CANDIDATE_IMAGE_ID)"
@@ -195,7 +195,11 @@ echo "Candidate Container HEALTHCHECK verified: 200 OK via /health"
 echo ""
 echo "--- Step 4: External MCP Acceptance (Tool Discovery, Read, Write Rejection) ---"
 ACCEPTANCE_SCRIPT="$SEMAPHORE_DIR/test-harness/acceptance/test_external_acceptance.mjs"
-TARGET_URL="http://127.0.0.1:17799" node --experimental-strip-types "$ACCEPTANCE_SCRIPT" normal
+if ! TARGET_URL="http://127.0.0.1:17799" node --experimental-strip-types "$ACCEPTANCE_SCRIPT" normal; then
+  echo "--- Candidate Container Logs on Failure: ---"
+  docker logs "$DRILL_CONTAINER"
+  exit 1
+fi
 echo "Step 4 PASS: External MCP Tool Discovery, Bound List Read, and Write Rejection verified."
 
 # Stop Fake Bridge

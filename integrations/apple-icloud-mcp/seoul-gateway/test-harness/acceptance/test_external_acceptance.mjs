@@ -53,6 +53,9 @@ async function run() {
         name: 'reminders_lists',
         arguments: {},
       });
+      if (listsCall.isError) {
+        console.error('[ExternalAcceptance] reminders_lists error payload:', JSON.stringify(listsCall, null, 2));
+      }
       assert(!listsCall.isError, 'reminders_lists must not error');
       const listsText = listsCall.content[0].text;
       const listsData = JSON.parse(listsText);
