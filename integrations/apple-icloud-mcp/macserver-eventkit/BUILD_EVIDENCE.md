@@ -8,7 +8,7 @@
 |------|-------|
 | Date | 2026-11-07 |
 | Clean Checkout Base | `/tmp/clean-checkout-ag01` |
-| Tested Commit | `a5b2c9d8dea5371ac3a477e14d5e0e53bc70c58d` |
+| Tested Commit | `cab1252f6080da898d822435f1c9295a876034a4` |
 | Swift version | Apple Swift version 6.4 (swiftlang-6.4.0.27.1 clang-2100.3.27.1) |
 | Native Host Architecture | arm64-apple-macosx27.0.0 (M5 Pro Host) |
 | Target Machine Architecture | x86_64-apple-macosx (Intel MacServer) |
@@ -24,10 +24,10 @@
 ```bash
 swift build --triple x86_64-apple-macosx -c release --scratch-path .build-x86_64 2>&1
 ```
-**Result:** ✅ Exit code 0 (Build complete in 3.13s)
+**Result:** ✅ Exit code 0 (Build complete in 2.65s)
 - Binary Format: `Mach-O 64-bit executable x86_64`
-- Binary Size: 448 KB
-- SHA-256 Digest: `c01b3d2b5f60f60a13d643d1087d9a87b73bca0b92990e5765a8aa70102dc181`
+- Binary Path: `.build-x86_64/out/Products/Release/EventKitBridgeServer`
+- SHA-256 Digest: `82aff2d1e33cdc599420195f31e07d5c282ce4a79489a6bb80c7b291d1de51cd`
 - Symbol Audit: Contains native `ProductionEventKitStore`, `ProductionStoreAssembly`, and `SourceVerifier` Mach-O symbols.
 
 ### B. M5 Pro Host Target (`arm64-apple-macosx`)
@@ -35,10 +35,10 @@ swift build --triple x86_64-apple-macosx -c release --scratch-path .build-x86_64
 ```bash
 swift build --triple arm64-apple-macosx -c release --scratch-path .build-arm64 2>&1
 ```
-**Result:** ✅ Exit code 0 (Build complete in 3.10s)
+**Result:** ✅ Exit code 0 (Build complete in 2.67s)
 - Binary Format: `Mach-O 64-bit executable arm64`
-- Binary Size: 460 KB
-- SHA-256 Digest: `6ef70927f5e5053f481f9e499767748a5bd09ae232e93defe5292399e3807983`
+- Binary Path: `.build-arm64/out/Products/Release/EventKitBridgeServer`
+- SHA-256 Digest: `02f60b66ac85fe9e87a3ded4cec79125c62a81d2c553bb76582749ec809dfe83`
 
 ---
 
@@ -49,26 +49,26 @@ swift build --triple arm64-apple-macosx -c release --scratch-path .build-arm64 2
 swift test 2>&1
 ```
 
-**Result:** ✅ Exit code 0 (74 executed, 0 failures in 3.60s)
+**Result:** ✅ Exit code 0 (77 executed, 0 failures in 4.512s)
 
-**Suite Summary Breakdown:**
+**Suite Summary Breakdown (from raw test log):**
 ```
 Test Suite 'AllowlistValidatorTests' passed.
-     Executed 10 tests, with 0 failures in 0.002 seconds
+     Executed 10 tests, with 0 failures (0 unexpected) in 0.001 seconds
 Test Suite 'AuthTests' passed.
-     Executed 10 tests, with 0 failures in 0.002 seconds
+     Executed 10 tests, with 0 failures (0 unexpected) in 0.001 seconds
 Test Suite 'ErrorHandlingTests' passed.
-     Executed 10 tests, with 0 failures in 0.001 seconds
-Test Suite 'MetadataOnlyTests' passed.
-     Executed 8 tests, with 0 failures in 0.005 seconds
-Test Suite 'SourceVerifierTests' passed.
-     Executed 10 tests, with 0 failures in 0.002 seconds
-Test Suite 'WriteIsolationTests' passed.
-     Executed 8 tests, with 0 failures in 0.003 seconds
+     Executed 10 tests, with 0 failures (0 unexpected) in 0.001 seconds
 Test Suite 'HttpIntegrationTests' passed.
-     Executed 18 tests, with 0 failures in 3.566 seconds
+     Executed 21 tests, with 0 failures (0 unexpected) in 4.403 seconds
+Test Suite 'MetadataOnlyTests' passed.
+     Executed 8 tests, with 0 failures (0 unexpected) in 0.002 seconds
+Test Suite 'SourceVerifierTests' passed.
+     Executed 10 tests, with 0 failures (0 unexpected) in 0.001 seconds
+Test Suite 'WriteIsolationTests' passed.
+     Executed 8 tests, with 0 failures (0 unexpected) in 0.110 seconds
 ---------------------------------------------------------------------------------
-TOTAL: Executed 74 tests, with 0 failures (0 unexpected) in 3.608 seconds
+TOTAL: Executed 77 tests, with 0 failures (0 unexpected) in 4.512 seconds
 ```
 
 ---
@@ -79,27 +79,29 @@ TOTAL: Executed 74 tests, with 0 failures (0 unexpected) in 3.608 seconds
 |------------|-------|--------|----------------------------------------|
 | `AllowlistValidatorTests` | 10 | 10 | Exact ID match; rejects prefixes, suffixes, wildcards, name guessing |
 | `AuthTests` | 10 | 10 | Rejects missing/invalid Bearer tokens; validates scoped permissions |
-| `ErrorHandlingTests` | 10 | 10 | Desensitized error descriptions, mapping to HTTP 401/403/404/405/408/413/429/431/504/500 |
+| `ErrorHandlingTests` | 10 | 10 | Desensitized error descriptions, mapping to HTTP 401/403/404/405/408/413/429/431/503/504/500 |
 | `MetadataOnlyTests` | 8 | 8 | **FIX-R4A-01**: `contentAccessCount` strictly 0 on metadata queries; no count fields |
 | `SourceVerifierTests` | 10 | 10 | **FIX-R4A-02**: Enforces calDAV source type, iCloud source title, source UUID & exact list identity binding |
 | `WriteIsolationTests` | 8 | 8 | All write verbs rejected with 405 Method Not Allowed; store writes = 0 |
-| `HttpIntegrationTests` | 18 | 18 | **Real Loopback HTTP**: Native socket listener, auth, allowlist, metadata-only (contentCount=0), source rejection matrix (4 targets: unbound, wrong UUID, local type, spoofed title with contentCount=0), 405 write block, chunked headers, 16KB header limit (431), client early disconnect resilience, slow request header deadline (408), slow request body deadline, hanging store watchdog (504 within deadline while /health remains 200), large response partial send loop, stop-and-restart counter isolation, strict production config validation |
-| **TOTAL** | **74** | **74** | **ALL ACCEPTANCE CRITERIA VERIFIED (100% PASS)** |
+| `HttpIntegrationTests` | 21 | 21 | **Real Loopback HTTP & Concurrency/Budget**: Native socket listener, auth, allowlist, metadata-only (contentCount=0), source rejection matrix (4 targets: unbound, wrong UUID, local type, spoofed title with contentCount=0), 405 write block, chunked headers, 16KB header limit (431), client early disconnect resilience, slow request header deadline (408), slow request body deadline, hanging store watchdog (504 within deadline while /health remains 200), large response partial send loop, stop-and-restart counter isolation, strict production config validation, connection registration before worker startup, idempotent fd closing via `ManagedSocketHandle`, rapid disconnect stress test (10 concurrent fast closes), stop-and-restart under pressure, and bounded store resource budget (rejecting tasks with 503 upon budget exhaustion) |
+| **TOTAL** | **77** | **77** | **ALL ACCEPTANCE CRITERIA VERIFIED (100% PASS)** |
 
 ---
 
-## 4. Diff Explanation: `b63f72e` → Current HEAD
+## 4. Diff Explanation: `b63f72e` → Current HEAD (`cab1252`)
 
 | Component | Nature of Change | Impact & Justification |
 |-----------|------------------|------------------------|
-| `EventKitBridgeServer.swift` | **Decoupled Socket I/O** | Moved all blocking Darwin socket read/write operations out of the server Actor into non-blocking `SocketConnectionWorker`. The Actor now strictly handles business logic and server state. |
+| `ManagedSocketHandle.swift` | **Centralized fd Lifecycle** | Thread-safe atomic socket descriptor handle (`StoreAtomicBool.getAndSet(true)`). Guarantees idempotent, exactly-once `Darwin.close(fd)` with non-blocking receive buffer draining, completely eliminating duplicate closes across `stop()`, worker exit, or refused registration. |
+| `EventKitBridgeServer.swift` | **Inverted Worker Spawning** | Connection registration with the server actor (`registerIncomingConnection(connectionID:handle:)`) now occurs *prior* to starting Worker tasks. If registration is refused, the socket is closed immediately and no background worker is spawned. |
+| `EventKitBridgeServer.swift` | **Bounded Store Resource Budget** | Store operations remain tracked in `activeStoreOperationsCount` even if the client times out with HTTP 504. When `maxConcurrentStoreOperations` is saturated, subsequent requests are immediately rejected with HTTP 503 (`STORE_RESOURCE_LIMIT_EXCEEDED`), strictly preventing runaway background task accumulation from uncooperative Stores. |
+| `EventKitBridgeServer.swift` | **Decoupled Socket I/O** | Darwin socket I/O is completely removed from the actor context into `SocketConnectionWorker`. Actor exclusively arbitrates configuration, routing, and concurrency state. |
 | `EventKitBridgeServer.swift` | **Full Send Loop** | Implemented `sendHttpResponseFull` handling partial socket writes, `EINTR` signal retries, `EPIPE`/`ECONNRESET` client disconnects, and `SO_NOSIGPIPE` to prevent process crashes. |
-| `EventKitBridgeServer.swift` | **Hanging Store Watchdog** | Replaced `withThrowingTaskGroup` with unstructured task race using `StoreAtomicBool`. An uncooperative or hanging Store continuation cannot block HTTP response or drag out timeout; 504 Gateway Timeout is returned promptly. |
-| `EventKitBridgeServer.swift` | **Teardown & Counter Isolation** | `stop()` closes all active client sockets, cancels tasks, and increments `serverGeneration`. Any late-finishing tasks from previous runs cannot pollute restarted server counters. |
-| `BridgeConfig.swift` | **Deadlines & Capacities** | Added `headerReadTimeoutSeconds` (default 3.0s), `bodyReadTimeoutSeconds` (default 3.0s), `maxBodySizeBytes` (default 1MB), `sendTimeoutSeconds` (default 5.0s), and `isProductionAuthorized`. |
-| `ProductionEventKitStore.swift` | **Explicit Assembly Path** | Introduced `ProductionStoreAssembly.assemble(isAuthorized:...)` providing a default-off, explicit authorization injection path. Verified via dependency injection without live EKEventStore instantiation. |
+| `EventKitBridgeServer.swift` | **Generational Counter Isolation** | Teardown increments `serverGeneration`. Late-finishing background tasks from previous server generations are prevented from decrementing or polluting active counters on restarted servers. |
+| `BridgeConfig.swift` | **Configurable Store Ops Limit** | Added `maxConcurrentStoreOperations` (default 10, configurable via `EVENTKIT_BRIDGE_MAX_STORE_OPS`). |
+| `ProductionEventKitStore.swift` | **Explicit Assembly Path** | Introduced `ProductionStoreAssembly.assemble(isAuthorized:authorizedStoreProvider:)` providing a default-off, explicit authorization injection path. Verified via dependency injection without live EKEventStore instantiation. |
 | `FakeEventKitStore.swift` | **Chaos Fixtures** | Added hanging store injection (`setHanging`) and large dataset generator (`makeWithLargeDataSet`) for deterministic integration testing. |
-| `HttpIntegrationTests.swift` | **Fault/Chaos Test Suite** | Added 6 new integration tests covering slow headers, slow bodies, hanging stores, large responses, stop-and-restart counter isolation, and production assembly authorization. Total tests expanded from 68 to 74. |
+| `HttpIntegrationTests.swift` | **Pressure & Resource Budget Tests** | Added 3 new integration tests: `testRapidConnectionAndDisconnectStress`, `testStopAndRestartUnderPressure`, and `testStoreResourceBudgetRejectsExcessiveHangingTasks`. Total test count expanded to 77 tests (21 HTTP integration tests). |
 
 ---
 

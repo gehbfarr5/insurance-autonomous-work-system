@@ -3,12 +3,13 @@
 
 ## 1. Summary & Scope
 
-This document specifies the formal acceptance request and protocol for the **MacServer EventKit Read-Only Candidate**.
+This document specifies the formal acceptance request and production installation protocol for the **MacServer EventKit Read-Only Candidate**.
 It defines:
-1. Candidate build digests and target architecture (Intel MacServer x86_64 and M5 Pro arm64).
+1. Candidate build digests and target architecture (Intel MacServer `x86_64` and M5 Pro `arm64`).
 2. Human review and installation approval criteria.
 3. MUSE independent verification task routed strictly through the **Seoul MCP** security gateway.
 4. Subsequent dependency tracking for the Seoul MCP Reminders Gateway adapter.
+5. End-to-end installation procedure: Code signing, TCC identity, target OS compatibility, GUI domain loading, LaunchAgent specification, health verification, and rollback recovery.
 
 ---
 
@@ -19,9 +20,10 @@ It defines:
 | Task ID | AG-01 (Phase B) |
 | Feature Branch | `feat/macserver-eventkit-readonly` |
 | Base Branch | `reconcile/icloud-source-baseline` (Stacked PR #21) |
-| arm64 Binary SHA-256 | `6ef70927f5e5053f481f9e499767748a5bd09ae232e93defe5292399e3807983` |
-| x86_64 Binary SHA-256 (Intel MacServer) | `c01b3d2b5f60f60a13d643d1087d9a87b73bca0b92990e5765a8aa70102dc181` |
-| Isolation Test Suite | **74 passed, 0 failed** (including 18 real loopback HTTP integration tests) |
+| Verified Clean Checkout Commit | `cab1252f6080da898d822435f1c9295a876034a4` |
+| arm64 Binary SHA-256 | `02f60b66ac85fe9e87a3ded4cec79125c62a81d2c553bb76582749ec809dfe83` |
+| x86_64 Binary SHA-256 (Intel MacServer) | `82aff2d1e33cdc599420195f31e07d5c282ce4a79489a6bb80c7b291d1de51cd` |
+| Isolation Test Suite | **77 passed, 0 failed** (including 21 real loopback HTTP integration tests) |
 | Apple Live Writes | **0** (strictly read-only protocol, write methods return 405) |
 | Production Changes | **0** (no service restarted, no deployment applied) |
 | PyiCloud Status | `MOCK_ONLY` |
@@ -31,14 +33,16 @@ It defines:
 
 ---
 
-## 3. Review Fixes Confirmed
+## 3. Review Fixes & Architecture Guarantees
 
 | Item | Problem Addressed | Offline Verification Evidence |
 |------|-------------------|--------------------------------|
 | **FIX-R4A-01** | Metadata queries must never query reminder counts or items | `MetadataOnlyTests` + `HttpIntegrationTests.testRealHttpMetadataOnlyNeverQueriesReminderContent` (store query count = 0) |
-| **FIX-R4A-02** | Content query must enforce iCloud source identity & type | `SourceVerifierTests` (calDAV type, source UUID & list binding check) + `HttpIntegrationTests.testRealHttpContentQueryEnforcesICloudSource` |
+| **FIX-R4A-02** | Content query must enforce iCloud source identity & type | `SourceVerifierTests` (calDAV type, source UUID & list binding check) + `HttpIntegrationTests.testSourceRejectionMatrixZeroContentAccess` |
 | **Write Isolation** | Non-GET HTTP methods must be rejected with 0 downstream calls | `WriteIsolationTests` + `HttpIntegrationTests.testRealHttpWriteOperationsRejectedWith405` (POST/PUT/DELETE/PATCH -> 405) |
-| **Listener & Shutdown** | Real HTTP loopback server with graceful stop/restart | `HttpIntegrationTests.testRealHttpGracefulStopAndRecovery` (verified socket lifecycle) |
+| **Connection Ownership** | Socket lifecycle centralization before Worker spawn | `ManagedSocketHandle` with atomic exactly-once close; `testRapidConnectionAndDisconnectStress` (10 rapid disconnects with zero fd leaks or double closes) |
+| **Store Resource Budget** | Hanging Store tasks must not accumulate unbounded | `activeStoreOperationsCount` tracked across timeouts; returns 503 (`STORE_RESOURCE_LIMIT_EXCEEDED`) when limit reached; verified in `testStoreResourceBudgetRejectsExcessiveHangingTasks` |
+| **Production Assembly Gate** | Store provider must be default-off and reject unauthorized activation | `ProductionStoreAssembly.assemble(isAuthorized:authorizedStoreProvider:)`; verified in `testProductionStoreAssemblyExplicitAuthorization` |
 
 ---
 
@@ -86,16 +90,129 @@ It defines:
 
 ## 5. MacServer Sandboxed Installation Protocol (When Authorized)
 
-When Gate B is granted by human approval:
-1. Target Host: Intel MacServer (x86_64), logged-in user graphical session.
-2. Deploy Binary: Copy x86_64 binary (`0c507fe94...`) to `~/bin/EventKitBridgeServer`.
-3. Configure `com.muse.macserver-eventkit.plist` in `~/Library/LaunchAgents/` with `127.0.0.1` and explicit allowlist.
-4. Enable LaunchAgent:
+When human authorization is granted, the deployment must execute strictly according to the following protocol:
+
+### A. Target Platform Compatibility
+- **Host Hardware**: Intel MacServer (`x86_64`)
+- **OS Compatibility**: macOS 13 (Ventura), macOS 14 (Sonoma), macOS 15 (Sequoia), Darwin 27.x.
+- **Session Domain Requirement**: **Active Graphical User Session (`gui/$(id -u)`)**.
+  > [!WARNING]
+  > EventKit relies on Apple Privacy TCC (`kTCCServiceReminders`). Daemons registered in the `system` domain or headless `launchd` contexts cannot display permission authorization dialogs or access user EventKit databases. The service **must** run in the user's GUI session.
+
+### B. Code Signing & TCC Identity
+Ad-hoc or Developer ID code signing ensures deterministic TCC attribution:
+```bash
+# Entitlements configuration (entitlements.plist)
+cat << 'EOF' > /tmp/bridge_entitlements.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+</dict>
+</plist>
+EOF
+
+# Sign binary with hardened runtime and designated identifier
+codesign --force --sign - \
+  --identifier "com.muse.macserver-eventkit" \
+  --options runtime \
+  --entitlements /tmp/bridge_entitlements.plist \
+  ~/bin/EventKitBridgeServer
+
+# Verify signature
+codesign -dv --verbose=4 ~/bin/EventKitBridgeServer
+```
+
+### C. Installation Steps
+1. **Copy Verified Binary**:
+   Copy the `x86_64` binary (SHA-256: `82aff2d1e33cdc599420195f31e07d5c282ce4a79489a6bb80c7b291d1de51cd`) to target:
+   ```bash
+   mkdir -p ~/bin
+   install -m 755 .build-x86_64/out/Products/Release/EventKitBridgeServer ~/bin/EventKitBridgeServer
+   ```
+
+2. **Deploy LaunchAgent Template (`~/Library/LaunchAgents/com.muse.macserver-eventkit.plist`)**:
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+       <key>Label</key>
+       <string>com.muse.macserver-eventkit</string>
+       <key>ProgramArguments</key>
+       <array>
+           <string>/Users/shared/bin/EventKitBridgeServer</string>
+       </array>
+       <key>EnvironmentVariables</key>
+       <dict>
+           <key>EVENTKIT_BRIDGE_MODE</key>
+           <string>production</string>
+           <key>EVENTKIT_BRIDGE_PORT</key>
+           <string>18765</string>
+           <key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
+           <string>TARGET_ICLOUD_LIST_UUID</string>
+           <key>EVENTKIT_BRIDGE_ALLOWED_SOURCE_IDS</key>
+           <string>TARGET_ICLOUD_SOURCE_UUID</string>
+           <key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
+           <string>GENERATE_SECURE_TOKEN_AT_INSTALL</string>
+           <key>EVENTKIT_BRIDGE_MAX_CONCURRENT</key>
+           <string>10</string>
+           <key>EVENTKIT_BRIDGE_MAX_STORE_OPS</key>
+           <string>10</string>
+           <key>EVENTKIT_BRIDGE_TIMEOUT</key>
+           <string>5.0</string>
+       </dict>
+       <key>RunAtLoad</key>
+       <true/>
+       <key>KeepAlive</key>
+       <true/>
+       <key>StandardOutPath</key>
+       <string>/Users/shared/log/macserver-eventkit.stdout.log</string>
+       <key>StandardErrorPath</key>
+       <string>/Users/shared/log/macserver-eventkit.stderr.log</string>
+   </dict>
+   </plist>
+   ```
+
+3. **Activate Service in GUI Domain**:
    ```bash
    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
    ```
-5. Rollback:
+
+4. **Verify Health & Isolation**:
+   ```bash
+   # 1. Health check (returns 200 without auth)
+   curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18765/health
+   # Expected: 200
+
+   # 2. Write rejection check (returns 405)
+   curl -s -X POST -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18765/reminders/lists
+   # Expected: 405
+
+   # 3. Read metadata check
+   curl -s -H "Authorization: Bearer <TOKEN>" http://127.0.0.1:18765/reminders/lists
+   # Expected: 200 with list metadata only
+   ```
+
+### D. Rollback & Recovery Procedure
+In the event of unexpected behavior, execute immediate rollback:
+1. **Unload Daemon**:
    ```bash
    launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
+   ```
+2. **Remove Binary & Plist**:
+   ```bash
+   rm -f ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
    rm -f ~/bin/EventKitBridgeServer
+   ```
+3. **Reset TCC Permissions (if testing scope requires cleanup)**:
+   ```bash
+   tccutil reset Reminders com.muse.macserver-eventkit
+   ```
+4. **Confirm Port Teardown**:
+   ```bash
+   lsof -i :18765
+   # Output must be empty
    ```
