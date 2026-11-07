@@ -1,213 +1,131 @@
-# MacServer EventKit Readonly Candidate — Formal Acceptance Protocol
-<!-- AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07 -->
+# MacServer EventKit Readonly Candidate — AG-02 安装准入与限定只读试运行申请书
+<!-- AG-02 | feat/macserver-eventkit-readonly | 2026-11-07 -->
 
-## 1. Summary & Scope
+## 1. 概述与申请目标
 
-This document specifies the formal acceptance request and actionable installation protocol for the **MacServer EventKit Read-Only Candidate**.
-It defines:
-1. Candidate build digests and target architecture (Intel MacServer `x86_64` and M5 Pro `arm64`).
-2. Human review and installation approval criteria.
-3. MUSE independent verification task routed strictly through the **Seoul MCP** security gateway.
-4. Subsequent dependency tracking for the Seoul MCP Reminders Gateway adapter.
-5. End-to-end installation procedure: Code signing with Hardened Runtime, CDHash verification, target OS compatibility, GUI domain loading, LaunchAgent specification, health verification, and rollback recovery.
+本文件为 **MacServer EventKit 只读候选守护进程** 的正式安装准入与限定只读试运行申请书。
+在 AG-01 功能范围已严格冻结的前提下，本阶段已在既有有效权限内自主完成：
+1. **候选打包与签名完整性验证**（产物已固化为自包含部署包）。
+2. **目标平台实机只读核对**（通过 Tailscale/SSH 对 Intel MacServer 系统版本、架构、GUI 登录域、端口占用及已有服务完成实地核查）。
+3. **受限配置存储与权限规范**（配置与程序定义 100% 对齐，文件权限严格最小化）。
+4. **TCC 授权入口及状态管理**（明确 macOS 15 Sequoia 体系下的首次弹窗触发与重置路径）。
+5. **基于 Fake 的进程级完整冒烟验证**（双架构二进制与配置加载全通）。
 
----
-
-## 2. Delivery & Build Verification
-
-| Field | Value |
-|-------|-------|
-| Task ID | AG-01 (Phase B) |
-| Feature Branch | `feat/macserver-eventkit-readonly` |
-| Base Branch | `reconcile/icloud-source-baseline` (Stacked PR #21) |
-| Verified Clean Checkout Commit | `fd1aa15906b8bf3327cb4f82ea79cde32bb77cab` |
-| x86_64 Pre-signing SHA-256 (Intel MacServer) | `13949eb3b3a212994024a0df5932a54f6f79e40de5867d83b34ac6d194fd408b` |
-| x86_64 Post-signing SHA-256 (Hardened Runtime) | `223d624c8bf455543f36499fc448c072a5b34087c119e4b8d4a15829f95df8d4` |
-| x86_64 CDHash | `6d8862157803a2fc7863818acdcb2b0e7ee2b103` |
-| arm64 Pre-signing SHA-256 (M5 Pro Host) | `473a49987c24f3bfaa6e8aa71358b2d1bc6a95a2a233e6a298602aa363323f4f` |
-| arm64 Post-signing SHA-256 (Hardened Runtime) | `40bcdcfbd7f4eb1011b4085f6210c99d91239306ebd236366097cdabc72bb7f1` |
-| arm64 CDHash | `f9f2c10f5bbc6076f4e6ecf1d453327905a584b5` |
-| Isolation Test Suite | **80 passed, 0 failed** (including 24 real loopback HTTP integration tests) |
-| Apple Live Writes | **0** (strictly read-only protocol, write methods return 405) |
-| Production Changes | **0** (no service restarted, no deployment applied) |
-| PyiCloud Status | `MOCK_ONLY` |
-| Seoul / MUSE Status | `PENDING` |
-| Source Reconciliation | `PARTIAL` |
-| M5 Pro Retirement | `PENDING_AUTHORIZATION` |
-
----
-
-## 3. Architecture Guarantees & Closed Blockers
-
-| Item | Problem Addressed | Offline Verification Evidence |
-|------|-------------------|--------------------------------|
-| **FIX-R4A-01** | Metadata queries must never query reminder counts or items | `MetadataOnlyTests` + `HttpIntegrationTests.testRealHttpMetadataOnlyNeverQueriesReminderContent` (store query count = 0) |
-| **FIX-R4A-02** | Content query must enforce iCloud source identity & type | `SourceVerifierTests` (calDAV type, source UUID & list binding check) + `HttpIntegrationTests.testSourceRejectionMatrixZeroContentAccess` |
-| **Write Isolation** | Non-GET HTTP methods must be rejected with 0 downstream calls | `WriteIsolationTests` + `HttpIntegrationTests.testRealHttpWriteOperationsRejectedWith405` (POST/PUT/DELETE/PATCH -> 405) |
-| **Connection Ownership** | Socket lifecycle centralization before Worker spawn | `ManagedSocketHandle` with atomic exactly-once close; `testRapidConnectionAndDisconnectStress` (10 rapid disconnects with zero fd leaks or double closes) |
-| **Store Resource Budget** | Hanging Store tasks must not accumulate unbounded across restarts | `activeStoreOperationIDs` preserved across `stop()` and `start()`; multi-round budget preservation verified in `testStoreResourceBudgetPreservedAcrossMultiRoundStopRestart` (total alive tasks capped at 2, rejects 3rd with 503) |
-| **Production Provider Assembly** | Default-off real store provider, explicit runtime authorization | `ProductionEventKitProvider.makeLiveEventStoreProvider()` wired into `ProductionStoreAssembly.assemble`; offline verified in `testProductionEventKitProviderWiringDefaultOff` (unauthorized throws `permissionDenied`, 0 live store access) |
-| **Template & Program Consistency** | Unified `EVENTKIT_BRIDGE_*` variables and canonical LaunchAgent plist | Program natively provides `--generate-plist-template`; verified in `testLaunchAgentTemplateConsistencyAndProcessLevelStartup` (plist XML parsed back, starts loopback server cleanly) |
-
----
-
-## 4. MUSE Independent Acceptance Protocol (Via Seoul MCP)
-
-### Architecture Contract
-- **Seoul Host**: Serves as the unified entry point, OAuth 2.1 layer, and write gatekeeper.
-- **MacServer EventKit**: Serves as the resident read-only helper daemon for modern Reminders lists.
-- **MUSE Client**: Must be triggered independently by the user in the MUSE client UI. Antigravity direct terminal or SSH calls **cannot substitute** for MUSE acceptance.
-
-### Dependency Gate: Seoul Gateway Adapter
 > [!IMPORTANT]
-> If Seoul MCP does not yet have the updated gateway adapter routing Reminders requests to MacServer EventKit, the MUSE end-to-end acceptance is marked **`PENDING_SEOUL_GATEWAY_ADAPTER`**. Acceptance must wait until the Seoul MCP router is deployed under a separate maintenance window.
+> **试运行边界声明**：未取得用户明确安装批准前，绝不向 MacServer 写入生产文件、不启动真实 Store、不申请真实 TCC 授权、不访问 Apple 实体数据、不修改 Seoul 网关。
 
-### User Prompt for Independent MUSE Acceptance (Read-Only)
-```text
-请通过已连接的 Seoul MCP 实例执行只读提醒事项验收：
-1. 列表元数据核验：调用 reminders_lists，验证返回的列表中仅包含列表 ID、名称和颜色，绝不包含任何未完成数量或提醒内容。
-2. 白名单读取核验：读取指定白名单测试列表中的待办事项，验证条目结构与 iCloud 来源校验一致。
-（注意：本轮为纯只读验收，严禁发送任何新建、修改或删除指令）
+---
+
+## 2. 目标平台实机只读核对证据 (MacServer Live State)
+
+通过既有授权对目标宿主 `macserver-ts` (`100.100.172.91`) 执行只读核对，确凿事实如下：
+
+| 核对项 | 实际检测值 | 准入结论 |
+|---|---|---|
+| **主机名 / 节点** | `MacServer` (`macserver-ts` / `100.100.172.91`) | ✅ 正常在线 |
+| **操作系统** | `macOS 15.7.7` (`BuildVersion 24G720`, Darwin Kernel 24.6.0) | ✅ 完全受支持（macOS 13+ 兼容） |
+| **硬件架构** | `x86_64` (`RELEASE_X86_64`) | ✅ 与候选 `Mach-O thin (x86_64)` 100% 匹配 |
+| **执行用户与组** | `uid=501(jin) gid=20(staff)` | ✅ 用户权限就绪 |
+| **GUI 登录会话** | `jin console`, session = `Aqua`, creator = `loginwindow[6593]` | ✅ 处于活动图形界面，可正常响应 TCC 授权 |
+| **目标监听端口** | `127.0.0.1:18765` | ✅ `lsof` 检查确认当前完全空闲、无任何占用 |
+| **现有服务排查** | `launchctl list \| grep muse` 无匹配项 | ✅ 无冲突服务，可干净注册 |
+| **目标目录结构** | `/Users/Shared` (drwxrwxrwt), `~/bin` (drwxr-xr-x), `~/Library/LaunchAgents` (drwxr-xr-x) | ✅ 权限完备，无需 root 提权 |
+
+---
+
+## 3. 候选打包产物与签名完整性证据
+
+所有候选部署产物已打包并固化于 `integrations/apple-icloud-mcp/candidate-package/`：
+
+| 交付文件 | 文件格式 / 属性 | SHA-256 校验和 / CDHash |
+|---|---|---|
+| **部署总包** | `macserver-eventkit-candidate-x86_64.tar.gz` | `b86543fe9aec1abb362b867282c870999b10f5fad9b5e87ab275e9c31e578f1f` |
+| **可执行二进制** | `bin/EventKitBridgeServer` (`Mach-O thin x86_64`) | 签名后 SHA-256: `223d624c8bf455543f36499fc448c072a5b34087c119e4b8d4a15829f95df8d4`<br>签名签名 CDHash: `6d8862157803a2fc7863818acdcb2b0e7ee2b103` |
+| **签名标识符** | `com.muse.macserver-eventkit` | Hardened Runtime 标志: `0x10002(adhoc,runtime)` |
+| **安装守护模板** | `com.muse.macserver-eventkit.plist.template` | 程序代码原生输出，`plutil -lint` 验证通过 |
+| **安装脚本** | `install.sh` (支持 `--dry-run`) | 权限 `0755`，集成前置检查与原子部署 |
+| **恢复卸载脚本** | `uninstall.sh` | 权限 `0755`，集成服务卸载与 TCC 重置 |
+| **状态核验脚本** | `verify.sh` | 权限 `0755`，集成 200/405/元数据检查 |
+| **冒烟验证脚本** | `smoke_test.sh` | 权限 `0755`，全自动本地回环进程级冒烟测试 |
+
+---
+
+## 4. 目标文件与权限清单 (File & Permission Matrix)
+
+在获准试运行安装后，落地于 MacServer 的目标文件及权限定义严格如下：
+
+| 文件绝对路径 | 建议权限 | 所属用户:组 | 用途与安全控制说明 |
+|---|---|---|---|
+| `/Users/shared/bin/EventKitBridgeServer` | `0755` | `jin:staff` | 带 Hardened Runtime 签名的只读服务二进制 |
+| `/Users/jin/Library/LaunchAgents/com.muse.macserver-eventkit.plist` | `0644` | `jin:staff` | 仅当前用户可读写的 LaunchAgent 配置，注入环境变量 |
+| `/Users/shared/log/macserver-eventkit.stdout.log` | `0644` | `jin:staff` | 标准输出日志（脱敏无密钥） |
+| `/Users/shared/log/macserver-eventkit.stderr.log` | `0644` | `jin:staff` | 标准错误日志 |
+
+---
+
+## 5. 限定只读试运行的真实读取范围
+
+在试运行阶段，服务被约束在极窄的安全边界内：
+
+1. **白名单强绑定范围**：
+   - 仅允许读取 `EVENTKIT_BRIDGE_ALLOWED_LIST_IDS` 环境变量中指定的特定测试列表 UUID。
+   - 仅允许经过 `EVENTKIT_BRIDGE_BINDINGS` 显式绑定的 iCloud 数据源（`sourceType == calDAV` 且 `sourceTitle == iCloud`）。
+2. **元数据与内容严格分离 (FIX-R4A-01)**：
+   - 列表查询仅暴露 `listID`、`title`、`color`、`sourceID`。
+   - 绝不暴露待办条目数量（counts）或条目内容（items）。
+3. **完全写隔离**：
+   - 协议内未定义任何写方法；HTTP 层面对于 POST、PUT、DELETE、PATCH 等非 GET 请求全部返回 405 Method Not Allowed。
+
+---
+
+## 6. 首次 TCC 授权步骤与状态检查 (Sequoia 交互)
+
+因为 MacServer 运行 macOS 15.7.7，EventKit 访问受 Apple 隐私保护机制（TCC）管辖：
+
+1. **授权触发点**：
+   - 当服务以 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true` 运行，且首个经过鉴权的只读请求触达 `/reminders/lists` 时，macOS 系统将自动在 MacServer 的物理显示器（Aqua 图形会话 `gui/501`）弹出授权框：
+     > **“EventKitBridgeServer”想要访问您的“提醒事项”。**
+2. **首次授权操作**：
+   - 由用户 `jin` 在 MacServer 图形控制台前台点击“允许”；或在 macOS `系统设置 -> 隐私与安全性 -> 提醒事项` 中勾选 `EventKitBridgeServer`。
+3. **状态检查机制**：
+   - **授权前/待确认状态**：`/health` 端点仍返回 200 OK；业务端点返回 403 `permissionDenied`（脱敏不崩溃）。
+   - **授权通过状态**：业务端点返回 200 OK 及只读列表元数据。
+   - **重置复原**：执行 `tccutil reset Reminders com.muse.macserver-eventkit` 即可瞬间重置为未授权状态。
+
+---
+
+## 7. 一键可批准的安装与原状态恢复方案
+
+### A. 执行试运行安装（待用户批准后执行）
+```bash
+# 1. 登录目标机器检查预检项（干跑验证）
+ssh macserver-ts "/path/to/install.sh --dry-run"
+
+# 2. 正式安装与启动
+ssh macserver-ts "/path/to/install.sh"
+
+# 3. 验证基础连通性与写隔离（返回 200 与 405）
+ssh macserver-ts "/path/to/verify.sh 18765"
 ```
 
-### Expected Structured Verification Receipt
-```json
-{
-  "task": "MUSE_EVENTKIT_READONLY_ACCEPTANCE",
-  "gateway": "SEOUL_MCP",
-  "backend": "MACSERVER_EVENTKIT",
-  "metadata_only_verified": {
-    "status": "PASS",
-    "reminder_counts_exposed": false,
-    "items_exposed": false
-  },
-  "source_integrity_verified": {
-    "status": "PASS",
-    "source_type": "calDAV",
-    "source_title": "iCloud"
-  },
-  "downstream_writes": 0,
-  "timestamp": "<ISO-8601>"
-}
+### B. 恢复原状态方案（Rollback，遇任何异常一键执行）
+```bash
+# 1. 执行回退脚本
+ssh macserver-ts "/path/to/uninstall.sh"
+
+# 脚本自动执行：
+# a. launchctl bootout gui/501 ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
+# b. rm -f ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist /Users/shared/bin/EventKitBridgeServer
+# c. tccutil reset Reminders com.muse.macserver-eventkit
+# d. 确认端口 18765 彻底释放
 ```
 
 ---
 
-## 5. MacServer Sandboxed Installation Protocol (When Authorized)
+## 八、零变更与合规声明
 
-When human authorization is granted, the deployment must execute strictly according to the following protocol:
-
-### A. Target Platform Compatibility
-- **Host Hardware**: Intel MacServer (`x86_64`)
-- **OS Compatibility**: macOS 13 (Ventura), macOS 14 (Sonoma), macOS 15 (Sequoia), Darwin 27.x.
-- **Session Domain Requirement**: **Active Graphical User Session (`gui/$(id -u)`)**.
-  > [!WARNING]
-  > EventKit relies on Apple Privacy TCC (`kTCCServiceReminders`). Daemons registered in the `system` domain or headless `launchd` contexts cannot display permission authorization dialogs or access user EventKit databases. The service **must** run in the user's GUI session.
-
-### B. Code Signing & Hardened Runtime Verification
-Apply ad-hoc code signature with Hardened Runtime on the target binary:
-```bash
-# 1. Sign target binary with designated identifier and hardened runtime
-codesign --force --sign - \
-  --identifier "com.muse.macserver-eventkit" \
-  --options runtime \
-  /Users/shared/bin/EventKitBridgeServer
-
-# 2. Verify signature and CDHash (must match 6d8862157803a2fc7863818acdcb2b0e7ee2b103)
-codesign -dv --verbose=4 /Users/shared/bin/EventKitBridgeServer
-```
-
-### C. Installation Steps
-1. **Prepare Directories & Deploy Binary**:
-   ```bash
-   mkdir -p /Users/shared/bin /Users/shared/log ~/Library/LaunchAgents
-   install -m 755 .build-x86_64/out/Products/Release/EventKitBridgeServer /Users/shared/bin/EventKitBridgeServer
-   ```
-
-2. **Deploy Canonical LaunchAgent Configuration (`~/Library/LaunchAgents/com.muse.macserver-eventkit.plist`)**:
-   Use the canonical template generated directly from the binary definition:
-   ```xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>Label</key>
-       <string>com.muse.macserver-eventkit</string>
-       <key>ProgramArguments</key>
-       <array>
-           <string>/Users/shared/bin/EventKitBridgeServer</string>
-       </array>
-       <key>EnvironmentVariables</key>
-       <dict>
-           <key>EVENTKIT_BRIDGE_MODE</key>
-           <string>PRODUCTION</string>
-           <key>EVENTKIT_BRIDGE_PORT</key>
-           <string>18765</string>
-           <key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
-           <string>TARGET_ICLOUD_LIST_UUID</string>
-           <key>EVENTKIT_BRIDGE_BINDINGS</key>
-           <string>TARGET_ICLOUD_LIST_UUID:TARGET_ICLOUD_SOURCE_UUID:calDAV:iCloud</string>
-           <key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
-           <string>GENERATE_SECURE_TOKEN_AT_INSTALL</string>
-           <key>EVENTKIT_BRIDGE_MAX_CONCURRENT</key>
-           <string>10</string>
-           <key>EVENTKIT_BRIDGE_MAX_STORE_OPS</key>
-           <string>10</string>
-           <key>EVENTKIT_BRIDGE_TIMEOUT</key>
-           <string>5.0</string>
-           <key>EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED</key>
-           <string>true</string>
-       </dict>
-       <key>RunAtLoad</key>
-       <true/>
-       <key>KeepAlive</key>
-       <true/>
-       <key>StandardOutPath</key>
-       <string>/Users/shared/log/macserver-eventkit.stdout.log</string>
-       <key>StandardErrorPath</key>
-       <string>/Users/shared/log/macserver-eventkit.stderr.log</string>
-   </dict>
-   </plist>
-   ```
-
-3. **Activate Service in GUI Domain**:
-   ```bash
-   chmod 644 ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
-   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
-   ```
-
-4. **Verify Health & Isolation**:
-   ```bash
-   # 1. Health check (returns 200 without auth)
-   curl -s http://127.0.0.1:18765/health
-   # Expected: {"status":"ok","mode":"readonly","active_requests":0,"active_store_operations":0...}
-
-   # 2. Write rejection check (returns 405)
-   curl -s -X POST -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18765/reminders/lists
-   # Expected: 405
-
-   # 3. Read metadata check
-   curl -s -H "Authorization: Bearer <TOKEN>" http://127.0.0.1:18765/reminders/lists
-   # Expected: 200 with list metadata only
-   ```
-
-### D. Rollback & Recovery Procedure
-In the event of unexpected behavior, execute immediate rollback:
-1. **Unload Daemon**:
-   ```bash
-   launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
-   ```
-2. **Remove Binary & Plist**:
-   ```bash
-   rm -f ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
-   rm -f /Users/shared/bin/EventKitBridgeServer
-   ```
-3. **Reset TCC Permissions (if testing scope requires cleanup)**:
-   ```bash
-   tccutil reset Reminders com.muse.macserver-eventkit
-   ```
-4. **Confirm Port Teardown**:
-   ```bash
-   lsof -i :18765
-   # Output must be empty
-   ```
+- 本轮所有实机核查均为 **100% 只读**，未在 MacServer 上创建任何文件、未启动任何后台常驻进程。
+- **真实 Apple 数据调用**：0 次。
+- **生产服务变更**：0 次。
+- **Seoul 网关修改**：0 次。
+- GitHub PR 状态：[PR #20](https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/20) 与 [PR #21](https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/21) 保持 **OPEN**，等待后续指令。

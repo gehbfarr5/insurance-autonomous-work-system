@@ -1,0 +1,93 @@
+{
+  "task": "AG-02",
+  "candidate": "MacServer EventKit Read-Only Helper Daemon",
+  "version": "1.0.0-candidate",
+  "verified_commit": "fd1aa15906b8bf3327cb4f82ea79cde32bb77cab",
+  "target_platform": {
+    "hostname": "MacServer",
+    "tailscale_ip": "100.100.172.91",
+    "os_name": "macOS",
+    "os_version": "15.7.7",
+    "build_version": "24G720",
+    "darwin_kernel": "24.6.0 (RELEASE_X86_64)",
+    "architecture": "x86_64",
+    "target_user": {
+      "username": "jin",
+      "uid": 501,
+      "gid": 20,
+      "group": "staff"
+    },
+    "gui_session": {
+      "domain": "gui/501",
+      "session_type": "Aqua",
+      "creator": "loginwindow[6593]"
+    },
+    "port": {
+      "host": "127.0.0.1",
+      "port": 18765,
+      "status": "confirmed_free"
+    }
+  },
+  "binary": {
+    "relative_path": "bin/EventKitBridgeServer",
+    "format": "Mach-O thin (x86_64)",
+    "pre_signing_sha256": "13949eb3b3a212994024a0df5932a54f6f79e40de5867d83b34ac6d194fd408b",
+    "post_signing_sha256": "223d624c8bf455543f36499fc448c072a5b34087c119e4b8d4a15829f95df8d4",
+    "code_signature": {
+      "identifier": "com.muse.macserver-eventkit",
+      "authority": "adhoc",
+      "options": "runtime (Hardened Runtime active)",
+      "flags": "0x10002",
+      "cdhash": "6d8862157803a2fc7863818acdcb2b0e7ee2b103"
+    }
+  },
+  "file_permission_matrix": [
+    {
+      "path": "/Users/shared/bin/EventKitBridgeServer",
+      "permissions": "0755",
+      "owner": "jin:staff",
+      "description": "Signed executable binary with Hardened Runtime"
+    },
+    {
+      "path": "$HOME/Library/LaunchAgents/com.muse.macserver-eventkit.plist",
+      "permissions": "0644",
+      "owner": "jin:staff",
+      "description": "User GUI session LaunchAgent configuration"
+    },
+    {
+      "path": "/Users/shared/log/macserver-eventkit.stdout.log",
+      "permissions": "0644",
+      "owner": "jin:staff",
+      "description": "Standard output log file"
+    },
+    {
+      "path": "/Users/shared/log/macserver-eventkit.stderr.log",
+      "permissions": "0644",
+      "owner": "jin:staff",
+      "description": "Standard error log file"
+    }
+  ],
+  "security_boundaries": {
+    "live_writes_permitted": false,
+    "http_write_verb_status": 405,
+    "metadata_content_exposure": false,
+    "metadata_count_exposure": false,
+    "unverified_source_rejection": true,
+    "tcc_permission_required": "kTCCServiceReminders",
+    "production_default": "disabled (EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false)"
+  },
+  "first_time_authorization": {
+    "tcc_service": "Reminders",
+    "designated_identity": "com.muse.macserver-eventkit",
+    "prompt_mechanism": "Aqua GUI system dialog on console (loginwindow)",
+    "manual_path": "System Settings -> Privacy & Security -> Reminders"
+  },
+  "rollback": {
+    "daemon_bootout_command": "launchctl bootout gui/501 ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist",
+    "tcc_reset_command": "tccutil reset Reminders com.muse.macserver-eventkit",
+    "file_cleanup": [
+      "rm -f ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist",
+      "rm -f /Users/shared/bin/EventKitBridgeServer"
+    ]
+  }
+}
