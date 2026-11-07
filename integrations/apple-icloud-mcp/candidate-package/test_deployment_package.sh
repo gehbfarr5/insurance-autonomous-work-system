@@ -1,18 +1,19 @@
 #!/bin/bash
 # test_deployment_package.sh — Candidate Package Admission & Safety Test Suite
-# AG-02 Admission Verification | Version 1.3.0
+# AG-02 Admission Verification | Version 1.4.0
 #
 # Validates:
-# 1. Clean installation & permission matrix (0600/0700/0755/0644, zero re-signing)
+# 1. Clean installation & permission matrix (0600/0700/0755/0644, zero re-signing) [SIMULATED launchd]
 # 2. Rejection of any existing binary, plist, or config (clean install only)
 # 3. Dry-run zero-write verification (zero filesystem modifications)
 # 4. Fault injection: Post-copy verification failure rollback
-# 5. Fault injection: Bootstrap failure rollback
-# 6. Fault injection: Post-bootstrap health failure rollback
+# 5. Fault injection: Bootstrap failure rollback [SIMULATED launchd]
+# 6. Fault injection: Post-bootstrap health failure rollback [SIMULATED launchd]
 # 7. Fault injection: Pre-existing parent directory and permission preservation (0750)
-# 8. Uninstall safety & foreign port conflict protection (preserves files, never kills foreign PID)
-# 9. Verification modes: unauthorized-check (expects 403) and readonly-acceptance (403 fails)
-# 10. Digest mismatch rejection on tampered source binary
+# 8. Real TERM signal termination & zero-subsequent-write isolation test (asserts exit code 143, process dead, zero subsequent writes)
+# 9. Uninstall safety, port conflict protection, and pre/post directory tree equivalence [SIMULATED launchd]
+# 10. Verification modes: unauthorized-check (expects 403) and readonly-acceptance (403 fails)
+# 11. Digest mismatch rejection on tampered source binary
 
 set -euo pipefail
 
@@ -23,16 +24,18 @@ trap 'rm -rf "$TEST_ROOT"' EXIT
 echo "=========================================================="
 echo " MacServer Candidate Package Isolation Test Harness       "
 echo " Sandbox: $TEST_ROOT"
+echo " Note: launchd operations run in simulated mode (SKIP_LAUNCHCTL=true);"
+echo "       live launchctl registration deferred to authorized trial run."
 echo "=========================================================="
 
 PASSED=0
-TOTAL=10
+TOTAL=11
 
 # -------------------------------------------------------------
-# Test 1: Clean Installation & Permission Matrix
+# Test 1: Clean Installation & Permission Matrix [SIMULATED launchd]
 # -------------------------------------------------------------
 echo ""
-echo "=== Test 1: Clean Installation & Permission Matrix ==="
+echo "=== Test 1: Clean Installation & Permission Matrix [SIMULATED launchd] ==="
 T1_DIR="$TEST_ROOT/test1"
 mkdir -p "$T1_DIR"
 
@@ -101,7 +104,7 @@ done
 kill -TERM "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 
-echo "-> PASS: Clean installation verified with complete permission matrix."
+echo "-> PASS: Clean installation verified with complete permission matrix [SIMULATED launchd]."
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
@@ -205,10 +208,10 @@ echo "-> PASS: Post-copy verification failure triggered rollback; exact clean st
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
-# Test 5: Fault Injection 2 — Bootstrap Failure
+# Test 5: Fault Injection 2 — Bootstrap Failure [SIMULATED launchd]
 # -------------------------------------------------------------
 echo ""
-echo "=== Test 5: Fault Injection 2 — Bootstrap Failure ==="
+echo "=== Test 5: Fault Injection 2 — Bootstrap Failure [SIMULATED launchd] ==="
 T5_DIR="$TEST_ROOT/test5"
 mkdir -p "$T5_DIR"
 
@@ -230,14 +233,14 @@ set -e
 [ ! -f "$TARGET_CONFIG_DIR/bridge.env" ]
 [ ! -d "$TARGET_CONFIG_DIR" ]
 
-echo "-> PASS: Bootstrap failure triggered rollback; exact clean state restored."
+echo "-> PASS: Bootstrap failure triggered rollback; exact clean state restored [SIMULATED launchd]."
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
-# Test 6: Fault Injection 3 — Post-Bootstrap Health Failure
+# Test 6: Fault Injection 3 — Post-Bootstrap Health Failure [SIMULATED launchd]
 # -------------------------------------------------------------
 echo ""
-echo "=== Test 6: Fault Injection 3 — Post-Bootstrap Health Failure ==="
+echo "=== Test 6: Fault Injection 3 — Post-Bootstrap Health Failure [SIMULATED launchd] ==="
 T6_DIR="$TEST_ROOT/test6"
 mkdir -p "$T6_DIR"
 
@@ -259,7 +262,7 @@ set -e
 [ ! -f "$TARGET_CONFIG_DIR/bridge.env" ]
 [ ! -d "$TARGET_CONFIG_DIR" ]
 
-echo "-> PASS: Post-bootstrap health failure triggered rollback; exact clean state restored."
+echo "-> PASS: Post-bootstrap health failure triggered rollback; exact clean state restored [SIMULATED launchd]."
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
@@ -299,84 +302,172 @@ echo "-> PASS: Pre-existing parent directory retained with original 0750 permiss
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
-# Test 8: Uninstall Safety & Port Conflict Protection
+# Test 8: Real TERM Signal Termination & Zero-Subsequent-Write Isolation
 # -------------------------------------------------------------
 echo ""
-echo "=== Test 8: Uninstall Safety & Port Conflict Protection ==="
-# Part A: Normal uninstall of Test 1 environment
-export TARGET_BIN_DIR="$T1_DIR/bin"
-export TARGET_LOG_DIR="$T1_DIR/log"
-export TARGET_LAUNCHAGENTS_DIR="$T1_DIR/LaunchAgents"
-export TARGET_CONFIG_DIR="$T1_DIR/config"
-export TARGET_STATE_DIR="$T1_DIR/config/state"
+echo "=== Test 8: Real TERM Signal Termination & Zero-Subsequent-Write ==="
+T8_TERM_DIR="$TEST_ROOT/test8_term"
+mkdir -p "$T8_TERM_DIR"
+
+export TARGET_BIN_DIR="$T8_TERM_DIR/bin"
+export TARGET_LOG_DIR="$T8_TERM_DIR/log"
+export TARGET_LAUNCHAGENTS_DIR="$T8_TERM_DIR/LaunchAgents"
+export TARGET_CONFIG_DIR="$T8_TERM_DIR/config"
+export TARGET_STATE_DIR="$T8_TERM_DIR/config/state"
 export SKIP_LAUNCHCTL=true
 
-"$PACKAGE_DIR/uninstall.sh"
+TERM_LOG="$TEST_ROOT/test8_term.log"
 
+# Run install.sh with wait-for-signal injection in background
+"$PACKAGE_DIR/install.sh" --inject-failure=wait-for-signal > "$TERM_LOG" 2>&1 &
+TERM_PID=$!
+
+# Wait for process to pause at injection point
+for i in {1..30}; do
+    if grep -q "INJECTED PAUSE" "$TERM_LOG" 2>/dev/null; then
+        break
+    fi
+    sleep 0.1
+done
+
+# Send real SIGTERM to running install.sh process
+kill -TERM "$TERM_PID"
+
+# Wait for process to terminate and capture exit code
+set +e
+wait "$TERM_PID"
+TERM_EXIT_CODE=$?
+set -e
+
+# Assert exit code is exactly 143 (128 + 15 for SIGTERM)
+[ "$TERM_EXIT_CODE" -eq 143 ]
+
+# Assert process has exited and is dead
+! kill -0 "$TERM_PID" 2>/dev/null
+
+# Assert EXIT trap executed rollback and cleaned up created files
 [ ! -f "$TARGET_BIN_DIR/EventKitBridgeServer" ]
 [ ! -f "$TARGET_LAUNCHAGENTS_DIR/com.muse.macserver-eventkit.plist" ]
 [ ! -f "$TARGET_CONFIG_DIR/bridge.env" ]
+[ ! -f "$TARGET_STATE_DIR/install_receipt.json" ]
+[ ! -d "$TARGET_CONFIG_DIR" ]
 
-# Part B: Foreign port conflict protection
-# Create a dummy receipt claiming port 18783
-T8_DIR="$TEST_ROOT/test8"
-mkdir -p "$T8_DIR/config/state"
-RECEIPT_8="$T8_DIR/config/state/install_receipt.json"
-cat > "$RECEIPT_8" << EOF_R
+# Wait 0.5s and assert NO subsequent writes occurred
+sleep 0.5
+ENTRY_COUNT_TERM=$(find "$T8_TERM_DIR" -type f | wc -l | tr -d ' ')
+[ "$ENTRY_COUNT_TERM" -eq 0 ]
+! kill -0 "$TERM_PID" 2>/dev/null
+
+echo "-> PASS: Real TERM signal terminated install.sh with exit code 143; EXIT trap executed rollback; zero subsequent writes confirmed."
+PASSED=$((PASSED + 1))
+
+# -------------------------------------------------------------
+# Test 9: Uninstall Directory Tree & Permission Equivalence & Port Conflict [SIMULATED launchd]
+# -------------------------------------------------------------
+echo ""
+echo "=== Test 9: Uninstall Directory Tree Equivalence & Port Conflict [SIMULATED launchd] ==="
+T9_TREE_DIR="$TEST_ROOT/test9_tree"
+# Setup pre-existing directory structure with specific permissions
+mkdir -p -m 0755 "$T9_TREE_DIR/bin"
+mkdir -p -m 0755 "$T9_TREE_DIR/log"
+mkdir -p -m 0755 "$T9_TREE_DIR/LaunchAgents"
+mkdir -p -m 0750 "$T9_TREE_DIR/config"
+touch "$T9_TREE_DIR/config/existing_keep.txt"
+chmod 0640 "$T9_TREE_DIR/config/existing_keep.txt"
+
+# Capture PRE-install directory tree and permission matrix
+PRE_TREE=$(find "$T9_TREE_DIR" | sort)
+PRE_PERMS=$(stat -f "%N:%OLp" $(find "$T9_TREE_DIR") | sort)
+
+export TARGET_BIN_DIR="$T9_TREE_DIR/bin"
+export TARGET_LOG_DIR="$T9_TREE_DIR/log"
+export TARGET_LAUNCHAGENTS_DIR="$T9_TREE_DIR/LaunchAgents"
+export TARGET_CONFIG_DIR="$T9_TREE_DIR/config/muse-macserver"
+export TARGET_STATE_DIR="$T9_TREE_DIR/config/muse-macserver/state"
+export SKIP_LAUNCHCTL=true
+export EVENTKIT_BRIDGE_PORT=18789
+
+# Install into subdirectories
+"$PACKAGE_DIR/install.sh" > /dev/null
+
+# Verify installation files exist
+[ -f "$TARGET_CONFIG_DIR/bridge.env" ]
+[ -f "$TARGET_STATE_DIR/install_receipt.json" ]
+[ -d "$TARGET_STATE_DIR" ]
+
+# Now uninstall
+"$PACKAGE_DIR/uninstall.sh" > /dev/null
+
+# Capture POST-uninstall directory tree and permission matrix
+POST_TREE=$(find "$T9_TREE_DIR" | sort)
+POST_PERMS=$(stat -f "%N:%OLp" $(find "$T9_TREE_DIR") | sort)
+
+# Assert exact equivalence: all newly created directories cleaned up, pre-existing tree and permissions unchanged
+[ "$PRE_TREE" = "$POST_TREE" ]
+[ "$PRE_PERMS" = "$POST_PERMS" ]
+[ ! -d "$TARGET_CONFIG_DIR" ]
+[ ! -d "$TARGET_STATE_DIR" ]
+[ -f "$T9_TREE_DIR/config/existing_keep.txt" ]
+KEEP_MODE=$(stat -f "%OLp" "$T9_TREE_DIR/config")
+[ "$KEEP_MODE" = "750" ]
+
+# Part B: Foreign port conflict protection (preserves files and receipt)
+T9_PORT_DIR="$TEST_ROOT/test9_port"
+mkdir -p "$T9_PORT_DIR/config/state"
+RECEIPT_PORT="$T9_PORT_DIR/config/state/install_receipt.json"
+cat > "$RECEIPT_PORT" << EOF_RP
 {
-  "binary_path": "$T8_DIR/bin/EventKitBridgeServer",
-  "plist_path": "$T8_DIR/LaunchAgents/com.muse.macserver-eventkit.plist",
-  "config_path": "$T8_DIR/config/bridge.env",
+  "binary_path": "$T9_PORT_DIR/bin/EventKitBridgeServer",
+  "plist_path": "$T9_PORT_DIR/LaunchAgents/com.muse.macserver-eventkit.plist",
+  "config_path": "$T9_PORT_DIR/config/bridge.env",
   "service_label": "com.muse.macserver-eventkit",
   "port": 18783
 }
-EOF_R
+EOF_RP
 
-# Start an external foreign listener on port 18783
+# Start external listener on port 18783
 nc -l 127.0.0.1 18783 > /dev/null 2>&1 &
 NC_PID=$!
 sleep 0.2
 
-export TARGET_CONFIG_DIR="$T8_DIR/config"
-export TARGET_STATE_DIR="$T8_DIR/config/state"
+export TARGET_CONFIG_DIR="$T9_PORT_DIR/config"
+export TARGET_STATE_DIR="$T9_PORT_DIR/config/state"
 export SKIP_LAUNCHCTL=false
 
 set +e
 "$PACKAGE_DIR/uninstall.sh" > /dev/null 2>&1
-UNINSTALL_EXIT=$?
+UNINSTALL_PORT_EXIT=$?
 set -e
 
-# Assert uninstall exited non-zero because port was held by an external process
-[ "$UNINSTALL_EXIT" -ne 0 ]
-
+[ "$UNINSTALL_PORT_EXIT" -ne 0 ]
 # Assert external process was NOT killed
 kill -0 "$NC_PID" 2>/dev/null
 kill -9 "$NC_PID" 2>/dev/null || true
 wait "$NC_PID" 2>/dev/null || true
 
-# Assert receipt was PRESERVED for operator investigation
-[ -f "$RECEIPT_8" ]
+# Assert receipt preserved
+[ -f "$RECEIPT_PORT" ]
 
-echo "-> PASS: Uninstall cleanly removed confirmed files; foreign process on port protected without killing; receipt preserved."
+echo "-> PASS: Directory tree matches 100% pre-install baseline; all created dirs removed, pre-existing dirs/perms intact; foreign port conflict protected [SIMULATED launchd]."
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
-# Test 9: Verification Modes (Unauthorized vs Real-Read)
+# Test 10: Verification Modes (Unauthorized vs Real-Read)
 # -------------------------------------------------------------
 echo ""
-echo "=== Test 9: Verification Modes (Unauthorized vs Real-Read) ==="
-T9_DIR="$TEST_ROOT/test9"
-mkdir -p "$T9_DIR/config"
-TOKEN_9="test-verify-token-001"
-echo "EVENTKIT_BRIDGE_BEARER_TOKEN=\"$TOKEN_9\"" > "$T9_DIR/config/bridge.env"
-chmod 0600 "$T9_DIR/config/bridge.env"
+echo "=== Test 10: Verification Modes (Unauthorized vs Real-Read) ==="
+T10_DIR="$TEST_ROOT/test10"
+mkdir -p "$T10_DIR/config"
+TOKEN_10="test-verify-token-001"
+echo "EVENTKIT_BRIDGE_BEARER_TOKEN=\"$TOKEN_10\"" > "$T10_DIR/config/bridge.env"
+chmod 0600 "$T10_DIR/config/bridge.env"
 
 # Case A: Start server in unauthorized mode (force 403 on lists)
 export EVENTKIT_BRIDGE_PORT=18785
 export EVENTKIT_BRIDGE_MODE="PRODUCTION"
 export EVENTKIT_BRIDGE_ALLOWED_LIST_IDS="test-list-uuid"
 export EVENTKIT_BRIDGE_BINDINGS="test-list-uuid:src-uuid:calDAV:iCloud"
-export EVENTKIT_BRIDGE_BEARER_TOKEN="$TOKEN_9"
+export EVENTKIT_BRIDGE_BEARER_TOKEN="$TOKEN_10"
 export EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED="false"
 
 "$PACKAGE_DIR/bin/EventKitBridgeServer" > /dev/null 2>&1 &
@@ -390,11 +481,11 @@ for i in {1..20}; do
 done
 
 # In unauthorized mode: --unauthorized-check MUST pass
-"$PACKAGE_DIR/verify.sh" --mode=unauthorized-check --port=18785 --config="$T9_DIR/config/bridge.env" > /dev/null
+"$PACKAGE_DIR/verify.sh" --mode=unauthorized-check --port=18785 --config="$T10_DIR/config/bridge.env" > /dev/null
 
 # In unauthorized mode: --readonly-acceptance MUST FAIL (non-zero)
 set +e
-"$PACKAGE_DIR/verify.sh" --mode=readonly-acceptance --port=18785 --config="$T9_DIR/config/bridge.env" > /dev/null 2>&1
+"$PACKAGE_DIR/verify.sh" --mode=readonly-acceptance --port=18785 --config="$T10_DIR/config/bridge.env" > /dev/null 2>&1
 ACCEPT_FAIL=$?
 set -e
 [ "$ACCEPT_FAIL" -ne 0 ]
@@ -415,11 +506,11 @@ for i in {1..20}; do
 done
 
 # In authorized mode: --readonly-acceptance MUST pass
-"$PACKAGE_DIR/verify.sh" --mode=readonly-acceptance --port=18785 --config="$T9_DIR/config/bridge.env" > /dev/null
+"$PACKAGE_DIR/verify.sh" --mode=readonly-acceptance --port=18785 --config="$T10_DIR/config/bridge.env" > /dev/null
 
 # In authorized mode: --unauthorized-check MUST FAIL (non-zero) because 200 was received instead of 403
 set +e
-"$PACKAGE_DIR/verify.sh" --mode=unauthorized-check --port=18785 --config="$T9_DIR/config/bridge.env" > /dev/null 2>&1
+"$PACKAGE_DIR/verify.sh" --mode=unauthorized-check --port=18785 --config="$T10_DIR/config/bridge.env" > /dev/null 2>&1
 UNAUTH_FAIL=$?
 set -e
 [ "$UNAUTH_FAIL" -ne 0 ]
@@ -431,26 +522,26 @@ echo "-> PASS: Verification modes strictly differentiated; 403 fails real-read; 
 PASSED=$((PASSED + 1))
 
 # -------------------------------------------------------------
-# Test 10: Digest Mismatch Rejection
+# Test 11: Digest Mismatch Rejection
 # -------------------------------------------------------------
 echo ""
-echo "=== Test 10: Digest Mismatch Rejection ==="
-T10_DIR="$TEST_ROOT/test10"
-mkdir -p "$T10_DIR"
-cp -r "$PACKAGE_DIR" "$T10_DIR/tampered-package"
+echo "=== Test 11: Digest Mismatch Rejection ==="
+T11_DIR="$TEST_ROOT/test11"
+mkdir -p "$T11_DIR"
+cp -r "$PACKAGE_DIR" "$T11_DIR/tampered-package"
 
 # Tamper binary by appending 1 byte
-echo "Z" >> "$T10_DIR/tampered-package/bin/EventKitBridgeServer"
+echo "Z" >> "$T11_DIR/tampered-package/bin/EventKitBridgeServer"
 
-export TARGET_BIN_DIR="$T10_DIR/target/bin"
-export TARGET_LOG_DIR="$T10_DIR/target/log"
-export TARGET_LAUNCHAGENTS_DIR="$T10_DIR/target/LaunchAgents"
-export TARGET_CONFIG_DIR="$T10_DIR/target/config"
-export TARGET_STATE_DIR="$T10_DIR/target/config/state"
+export TARGET_BIN_DIR="$T11_DIR/target/bin"
+export TARGET_LOG_DIR="$T11_DIR/target/log"
+export TARGET_LAUNCHAGENTS_DIR="$T11_DIR/target/LaunchAgents"
+export TARGET_CONFIG_DIR="$T11_DIR/target/config"
+export TARGET_STATE_DIR="$T11_DIR/target/config/state"
 export SKIP_LAUNCHCTL=true
 
 set +e
-"$T10_DIR/tampered-package/install.sh" > /dev/null 2>&1
+"$T11_DIR/tampered-package/install.sh" > /dev/null 2>&1
 TAMPER_EXIT=$?
 set -e
 

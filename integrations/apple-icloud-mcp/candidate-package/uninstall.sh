@@ -1,6 +1,6 @@
 #!/bin/bash
 # uninstall.sh — MacServer EventKit Bridge Rollback / Teardown Script
-# AG-02 Candidate Package | Version 1.3.0
+# AG-02 Candidate Package | Version 1.4.0
 
 set -euo pipefail
 
@@ -63,18 +63,30 @@ if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         echo "Preserving all installation files and receipt for investigation at $RECEIPT_FILE" >&2
         exit 1
     fi
+else
+    echo "  -> [SIMULATED launchd] LaunchAgent bootout simulated (SKIP_LAUNCHCTL=true; live launchctl bootout deferred to authorized trial run)."
 fi
 
 # 3. Clean up deployed files recorded in receipt and restore directory states
 echo "[2/4] Removing installed files and restoring directory states..."
-rm -f "$PLIST_PATH" "$BINARY_PATH" "$CONFIG_PATH"
+
+# 3a. Retain snapshot records in memory first before deleting status files
+SNAPSHOT_RECORDS=""
+if [ -f "$SNAPSHOT_FILE" ]; then
+    SNAPSHOT_RECORDS=$(cat "$SNAPSHOT_FILE")
+fi
+
+# 3b. Delete installed files and status/receipt files
+rm -f "$PLIST_PATH" "$BINARY_PATH" "$CONFIG_PATH" "$RECEIPT_FILE" "$SNAPSHOT_FILE"
 echo "  -> Removed: $PLIST_PATH"
 echo "  -> Removed: $BINARY_PATH"
 echo "  -> Removed: $CONFIG_PATH"
+echo "  -> Removed: $RECEIPT_FILE"
+echo "  -> Removed: $SNAPSHOT_FILE"
 
-# Restore pre-install directory permissions and remove only created directories
-if [ -f "$SNAPSHOT_FILE" ]; then
-    tail -r "$SNAPSHOT_FILE" 2>/dev/null | while IFS='|' read -r type path mode || [ -n "$type" ]; do
+# 3c. Clean up created directories bottom-up and restore original directory permissions
+if [ -n "$SNAPSHOT_RECORDS" ]; then
+    echo "$SNAPSHOT_RECORDS" | { tail -r 2>/dev/null || awk '{a[i++]=$0} END {for (j=i-1; j>=0; j--) print a[j]}'; } | while IFS='|' read -r type path mode || [ -n "$type" ]; do
         case "$type" in
             DIR_CREATED)
                 if [ -d "$path" ]; then
@@ -90,10 +102,7 @@ if [ -f "$SNAPSHOT_FILE" ]; then
                 ;;
         esac
     done
-    rm -f "$SNAPSHOT_FILE"
 fi
-
-rm -f "$RECEIPT_FILE"
 
 # 4. Optional TCC Permission Reset (ONLY on explicit request, never by default)
 echo "[3/4] Checking TCC Reminders state..."

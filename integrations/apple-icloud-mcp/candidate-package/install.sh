@@ -1,7 +1,7 @@
 #!/bin/bash
 # install.sh — MacServer EventKit Bridge Installation Script
 # Target: Intel MacServer (macOS 13+, x86_64) | gui/$(id -u) domain
-# AG-02 Candidate Package | Version 1.3.0
+# AG-02 Candidate Package | Version 1.4.0
 
 set -euo pipefail
 
@@ -70,8 +70,10 @@ if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         echo "EventKit requires an active Aqua graphical login session for TCC authorization." >&2
         exit 1
     fi
+    echo "  -> OS: $OS_NAME ($ARCH_NAME), User UID: $CURRENT_UID (GUI session active)"
+else
+    echo "  -> OS: $OS_NAME ($ARCH_NAME), User UID: $CURRENT_UID [SIMULATED launchd - live verification deferred to authorized trial run]"
 fi
-echo "  -> OS: $OS_NAME ($ARCH_NAME), User UID: $CURRENT_UID (GUI session active)"
 
 # 2. Port conflict check
 echo "[2/6] Checking port $PORT availability..."
@@ -195,23 +197,26 @@ rollback_on_failure() {
     local code="${1:-1}"
     echo "ERROR: Installation failed (exit code: $code)! Rolling back to exact pre-install state..." >&2
 
-    # 1. Unload LaunchAgent daemon if registered
+    # 1. Retain snapshot records first before deleting files
+    local snap_content=""
+    if [ -f "$SNAPSHOT_FILE" ]; then
+        snap_content=$(cat "$SNAPSHOT_FILE")
+    elif [ -f "$SNAPSHOT_TMP" ]; then
+        snap_content=$(cat "$SNAPSHOT_TMP")
+    fi
+
+    # 2. Unload LaunchAgent daemon if registered
     if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         launchctl bootout "gui/$CURRENT_UID/com.muse.macserver-eventkit" > /dev/null 2>&1 || true
     fi
 
-    # 2. Remove files created by this install
+    # 3. Remove files created by this install
     rm -f "$TARGET_BIN" "$TARGET_PLIST" "$TARGET_CONFIG" "$RECEIPT_FILE" "$SNAPSHOT_FILE"
 
-    # 3. Restore directory permissions and remove created directories using snapshot records
-    local snap="$SNAPSHOT_FILE"
-    if [ ! -f "$snap" ] && [ -f "$SNAPSHOT_TMP" ]; then
-        snap="$SNAPSHOT_TMP"
-    fi
-
-    if [ -f "$snap" ]; then
+    # 4. Restore directory permissions and remove created directories using retained snapshot records
+    if [ -n "$snap_content" ]; then
         # Read from bottom to top so child directories are removed before parent
-        tail -r "$snap" 2>/dev/null | while IFS='|' read -r type path mode || [ -n "$type" ]; do
+        echo "$snap_content" | { tail -r 2>/dev/null || awk '{a[i++]=$0} END {for (j=i-1; j>=0; j--) print a[j]}'; } | while IFS='|' read -r type path mode || [ -n "$type" ]; do
             case "$type" in
                 DIR_CREATED)
                     if [ -d "$path" ]; then
@@ -238,9 +243,12 @@ cleanup_on_exit() {
     else
         rm -f "$SNAPSHOT_TMP"
     fi
+    exit "$code"
 }
 
-trap cleanup_on_exit EXIT INT TERM
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap cleanup_on_exit EXIT
 
 # 5. Create directories & Deploy configuration
 echo "[5/6] Deploying restricted credentials and application artifacts..."
@@ -282,6 +290,14 @@ if ! codesign --verify --verbose=2 "$TARGET_BIN" > /dev/null 2>&1; then
     exit 1
 fi
 echo "  -> Deployed audited binary to $TARGET_BIN (mode 0755, original signature intact, zero re-signing)."
+
+# Check signal wait injection point (for testing asynchronous termination & rollback)
+if [ "$INJECT_FAILURE" = "wait-for-signal" ]; then
+    echo "INJECTED PAUSE: Process paused, waiting for external signal..." >&2
+    sleep 30 &
+    WAIT_PID=$!
+    wait "$WAIT_PID" 2>/dev/null || true
+fi
 
 # Plist deployment
 PLIST_SRC="$SCRIPT_DIR/com.muse.macserver-eventkit.plist.template"
@@ -331,6 +347,7 @@ if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         exit 1
     fi
 else
+    echo "  -> [SIMULATED launchd] LaunchAgent bootstrap simulated (SKIP_LAUNCHCTL=true; live launchctl bootstrap deferred to authorized trial run)."
     # In skipped launchctl testing, still test health injection if requested
     if [ "$INJECT_FAILURE" = "health" ]; then
         echo "INJECTED FAILURE: Simulating health check failure post-bootstrap..." >&2
