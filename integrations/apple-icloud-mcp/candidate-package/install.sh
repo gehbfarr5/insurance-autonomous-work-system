@@ -1,20 +1,30 @@
 #!/bin/bash
 # install.sh — MacServer EventKit Bridge Installation Script
 # Target: Intel MacServer (macOS 13+, x86_64) | gui/$(id -u) domain
-# AG-02 Candidate Package | Version 1.1.0
+# AG-02 Candidate Package | Version 1.2.0
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=false
+INJECT_FAILURE="${INJECT_INSTALL_FAILURE:-}"
 
-for arg in "$@"; do
-    case "$arg" in
+while [ $# -gt 0 ]; do
+    case "$1" in
         --dry-run)
             DRY_RUN=true
             shift
             ;;
+        --inject-failure=*)
+            INJECT_FAILURE="${1#*=}"
+            shift
+            ;;
+        --inject-failure)
+            INJECT_FAILURE="$2"
+            shift 2
+            ;;
         *)
+            shift
             ;;
     esac
 done
@@ -109,97 +119,105 @@ if ! echo "$CODESIGN_OUTPUT" | grep -q "flags=0x10002"; then
 fi
 echo "  -> Audited binary verified: SHA-256 matches ($ACTUAL_SHA256), Hardened Runtime valid."
 
-# 4. Unknown Existing Deployment Detection & State Snapshot
-echo "[4/6] Checking for unknown existing deployments and recording initial state..."
-mkdir -p -m 0700 "$TARGET_CONFIG_DIR" "$STATE_DIR"
+# 4. Strict Clean-Install Enforcement (Reject any existing binary, plist, config, or service)
+echo "[4/6] Verifying target environment is clean (clean-installation only)..."
 
-# If binary or plist already exists, check if recognized by receipt
-if [ -f "$TARGET_BIN" ] && [ ! -f "$RECEIPT_FILE" ]; then
-    echo "ERROR: Unknown existing binary detected at $TARGET_BIN without installation receipt!" >&2
-    echo "Installation aborted to protect existing unrecorded state." >&2
+if [ -f "$TARGET_BIN" ]; then
+    echo "ERROR: Target binary already exists at $TARGET_BIN!" >&2
+    echo "First-round trial run is strictly restricted to clean installation only." >&2
+    echo "Existing binary detected. Upgrade or overwrite is not permitted. Aborting." >&2
     exit 1
 fi
 
-if [ -f "$TARGET_PLIST" ] && [ ! -f "$RECEIPT_FILE" ]; then
-    echo "ERROR: Unknown existing LaunchAgent detected at $TARGET_PLIST without installation receipt!" >&2
-    echo "Installation aborted to protect existing unrecorded state." >&2
+if [ -f "$TARGET_PLIST" ]; then
+    echo "ERROR: Target LaunchAgent plist already exists at $TARGET_PLIST!" >&2
+    echo "First-round trial run is strictly restricted to clean installation only. Aborting." >&2
+    exit 1
+fi
+
+if [ -f "$TARGET_CONFIG" ]; then
+    echo "ERROR: Target configuration already exists at $TARGET_CONFIG!" >&2
+    echo "First-round trial run is strictly restricted to clean installation only. Aborting." >&2
     exit 1
 fi
 
 if [ "$SKIP_LAUNCHCTL" != "true" ]; then
-    if launchctl print "gui/$CURRENT_UID/com.muse.macserver-eventkit" > /dev/null 2>&1 && [ ! -f "$RECEIPT_FILE" ]; then
-        echo "ERROR: Unknown active service com.muse.macserver-eventkit detected without receipt!" >&2
-        echo "Installation aborted to protect existing active service." >&2
+    if launchctl print "gui/$CURRENT_UID/com.muse.macserver-eventkit" > /dev/null 2>&1; then
+        echo "ERROR: LaunchAgent service com.muse.macserver-eventkit is already active in launchd!" >&2
+        echo "First-round trial run is strictly restricted to clean installation only. Aborting." >&2
         exit 1
     fi
 fi
+echo "  -> Verified clean install state: 0 existing binaries, 0 plists, 0 configs, 0 active services."
 
-# Record snapshot before modification
-cat > "$SNAPSHOT_FILE" << SNAPSHOT_EOF
-{
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "uid": $CURRENT_UID,
-  "binary_existed": $([ -f "$TARGET_BIN" ] && echo true || echo false),
-  "plist_existed": $([ -f "$TARGET_PLIST" ] && echo true || echo false),
-  "config_existed": $([ -f "$TARGET_CONFIG" ] && echo true || echo false)
-}
-SNAPSHOT_EOF
-chmod 0600 "$SNAPSHOT_FILE"
-echo "  -> Pre-install state snapshot recorded at $SNAPSHOT_FILE"
-
+# ZERO-WRITE DRY RUN EXIT
 if [ "$DRY_RUN" = true ]; then
     echo ""
-    echo "=== DRY RUN SUCCESSFUL ==="
-    echo "Target Directories & Permissions:"
+    echo "=== DRY RUN SUCCESSFUL (Zero Disk Writes) ==="
+    echo "Target Directories & Permissions Planned:"
     echo "  - Config:  $TARGET_CONFIG_DIR (mode 0700, owner $(whoami):staff)"
     echo "  - Token:   $TARGET_CONFIG (mode 0600, owner $(whoami):staff)"
     echo "  - Binary:  $TARGET_BIN (mode 0755, owner $(whoami):staff)"
     echo "  - Logs:    $TARGET_LOG_DIR (mode 0755)"
     echo "  - Plist:   $TARGET_PLIST (mode 0644)"
-    echo "No modifications were made to the system."
+    echo "Pre-flight checks passed. Zero modifications made to the filesystem or services."
     exit 0
 fi
 
-# Define mid-flight rollback handler
+# Track directory creation for exact rollback
+CONFIG_DIR_CREATED_BY_US=false
+STATE_DIR_CREATED_BY_US=false
+if [ ! -d "$TARGET_CONFIG_DIR" ]; then CONFIG_DIR_CREATED_BY_US=true; fi
+if [ ! -d "$STATE_DIR" ]; then STATE_DIR_CREATED_BY_US=true; fi
+
+# Create state directory and snapshot
+mkdir -p -m 0700 "$TARGET_CONFIG_DIR" "$STATE_DIR"
+
+cat > "$SNAPSHOT_FILE" << SNAPSHOT_EOF
+{
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "uid": $CURRENT_UID,
+  "config_dir_created": $CONFIG_DIR_CREATED_BY_US,
+  "state_dir_created": $STATE_DIR_CREATED_BY_US,
+  "binary_path": "$TARGET_BIN",
+  "plist_path": "$TARGET_PLIST",
+  "config_path": "$TARGET_CONFIG"
+}
+SNAPSHOT_EOF
+chmod 0600 "$SNAPSHOT_FILE"
+
+# Define mid-flight rollback handler to restore exact pre-install state
 rollback_on_failure() {
-    echo "ERROR: Installation failed mid-flight! Rolling back to pre-install state..." >&2
+    echo "ERROR: Installation failed mid-flight! Rolling back to exact pre-install state..." >&2
     if [ "$SKIP_LAUNCHCTL" != "true" ]; then
         launchctl bootout "gui/$CURRENT_UID/com.muse.macserver-eventkit" > /dev/null 2>&1 || true
     fi
-    if [ -f "$SNAPSHOT_FILE" ]; then
-        BIN_EXISTED=$(grep '"binary_existed":' "$SNAPSHOT_FILE" | awk '{print $2}' | tr -d ',')
-        PLIST_EXISTED=$(grep '"plist_existed":' "$SNAPSHOT_FILE" | awk '{print $2}' | tr -d ',')
-        CONFIG_EXISTED=$(grep '"config_existed":' "$SNAPSHOT_FILE" | awk '{print $2}' | tr -d ',')
-        if [ "$BIN_EXISTED" = "false" ]; then rm -f "$TARGET_BIN"; fi
-        if [ "$PLIST_EXISTED" = "false" ]; then rm -f "$TARGET_PLIST"; fi
-        if [ "$CONFIG_EXISTED" = "false" ]; then rm -f "$TARGET_CONFIG"; fi
+    rm -f "$TARGET_BIN" "$TARGET_PLIST" "$TARGET_CONFIG" "$RECEIPT_FILE" "$SNAPSHOT_FILE"
+    if [ -d "$STATE_DIR" ]; then
+        rmdir "$STATE_DIR" 2>/dev/null || true
     fi
-    rm -f "$RECEIPT_FILE"
-    echo "Rollback completed. System restored." >&2
+    if [ "$CONFIG_DIR_CREATED_BY_US" = true ] && [ -d "$TARGET_CONFIG_DIR" ]; then
+        rmdir "$TARGET_CONFIG_DIR" 2>/dev/null || true
+    fi
+    echo "Rollback completed. Exact pre-install clean state restored." >&2
 }
 trap rollback_on_failure ERR
 
 # 5. Restricted Credential Storage & Target Deployment
 echo "[5/6] Deploying restricted credentials and application artifacts..."
-# A. Credential storage: parent dir 0700, file 0600. NEVER log or output token.
 mkdir -p -m 0700 "$TARGET_CONFIG_DIR"
 chmod 0700 "$TARGET_CONFIG_DIR"
 
-if [ ! -f "$TARGET_CONFIG" ]; then
-    SECURE_TOKEN=$(openssl rand -hex 32)
-    cat > "$TARGET_CONFIG" << EOF_CONF
+SECURE_TOKEN=$(openssl rand -hex 32)
+cat > "$TARGET_CONFIG" << EOF_CONF
 # Restricted Configuration for MacServer EventKit Bridge
 # AG-02 Candidate
 EVENTKIT_BRIDGE_BEARER_TOKEN="$SECURE_TOKEN"
 EOF_CONF
-    chmod 0600 "$TARGET_CONFIG"
-    echo "  -> Created restricted credential store at $TARGET_CONFIG (mode 0600)"
-else
-    chmod 0600 "$TARGET_CONFIG"
-    echo "  -> Preserved existing restricted credential store at $TARGET_CONFIG (mode 0600 enforced)"
-fi
+chmod 0600 "$TARGET_CONFIG"
+echo "  -> Created restricted credential store at $TARGET_CONFIG (mode 0600, parent 0700)"
 
-# B. Binary deployment: Copy original audited artifact WITHOUT re-signing
+# Binary deployment: Copy original audited artifact WITHOUT re-signing
 mkdir -p -m 0755 "$TARGET_BIN_DIR" "$TARGET_LOG_DIR" "$TARGET_LAUNCHAGENTS_DIR"
 cp -p "$BINARY_SRC" "$TARGET_BIN"
 chmod 0755 "$TARGET_BIN"
@@ -216,7 +234,7 @@ if ! codesign --verify --verbose=2 "$TARGET_BIN" > /dev/null 2>&1; then
 fi
 echo "  -> Deployed audited binary to $TARGET_BIN (mode 0755, original signature intact, zero re-signing)."
 
-# C. Plist deployment
+# Plist deployment
 PLIST_SRC="$SCRIPT_DIR/com.muse.macserver-eventkit.plist.template"
 sed -e "s|/Users/shared/bin/EventKitBridgeServer|$TARGET_BIN|g" \
     -e "s|/Users/shared/log|$TARGET_LOG_DIR|g" \
@@ -226,12 +244,21 @@ sed -e "s|/Users/shared/bin/EventKitBridgeServer|$TARGET_BIN|g" \
 chmod 0644 "$TARGET_PLIST"
 echo "  -> Installed LaunchAgent configuration to $TARGET_PLIST (mode 0644)"
 
+# Check failure injection point
+if [ "$INJECT_FAILURE" = "pre-bootstrap" ]; then
+    echo "INJECTED FAILURE: Simulating unexpected failure prior to service bootstrap..." >&2
+    false
+fi
+
 # 6. Service Bootstrap & Health Verification
 echo "[6/6] Bootstrapping LaunchAgent daemon into gui/$CURRENT_UID..."
 if [ "$SKIP_LAUNCHCTL" != "true" ]; then
-    # Unload if previously running from our managed receipt
-    launchctl bootout "gui/$CURRENT_UID/com.muse.macserver-eventkit" > /dev/null 2>&1 || true
     launchctl bootstrap "gui/$CURRENT_UID" "$TARGET_PLIST"
+
+    if [ "$INJECT_FAILURE" = "post-bootstrap" ]; then
+        echo "INJECTED FAILURE: Simulating failure immediately after bootstrap..." >&2
+        false
+    fi
 
     # Wait for service to bind and respond to health check
     echo "Waiting for service to bind on http://127.0.0.1:$PORT/health..."
