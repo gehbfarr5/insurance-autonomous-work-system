@@ -19,9 +19,9 @@ It defines:
 | Task ID | AG-01 (Phase B) |
 | Feature Branch | `feat/macserver-eventkit-readonly` |
 | Base Branch | `reconcile/icloud-source-baseline` (Stacked PR #21) |
-| arm64 Binary SHA-256 | `96741acbc054cbdef75431bbf9a40f52444ffe10304b95cfdbfecd877d02e119` |
-| x86_64 Binary SHA-256 (Intel MacServer) | `0c507fe946be20e23e2f30312ef324e80c0a35b2713fcc64c49401c89e50b872` |
-| Isolation Test Suite | **67 passed, 0 failed** (including 9 real loopback HTTP integration tests) |
+| arm64 Binary SHA-256 | `0b6e4d6aa17036d712d8a12ca26d386b4cdbe8d6eb788a8943dd5d0aaf654cf3` |
+| x86_64 Binary SHA-256 (Intel MacServer) | `666e63cd9563ec86e20adb6b2831ad8e0b3c474b282bdc8765365338cb2d9b81` |
+| Isolation Test Suite | **68 passed, 0 failed** (including 12 real loopback HTTP integration tests) |
 | Apple Live Writes | **0** (strictly read-only protocol, write methods return 405) |
 | Production Changes | **0** (no service restarted, no deployment applied) |
 
