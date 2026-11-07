@@ -3,13 +3,13 @@
 
 ## 1. Summary & Scope
 
-This document specifies the formal acceptance request and production installation protocol for the **MacServer EventKit Read-Only Candidate**.
+This document specifies the formal acceptance request and actionable installation protocol for the **MacServer EventKit Read-Only Candidate**.
 It defines:
 1. Candidate build digests and target architecture (Intel MacServer `x86_64` and M5 Pro `arm64`).
 2. Human review and installation approval criteria.
 3. MUSE independent verification task routed strictly through the **Seoul MCP** security gateway.
 4. Subsequent dependency tracking for the Seoul MCP Reminders Gateway adapter.
-5. End-to-end installation procedure: Code signing, TCC identity, target OS compatibility, GUI domain loading, LaunchAgent specification, health verification, and rollback recovery.
+5. End-to-end installation procedure: Code signing with Hardened Runtime, CDHash verification, target OS compatibility, GUI domain loading, LaunchAgent specification, health verification, and rollback recovery.
 
 ---
 
@@ -20,10 +20,14 @@ It defines:
 | Task ID | AG-01 (Phase B) |
 | Feature Branch | `feat/macserver-eventkit-readonly` |
 | Base Branch | `reconcile/icloud-source-baseline` (Stacked PR #21) |
-| Verified Clean Checkout Commit | `cab1252f6080da898d822435f1c9295a876034a4` |
-| arm64 Binary SHA-256 | `02f60b66ac85fe9e87a3ded4cec79125c62a81d2c553bb76582749ec809dfe83` |
-| x86_64 Binary SHA-256 (Intel MacServer) | `82aff2d1e33cdc599420195f31e07d5c282ce4a79489a6bb80c7b291d1de51cd` |
-| Isolation Test Suite | **77 passed, 0 failed** (including 21 real loopback HTTP integration tests) |
+| Verified Clean Checkout Commit | `fd1aa15906b8bf3327cb4f82ea79cde32bb77cab` |
+| x86_64 Pre-signing SHA-256 (Intel MacServer) | `13949eb3b3a212994024a0df5932a54f6f79e40de5867d83b34ac6d194fd408b` |
+| x86_64 Post-signing SHA-256 (Hardened Runtime) | `223d624c8bf455543f36499fc448c072a5b34087c119e4b8d4a15829f95df8d4` |
+| x86_64 CDHash | `6d8862157803a2fc7863818acdcb2b0e7ee2b103` |
+| arm64 Pre-signing SHA-256 (M5 Pro Host) | `473a49987c24f3bfaa6e8aa71358b2d1bc6a95a2a233e6a298602aa363323f4f` |
+| arm64 Post-signing SHA-256 (Hardened Runtime) | `40bcdcfbd7f4eb1011b4085f6210c99d91239306ebd236366097cdabc72bb7f1` |
+| arm64 CDHash | `f9f2c10f5bbc6076f4e6ecf1d453327905a584b5` |
+| Isolation Test Suite | **80 passed, 0 failed** (including 24 real loopback HTTP integration tests) |
 | Apple Live Writes | **0** (strictly read-only protocol, write methods return 405) |
 | Production Changes | **0** (no service restarted, no deployment applied) |
 | PyiCloud Status | `MOCK_ONLY` |
@@ -33,7 +37,7 @@ It defines:
 
 ---
 
-## 3. Review Fixes & Architecture Guarantees
+## 3. Architecture Guarantees & Closed Blockers
 
 | Item | Problem Addressed | Offline Verification Evidence |
 |------|-------------------|--------------------------------|
@@ -41,8 +45,9 @@ It defines:
 | **FIX-R4A-02** | Content query must enforce iCloud source identity & type | `SourceVerifierTests` (calDAV type, source UUID & list binding check) + `HttpIntegrationTests.testSourceRejectionMatrixZeroContentAccess` |
 | **Write Isolation** | Non-GET HTTP methods must be rejected with 0 downstream calls | `WriteIsolationTests` + `HttpIntegrationTests.testRealHttpWriteOperationsRejectedWith405` (POST/PUT/DELETE/PATCH -> 405) |
 | **Connection Ownership** | Socket lifecycle centralization before Worker spawn | `ManagedSocketHandle` with atomic exactly-once close; `testRapidConnectionAndDisconnectStress` (10 rapid disconnects with zero fd leaks or double closes) |
-| **Store Resource Budget** | Hanging Store tasks must not accumulate unbounded | `activeStoreOperationsCount` tracked across timeouts; returns 503 (`STORE_RESOURCE_LIMIT_EXCEEDED`) when limit reached; verified in `testStoreResourceBudgetRejectsExcessiveHangingTasks` |
-| **Production Assembly Gate** | Store provider must be default-off and reject unauthorized activation | `ProductionStoreAssembly.assemble(isAuthorized:authorizedStoreProvider:)`; verified in `testProductionStoreAssemblyExplicitAuthorization` |
+| **Store Resource Budget** | Hanging Store tasks must not accumulate unbounded across restarts | `activeStoreOperationIDs` preserved across `stop()` and `start()`; multi-round budget preservation verified in `testStoreResourceBudgetPreservedAcrossMultiRoundStopRestart` (total alive tasks capped at 2, rejects 3rd with 503) |
+| **Production Provider Assembly** | Default-off real store provider, explicit runtime authorization | `ProductionEventKitProvider.makeLiveEventStoreProvider()` wired into `ProductionStoreAssembly.assemble`; offline verified in `testProductionEventKitProviderWiringDefaultOff` (unauthorized throws `permissionDenied`, 0 live store access) |
+| **Template & Program Consistency** | Unified `EVENTKIT_BRIDGE_*` variables and canonical LaunchAgent plist | Program natively provides `--generate-plist-template`; verified in `testLaunchAgentTemplateConsistencyAndProcessLevelStartup` (plist XML parsed back, starts loopback server cleanly) |
 
 ---
 
@@ -99,41 +104,28 @@ When human authorization is granted, the deployment must execute strictly accord
   > [!WARNING]
   > EventKit relies on Apple Privacy TCC (`kTCCServiceReminders`). Daemons registered in the `system` domain or headless `launchd` contexts cannot display permission authorization dialogs or access user EventKit databases. The service **must** run in the user's GUI session.
 
-### B. Code Signing & TCC Identity
-Ad-hoc or Developer ID code signing ensures deterministic TCC attribution:
+### B. Code Signing & Hardened Runtime Verification
+Apply ad-hoc code signature with Hardened Runtime on the target binary:
 ```bash
-# Entitlements configuration (entitlements.plist)
-cat << 'EOF' > /tmp/bridge_entitlements.plist
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.security.app-sandbox</key>
-    <false/>
-</dict>
-</plist>
-EOF
-
-# Sign binary with hardened runtime and designated identifier
+# 1. Sign target binary with designated identifier and hardened runtime
 codesign --force --sign - \
   --identifier "com.muse.macserver-eventkit" \
   --options runtime \
-  --entitlements /tmp/bridge_entitlements.plist \
-  ~/bin/EventKitBridgeServer
+  /Users/shared/bin/EventKitBridgeServer
 
-# Verify signature
-codesign -dv --verbose=4 ~/bin/EventKitBridgeServer
+# 2. Verify signature and CDHash (must match 6d8862157803a2fc7863818acdcb2b0e7ee2b103)
+codesign -dv --verbose=4 /Users/shared/bin/EventKitBridgeServer
 ```
 
 ### C. Installation Steps
-1. **Copy Verified Binary**:
-   Copy the `x86_64` binary (SHA-256: `82aff2d1e33cdc599420195f31e07d5c282ce4a79489a6bb80c7b291d1de51cd`) to target:
+1. **Prepare Directories & Deploy Binary**:
    ```bash
-   mkdir -p ~/bin
-   install -m 755 .build-x86_64/out/Products/Release/EventKitBridgeServer ~/bin/EventKitBridgeServer
+   mkdir -p /Users/shared/bin /Users/shared/log ~/Library/LaunchAgents
+   install -m 755 .build-x86_64/out/Products/Release/EventKitBridgeServer /Users/shared/bin/EventKitBridgeServer
    ```
 
-2. **Deploy LaunchAgent Template (`~/Library/LaunchAgents/com.muse.macserver-eventkit.plist`)**:
+2. **Deploy Canonical LaunchAgent Configuration (`~/Library/LaunchAgents/com.muse.macserver-eventkit.plist`)**:
+   Use the canonical template generated directly from the binary definition:
    ```xml
    <?xml version="1.0" encoding="UTF-8"?>
    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -148,13 +140,13 @@ codesign -dv --verbose=4 ~/bin/EventKitBridgeServer
        <key>EnvironmentVariables</key>
        <dict>
            <key>EVENTKIT_BRIDGE_MODE</key>
-           <string>production</string>
+           <string>PRODUCTION</string>
            <key>EVENTKIT_BRIDGE_PORT</key>
            <string>18765</string>
            <key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
            <string>TARGET_ICLOUD_LIST_UUID</string>
-           <key>EVENTKIT_BRIDGE_ALLOWED_SOURCE_IDS</key>
-           <string>TARGET_ICLOUD_SOURCE_UUID</string>
+           <key>EVENTKIT_BRIDGE_BINDINGS</key>
+           <string>TARGET_ICLOUD_LIST_UUID:TARGET_ICLOUD_SOURCE_UUID:calDAV:iCloud</string>
            <key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
            <string>GENERATE_SECURE_TOKEN_AT_INSTALL</string>
            <key>EVENTKIT_BRIDGE_MAX_CONCURRENT</key>
@@ -163,6 +155,8 @@ codesign -dv --verbose=4 ~/bin/EventKitBridgeServer
            <string>10</string>
            <key>EVENTKIT_BRIDGE_TIMEOUT</key>
            <string>5.0</string>
+           <key>EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED</key>
+           <string>true</string>
        </dict>
        <key>RunAtLoad</key>
        <true/>
@@ -178,14 +172,15 @@ codesign -dv --verbose=4 ~/bin/EventKitBridgeServer
 
 3. **Activate Service in GUI Domain**:
    ```bash
+   chmod 644 ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
    ```
 
 4. **Verify Health & Isolation**:
    ```bash
    # 1. Health check (returns 200 without auth)
-   curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18765/health
-   # Expected: 200
+   curl -s http://127.0.0.1:18765/health
+   # Expected: {"status":"ok","mode":"readonly","active_requests":0,"active_store_operations":0...}
 
    # 2. Write rejection check (returns 405)
    curl -s -X POST -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18765/reminders/lists
@@ -205,7 +200,7 @@ In the event of unexpected behavior, execute immediate rollback:
 2. **Remove Binary & Plist**:
    ```bash
    rm -f ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist
-   rm -f ~/bin/EventKitBridgeServer
+   rm -f /Users/shared/bin/EventKitBridgeServer
    ```
 3. **Reset TCC Permissions (if testing scope requires cleanup)**:
    ```bash
