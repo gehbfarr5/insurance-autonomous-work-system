@@ -185,12 +185,10 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     /// FIX-R4A-01: Returns ONLY list metadata. Does NOT touch reminders or counts.
     public func fetchListsMetadata() async throws -> [RemindersList] {
-        if _shouldHangIndefinitely {
-            // Uncooperative hang: sleeps ignoring Task cancellation
-            while true {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-            }
-        } else if _hangDurationSeconds > 0 {
+        while _shouldHangIndefinitely {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        if _hangDurationSeconds > 0 {
             try? await Task.sleep(nanoseconds: UInt64(_hangDurationSeconds * 1_000_000_000))
         }
 
@@ -210,11 +208,10 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     /// FIX-R4A-02: Verifies source identity, type, and binding before returning reminders.
     public func fetchReminders(listID: String) async throws -> [ReminderItem] {
-        if _shouldHangIndefinitely {
-            while true {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-            }
-        } else if _hangDurationSeconds > 0 {
+        while _shouldHangIndefinitely {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        if _hangDurationSeconds > 0 {
             try? await Task.sleep(nanoseconds: UInt64(_hangDurationSeconds * 1_000_000_000))
         }
 

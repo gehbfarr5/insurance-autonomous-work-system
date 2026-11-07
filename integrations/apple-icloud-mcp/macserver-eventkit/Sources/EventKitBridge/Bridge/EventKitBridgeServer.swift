@@ -70,8 +70,8 @@ public actor EventKitBridgeServer {
     private var serverGeneration: Int = 0
     private var currentActiveBusinessRequests: Int = 0
 
-    // Strict Store Resource Budget tracking
-    private var activeStoreOperationsCount: Int = 0
+    // Strict Store Resource Budget tracking across generations and restarts
+    private var activeStoreOperationIDs: Set<UUID> = []
 
     // Active connection tracking for idempotent teardown on stop
     private var activeConnections: [UUID: ManagedSocketHandle] = [:]
@@ -94,7 +94,7 @@ public actor EventKitBridgeServer {
     public var isListening: Bool { _isListening }
     public var boundPort: Int { actualBoundPort }
     public var activeRequestsCount: Int { currentActiveBusinessRequests }
-    public var activeStoreOperations: Int { activeStoreOperationsCount }
+    public var activeStoreOperations: Int { activeStoreOperationIDs.count }
     public var generation: Int { serverGeneration }
 
     // MARK: — Lifecycle
@@ -143,7 +143,8 @@ public actor EventKitBridgeServer {
         self.serverSocketFd = fd
         self._isListening = true
         self.currentActiveBusinessRequests = 0
-        self.activeStoreOperationsCount = 0
+        // NOTE: We intentionally preserve activeStoreOperationIDs across restarts!
+        // Living Store operations in the background continue to occupy budget until they release.
 
         let currentGen = self.serverGeneration
         let capturedConfig = self.config
@@ -201,7 +202,8 @@ public actor EventKitBridgeServer {
         _isListening = false
         serverGeneration += 1
         currentActiveBusinessRequests = 0
-        activeStoreOperationsCount = 0
+        // NOTE: We intentionally preserve activeStoreOperationIDs across stop()!
+        // Living Store operations in the background continue to occupy budget until they release.
 
         listeningTask?.cancel()
         listeningTask = nil
@@ -248,9 +250,13 @@ public actor EventKitBridgeServer {
         activeClientTasks.removeValue(forKey: connectionID)
     }
 
+    public func releaseStoreOperation(_ opID: UUID) {
+        activeStoreOperationIDs.remove(opID)
+    }
+
     public func decrementStoreOperation(generationID: Int) async {
-        if self.serverGeneration == generationID {
-            activeStoreOperationsCount = max(0, activeStoreOperationsCount - 1)
+        if !activeStoreOperationIDs.isEmpty {
+            activeStoreOperationIDs.remove(activeStoreOperationIDs.first!)
         }
     }
 
@@ -277,7 +283,7 @@ public actor EventKitBridgeServer {
                 "mode": "readonly",
                 "store": config.useFakeStore ? "fake" : "production",
                 "active_requests": currentActiveBusinessRequests,
-                "active_store_operations": activeStoreOperationsCount,
+                "active_store_operations": activeStoreOperationIDs.count,
                 "max_store_operations": config.maxConcurrentStoreOperations,
                 "generation": self.serverGeneration,
                 "timestamp": ISO8601DateFormatter().string(from: Date())
@@ -297,8 +303,8 @@ public actor EventKitBridgeServer {
             return (503, data)
         }
 
-        // Bounded Store Resource Budget check
-        guard activeStoreOperationsCount < config.maxConcurrentStoreOperations else {
+        // Bounded Store Resource Budget check across all living operations (across restarts)
+        guard activeStoreOperationIDs.count < config.maxConcurrentStoreOperations else {
             let err = [
                 "success": "false",
                 "error": "Store resource budget exceeded. Background operations quarantined.",
@@ -308,8 +314,9 @@ public actor EventKitBridgeServer {
             return (503, data)
         }
 
+        let opID = UUID()
+        activeStoreOperationIDs.insert(opID)
         currentActiveBusinessRequests += 1
-        activeStoreOperationsCount += 1
 
         defer {
             if self.serverGeneration == generationID {
@@ -317,20 +324,19 @@ public actor EventKitBridgeServer {
             }
         }
 
-        let currentGen = self.serverGeneration
         let timeoutSecs = config.timeoutSeconds
 
         // Execute route with deadline enforcement.
-        // Worker task runs Store operation; its completion decrements activeStoreOperationsCount.
+        // Worker task runs Store operation; its completion releases the unique opID budget ticket.
         // If the Store hangs, HTTP 504 is returned immediately to the client at timeoutSecs,
-        // while activeStoreOperationsCount continues to track the hanging background task until termination!
+        // while activeStoreOperationIDs continues to track the hanging background task until termination!
         let response: (Int, Data) = await withCheckedContinuation { continuation in
             let isResumed = StoreAtomicBool(false)
 
             let workerTask = Task { [self] in
                 defer {
                     Task { [self] in
-                        await self.decrementStoreOperation(generationID: currentGen)
+                        await self.releaseStoreOperation(opID)
                     }
                 }
                 let res = await self.handleRawHttpRequest(method: method, path: path, token: token)

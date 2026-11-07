@@ -178,6 +178,24 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
     public func resetCounters() { _contentAccessCount = 0 }
 }
 
+/// Real EventKit store provider factory.
+/// Default-off: Never invoked unless explicitly authorized at runtime.
+/// In this candidate phase, provides the sanctioned closure for real EKEventStore instantiation.
+public enum ProductionEventKitProvider {
+    /// Factory that produces the live EKEventStore provider closure.
+    /// Note: This closure instantiates EKEventStore() when called.
+    /// In this offline verification candidate, it is default-off and must NOT be executed without authorization.
+    public static func makeLiveEventStoreProvider() -> @Sendable () throws -> EKEventStore {
+        return {
+            #if canImport(EventKit)
+            return EKEventStore()
+            #else
+            throw BridgeError.backendInternalError(detail: "EventKit framework unavailable on this platform")
+            #endif
+        }
+    }
+}
+
 /// Explicit, default-off assembly path for ProductionEventKitStore.
 /// Only activated when isAuthorized == true AND authorizedStoreProvider != nil.
 public enum ProductionStoreAssembly {

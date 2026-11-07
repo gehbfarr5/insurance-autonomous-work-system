@@ -898,4 +898,220 @@ final class HttpIntegrationTests: XCTestCase {
         let json3 = try XCTUnwrap(JSONSerialization.jsonObject(with: data3) as? [String: Any])
         XCTAssertEqual(json3["code"] as? String, "STORE_RESOURCE_LIMIT_EXCEEDED")
     }
+
+    func testStoreResourceBudgetPreservedAcrossMultiRoundStopRestart() async throws {
+        await store.setHanging(indefinitely: true)
+
+        let budgetConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 0.3,
+            maxConcurrentRequests: 10,
+            maxConcurrentStoreOperations: 2, // Hard limit of 2 store tasks across rounds
+            allowedListIDs: ["fake-list-icloud-001"],
+            listBindings: [
+                "fake-list-icloud-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            validTokens: ["test-valid-bearer-token"]
+        )
+
+        let serverInstance = EventKitBridgeServer(
+            store: store,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: budgetConfig
+        )
+
+        // --- ROUND 1 ---
+        try await serverInstance.start()
+        let port1 = await serverInstance.boundPort
+        let url1 = URL(string: "http://127.0.0.1:\(port1)/reminders/lists/fake-list-icloud-001/items")!
+        var req1 = URLRequest(url: url1)
+        req1.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        // Hang -> Timeout (504)
+        let (_, res1) = try await URLSession.shared.data(for: req1)
+        XCTAssertEqual((res1 as? HTTPURLResponse)?.statusCode, 504)
+        let opsAfterReq1 = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAfterReq1, 1)
+
+        // Stop -> Restart
+        await serverInstance.stop()
+        let opsAfterStop1 = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAfterStop1, 1, "Budget ticket must be preserved across stop")
+        try await serverInstance.start()
+        let opsAfterRestart1 = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAfterRestart1, 1, "Budget ticket must be preserved across restart")
+
+        // --- ROUND 2 ---
+        let port2 = await serverInstance.boundPort
+        let url2 = URL(string: "http://127.0.0.1:\(port2)/reminders/lists/fake-list-icloud-001/items")!
+        var req2 = URLRequest(url: url2)
+        req2.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        // Hang -> Timeout (504)
+        let (_, res2) = try await URLSession.shared.data(for: req2)
+        XCTAssertEqual((res2 as? HTTPURLResponse)?.statusCode, 504)
+        let opsAfterReq2 = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAfterReq2, 2, "Second hanging task consumes 2nd budget slot")
+
+        // Stop -> Restart
+        await serverInstance.stop()
+        let opsAfterStop2 = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAfterStop2, 2, "Both living tasks must remain budgeted after 2nd stop")
+        try await serverInstance.start()
+        let opsAfterRestart2 = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAfterRestart2, 2, "Both living tasks must remain budgeted after 2nd restart")
+
+        // --- ROUND 3 (Exhaustion & Cap Check) ---
+        let port3 = await serverInstance.boundPort
+        let url3 = URL(string: "http://127.0.0.1:\(port3)/reminders/lists/fake-list-icloud-001/items")!
+        var req3 = URLRequest(url: url3)
+        req3.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        let (data3, res3) = try await URLSession.shared.data(for: req3)
+        XCTAssertEqual((res3 as? HTTPURLResponse)?.statusCode, 503, "Must reject operation when cumulative alive tasks hit limit")
+        let json3 = try XCTUnwrap(JSONSerialization.jsonObject(with: data3) as? [String: Any])
+        XCTAssertEqual(json3["code"] as? String, "STORE_RESOURCE_LIMIT_EXCEEDED")
+        let opsAtCap = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsAtCap, 2, "Total living operations must never exceed budget cap of 2")
+
+        // --- RECOVERY ---
+        await store.setHanging(indefinitely: false)
+        // Give background tasks brief moment to complete and release tickets
+        for _ in 0..<20 {
+            let current = await serverInstance.activeStoreOperations
+            if current == 0 { break }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        let opsRecovered = await serverInstance.activeStoreOperations
+        XCTAssertEqual(opsRecovered, 0, "Budget recovers once background store tasks terminate")
+
+        let (_, resRecovered) = try await URLSession.shared.data(for: req3)
+        XCTAssertEqual((resRecovered as? HTTPURLResponse)?.statusCode, 200, "Subsequent requests succeed once budget recovered")
+
+        await serverInstance.stop()
+    }
+
+    func testLaunchAgentTemplateConsistencyAndProcessLevelStartup() async throws {
+        // 1. Generate canonical LaunchAgent plist XML with synthetic test config
+        let syntheticBinaryPath = "/Users/shared/bin/EventKitBridgeServer"
+        let syntheticToken = "synthetic-secure-test-token-7788"
+        let syntheticListID = "synthetic-list-uuid-9900"
+        let syntheticSourceID = "synthetic-source-uuid-1122"
+
+        let generatedPlistXML = BridgeConfig.generateLaunchAgentPlist(
+            label: "com.muse.macserver-eventkit",
+            binaryPath: syntheticBinaryPath,
+            mode: .test,
+            port: 0,
+            allowedListIDs: [syntheticListID],
+            bindings: [
+                syntheticListID: SourceIdentity(
+                    sourceID: syntheticSourceID,
+                    sourceType: "calDAV",
+                    sourceTitle: "iCloud"
+                )
+            ],
+            bearerToken: syntheticToken,
+            maxConcurrent: 8,
+            maxStoreOps: 8,
+            timeout: 4.5,
+            headerTimeout: 2.5,
+            bodyTimeout: 2.5,
+            maxBodySize: 524_288,
+            sendTimeout: 4.0,
+            rateLimitRPS: 20,
+            isProductionAuthorized: false
+        )
+
+        XCTAssertTrue(generatedPlistXML.contains("com.muse.macserver-eventkit"))
+        XCTAssertTrue(generatedPlistXML.contains("EVENTKIT_BRIDGE_ALLOWED_LIST_IDS"))
+        XCTAssertTrue(generatedPlistXML.contains("EVENTKIT_BRIDGE_BINDINGS"))
+
+        // 2. Parse EnvironmentVariables from generated plist XML
+        let parsedEnv = try BridgeConfig.parseEnvironment(fromPlistXML: generatedPlistXML)
+        XCTAssertEqual(parsedEnv["EVENTKIT_BRIDGE_MODE"]?.lowercased(), "test")
+        XCTAssertEqual(parsedEnv["EVENTKIT_BRIDGE_PORT"], "0")
+        XCTAssertEqual(parsedEnv["EVENTKIT_BRIDGE_ALLOWED_LIST_IDS"], syntheticListID)
+        XCTAssertEqual(parsedEnv["EVENTKIT_BRIDGE_BEARER_TOKEN"], syntheticToken)
+
+        // 3. Load BridgeConfig from parsed environment
+        let loadedConfig = try BridgeConfig.load(from: parsedEnv)
+        XCTAssertEqual(loadedConfig.mode, .test)
+        XCTAssertEqual(loadedConfig.allowedListIDs, [syntheticListID])
+        XCTAssertEqual(loadedConfig.validTokens, [syntheticToken])
+        XCTAssertEqual(loadedConfig.maxConcurrentRequests, 8)
+        XCTAssertEqual(loadedConfig.maxConcurrentStoreOperations, 8)
+        XCTAssertEqual(loadedConfig.timeoutSeconds, 4.5)
+
+        // 4. Process-level server startup verification with parsed config
+        let templateVerifier = SourceVerifier(
+            allowedSourceTypes: loadedConfig.allowedSourceTypes,
+            allowedSourceTitles: loadedConfig.allowedSources,
+            listBindings: loadedConfig.listBindings,
+            requireExplicitBinding: true
+        )
+        let templateStore = FakeEventKitStore(sourceVerifier: templateVerifier)
+        let templateAuth = AuthValidator(allowedTokens: loadedConfig.validTokens)
+        let templateAllowlist = AllowlistValidator(allowedIDs: loadedConfig.allowedListIDs)
+        let templateLimiter = RequestLimiter(capacity: loadedConfig.rateLimitRPS, refillPerSecond: loadedConfig.rateLimitRPS)
+
+        let templateServer = EventKitBridgeServer(
+            store: templateStore,
+            authValidator: templateAuth,
+            allowlistValidator: templateAllowlist,
+            requestLimiter: templateLimiter,
+            config: loadedConfig
+        )
+
+        try await templateServer.start()
+        let boundPort = await templateServer.boundPort
+        XCTAssertGreaterThan(boundPort, 0)
+
+        // Health check
+        let healthURL = URL(string: "http://127.0.0.1:\(boundPort)/health")!
+        let (hData, hRes) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((hRes as? HTTPURLResponse)?.statusCode, 200)
+        let hJson = try XCTUnwrap(JSONSerialization.jsonObject(with: hData) as? [String: Any])
+        XCTAssertEqual(hJson["status"] as? String, "ok")
+
+        // Authorized metadata query
+        let listsURL = URL(string: "http://127.0.0.1:\(boundPort)/reminders/lists")!
+        var listsReq = URLRequest(url: listsURL)
+        listsReq.setValue("Bearer \(syntheticToken)", forHTTPHeaderField: "Authorization")
+        let (_, listsRes) = try await URLSession.shared.data(for: listsReq)
+        XCTAssertEqual((listsRes as? HTTPURLResponse)?.statusCode, 200)
+
+        await templateServer.stop()
+    }
+
+    func testProductionEventKitProviderWiringDefaultOff() async throws {
+        // 1. Verify live provider factory is constructible
+        let providerFactory = ProductionEventKitProvider.makeLiveEventStoreProvider()
+        XCTAssertNotNil(providerFactory)
+
+        // 2. Verify ProductionStoreAssembly produces unactivated store when isAuthorized == false
+        let unauthStore = ProductionStoreAssembly.assemble(
+            isAuthorized: false,
+            sourceVerifier: SourceVerifier(listBindings: [:]),
+            requestLimiter: RequestLimiter(capacity: 10, refillPerSecond: 10),
+            callbackTimeoutSeconds: 5.0,
+            authorizedStoreProvider: providerFactory
+        )
+
+        do {
+            _ = try await unauthStore.fetchListsMetadata()
+            XCTFail("Unactivated production store must reject fetchListsMetadata()")
+        } catch let err as EventKitBridgeError {
+            switch err {
+            case .permissionDenied:
+                break // Expected!
+            default:
+                XCTFail("Expected permissionDenied error, got \(err)")
+            }
+        }
+    }
 }

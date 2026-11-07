@@ -10,10 +10,19 @@
 
 import Foundation
 import EventKitBridge
+#if canImport(EventKit)
+import EventKit
+#endif
 
 @main
 struct BridgeServerMain {
     static func main() async {
+        if CommandLine.arguments.contains("--generate-plist-template") {
+            let template = BridgeConfig.generateLaunchAgentPlist()
+            print(template)
+            return
+        }
+
         let env = ProcessInfo.processInfo.environment
 
         // 1. Configuration loading and strict production validation
@@ -57,12 +66,15 @@ struct BridgeServerMain {
             print("[EventKitBridge] Assembling guarded ProductionEventKitStore via ProductionStoreAssembly...")
             // Strictly guarded: isProductionActivated remains false unless explicitly authorized with injection.
             // In offline candidate verification, does NOT instantiate live EKEventStore or prompt TCC.
+            let liveProvider = config.isProductionAuthorized
+                ? ProductionEventKitProvider.makeLiveEventStoreProvider()
+                : nil
             store = ProductionStoreAssembly.assemble(
                 isAuthorized: config.isProductionAuthorized,
                 sourceVerifier: sourceVerifier,
                 requestLimiter: requestLimiter,
                 callbackTimeoutSeconds: config.timeoutSeconds,
-                authorizedStoreProvider: nil
+                authorizedStoreProvider: liveProvider
             )
         }
 

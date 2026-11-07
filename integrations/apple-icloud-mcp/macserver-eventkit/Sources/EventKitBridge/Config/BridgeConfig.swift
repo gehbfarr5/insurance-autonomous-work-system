@@ -17,6 +17,8 @@ public enum BridgeOperationMode: String, Sendable, Codable {
 /// Configuration validation error.
 public enum ConfigurationError: Error, Sendable, Equatable {
     case missingRequiredField(String)
+    case missingRequiredKey(String)
+    case invalidValue(key: String, reason: String)
     case insecureHostConfiguration(String)
     case testTokenInProduction(String)
     case missingListBinding(listID: String)
@@ -27,6 +29,10 @@ public enum ConfigurationError: Error, Sendable, Equatable {
         switch self {
         case .missingRequiredField(let field):
             return "Production configuration error: Missing required field '\(field)'."
+        case .missingRequiredKey(let key):
+            return "Configuration error: Missing required key '\(key)'."
+        case .invalidValue(let key, let reason):
+            return "Configuration error for key '\(key)': \(reason)."
         case .insecureHostConfiguration(let host):
             return "Production configuration error: Host '\(host)' is not permitted. Only 127.0.0.1 loopback is allowed."
         case .testTokenInProduction(let token):
@@ -229,13 +235,13 @@ public struct BridgeConfig: Sendable {
 
         let port = Int(environment["EVENTKIT_BRIDGE_PORT"] ?? "") ?? 18765
         let timeout = Double(environment["EVENTKIT_BRIDGE_TIMEOUT"] ?? "") ?? 5.0
-        let rps = Int(environment["EVENTKIT_BRIDGE_RPS"] ?? "") ?? 10
+        let rps = Int(environment["EVENTKIT_BRIDGE_RATE_LIMIT_RPS"] ?? environment["EVENTKIT_BRIDGE_RPS"] ?? "") ?? 10
         let maxConcurrent = Int(environment["EVENTKIT_BRIDGE_MAX_CONCURRENT"] ?? "") ?? 10
 
-        let allowlistStr = environment["EVENTKIT_BRIDGE_ALLOWLIST"] ?? ""
+        let allowlistStr = environment["EVENTKIT_BRIDGE_ALLOWED_LIST_IDS"] ?? environment["EVENTKIT_BRIDGE_ALLOWLIST"] ?? ""
         let allowlist = Set(allowlistStr.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
 
-        let tokensStr = environment["EVENTKIT_BRIDGE_TOKENS"] ?? ""
+        let tokensStr = environment["EVENTKIT_BRIDGE_BEARER_TOKEN"] ?? environment["EVENTKIT_BRIDGE_TOKENS"] ?? ""
         let tokens = Set(tokensStr.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
 
         // Parse list bindings: format "listID:sourceID:sourceType:sourceTitle;..." or JSON
@@ -254,8 +260,11 @@ public struct BridgeConfig: Sendable {
             }
         }
 
-        let useFake = (mode == .test) ? (environment["EVENTKIT_USE_FAKE"] != "false") : false
-        let isAuthorized = (environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "true" || environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "1")
+        let useFake = (mode == .test) ? ((environment["EVENTKIT_BRIDGE_USE_FAKE"] ?? environment["EVENTKIT_USE_FAKE"]) != "false") : false
+        let isAuthorized = (environment["EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED"] == "true" ||
+                            environment["EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED"] == "1" ||
+                            environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "true" ||
+                            environment["EVENTKIT_PRODUCTION_AUTHORIZED"] == "1")
 
         let headerTimeout = Double(environment["EVENTKIT_BRIDGE_HEADER_TIMEOUT"] ?? "") ?? 3.0
         let bodyTimeout = Double(environment["EVENTKIT_BRIDGE_BODY_TIMEOUT"] ?? "") ?? 3.0
@@ -291,5 +300,132 @@ public struct BridgeConfig: Sendable {
         }
 
         return config
+    }
+
+    // MARK: — Canonical LaunchAgent Plist Generation & Parsing
+
+    /// Generates canonical LaunchAgent plist XML directly from configuration fields.
+    /// Unifies variable names, file paths, and default configurations.
+    public static func generateLaunchAgentPlist(
+        label: String = "com.muse.macserver-eventkit",
+        binaryPath: String = "/Users/shared/bin/EventKitBridgeServer",
+        mode: BridgeOperationMode = .production,
+        port: Int = 18765,
+        allowedListIDs: [String] = ["TARGET_ICLOUD_LIST_UUID"],
+        bindings: [String: SourceIdentity] = [
+            "TARGET_ICLOUD_LIST_UUID": SourceIdentity(
+                sourceID: "TARGET_ICLOUD_SOURCE_UUID",
+                sourceType: "calDAV",
+                sourceTitle: "iCloud"
+            )
+        ],
+        bearerToken: String = "GENERATE_SECURE_TOKEN_AT_INSTALL",
+        maxConcurrent: Int = 10,
+        maxStoreOps: Int = 10,
+        timeout: Double = 5.0,
+        headerTimeout: Double = 3.0,
+        bodyTimeout: Double = 3.0,
+        maxBodySize: Int = 1_048_576,
+        sendTimeout: Double = 5.0,
+        rateLimitRPS: Int = 10,
+        isProductionAuthorized: Bool = false,
+        stdoutLogPath: String = "/Users/shared/log/macserver-eventkit.stdout.log",
+        stderrLogPath: String = "/Users/shared/log/macserver-eventkit.stderr.log"
+    ) -> String {
+        let bindingsString = bindings.map { "\($0.key):\($0.value.sourceID):\($0.value.sourceType):\($0.value.sourceTitle)" }.joined(separator: ";")
+        let allowlistString = allowedListIDs.joined(separator: ",")
+
+        let plistDict: [String: Any] = [
+            "Label": label,
+            "ProgramArguments": [binaryPath],
+            "EnvironmentVariables": [
+                "EVENTKIT_BRIDGE_MODE": mode.rawValue,
+                "EVENTKIT_BRIDGE_PORT": String(port),
+                "EVENTKIT_BRIDGE_ALLOWED_LIST_IDS": allowlistString,
+                "EVENTKIT_BRIDGE_BINDINGS": bindingsString,
+                "EVENTKIT_BRIDGE_BEARER_TOKEN": bearerToken,
+                "EVENTKIT_BRIDGE_MAX_CONCURRENT": String(maxConcurrent),
+                "EVENTKIT_BRIDGE_MAX_STORE_OPS": String(maxStoreOps),
+                "EVENTKIT_BRIDGE_TIMEOUT": String(timeout),
+                "EVENTKIT_BRIDGE_HEADER_TIMEOUT": String(headerTimeout),
+                "EVENTKIT_BRIDGE_BODY_TIMEOUT": String(bodyTimeout),
+                "EVENTKIT_BRIDGE_MAX_BODY_SIZE": String(maxBodySize),
+                "EVENTKIT_BRIDGE_SEND_TIMEOUT": String(sendTimeout),
+                "EVENTKIT_BRIDGE_RATE_LIMIT_RPS": String(rateLimitRPS),
+                "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED": isProductionAuthorized ? "true" : "false"
+            ],
+            "RunAtLoad": true,
+            "KeepAlive": true,
+            "StandardOutPath": stdoutLogPath,
+            "StandardErrorPath": stderrLogPath
+        ]
+
+        if let data = try? PropertyListSerialization.data(fromPropertyList: plistDict, format: .xml, options: 0),
+           let xmlString = String(data: data, encoding: .utf8) {
+            return xmlString
+        }
+
+        // Fallback formatted XML
+        return """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>\(label)</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>\(binaryPath)</string>
+            </array>
+            <key>EnvironmentVariables</key>
+            <dict>
+                <key>EVENTKIT_BRIDGE_MODE</key>
+                <string>\(mode.rawValue)</string>
+                <key>EVENTKIT_BRIDGE_PORT</key>
+                <string>\(port)</string>
+                <key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
+                <string>\(allowlistString)</string>
+                <key>EVENTKIT_BRIDGE_BINDINGS</key>
+                <string>\(bindingsString)</string>
+                <key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
+                <string>\(bearerToken)</string>
+                <key>EVENTKIT_BRIDGE_MAX_CONCURRENT</key>
+                <string>\(maxConcurrent)</string>
+                <key>EVENTKIT_BRIDGE_MAX_STORE_OPS</key>
+                <string>\(maxStoreOps)</string>
+                <key>EVENTKIT_BRIDGE_TIMEOUT</key>
+                <string>\(timeout)</string>
+                <key>EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED</key>
+                <string>\(isProductionAuthorized ? "true" : "false")</string>
+            </dict>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>KeepAlive</key>
+            <true/>
+            <key>StandardOutPath</key>
+            <string>\(stdoutLogPath)</string>
+            <key>StandardErrorPath</key>
+            <string>\(stderrLogPath)</string>
+        </dict>
+        </plist>
+        """
+    }
+
+    /// Parses EnvironmentVariables from a LaunchAgent plist XML representation.
+    public static func parseEnvironment(fromPlistXML plistXML: String) throws -> [String: String] {
+        guard let data = plistXML.data(using: .utf8) else {
+            throw ConfigurationError.invalidValue(key: "plistXML", reason: "Cannot encode plist string to UTF-8")
+        }
+        guard let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else {
+            throw ConfigurationError.invalidValue(key: "plistXML", reason: "Invalid plist XML format")
+        }
+        guard let envDict = plist["EnvironmentVariables"] as? [String: Any] else {
+            throw ConfigurationError.missingRequiredKey("EnvironmentVariables")
+        }
+        var stringEnv: [String: String] = [:]
+        for (k, v) in envDict {
+            stringEnv[k] = "\(v)"
+        }
+        return stringEnv
     }
 }

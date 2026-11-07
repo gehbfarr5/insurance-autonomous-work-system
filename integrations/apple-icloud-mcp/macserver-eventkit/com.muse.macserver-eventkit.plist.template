@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>EVENTKIT_BRIDGE_ALLOWED_LIST_IDS</key>
+		<string>TARGET_ICLOUD_LIST_UUID</string>
+		<key>EVENTKIT_BRIDGE_BEARER_TOKEN</key>
+		<string>GENERATE_SECURE_TOKEN_AT_INSTALL</string>
+		<key>EVENTKIT_BRIDGE_BINDINGS</key>
+		<string>TARGET_ICLOUD_LIST_UUID:TARGET_ICLOUD_SOURCE_UUID:calDAV:iCloud</string>
+		<key>EVENTKIT_BRIDGE_BODY_TIMEOUT</key>
+		<string>3.0</string>
+		<key>EVENTKIT_BRIDGE_HEADER_TIMEOUT</key>
+		<string>3.0</string>
+		<key>EVENTKIT_BRIDGE_MAX_BODY_SIZE</key>
+		<string>1048576</string>
+		<key>EVENTKIT_BRIDGE_MAX_CONCURRENT</key>
+		<string>10</string>
+		<key>EVENTKIT_BRIDGE_MAX_STORE_OPS</key>
+		<string>10</string>
+		<key>EVENTKIT_BRIDGE_MODE</key>
+		<string>PRODUCTION</string>
+		<key>EVENTKIT_BRIDGE_PORT</key>
+		<string>18765</string>
+		<key>EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED</key>
+		<string>false</string>
+		<key>EVENTKIT_BRIDGE_RATE_LIMIT_RPS</key>
+		<string>10</string>
+		<key>EVENTKIT_BRIDGE_SEND_TIMEOUT</key>
+		<string>5.0</string>
+		<key>EVENTKIT_BRIDGE_TIMEOUT</key>
+		<string>5.0</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.muse.macserver-eventkit</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/shared/bin/EventKitBridgeServer</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/shared/log/macserver-eventkit.stderr.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/shared/log/macserver-eventkit.stdout.log</string>
+</dict>
+</plist>
+
