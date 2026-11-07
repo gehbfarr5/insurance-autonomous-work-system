@@ -51,7 +51,7 @@ async function run() {
       console.log('[ExternalAcceptance] Testing Bound List Reading...');
       const listsCall = await client.callTool({
         name: 'reminders_lists',
-        arguments: {},
+        arguments: { session_id: 'ag03-acceptance-session' },
       });
       if (listsCall.isError) {
         console.error('[ExternalAcceptance] reminders_lists error payload:', JSON.stringify(listsCall, null, 2));
@@ -69,7 +69,7 @@ async function run() {
       console.log('[ExternalAcceptance] Testing Reminders Item Reading...');
       const itemsCall = await client.callTool({
         name: 'reminders_list',
-        arguments: { list_ids: ['9D9A****03F3'] },
+        arguments: { session_id: 'ag03-acceptance-session', list_ids: ['9D9A****03F3'] },
       });
       assert(!itemsCall.isError, 'reminders_list must not error');
       const itemsData = JSON.parse(itemsCall.content[0].text);
@@ -81,6 +81,7 @@ async function run() {
       const createCall = await client.callTool({
         name: 'reminders_create',
         arguments: {
+          session_id: 'ag03-acceptance-session',
           reminder: { title: '外部写入拦截探测' },
         },
       });
@@ -94,7 +95,7 @@ async function run() {
       console.log('[ExternalAcceptance] Testing Fault Blocking: Bridge 403...');
       const listsCall = await client.callTool({
         name: 'reminders_lists',
-        arguments: {},
+        arguments: { session_id: 'ag03-acceptance-session' },
       });
       assert.strictEqual(listsCall.isError, true, 'Must return isError: true on bridge 403');
       const err = JSON.parse(listsCall.content[0].text);
@@ -105,7 +106,7 @@ async function run() {
       console.log('[ExternalAcceptance] Testing Fault Blocking: Broken Tunnel...');
       const listsCall = await client.callTool({
         name: 'reminders_lists',
-        arguments: {},
+        arguments: { session_id: 'ag03-acceptance-session' },
       });
       assert.strictEqual(listsCall.isError, true, 'Must return isError: true on broken tunnel');
       const err = JSON.parse(listsCall.content[0].text);
