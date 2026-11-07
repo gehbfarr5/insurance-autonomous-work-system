@@ -91,11 +91,12 @@ echo "Persisted config file written: $CONFIG_FILE"
 
 # Start transient Fake Bridge reading from persisted file
 node -e '
-import http from "node:http";
-import fs from "node:fs";
+const http = require("http");
+const fs = require("fs");
 
+const configFile = process.argv[1];
 const server = http.createServer((req, res) => {
-  const envContent = fs.readFileSync(process.argv[1], "utf8");
+  const envContent = fs.readFileSync(configFile, "utf8");
   const isAuth = envContent.includes("EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true");
   if (!isAuth) {
     res.writeHead(403, { "Content-Type": "application/json" });
@@ -105,8 +106,8 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify([]));
 });
-server.listen(18769, "127.0.0.1", () => console.log("Persisted config test bridge ready on 18769"));
-' "$CONFIG_FILE" &
+server.listen(18769, "127.0.0.1");
+' "$CONFIG_FILE" >/dev/null 2>&1 &
 TEST_BRIDGE_PID=$!
 sleep 1
 
@@ -143,7 +144,11 @@ if [ "$PROD_IMAGE_ID" != "image_unavailable" ]; then
   docker run -d \
     --name "$ROLLBACK_CONTAINER" \
     -p 127.0.0.1:17798:17733 \
+    --env-file /opt/insurance-carddav-mcp/secrets.env \
     -e PORT=17733 \
+    -e TOKEN_STORE_PATH=/app/data/tokens.json.enc \
+    -e TRUST_PROXY=true \
+    -v /opt/insurance-carddav-mcp/data:/app/data:ro \
     "$BACKUP_IMAGE_TAG"
 
   sleep 2
