@@ -1,9 +1,18 @@
 /**
  * config.ts
  * Gateway configuration parsing and validation.
+ * 
+ * Strict enforcement:
+ * - Reject wildcard / unsafe addresses (0.0.0.0, ::, *)
+ * - Bearer token validation (>= 16 chars)
+ * - Explicit list-to-source ID binding (missing binding = rejected)
+ * - Max response size limits
  */
 
-import { AppError, type MacServerGatewayConfig } from './types.ts';
+import { AppError, type BoundListConfig, type MacServerGatewayConfig } from './types.ts';
+
+const DEFAULT_TIMEOUT_MS = 5000;
+const DEFAULT_MAX_RESPONSE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
   if (!raw || typeof raw !== 'object') {
@@ -44,7 +53,7 @@ export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
   }
 
   // 3. Timeout validation
-  let timeoutMs = 5000;
+  let timeoutMs = DEFAULT_TIMEOUT_MS;
   if (candidate.timeoutMs !== undefined) {
     const parsed = Number(candidate.timeoutMs);
     if (!Number.isInteger(parsed) || parsed < 500 || parsed > 60000) {
@@ -53,21 +62,56 @@ export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
     timeoutMs = parsed;
   }
 
-  // 4. Allowed list IDs validation
-  let allowedListIds: string[] | undefined;
-  if (candidate.allowedListIds !== undefined) {
-    if (!Array.isArray(candidate.allowedListIds)) {
-      throw new AppError('INVALID_INPUT', 'allowedListIds 必须是字符串数组');
+  // 4. Max response size validation
+  let maxResponseSizeBytes = DEFAULT_MAX_RESPONSE_SIZE;
+  if (candidate.maxResponseSizeBytes !== undefined) {
+    const parsed = Number(candidate.maxResponseSizeBytes);
+    if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 50 * 1024 * 1024) {
+      throw new AppError('INVALID_INPUT', 'maxResponseSizeBytes 必须在 1KB 到 50MB 之间');
     }
-    allowedListIds = candidate.allowedListIds.map((id, index) => {
-      if (typeof id !== 'string' || !id.trim()) {
-        throw new AppError('INVALID_INPUT', `allowedListIds[${index}] 必须为非空字符串`);
-      }
-      return id.trim();
-    });
+    maxResponseSizeBytes = parsed;
   }
 
-  // 5. Expected source validation
+  // 5. Explicit List-to-Source binding validation
+  // Rule: 白名单与列表—来源 ID 绑定必须显式配置，缺失即拒绝。
+  if (!candidate.allowedLists || !Array.isArray(candidate.allowedLists) || candidate.allowedLists.length === 0) {
+    throw new AppError(
+      'INVALID_INPUT',
+      '配置缺失或空的 allowedLists: 列表白名单与来源 ID 绑定必须显式配置，缺失即拒绝'
+    );
+  }
+
+  const allowedLists: BoundListConfig[] = candidate.allowedLists.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new AppError('INVALID_INPUT', `allowedLists[${index}] 必须为包含 listId 与 expectedSourceId 的对象`);
+    }
+    const obj = item as Record<string, unknown>;
+    const listId = typeof obj.listId === 'string' ? obj.listId.trim() : '';
+    const expectedSourceId = typeof obj.expectedSourceId === 'string' ? obj.expectedSourceId.trim() : '';
+
+    if (!listId) {
+      throw new AppError('INVALID_INPUT', `allowedLists[${index}].listId 缺失或为空`);
+    }
+    if (!expectedSourceId) {
+      throw new AppError(
+        'INVALID_INPUT',
+        `allowedLists[${index}] 缺失显式 expectedSourceId 绑定: 必须显式绑定来源 ID，缺失即拒绝`
+      );
+    }
+
+    return {
+      listId,
+      expectedSourceId,
+      expectedSourceName: typeof obj.expectedSourceName === 'string' && obj.expectedSourceName.trim()
+        ? obj.expectedSourceName.trim()
+        : 'iCloud',
+      expectedSourceType: typeof obj.expectedSourceType === 'string' && obj.expectedSourceType.trim()
+        ? obj.expectedSourceType.trim()
+        : 'calDAV',
+    };
+  });
+
+  // 6. Global expected source validation
   const expectedSourceType = typeof candidate.expectedSourceType === 'string' && candidate.expectedSourceType.trim()
     ? candidate.expectedSourceType.trim()
     : 'calDAV';
@@ -80,7 +124,8 @@ export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
     macserverEndpoint: parsedUrl.origin,
     authToken: token.trim(),
     timeoutMs,
-    allowedListIds,
+    maxResponseSizeBytes,
+    allowedLists,
     expectedSourceType,
     expectedSourceName,
   };
@@ -88,24 +133,46 @@ export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
 
 /**
  * Loads gateway config from environment variables.
+ * MACSERVER_EVENTKIT_ALLOWED_LISTS can be formatted as:
+ * JSON string: '[{"listId":"...","expectedSourceId":"..."}]'
+ * or colon-delimited string: 'listId:sourceId,listId2:sourceId2'
  */
 export function loadGatewayConfigFromEnv(env: Record<string, string | undefined> = process.env): MacServerGatewayConfig {
   const endpoint = env.MACSERVER_EVENTKIT_ENDPOINT || 'http://127.0.0.1:18765';
   const token = env.MACSERVER_EVENTKIT_TOKEN || '';
-  const timeoutMs = env.MACSERVER_EVENTKIT_TIMEOUT_MS ? Number(env.MACSERVER_EVENTKIT_TIMEOUT_MS) : 5000;
-  
-  let allowedListIds: string[] | undefined;
-  if (env.MACSERVER_EVENTKIT_ALLOWED_LIST_IDS) {
-    allowedListIds = env.MACSERVER_EVENTKIT_ALLOWED_LIST_IDS.split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const timeoutMs = env.MACSERVER_EVENTKIT_TIMEOUT_MS ? Number(env.MACSERVER_EVENTKIT_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
+  const maxResponseSizeBytes = env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE
+    ? Number(env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE)
+    : DEFAULT_MAX_RESPONSE_SIZE;
+
+  let allowedLists: BoundListConfig[] = [];
+  const rawLists = env.MACSERVER_EVENTKIT_ALLOWED_LISTS;
+  if (rawLists && rawLists.trim()) {
+    const trimmed = rawLists.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        allowedLists = JSON.parse(trimmed);
+      } catch (cause) {
+        throw new AppError('INVALID_INPUT', '环境变量 MACSERVER_EVENTKIT_ALLOWED_LISTS JSON 解析失败', { cause });
+      }
+    } else {
+      allowedLists = trimmed.split(',').map((entry) => {
+        const parts = entry.split(':').map((s) => s.trim());
+        const listId = parts[0] || '';
+        const expectedSourceId = parts[1] || '';
+        const expectedSourceName = parts[2] || 'iCloud';
+        const expectedSourceType = parts[3] || 'calDAV';
+        return { listId, expectedSourceId, expectedSourceName, expectedSourceType };
+      });
+    }
   }
 
   return validateGatewayConfig({
     macserverEndpoint: endpoint,
     authToken: token,
     timeoutMs,
-    allowedListIds,
+    maxResponseSizeBytes,
+    allowedLists,
     expectedSourceType: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_TYPE || 'calDAV',
     expectedSourceName: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_NAME || 'iCloud',
   });

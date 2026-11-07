@@ -37,6 +37,15 @@ describe('MacServerReminderService with Fake Bridge', () => {
           isImmutable: true,
         },
         {
+          listID: 'list-foreign-source-id',
+          title: '伪造来源列表',
+          sourceID: 'src-foreign-fake',
+          sourceType: 'calDAV',
+          sourceName: 'iCloud',
+          color: '#FF9500',
+          isImmutable: true,
+        },
+        {
           listID: 'list-local-foreign',
           title: '本地杂项',
           sourceID: 'src-local',
@@ -52,7 +61,8 @@ describe('MacServerReminderService with Fake Bridge', () => {
             itemID: 'item-01',
             title: 'B：明天上午核保会议',
             isCompleted: false,
-            dueDate: '2026-11-09T09:00:00.000Z',
+            // 815926800 in Cocoa seconds = 2026-11-09T15:20:00.000Z
+            dueDate: 815926800,
             priority: 1,
             notes: '核实理赔条款附录',
             listID: 'list-icloud-01',
@@ -61,7 +71,8 @@ describe('MacServerReminderService with Fake Bridge', () => {
             itemID: 'item-02',
             title: 'A：今天下午客户电话',
             isCompleted: true,
-            dueDate: '2026-11-08T15:00:00.000Z',
+            // 815840400 in Cocoa seconds = 2026-11-08T15:20:00.000Z
+            dueDate: 815840400,
             priority: 5,
             notes: '解答免赔额疑问',
             listID: 'list-icloud-01',
@@ -81,7 +92,8 @@ describe('MacServerReminderService with Fake Bridge', () => {
             itemID: 'item-04',
             title: 'D：私人账单',
             isCompleted: false,
-            dueDate: '2026-11-12T12:00:00.000Z',
+            // 816187200 in Cocoa seconds = 2026-11-12T15:20:00.000Z
+            dueDate: 816187200,
             priority: 9,
             notes: null,
             listID: 'list-icloud-02',
@@ -95,6 +107,27 @@ describe('MacServerReminderService with Fake Bridge', () => {
       macserverEndpoint: bridgeUrl,
       authToken: token,
       timeoutMs: 2000,
+      maxResponseSizeBytes: 1024 * 1024,
+      allowedLists: [
+        {
+          listId: 'list-icloud-01',
+          expectedSourceId: 'src-icloud',
+          expectedSourceName: 'iCloud',
+          expectedSourceType: 'calDAV',
+        },
+        {
+          listId: 'list-icloud-02',
+          expectedSourceId: 'src-icloud',
+          expectedSourceName: 'iCloud',
+          expectedSourceType: 'calDAV',
+        },
+        {
+          listId: 'list-foreign-source-id',
+          expectedSourceId: 'src-legit-expected-not-matching', // Mismatched!
+          expectedSourceName: 'iCloud',
+          expectedSourceType: 'calDAV',
+        },
+      ],
       expectedSourceType: 'calDAV',
       expectedSourceName: 'iCloud',
     };
@@ -106,33 +139,39 @@ describe('MacServerReminderService with Fake Bridge', () => {
     await fakeBridge.stop();
   });
 
-  test('listLists filters out non-iCloud sources and marks writable: false', async () => {
+  test('listLists filters out non-iCloud sources and mismatched source IDs, marks writable: false', async () => {
     const lists = await service.listLists();
-    assert.strictEqual(lists.length, 2, 'Filtered out On My Mac / local list');
+    assert.strictEqual(lists.length, 2, 'Filtered out On My Mac, unbound lists, and mismatched source ID lists');
 
     const ids = lists.map((l) => l.list_id);
     assert(ids.includes('list-icloud-01'));
     assert(ids.includes('list-icloud-02'));
     assert(!ids.includes('list-local-foreign'));
+    assert(!ids.includes('list-foreign-source-id'));
 
     for (const l of lists) {
       assert.strictEqual(l.writable, false, 'Gateway lists are strictly non-writable');
     }
   });
 
-  test('list queries all lists and sorts deterministically (due asc, null due last, title tiebreaker)', async () => {
+  test('list queries all lists and sorts deterministically with Swift Cocoa dates', async () => {
     const res = await service.list({});
     assert.strictEqual(res.reminders.length, 4);
 
     // Expected order:
-    // 1. item-02 (2026-11-08T15:00:00.000Z)
-    // 2. item-01 (2026-11-09T09:00:00.000Z)
-    // 3. item-04 (2026-11-12T12:00:00.000Z)
+    // 1. item-02 (2026-11-08)
+    // 2. item-01 (2026-11-09)
+    // 3. item-04 (2026-11-12)
     // 4. item-03 (due is undefined, placed last)
     assert.strictEqual(res.reminders[0]?.reminder_id, 'item-02');
     assert.strictEqual(res.reminders[1]?.reminder_id, 'item-01');
     assert.strictEqual(res.reminders[2]?.reminder_id, 'item-04');
     assert.strictEqual(res.reminders[3]?.reminder_id, 'item-03');
+
+    // Verify converted ISO dates
+    assert(res.reminders[0]?.due?.startsWith('2026-11-08'));
+    assert(res.reminders[1]?.due?.startsWith('2026-11-09'));
+    assert(res.reminders[2]?.due?.startsWith('2026-11-12'));
   });
 
   test('list filtering by completed: true and false', async () => {
@@ -167,16 +206,56 @@ describe('MacServerReminderService with Fake Bridge', () => {
     assert.strictEqual(res.reminders[0]?.list_id, 'list-icloud-02');
   });
 
-  test('list throws NOT_FOUND when requested list_id is missing', async () => {
+  test('list throws NOT_FOUND when requested list_id is missing or unbound', async () => {
     await assert.rejects(
       async () => service.list({ list_ids: ['non-existent-uuid'] }),
       (err: unknown) => {
         assert(err instanceof AppError);
         assert.strictEqual(err.code, 'NOT_FOUND');
-        assert(err.message.includes('不对应任何可用 iCloud 提醒列表'));
+        assert(err.message.includes('不对应任何已显式绑定的 iCloud 提醒列表'));
         return true;
       }
     );
+  });
+
+  test('Item ownership validation: cross-list item mismatch throws UPSTREAM_ERROR', async () => {
+    // Inject a rogue item into list-icloud-01 that claims listID="list-another-leak"
+    fakeBridge.mockItems.set('list-icloud-01', [
+      {
+        itemID: 'rogue-item-999',
+        title: '跨列表泄漏条目',
+        isCompleted: false,
+        dueDate: null,
+        priority: 0,
+        notes: null,
+        listID: 'list-another-leak', // Mismatch!
+      },
+    ]);
+
+    try {
+      await assert.rejects(
+        async () => service.list({ list_ids: ['list-icloud-01'] }),
+        (err: unknown) => {
+          assert(err instanceof AppError);
+          assert.strictEqual(err.code, 'UPSTREAM_ERROR');
+          assert(err.message.includes('与请求的目标列表'));
+          return true;
+        }
+      );
+    } finally {
+      // Restore valid items
+      fakeBridge.mockItems.set('list-icloud-01', [
+        {
+          itemID: 'item-01',
+          title: 'B：明天上午核保会议',
+          isCompleted: false,
+          dueDate: 815926800,
+          priority: 1,
+          notes: '核实理赔条款附录',
+          listID: 'list-icloud-01',
+        },
+      ]);
+    }
   });
 
   test('Write operations (create, update, remove) are strictly rejected with PERMISSION_DENIED', async () => {

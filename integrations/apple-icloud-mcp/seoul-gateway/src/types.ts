@@ -65,9 +65,14 @@ export interface ReminderItem {
   itemID: string;
   title: string;
   isCompleted: boolean;
-  dueDate: string | null; // ISO 8601 string from Swift Date
+  /**
+   * Swift JSONEncoder encodes Date as numeric Cocoa Reference Date (seconds since 2001-01-01) by default,
+   * or as an ISO 8601 string if dateEncodingStrategy is set to .iso8601.
+   * If nil in Swift, the field is omitted from JSON.
+   */
+  dueDate?: string | number | null;
   priority: number; // 0..9
-  notes: string | null;
+  notes?: string | null;
   listID: string;
 }
 
@@ -151,11 +156,22 @@ export interface ReminderService {
 // Gateway Configuration Types
 // ==========================================
 
+/**
+ * Explicit binding between an allowed list and its expected source.
+ * Any list without an explicit binding in gateway config MUST be rejected.
+ */
+export interface BoundListConfig {
+  listId: string;
+  expectedSourceId: string;
+  expectedSourceName?: string; // defaults to "iCloud"
+  expectedSourceType?: string; // defaults to "calDAV"
+}
+
 export interface MacServerGatewayConfig {
   /**
    * HTTP endpoint of MacServer EventKit Bridge.
    * e.g. "http://127.0.0.1:18765" (via persistent tunnel)
-   * or "http://100.100.172.91:18765" (Tailscale mesh candidate)
+   * or "http://172.19.0.1:18765" (container to host bridge gateway)
    */
   macserverEndpoint: string;
 
@@ -170,13 +186,18 @@ export interface MacServerGatewayConfig {
   timeoutMs: number;
 
   /**
-   * Optional allowlist of permitted list UUIDs.
-   * If provided, queries targeting unallowed lists will be rejected.
+   * Maximum response body size in bytes (default: 2MB = 2097152).
    */
-  allowedListIds?: string[];
+  maxResponseSizeBytes: number;
 
   /**
-   * Expected source validation (default: sourceType="calDAV", sourceName="iCloud").
+   * Explicit list-to-source bindings.
+   * Queries for lists not explicitly bound here will be rejected immediately.
+   */
+  allowedLists: BoundListConfig[];
+
+  /**
+   * Global default expected source validation (default: sourceType="calDAV", sourceName="iCloud").
    */
   expectedSourceType?: string;
   expectedSourceName?: string;

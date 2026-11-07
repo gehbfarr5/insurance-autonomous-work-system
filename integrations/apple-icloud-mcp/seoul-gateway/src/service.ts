@@ -2,17 +2,21 @@
  * service.ts
  * ReminderService implementation routing read requests to MacServer EventKit Transport.
  * 
- * Invariants:
- * 1. Interface conformance: Implements exact ReminderService required by registerReminderTools.
- * 2. Source and Identity binding: Only iCloud / calDAV lists and items are vended.
- * 3. Write prevention: create, update, remove MUST fail with PERMISSION_DENIED.
- *    ZERO fallback to legacy VTODO.
- * 4. Error honesty: Missing lists throw NOT_FOUND; backend errors throw upstream AppError;
+ * Invariants & Strict Protections:
+ * 1. Explicit List-to-Source ID Binding: Every list vended must have an explicit binding in
+ *    config.allowedLists. Lists without explicit source ID binding are rejected immediately.
+ * 2. Target list ownership: Every returned reminder item MUST belong to the requested listID.
+ *    Any cross-list item mismatch causes explicit failure.
+ * 3. Swift Date handling: Supports Cocoa reference date numbers and ISO 8601 strings via parseBridgeDate.
+ * 4. Write prevention: create, update, remove MUST fail with PERMISSION_DENIED.
+ *    ZERO write forwarding to MacServer, ZERO fallback to legacy VTODO.
+ * 5. Error honesty: Missing lists throw NOT_FOUND; backend errors throw upstream AppError;
  *    never masquerades failures as empty list [].
  */
 
 import {
   AppError,
+  type BoundListConfig,
   type ListRemindersParams,
   type ListRemindersResult,
   type MacServerGatewayConfig,
@@ -25,7 +29,7 @@ import {
   type RemindersList,
   type UpdateOptions,
 } from './types.ts';
-import { EventKitReadonlyTransport } from './transport.ts';
+import { EventKitReadonlyTransport, parseBridgeDate } from './transport.ts';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
@@ -56,29 +60,42 @@ export interface MacServerReminderServiceDeps {
 
 export function createMacServerReminderService(deps: MacServerReminderServiceDeps): ReminderService {
   const { transport, config } = deps;
-  const expectedSourceType = config.expectedSourceType || 'calDAV';
-  const expectedSourceName = config.expectedSourceName || 'iCloud';
+
+  // Build lookup index of explicit list-source bindings
+  const bindingIndex = new Map<string, BoundListConfig>();
+  for (const b of config.allowedLists) {
+    bindingIndex.set(b.listId, b);
+  }
 
   /**
-   * Internal helper to fetch and filter lists conforming to iCloud source and allowlist.
+   * Internal helper: fetches lists metadata and verifies explicit list-source ID bindings.
+   * Requirement: 白名单与列表—来源 ID 绑定必须显式配置，缺失即拒绝。
    */
   async function fetchAllowedICloudLists(): Promise<RemindersList[]> {
     const rawLists = await transport.fetchListsMetadata();
 
-    // Verify source identity (FIX-R4A-02)
-    const iCloudLists = rawLists.filter((list) => {
-      const typeMatches = !expectedSourceType || list.sourceType.toLowerCase() === expectedSourceType.toLowerCase();
-      const nameMatches = !expectedSourceName || list.sourceName.toLowerCase() === expectedSourceName.toLowerCase();
-      return typeMatches && nameMatches;
-    });
+    const verifiedLists: RemindersList[] = [];
+    for (const list of rawLists) {
+      const binding = bindingIndex.get(list.listID);
+      // If list is not explicitly bound in config, it is rejected/omitted
+      if (!binding) continue;
 
-    // Apply allowed list IDs filter if configured
-    if (config.allowedListIds && config.allowedListIds.length > 0) {
-      const allowedSet = new Set(config.allowedListIds);
-      return iCloudLists.filter((list) => allowedSet.has(list.listID));
+      // Verify sourceID matches explicit binding
+      if (list.sourceID !== binding.expectedSourceId) {
+        continue; // Source mismatch, reject
+      }
+
+      // Verify sourceType and sourceName
+      const expType = binding.expectedSourceType || config.expectedSourceType || 'calDAV';
+      const expName = binding.expectedSourceName || config.expectedSourceName || 'iCloud';
+
+      if (list.sourceType.toLowerCase() !== expType.toLowerCase()) continue;
+      if (list.sourceName.toLowerCase() !== expName.toLowerCase()) continue;
+
+      verifiedLists.push(list);
     }
 
-    return iCloudLists;
+    return verifiedLists;
   }
 
   return {
@@ -121,8 +138,8 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
         if (missing.length > 0) {
           throw new AppError(
             'NOT_FOUND',
-            `以下 list_id 不对应任何可用 iCloud 提醒列表：${missing.join('、')}`,
-            { hint: '重新调用 reminders_lists 获取当前有效的 list_id' }
+            `以下 list_id 不对应任何已显式绑定的 iCloud 提醒列表：${missing.join('、')}`,
+            { hint: '重新调用 reminders_lists 获取当前有效且已绑定的 list_id' }
           );
         }
         targetLists = availableLists.filter((avail) => params.list_ids!.includes(avail.listID));
@@ -145,29 +162,42 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
       let totalFailedLists = 0;
       let firstFailureError: unknown = null;
 
-      settled.forEach((outcome, index) => {
-        const list = targetLists[index]!;
+      for (let i = 0; i < settled.length; i++) {
+        const outcome = settled[i]!;
+        const list = targetLists[i]!;
+
         if (outcome.status === 'fulfilled') {
           const { items } = outcome.value;
           for (const item of items) {
+            // Rule: 返回条目必须属于请求的列表
+            if (item.listID !== list.listID) {
+              throw new AppError(
+                'UPSTREAM_ERROR',
+                `安全校验失败：返回条目 ${item.itemID} 所属列表 (${item.listID}) 与请求的目标列表 (${list.listID}) 不匹配`
+              );
+            }
+
             const reminder: Reminder = {
               reminder_id: item.itemID,
               list_id: item.listID,
               title: item.title,
               completed: item.isCompleted,
             };
+
             if (item.notes && item.notes.trim()) {
               reminder.notes = item.notes;
             }
-            if (item.dueDate) {
-              const d = new Date(item.dueDate);
-              if (!Number.isNaN(d.getTime())) {
-                reminder.due = d.toISOString();
-              }
+
+            // Swift Date parsing (Cocoa seconds or ISO string)
+            const parsedDue = parseBridgeDate(item.dueDate);
+            if (parsedDue) {
+              reminder.due = parsedDue;
             }
+
             if (item.priority !== undefined && item.priority !== null) {
               reminder.priority = item.priority;
             }
+
             allReminders.push(reminder);
           }
         } else {
@@ -185,7 +215,7 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
             reason,
           });
         }
-      });
+      }
 
       // Strict failure rule: If all requested lists failed, we MUST NOT report success with empty list!
       if (totalFailedLists === targetLists.length && targetLists.length > 0) {

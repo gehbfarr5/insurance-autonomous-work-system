@@ -1,91 +1,95 @@
 # AG-03: Seoul → MacServer 常驻连接方案 (Persistent Connection Scheme)
 
-- **设计版本**：v1.0 (AG-03 Gateway 候选)
+- **设计版本**：v1.1 (容器网络拓扑与 SSH 安全特权加固)
 - **基线分支**：`feat/seoul-macserver-readonly-gateway`
 - **目标端点**：
-  - **Seoul MCP 主机**：`VM-0-10-ubuntu` (Tailscale: `100.82.240.43`, 公网出口受安全组严密保护)
+  - **Seoul MCP 容器**：`insurance-carddav-mcp-carddav-1` (Bridge 网段 `172.19.0.2`，网关 `172.19.0.1`)
+  - **Seoul 宿主机**：`VM-0-10-ubuntu` (Tailscale: `100.82.240.43`)
   - **MacServer 常驻宿主**：`macserver-ts` (Tailscale: `100.100.172.91`, macOS 15.7.7 x86_64, `gui/501`)
 - **前置原则**：
   1. Seoul Host 为 MUSE 的**唯一**统一入口网关。
   2. 链路**绝对不依赖 M5 Pro**（M5 Pro 完全从运行时数据路径中剥离）。
-  3. **严禁扩大公网暴露**（全链路封闭于 Tailscale WireGuard 私网及 loopback）。
+  3. **严格维持 Loopback 边界，严禁公网暴露**（全链路封闭于 Tailscale WireGuard 私网及 loopback）。
   4. 网络与服务配置本轮仅作候选准备，部署另行审批。
 
 ---
 
-## 一、网络现状与设计权衡
+## 一、真实容器网络拓扑与多跳链路 (Container Topology)
 
-### 1.1 现状分析
-1. **MacServer 局部安全**：`EventKitBridgeServer` 依据安全基线严格监听在 `127.0.0.1:18765`（回环地址），防止同内网未授权进程探测。
-2. **跨机通信需求**：运行在 Seoul 容器中的 MCP 网关需要安全请求 MacServer 的只读 HTTP 接口（`GET /health`、`GET /reminders/lists`、`GET /reminders/lists/:id/items`）。
-3. **M5 历史依赖解除**：前期实验（A4）将请求指向 M5 Pro (`100.69.145.3:18443`)。本方案彻底断开与 M5 Pro 的任何联系，实现端到端常驻直连。
-
----
-
-## 二、候选方案对比与选型
-
-### 方案 A：Tailscale 私网 SSH 隧道守护（推荐候选，Candidate 1）
+生产环境中，Seoul MCP 运行于独立 Docker 容器内，其网络拓扑如下：
 
 ```
-[MUSE 前台] 
-    │ HTTPS
-    ▼
-[Seoul Host (100.82.240.43)]
-    │ 
-    ├─► apple-icloud-mcp 网关容器 (请求 http://127.0.0.1:18765)
-    │        │
-    │        ▼
-    └─► systemd 守护进程: seoul-macserver-tunnel.service
-             │ 
-             │ SSH Local Port Forwarding (-L 127.0.0.1:18765:127.0.0.1:18765)
-             │ 运行于 Tailscale WireGuard P2P 加密隧道内 (100.82.240.43 -> 100.100.172.91)
-             │
-             ▼
-[Intel MacServer (100.100.172.91)]
+[MCP Client (容器内 172.19.0.2)]
     │
-    └─► EventKitBridgeServer (监听 127.0.0.1:18765)
-             │ 
-             ▼
-        EventKit 原生只读接口 (TCC: authorized, read-only)
+    │ HTTP 请求 (目标: http://172.19.0.1:18765 或 http://host.docker.internal:18765)
+    ▼
+[Seoul Docker 网桥网关 (172.19.0.1:18765)]
+    │
+    │ 宿主 SSH 本地转发监听 (-L 172.19.0.1:18765:127.0.0.1:18765)
+    ▼
+[Seoul 宿主 SSH 隧道进程 (seoul-macserver-tunnel.service)]
+    │
+    │ Tailscale WireGuard P2P 加密隧道 (100.82.240.43 -> 100.100.172.91)
+    ▼
+[MacServer SSH 守护进程 (100.100.172.91:22)]
+    │ 校验主机公钥、专用私钥及转发权限 (permitopen="127.0.0.1:18765")
+    ▼
+[MacServer 回环接口 (127.0.0.1:18765)]
+    │
+    ▼
+[EventKitBridgeServer (PID resident in gui/501)]
+    │
+    ▼
+[Apple 原生 EventKit (只读查询)]
 ```
 
-**核心优势**：
-- **零配置侵入**：MacServer 端已部署的 `EventKitBridgeServer`（`127.0.0.1:18765`）无需做任何代码修改或重新启动；
-- **双重认证与加密**：Tailscale WireGuard 传输层加密 + SSH 专用公钥认证（`id_ed25519_macserver_tunnel`）；
-- **系统级自愈**：通过 Seoul systemd 监督，断线后 `Restart=always` 自动重连；
-- **公网零暴露**：SSH 服务仅绑定 Tailscale 网卡，且仅转发 `127.0.0.1`。
+---
 
-**候选配置交付**：
-- Systemd 单元文件：`config/seoul-macserver-tunnel.service.candidate`
+## 二、SSH 身份、主机密钥校验及转发特权限制
+
+为实现零信任安全基线，SSH 隧道采用精细化特权收敛：
+
+### 1. 专用 SSH 身份认证 (Dedicated Identity)
+- **密钥路径**：`/root/.ssh/id_ed25519_macserver_tunnel`（权限 `0600`，仅 Seoul root 用户可读）；
+- **公钥分发**：放置于 MacServer `~jin/.ssh/authorized_keys`；
+- **禁止交互登录**：使用 `-N -T` 参数（不分配 TTY、不执行远程 Shell）。
+
+### 2. 严格主机密钥校验 (Strict Host Key Checking)
+- **参数配置**：
+  ```
+  StrictHostKeyChecking=yes
+  UserKnownHostsFile=/root/.ssh/known_hosts
+  ```
+- **安全保障**：预先录入 MacServer Tailscale IP (`100.100.172.91`) 的 Ed25519 主机公钥指纹。若发生网络中间人篡改或主机变动，SSH 立即拒绝连接，防止假冒。
+
+### 3. MacServer 端最小化转发权限 (PermitOpen Restriction)
+在 MacServer 的 `~/.ssh/authorized_keys` 中，针对该专用公钥强制施加选项前缀：
+```
+command="",no-pty,no-X11-forwarding,no-agent-forwarding,permitopen="127.0.0.1:18765" ssh-ed25519 AAAA...
+```
+**特权封锁保障**：
+- **禁止执行命令** (`command=""`)：即使获得私钥也无法执行任何远程 Shell 命令；
+- **禁止无限制转发** (`permitopen="127.0.0.1:18765"`)：禁止跳板攻击，该 SSH 会话**仅能且只能**连接 MacServer 本地 `127.0.0.1:18765`，无法探测局域网其他任何机器或端口。
+
+### 4. Loopback 边界保留与公网防暴露
+- Seoul 侧 SSH 仅绑定：
+  - `127.0.0.1:18765`（宿主机本地回环）
+  - `172.19.0.1:18765`（Docker 容器网桥网关，仅供容器内访问）
+- **绝不监听 `0.0.0.0`**：公网网卡完全不可见该端口；
+- 配置层硬编码校验：`validateGatewayConfig` 遇到 `0.0.0.0`、`::`、`*` 时立即报错崩溃。
 
 ---
 
-### 方案 B：MacServer 监听 Tailscale 私网 IP（备用候选，Candidate 2）
+## 三、彻底解除 M5 Pro 依赖 (Zero M5 Pro Dependency)
 
-若未来希望精简 SSH 进程，可在 MacServer 守护配置中允许绑定至 Tailscale 单一接口：
-- 绑定地址：`100.100.172.91:18765`；
-- 访问控制：通过 Tailscale ACL（只允许 Seoul `100.82.240.43` 出站访问 MacServer `100.100.172.91:18765`）；
-- 应用层安全：每次调用强制验证 32 字节 Bearer Token 及生产激活开关。
-
-*注：当前版本优先使用方案 A，以保持 MacServer 运行中的 candidate 安装包（97571d4）状态绝对不受扰动。*
+- 生产及候选链路中已完全消除 `100.69.145.3` 和端口 `18443`；
+- 无论 M5 Pro 处于在线、关机、休眠还是实验性 A4 进程退役，Seoul → MacServer 只读通道均独立自洽运行。
 
 ---
 
-## 三、网络安全与红线保障
+## 四、候选交付文件清单
 
-1. **绝对禁止通配监听 (`0.0.0.0`)**：
-   - 网关配置解析器 `validateGatewayConfig` 已硬编码断言：若 endpoint 主机为 `0.0.0.0`、`::` 或通配符，立即抛出 `INVALID_INPUT` 并拒绝启动。
-2. **彻底脱离 M5 Pro**：
-   - 生产与候选配置中已完全清除 `100.69.145.3` 和 `18443` 端口；
-   - 无论 M5 Pro 处于开机、休眠还是实验进程退役状态，均不影响 Seoul → MacServer 链路。
-3. **只读保护与降级防护**：
-   - 写操作（POST/PATCH/DELETE）在 Seoul 端 `transport.ts` 与 `service.ts` 均被强制拦截并抛出 `PERMISSION_DENIED`；
-   - 严禁向 MacServer 转发写请求，且严禁回落至已废弃的旧 VTODO 写入逻辑；
-   - 故障时禁止假充空列表返回成功。
-
----
-
-## 四、部署就绪度
-
-- 配置文件与 Systemd 单元已在 `integrations/apple-icloud-mcp/seoul-gateway/config/` 完成编制；
-- **当前状态**：`READY_FOR_APPROVAL`（未部署至 Seoul 生产，等待专项部署授权）。
+- **Systemd 单元文件**：[`config/seoul-macserver-tunnel.service.candidate`](file:///Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system/integrations/apple-icloud-mcp/seoul-gateway/config/seoul-macserver-tunnel.service.candidate)
+- **环境变量配置模板**：[`config/gateway.env.candidate`](file:///Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system/integrations/apple-icloud-mcp/seoul-gateway/config/gateway.env.candidate)
+- **JSON 配置模板**：[`config/gateway-config.json.template`](file:///Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system/integrations/apple-icloud-mcp/seoul-gateway/config/gateway-config.json.template)
+- **多跳网络隔离集成测试**：[`tests/container-tunnel.test.ts`](file:///Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system/integrations/apple-icloud-mcp/seoul-gateway/tests/container-tunnel.test.ts)

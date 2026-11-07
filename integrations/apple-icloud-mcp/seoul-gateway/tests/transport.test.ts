@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert';
 import { FakeEventKitBridge } from '../src/fake-bridge.ts';
-import { EventKitReadonlyTransport } from '../src/transport.ts';
+import { EventKitReadonlyTransport, parseBridgeDate } from '../src/transport.ts';
 import { AppError, type MacServerGatewayConfig } from '../src/types.ts';
 
 describe('EventKitReadonlyTransport with Fake Bridge', () => {
@@ -45,6 +45,8 @@ describe('EventKitReadonlyTransport with Fake Bridge', () => {
       macserverEndpoint: bridgeUrl,
       authToken: token,
       timeoutMs: 1000,
+      maxResponseSizeBytes: 1024 * 1024,
+      allowedLists: [{ listId: 'allowed-list-01', expectedSourceId: 'src-01' }],
     };
   });
 
@@ -142,11 +144,11 @@ describe('EventKitReadonlyTransport with Fake Bridge', () => {
     }
   });
 
-  test('504 / timeout handling throws UPSTREAM_ERROR with retryable flag', async () => {
-    fakeBridge.delayMs = 800; // longer than shortTimeout
+  test('Timeout covers response body read: stalled body stream triggers UPSTREAM_ERROR', async () => {
+    fakeBridge.bodyDelayMs = 600; // body read takes 600ms
     const shortTimeoutConfig: MacServerGatewayConfig = {
       ...config,
-      timeoutMs: 500,
+      timeoutMs: 400, // timeout triggers at 400ms during body reading
     };
     const transport = new EventKitReadonlyTransport(shortTimeoutConfig);
 
@@ -162,7 +164,30 @@ describe('EventKitReadonlyTransport with Fake Bridge', () => {
         }
       );
     } finally {
-      fakeBridge.delayMs = 0;
+      fakeBridge.bodyDelayMs = 0;
+    }
+  });
+
+  test('Max response size limit enforcement: payload exceeding limit aborts and throws UPSTREAM_ERROR', async () => {
+    fakeBridge.simulateHugePayloadBytes = 50000; // 50KB payload
+    const tinyLimitConfig: MacServerGatewayConfig = {
+      ...config,
+      maxResponseSizeBytes: 10000, // limit is 10KB
+    };
+    const transport = new EventKitReadonlyTransport(tinyLimitConfig);
+
+    try {
+      await assert.rejects(
+        async () => transport.fetchListsMetadata(),
+        (err: unknown) => {
+          assert(err instanceof AppError);
+          assert.strictEqual(err.code, 'UPSTREAM_ERROR');
+          assert(err.message.includes('超出限制'));
+          return true;
+        }
+      );
+    } finally {
+      fakeBridge.simulateHugePayloadBytes = 0;
     }
   });
 
@@ -218,6 +243,20 @@ describe('EventKitReadonlyTransport with Fake Bridge', () => {
     );
 
     assert.strictEqual(fakeBridge.requests.length, initialRequests, 'No network request sent');
+  });
+
+  test('parseBridgeDate correctly converts numeric Cocoa dates and ISO strings', () => {
+    // 815961600 is 2026-11-10T00:00:00.000Z in Cocoa reference seconds
+    const fromCocoa = parseBridgeDate(815961600);
+    assert.strictEqual(fromCocoa, '2026-11-10T00:00:00.000Z');
+
+    // ISO 8601 string
+    const fromIso = parseBridgeDate('2026-11-10T00:00:00.000Z');
+    assert.strictEqual(fromIso, '2026-11-10T00:00:00.000Z');
+
+    // Null and undefined
+    assert.strictEqual(parseBridgeDate(null), undefined);
+    assert.strictEqual(parseBridgeDate(undefined), undefined);
   });
 
   test('NEGATIVE ASSERTION: Network errors never return empty array or fake success', async () => {

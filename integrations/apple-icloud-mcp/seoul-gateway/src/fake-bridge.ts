@@ -9,7 +9,8 @@
  * - Non-GET method rejection (HTTP 405 WRITE_OPERATION_REJECTED)
  * - Metadata-only /reminders/lists (FIX-R4A-01)
  * - Content query with source verification /reminders/lists/:id/items (FIX-R4A-02)
- * - Fault injection: timeouts, 500 internal errors, malformed JSON, simulated 404.
+ * - Swift JSONEncoder encoding emulation (numeric Cocoa Reference Dates, omitted nil keys)
+ * - Fault injection: timeouts, slow bodies, 500 internal errors, malformed JSON, huge payloads.
  */
 
 import http from 'node:http';
@@ -28,6 +29,7 @@ export interface FakeBridgeOptions {
   allowedListIds?: string[];
   mockLists?: RemindersList[];
   mockItems?: Record<string, ReminderItem[]>;
+  useSwiftDateEncoding?: boolean;
 }
 
 export class FakeEventKitBridge {
@@ -39,12 +41,15 @@ export class FakeEventKitBridge {
   public allowedListIds: Set<string>;
   public mockLists: RemindersList[];
   public mockItems: Map<string, ReminderItem[]>;
+  public useSwiftDateEncoding: boolean;
 
   // Fault injection controls
   public delayMs: number = 0;
+  public bodyDelayMs: number = 0;
   public simulateServerError: boolean = false;
   public simulateCorruptJson: boolean = false;
   public simulateListNotFound: boolean = false;
+  public simulateHugePayloadBytes: number = 0;
 
   public readonly requests: RecordedRequest[] = [];
 
@@ -54,6 +59,7 @@ export class FakeEventKitBridge {
     this.allowedListIds = new Set(options.allowedListIds || []);
     this.mockLists = options.mockLists || [];
     this.mockItems = new Map();
+    this.useSwiftDateEncoding = options.useSwiftDateEncoding ?? true;
 
     if (options.mockItems) {
       for (const [k, v] of Object.entries(options.mockItems)) {
@@ -92,6 +98,45 @@ export class FakeEventKitBridge {
 
   get url(): string {
     return `http://127.0.0.1:${this.port}`;
+  }
+
+  private serializeItems(items: ReminderItem[]): string {
+    if (!this.useSwiftDateEncoding) {
+      return JSON.stringify(items);
+    }
+
+    // Emulate Swift JSONEncoder() output format:
+    // 1. dueDate encoded as Cocoa reference seconds (Date.timeIntervalSinceReferenceDate)
+    // 2. nil fields omitted from dictionary
+    const swiftPayload = items.map((item) => {
+      const obj: Record<string, unknown> = {
+        itemID: item.itemID,
+        title: item.title,
+        isCompleted: item.isCompleted,
+        priority: item.priority,
+        listID: item.listID,
+      };
+
+      if (item.notes !== null && item.notes !== undefined) {
+        obj.notes = item.notes;
+      }
+
+      if (item.dueDate !== null && item.dueDate !== undefined) {
+        if (typeof item.dueDate === 'number') {
+          obj.dueDate = item.dueDate;
+        } else {
+          const d = new Date(item.dueDate);
+          if (!Number.isNaN(d.getTime())) {
+            // Convert to Cocoa reference date seconds (epoch ms - 978307200000) / 1000
+            obj.dueDate = (d.getTime() - 978307200000) / 1000;
+          }
+        }
+      }
+
+      return obj;
+    });
+
+    return JSON.stringify(swiftPayload);
   }
 
   private async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -185,10 +230,30 @@ export class FakeEventKitBridge {
       return;
     }
 
+    if (this.simulateHugePayloadBytes > 0) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      // Send large garbage body exceeding size limit
+      const chunk = Buffer.alloc(64 * 1024, 'A');
+      const totalChunks = Math.ceil(this.simulateHugePayloadBytes / (64 * 1024));
+      for (let i = 0; i < totalChunks; i++) {
+        res.write(chunk);
+      }
+      res.end();
+      return;
+    }
+
     // 6. Route: GET /reminders/lists
     if (pathname === '/reminders/lists') {
+      const responseData = JSON.stringify(this.mockLists);
+      if (this.bodyDelayMs > 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.write(responseData.slice(0, 5));
+        await new Promise((r) => setTimeout(r, this.bodyDelayMs));
+        res.end(responseData.slice(5));
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(this.mockLists));
+      res.end(responseData);
       return;
     }
 
@@ -223,8 +288,18 @@ export class FakeEventKitBridge {
       }
 
       const items = this.mockItems.get(listID) || [];
+      const serialized = this.serializeItems(items);
+
+      if (this.bodyDelayMs > 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.write(serialized.slice(0, 5));
+        await new Promise((r) => setTimeout(r, this.bodyDelayMs));
+        res.end(serialized.slice(5));
+        return;
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(items));
+      res.end(serialized);
       return;
     }
 
