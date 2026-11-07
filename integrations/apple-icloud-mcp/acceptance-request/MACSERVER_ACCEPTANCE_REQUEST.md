@@ -19,11 +19,15 @@ It defines:
 | Task ID | AG-01 (Phase B) |
 | Feature Branch | `feat/macserver-eventkit-readonly` |
 | Base Branch | `reconcile/icloud-source-baseline` (Stacked PR #21) |
-| arm64 Binary SHA-256 | `0b6e4d6aa17036d712d8a12ca26d386b4cdbe8d6eb788a8943dd5d0aaf654cf3` |
-| x86_64 Binary SHA-256 (Intel MacServer) | `666e63cd9563ec86e20adb6b2831ad8e0b3c474b282bdc8765365338cb2d9b81` |
-| Isolation Test Suite | **68 passed, 0 failed** (including 12 real loopback HTTP integration tests) |
+| arm64 Binary SHA-256 | `6ef70927f5e5053f481f9e499767748a5bd09ae232e93defe5292399e3807983` |
+| x86_64 Binary SHA-256 (Intel MacServer) | `c01b3d2b5f60f60a13d643d1087d9a87b73bca0b92990e5765a8aa70102dc181` |
+| Isolation Test Suite | **74 passed, 0 failed** (including 18 real loopback HTTP integration tests) |
 | Apple Live Writes | **0** (strictly read-only protocol, write methods return 405) |
 | Production Changes | **0** (no service restarted, no deployment applied) |
+| PyiCloud Status | `MOCK_ONLY` |
+| Seoul / MUSE Status | `PENDING` |
+| Source Reconciliation | `PARTIAL` |
+| M5 Pro Retirement | `PENDING_AUTHORIZATION` |
 
 ---
 
