@@ -76,6 +76,22 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
 
     const verifiedLists: RemindersList[] = [];
     for (const list of rawLists) {
+      if (!list || typeof list !== 'object') {
+        throw new AppError('UPSTREAM_ERROR', 'Bridge 返回的列表元数据不是有效对象');
+      }
+      if (typeof list.listID !== 'string' || !list.listID.trim()) {
+        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失或包含非法的 listID');
+      }
+      if (typeof list.title !== 'string') {
+        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失或包含非法的 title');
+      }
+      if (typeof list.sourceID !== 'string' || !list.sourceID.trim()) {
+        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失或包含非法的 sourceID');
+      }
+      if (typeof list.sourceType !== 'string' || typeof list.sourceName !== 'string') {
+        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失有效的 source 字段');
+      }
+
       const binding = bindingIndex.get(list.listID);
       // If list is not explicitly bound in config, it is rejected/omitted
       if (!binding) continue;
@@ -169,6 +185,29 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
         if (outcome.status === 'fulfilled') {
           const { items } = outcome.value;
           for (const item of items) {
+            if (!item || typeof item !== 'object') {
+              throw new AppError('UPSTREAM_ERROR', 'Bridge 返回的提醒条目不是有效对象');
+            }
+            if (typeof item.itemID !== 'string' || !item.itemID.trim()) {
+              throw new AppError('UPSTREAM_ERROR', 'Bridge 提醒条目缺失或包含非法的 itemID');
+            }
+            if (typeof item.title !== 'string') {
+              throw new AppError('UPSTREAM_ERROR', 'Bridge 提醒条目缺失或包含非法的 title');
+            }
+            if (typeof item.isCompleted !== 'boolean') {
+              throw new AppError('UPSTREAM_ERROR', 'Bridge 提醒条目 isCompleted 必须为布尔值');
+            }
+            if (typeof item.listID !== 'string' || !item.listID.trim()) {
+              throw new AppError('UPSTREAM_ERROR', 'Bridge 提醒条目缺失或包含非法的 listID');
+            }
+            if (
+              item.priority !== undefined &&
+              item.priority !== null &&
+              (!Number.isInteger(item.priority) || item.priority < 0 || item.priority > 9)
+            ) {
+              throw new AppError('UPSTREAM_ERROR', 'Bridge 提醒条目 priority 必须是 0 到 9 之间的整数');
+            }
+
             // Rule: 返回条目必须属于请求的列表
             if (item.listID !== list.listID) {
               throw new AppError(

@@ -13,7 +13,7 @@
 2. MacServer `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` 已置为 `true`；
 3. MUSE 客户端已成功连接到 Seoul MCP 统一网关：
    - MCP 端点：`https://seoul-forge-01.tail4db0d9.ts.net/mcp`
-   - 目标 Apple 账号：`gehbfarr5@i.softbank.jp`
+   - 目标 Apple 账号：`[REDACTED_TARGET_ACCOUNT]`
 
 ---
 
@@ -36,7 +36,7 @@
 - **用户对 MUSE 发送指令**：
   > “请列出我所有的提醒事项列表。”
 - **预期 MUSE 行为**：
-  - 调用 `apple_login({ account: "gehbfarr5@i.softbank.jp" })` 获取 `session_id`；
+  - 调用 `apple_login({ account: "[REDACTED_TARGET_ACCOUNT]" })` 获取 `session_id`；
   - 调用工具：`reminders_lists({ session_id })`；
   - 返回列表清单：
     - 包含已绑定的测试列表 `M****试`（脱敏标识：`9D9A****03F3`）；

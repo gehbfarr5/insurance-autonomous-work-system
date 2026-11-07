@@ -32,42 +32,39 @@ export interface TransportFetch {
 export const COCOA_TO_UNIX_OFFSET_SECONDS = 978307200;
 
 /**
- * Normalizes a bridge date field (which may be numeric Cocoa seconds, numeric Unix ms, or ISO 8601 string)
- * into a standardized ISO 8601 string.
+ * Normalizes a bridge date field strictly according to the Swift EventKitBridge contract:
+ * - Number: Cocoa Reference Date seconds (Double, seconds since 2001-01-01T00:00:00Z).
+ * - String: Standard ISO 8601 format.
+ * - null / undefined: omitted.
+ * Any invalid type or unparseable value throws AppError explicitly (no silent fallback, no numeric threshold guessing).
  */
 export function parseBridgeDate(raw: unknown): string | undefined {
   if (raw === null || raw === undefined) return undefined;
 
   if (typeof raw === 'number') {
-    // Determine whether this is Cocoa reference date seconds or Unix epoch timestamp
-    // Cocoa reference date for 2026 is around ~800,000,000 (8e8)
-    // Unix epoch seconds for 2026 is around ~1,780,000,000 (1.78e9)
-    // Unix epoch milliseconds for 2026 is around ~1.78e12
-    if (raw < 1e11) {
-      // Seconds
-      if (raw < 1.2e9) {
-        // Cocoa reference date seconds (Swift JSONEncoder default)
-        const unixMs = (raw + COCOA_TO_UNIX_OFFSET_SECONDS) * 1000;
-        const d = new Date(unixMs);
-        if (!Number.isNaN(d.getTime())) return d.toISOString();
-      } else {
-        // Unix epoch seconds
-        const d = new Date(raw * 1000);
-        if (!Number.isNaN(d.getTime())) return d.toISOString();
-      }
-    } else {
-      // Unix epoch milliseconds
-      const d = new Date(raw);
-      if (!Number.isNaN(d.getTime())) return d.toISOString();
+    if (!Number.isFinite(raw)) {
+      throw new AppError('UPSTREAM_ERROR', `非法日期编码: 数值非有限浮点数 (${raw})`);
     }
+    const unixMs = (raw + COCOA_TO_UNIX_OFFSET_SECONDS) * 1000;
+    const d = new Date(unixMs);
+    if (Number.isNaN(d.getTime())) {
+      throw new AppError('UPSTREAM_ERROR', `非法日期编码: 无法解析的 Cocoa 时间戳 (${raw})`);
+    }
+    return d.toISOString();
   }
 
-  if (typeof raw === 'string' && raw.trim()) {
+  if (typeof raw === 'string') {
+    if (!raw.trim()) {
+      throw new AppError('UPSTREAM_ERROR', '非法日期编码: 空日期字符串');
+    }
     const d = new Date(raw.trim());
-    if (!Number.isNaN(d.getTime())) return d.toISOString();
+    if (Number.isNaN(d.getTime())) {
+      throw new AppError('UPSTREAM_ERROR', `非法日期编码: 无法解析的 ISO 日期字符串 (${raw})`);
+    }
+    return d.toISOString();
   }
 
-  return undefined;
+  throw new AppError('UPSTREAM_ERROR', `非法日期编码类型: 期望 number 或 string, 实际为 ${typeof raw}`);
 }
 
 export class EventKitReadonlyTransport {

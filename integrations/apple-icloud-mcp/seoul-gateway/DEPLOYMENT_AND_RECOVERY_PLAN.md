@@ -30,7 +30,7 @@
 - **影响评估**：Reminders 只读网关作为独立的服务适配器插入，与 Contacts 及 Calendar 无代码级交叉依赖。在重启容器加载环境变量期间，存在秒级的容器重启窗口，重启完成后 Contacts 与 Calendar 立即恢复正常工作。
 
 ### 3. 多 Agent 租户共用影响（只读安全，零并发写冲突）
-- **获授权 Agent**：Antigravity、MUSE、WorkBuddy 共用同一套 Apple ID (`gehbfarr5@i.softbank.jp`)；
+- **获授权 Agent**：Antigravity、MUSE、WorkBuddy 共用同一套 Apple ID (`[REDACTED_TARGET_ACCOUNT]`)；
 - **只读保证**：网关在客户端和服务端硬编码拦截所有写操作（`PERMISSION_DENIED`），因此开启网关**绝不会**向 iCloud 写入任何脏数据，**绝不会**引发多 Agent 间的数据并发修改或覆盖。
 
 ---
