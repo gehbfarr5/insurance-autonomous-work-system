@@ -179,7 +179,7 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
 }
 
 /// Explicit, default-off assembly path for ProductionEventKitStore.
-/// Only instantiated with EKEventStore when isAuthorized == true AND authorizedStoreProvider != nil.
+/// Only activated when isAuthorized == true AND authorizedStoreProvider != nil.
 public enum ProductionStoreAssembly {
     public static func assemble(
         isAuthorized: Bool,
@@ -188,12 +188,13 @@ public enum ProductionStoreAssembly {
         callbackTimeoutSeconds: Double = 5.0,
         authorizedStoreProvider: (@Sendable () throws -> EKEventStore)? = nil
     ) -> ProductionEventKitStore {
+        let isFullyAuthorized = isAuthorized && (authorizedStoreProvider != nil)
         return ProductionEventKitStore(
-            isProductionActivated: isAuthorized,
+            isProductionActivated: isFullyAuthorized,
             sourceVerifier: sourceVerifier,
             requestLimiter: requestLimiter,
             callbackTimeoutSeconds: callbackTimeoutSeconds,
-            storeProvider: isAuthorized ? authorizedStoreProvider : nil
+            storeProvider: isFullyAuthorized ? authorizedStoreProvider : nil
         )
     }
 }

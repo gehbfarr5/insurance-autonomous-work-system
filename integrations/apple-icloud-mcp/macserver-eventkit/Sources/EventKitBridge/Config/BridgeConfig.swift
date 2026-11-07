@@ -59,6 +59,10 @@ public struct BridgeConfig: Sendable {
     /// Maximum concurrent business requests (health checks remain unblocked).
     public let maxConcurrentRequests: Int
 
+    /// Maximum concurrent operations permitted to query the Store backend.
+    /// Strict resource budget: Hanging operations continue to consume budget until termination.
+    public let maxConcurrentStoreOperations: Int
+
     /// Maximum permitted HTTP header size in bytes (e.g. 16384 = 16KB).
     public let maxHeaderSizeBytes: Int
 
@@ -114,6 +118,7 @@ public struct BridgeConfig: Sendable {
             port: 0,
             timeoutSeconds: 5.0,
             maxConcurrentRequests: 10,
+            maxConcurrentStoreOperations: 10,
             maxHeaderSizeBytes: 16384,
             headerReadTimeoutSeconds: 3.0,
             bodyReadTimeoutSeconds: 3.0,
@@ -142,6 +147,7 @@ public struct BridgeConfig: Sendable {
         port: Int = 18765,
         timeoutSeconds: Double = 5.0,
         maxConcurrentRequests: Int = 10,
+        maxConcurrentStoreOperations: Int = 10,
         maxHeaderSizeBytes: Int = 16384,
         headerReadTimeoutSeconds: Double = 3.0,
         bodyReadTimeoutSeconds: Double = 3.0,
@@ -161,6 +167,7 @@ public struct BridgeConfig: Sendable {
         self.port = port
         self.timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 5.0
         self.maxConcurrentRequests = maxConcurrentRequests > 0 ? maxConcurrentRequests : 10
+        self.maxConcurrentStoreOperations = maxConcurrentStoreOperations > 0 ? maxConcurrentStoreOperations : 10
         self.maxHeaderSizeBytes = maxHeaderSizeBytes > 0 ? maxHeaderSizeBytes : 16384
         self.headerReadTimeoutSeconds = headerReadTimeoutSeconds > 0 ? headerReadTimeoutSeconds : 3.0
         self.bodyReadTimeoutSeconds = bodyReadTimeoutSeconds > 0 ? bodyReadTimeoutSeconds : 3.0
@@ -254,6 +261,7 @@ public struct BridgeConfig: Sendable {
         let bodyTimeout = Double(environment["EVENTKIT_BRIDGE_BODY_TIMEOUT"] ?? "") ?? 3.0
         let maxBody = Int(environment["EVENTKIT_BRIDGE_MAX_BODY_SIZE"] ?? "") ?? 1_048_576
         let sendTimeout = Double(environment["EVENTKIT_BRIDGE_SEND_TIMEOUT"] ?? "") ?? 5.0
+        let maxStoreOps = Int(environment["EVENTKIT_BRIDGE_MAX_STORE_OPS"] ?? "") ?? maxConcurrent
 
         let config = BridgeConfig(
             mode: mode,
@@ -261,6 +269,7 @@ public struct BridgeConfig: Sendable {
             port: port,
             timeoutSeconds: timeout,
             maxConcurrentRequests: maxConcurrent,
+            maxConcurrentStoreOperations: maxStoreOps,
             maxHeaderSizeBytes: 16384,
             headerReadTimeoutSeconds: headerTimeout,
             bodyReadTimeoutSeconds: bodyTimeout,

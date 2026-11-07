@@ -742,4 +742,160 @@ final class HttpIntegrationTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
     }
+
+    // MARK: — 13. Advanced Lifecycle: Rapid Disconnect Stress, Restart Under Pressure & Store Budget Boundedness
+
+    func testRapidConnectionAndDisconnectStress() async throws {
+        let iterations = 25
+        let currentPort = boundPort
+
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<iterations {
+                group.addTask {
+                    let fd = socket(AF_INET, SOCK_STREAM, 0)
+                    guard fd >= 0 else { return }
+                    defer { Darwin.close(fd) }
+
+                    var addr = sockaddr_in()
+                    addr.sin_family = sa_family_t(AF_INET)
+                    addr.sin_port = in_port_t(UInt16(currentPort).bigEndian)
+                    inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr)
+
+                    let conn = withUnsafePointer(to: &addr) { ptr in
+                        ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                            Darwin.connect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_in>.size))
+                        }
+                    }
+                    guard conn == 0 else { return }
+
+                    if i % 3 == 0 {
+                        // Disconnect immediately after connect
+                        Darwin.close(fd)
+                    } else if i % 3 == 1 {
+                        // Send partial byte and close
+                        let b = "G"
+                        _ = b.withCString { Darwin.write(fd, $0, 1) }
+                        Darwin.close(fd)
+                    } else {
+                        // Send invalid garbage and close
+                        let junk = "INVALID_VERB / HTTP/1.1\r\n\r\n"
+                        _ = junk.withCString { Darwin.write(fd, $0, strlen($0)) }
+                        Darwin.close(fd)
+                    }
+                }
+            }
+        }
+
+        // Allow 100ms for connection teardowns to settle
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // Verify server remains fully healthy and responsive
+        let healthURL = baseURL.appendingPathComponent("health")
+        let (data, res) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((res as? HTTPURLResponse)?.statusCode, 200)
+
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["status"] as? String, "ok")
+        XCTAssertEqual(json["active_requests"] as? Int, 0)
+    }
+
+    func testStopAndRestartUnderPressure() async throws {
+        let clientCount = 10
+        let reqURL = baseURL.appendingPathComponent("reminders/lists")
+
+        // Fire 10 concurrent requests in flight
+        for _ in 0..<clientCount {
+            Task { [reqURL] in
+                var req = URLRequest(url: reqURL)
+                req.httpMethod = "GET"
+                req.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+                _ = try? await URLSession.shared.data(for: req)
+            }
+        }
+
+        // Stop server under active load
+        await server.stop()
+        let isStopped = await server.isListening
+        XCTAssertFalse(isStopped)
+
+        // Restart server
+        try await server.start()
+        let isRestarted = await server.isListening
+        XCTAssertTrue(isRestarted)
+
+        let newPort = await server.boundPort
+        let active = await server.activeRequestsCount
+        XCTAssertEqual(active, 0, "Restarted server must reset active request count to 0")
+
+        // Issue request to restarted server to verify operational recovery
+        let newHealthURL = URL(string: "http://127.0.0.1:\(newPort)/health")!
+        let (data, res) = try await URLSession.shared.data(for: URLRequest(url: newHealthURL))
+        XCTAssertEqual((res as? HTTPURLResponse)?.statusCode, 200)
+
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["status"] as? String, "ok")
+        XCTAssertEqual(json["active_requests"] as? Int, 0)
+    }
+
+    func testStoreResourceBudgetRejectsExcessiveHangingTasks() async throws {
+        await store.setHanging(indefinitely: true)
+
+        // Configure server with tight budget: max 2 concurrent store operations, timeout 0.4s
+        let budgetConfig = BridgeConfig(
+            mode: .test,
+            host: "127.0.0.1",
+            port: 0,
+            timeoutSeconds: 0.4,
+            maxConcurrentRequests: 10,
+            maxConcurrentStoreOperations: 2, // Hard limit of 2 store tasks
+            allowedListIDs: ["fake-list-icloud-001"],
+            listBindings: [
+                "fake-list-icloud-001": SourceIdentity(sourceID: "src-icloud-primary", sourceType: "calDAV", sourceTitle: "iCloud")
+            ],
+            validTokens: ["test-valid-bearer-token"]
+        )
+
+        let budgetServer = EventKitBridgeServer(
+            store: store,
+            authValidator: authValidator,
+            allowlistValidator: allowlistValidator,
+            requestLimiter: requestLimiter,
+            config: budgetConfig
+        )
+        try await budgetServer.start()
+        defer { Task { await budgetServer.stop() } }
+        let port = await budgetServer.boundPort
+
+        let url = URL(string: "http://127.0.0.1:\(port)/reminders/lists/fake-list-icloud-001/items")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer test-valid-bearer-token", forHTTPHeaderField: "Authorization")
+
+        // Request 1: Times out at 0.4s, underlying store task remains alive in background
+        let (_, res1) = try await URLSession.shared.data(for: request)
+        XCTAssertEqual((res1 as? HTTPURLResponse)?.statusCode, 504)
+
+        // Request 2: Times out at 0.4s, 2nd store task remains alive in background
+        let (_, res2) = try await URLSession.shared.data(for: request)
+        XCTAssertEqual((res2 as? HTTPURLResponse)?.statusCode, 504)
+
+        // Check health: active_store_operations is now 2 (budget exhausted!)
+        let healthURL = URL(string: "http://127.0.0.1:\(port)/health")!
+        let (hData, hRes) = try await URLSession.shared.data(for: URLRequest(url: healthURL))
+        XCTAssertEqual((hRes as? HTTPURLResponse)?.statusCode, 200)
+        let hJson = try XCTUnwrap(JSONSerialization.jsonObject(with: hData) as? [String: Any])
+        XCTAssertEqual(hJson["active_store_operations"] as? Int, 2, "Hanging tasks must remain budgeted after HTTP timeout")
+
+        // Request 3: Must be immediately REJECTED with 503 STORE_RESOURCE_LIMIT_EXCEEDED without spawning a 3rd task!
+        let startReq3 = Date()
+        let (data3, res3) = try await URLSession.shared.data(for: request)
+        let elapsedReq3 = Date().timeIntervalSince(startReq3)
+
+        let httpRes3 = try XCTUnwrap(res3 as? HTTPURLResponse)
+        XCTAssertEqual(httpRes3.statusCode, 503, "Exhausted store budget must reject new operation with 503")
+        XCTAssertLessThan(elapsedReq3, 0.2, "Rejection must happen immediately without waiting for store timeout")
+
+        let json3 = try XCTUnwrap(JSONSerialization.jsonObject(with: data3) as? [String: Any])
+        XCTAssertEqual(json3["code"] as? String, "STORE_RESOURCE_LIMIT_EXCEEDED")
+    }
 }

@@ -1,16 +1,19 @@
 // EventKitBridgeServer.swift
-// NEW_IMPLEMENTATION | NON_BLOCKING_ASYNC_ENGINE | FULL_SEND_LOOP | FAULT_TOLERANT
+// NEW_IMPLEMENTATION | NON_BLOCKING_ASYNC_ENGINE | FULL_SEND_LOOP | BOUNDED_STORE_BUDGET
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
 // Native POSIX loopback HTTP bridge server.
 // Architectural Highlights:
-// 1. Raw socket I/O is completely decoupled from the server Actor into non-blocking workers.
-// 2. Chunked/fragmented HTTP header handling with overall deadline and 16KB limit (431 on overflow).
-// 3. Request body draining with overall deadline and 1MB capacity limit (413 on overflow).
-// 4. Full send loop handling partial writes, EINTR retries, client disconnects, and SO_NOSIGPIPE.
-// 5. Uncooperative hanging Store isolation: Request deadline triggers 504 Gateway Timeout without
-//    allowing hanging Store continuations to block HTTP response or drag out timeout.
-// 6. Graceful stop and restart: Closes all active connection sockets, terminates client tasks,
+// 1. Connection registration occurs prior to starting Worker tasks.
+// 2. Centralized fd lifecycle via ManagedSocketHandle guarantees idempotent, zero double-close cleanup.
+// 3. Raw socket I/O is completely decoupled from the server Actor into non-blocking workers.
+// 4. Chunked/fragmented HTTP header handling with overall deadline and 16KB limit (431 on overflow).
+// 5. Request body draining with overall deadline and 1MB capacity limit (413 on overflow).
+// 6. Full send loop handling partial writes, EINTR retries, client disconnects, and SO_NOSIGPIPE.
+// 7. Bounded Store Resource Budget: Hanging Store operations continue to be accounted in the
+//    resource budget until actual termination. When budget is exhausted, new operations are rejected (503),
+//    preventing unbounded background task accumulation.
+// 8. Graceful stop and restart: Closes all active connection sockets idempotently, terminates client tasks,
 //    and uses server generation tracking so old requests never pollute restarted counters.
 
 import Foundation
@@ -67,8 +70,11 @@ public actor EventKitBridgeServer {
     private var serverGeneration: Int = 0
     private var currentActiveBusinessRequests: Int = 0
 
-    // Active connection tracking for graceful teardown on stop
-    private var activeClientSockets: [UUID: Int32] = [:]
+    // Strict Store Resource Budget tracking
+    private var activeStoreOperationsCount: Int = 0
+
+    // Active connection tracking for idempotent teardown on stop
+    private var activeConnections: [UUID: ManagedSocketHandle] = [:]
     private var activeClientTasks: [UUID: Task<Void, Never>] = [:]
 
     public init(
@@ -88,6 +94,7 @@ public actor EventKitBridgeServer {
     public var isListening: Bool { _isListening }
     public var boundPort: Int { actualBoundPort }
     public var activeRequestsCount: Int { currentActiveBusinessRequests }
+    public var activeStoreOperations: Int { activeStoreOperationsCount }
     public var generation: Int { serverGeneration }
 
     // MARK: — Lifecycle
@@ -136,6 +143,7 @@ public actor EventKitBridgeServer {
         self.serverSocketFd = fd
         self._isListening = true
         self.currentActiveBusinessRequests = 0
+        self.activeStoreOperationsCount = 0
 
         let currentGen = self.serverGeneration
         let capturedConfig = self.config
@@ -160,9 +168,19 @@ public actor EventKitBridgeServer {
                     break
                 }
 
+                let socketHandle = ManagedSocketHandle(fd: clientFd)
                 let taskID = UUID()
+
+                // Step 1: Register connection with server actor FIRST
+                let accepted = await server.registerIncomingConnection(connectionID: taskID, handle: socketHandle)
+                guard accepted else {
+                    // Registration refused (server stopping); handle was closed safely
+                    continue
+                }
+
+                // Step 2: Connection registered, now start Worker task
                 let worker = SocketConnectionWorker(
-                    clientFd: clientFd,
+                    socketHandle: socketHandle,
                     taskID: taskID,
                     generationID: currentGen,
                     config: capturedConfig
@@ -172,17 +190,18 @@ public actor EventKitBridgeServer {
                     await worker.run(server: server)
                 }
 
-                await server.registerClientConnection(taskID: taskID, fd: clientFd, task: clientTask)
+                await server.attachConnectionTask(connectionID: taskID, task: clientTask)
             }
         }
     }
 
-    /// Stops the HTTP listener, closes active client sockets, and cancels all pending tasks.
+    /// Stops the HTTP listener, closes active client sockets idempotently, and cancels all pending tasks.
     public func stop() {
         guard _isListening else { return }
         _isListening = false
         serverGeneration += 1
         currentActiveBusinessRequests = 0
+        activeStoreOperationsCount = 0
 
         listeningTask?.cancel()
         listeningTask = nil
@@ -192,12 +211,11 @@ public actor EventKitBridgeServer {
             serverSocketFd = -1
         }
 
-        // Close all active client connection sockets to instantly interrupt any blocking I/O
-        for (_, clientFd) in activeClientSockets {
-            Darwin.shutdown(clientFd, SHUT_RDWR)
-            Darwin.close(clientFd)
+        // Close all active connections idempotently via ManagedSocketHandle
+        for (_, handle) in activeConnections {
+            handle.closeSafely()
         }
-        activeClientSockets.removeAll()
+        activeConnections.removeAll()
 
         // Cancel all connection handler tasks
         for (_, task) in activeClientTasks {
@@ -206,22 +224,34 @@ public actor EventKitBridgeServer {
         activeClientTasks.removeAll()
     }
 
-    // MARK: — Connection Registration
+    // MARK: — Connection Registration (Centralized Lifecycle)
 
-    public func registerClientConnection(taskID: UUID, fd: Int32, task: Task<Void, Never>) {
+    public func registerIncomingConnection(connectionID: UUID, handle: ManagedSocketHandle) -> Bool {
         guard _isListening else {
-            Darwin.shutdown(fd, SHUT_RDWR)
-            Darwin.close(fd)
+            handle.closeSafely()
+            return false
+        }
+        activeConnections[connectionID] = handle
+        return true
+    }
+
+    public func attachConnectionTask(connectionID: UUID, task: Task<Void, Never>) {
+        guard _isListening, activeConnections[connectionID] != nil else {
             task.cancel()
             return
         }
-        activeClientSockets[taskID] = fd
-        activeClientTasks[taskID] = task
+        activeClientTasks[connectionID] = task
     }
 
-    public func unregisterClientConnection(taskID: UUID) {
-        activeClientSockets.removeValue(forKey: taskID)
-        activeClientTasks.removeValue(forKey: taskID)
+    public func unregisterConnection(connectionID: UUID) {
+        activeConnections.removeValue(forKey: connectionID)
+        activeClientTasks.removeValue(forKey: connectionID)
+    }
+
+    public func decrementStoreOperation(generationID: Int) async {
+        if self.serverGeneration == generationID {
+            activeStoreOperationsCount = max(0, activeStoreOperationsCount - 1)
+        }
     }
 
     // MARK: — Request Execution (Inside Actor)
@@ -247,6 +277,8 @@ public actor EventKitBridgeServer {
                 "mode": "readonly",
                 "store": config.useFakeStore ? "fake" : "production",
                 "active_requests": currentActiveBusinessRequests,
+                "active_store_operations": activeStoreOperationsCount,
+                "max_store_operations": config.maxConcurrentStoreOperations,
                 "generation": self.serverGeneration,
                 "timestamp": ISO8601DateFormatter().string(from: Date())
             ]
@@ -265,22 +297,42 @@ public actor EventKitBridgeServer {
             return (503, data)
         }
 
+        // Bounded Store Resource Budget check
+        guard activeStoreOperationsCount < config.maxConcurrentStoreOperations else {
+            let err = [
+                "success": "false",
+                "error": "Store resource budget exceeded. Background operations quarantined.",
+                "code": "STORE_RESOURCE_LIMIT_EXCEEDED"
+            ]
+            let data = (try? JSONSerialization.data(withJSONObject: err)) ?? Data()
+            return (503, data)
+        }
+
         currentActiveBusinessRequests += 1
+        activeStoreOperationsCount += 1
+
         defer {
             if self.serverGeneration == generationID {
                 currentActiveBusinessRequests = max(0, currentActiveBusinessRequests - 1)
             }
         }
 
-        // Execute route with deadline enforcement.
-        // Critical: The worker task is unstructured so an uncooperative/hanging Store cannot
-        // block continuation resumption or drag out the HTTP 504 response.
+        let currentGen = self.serverGeneration
         let timeoutSecs = config.timeoutSeconds
 
+        // Execute route with deadline enforcement.
+        // Worker task runs Store operation; its completion decrements activeStoreOperationsCount.
+        // If the Store hangs, HTTP 504 is returned immediately to the client at timeoutSecs,
+        // while activeStoreOperationsCount continues to track the hanging background task until termination!
         let response: (Int, Data) = await withCheckedContinuation { continuation in
             let isResumed = StoreAtomicBool(false)
 
             let workerTask = Task { [self] in
+                defer {
+                    Task { [self] in
+                        await self.decrementStoreOperation(generationID: currentGen)
+                    }
+                }
                 let res = await self.handleRawHttpRequest(method: method, path: path, token: token)
                 if !isResumed.getAndSet(true) {
                     continuation.resume(returning: res)
@@ -425,23 +477,19 @@ public actor EventKitBridgeServer {
 // MARK: — Decoupled Socket Connection Worker (Non-Actor POSIX Network Engine)
 
 struct SocketConnectionWorker: Sendable {
-    let clientFd: Int32
+    let socketHandle: ManagedSocketHandle
     let taskID: UUID
     let generationID: Int
     let config: BridgeConfig
 
+    var clientFd: Int32 { socketHandle.rawFd }
+
     func run(server: EventKitBridgeServer) async {
         defer {
-            // Drain socket receive buffer before closing to prevent TCP RST
-            var drainBuffer = [UInt8](repeating: 0, count: 4096)
-            let flags = fcntl(clientFd, F_GETFL, 0)
-            if flags >= 0 {
-                _ = fcntl(clientFd, F_SETFL, flags | O_NONBLOCK)
-                while Darwin.read(clientFd, &drainBuffer, drainBuffer.count) > 0 {}
-            }
-            Darwin.close(clientFd)
+            // Idempotent safe close guarantees no double-close even if server.stop() also closes
+            socketHandle.closeSafely()
             Task {
-                await server.unregisterClientConnection(taskID: taskID)
+                await server.unregisterConnection(connectionID: taskID)
             }
         }
 
@@ -486,7 +534,6 @@ struct SocketConnectionWorker: Sendable {
                 initialBodyBytes: initialBodyBytes
             )
             if !bodySuccess {
-                // Timed out or disconnected during body read
                 return
             }
         }
@@ -538,7 +585,7 @@ struct SocketConnectionWorker: Sendable {
                     if Date() > deadline {
                         return .timedOut
                     }
-                    try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
+                    try? await Task.sleep(nanoseconds: 10_000_000)
                     continue
                 }
                 return .clientDisconnectedOrError
@@ -695,16 +742,13 @@ struct SocketConnectionWorker: Sendable {
                 } else if bytesWritten < 0 {
                     let err = errno
                     if err == EINTR {
-                        // Interrupted by signal, retry immediately
                         continue
                     }
                     if err == EAGAIN || err == EWOULDBLOCK {
-                        // Socket send buffer full, yield briefly
-                        usleep(5000) // 5ms
+                        usleep(5000)
                         continue
                     }
                     if err == EPIPE || err == ECONNRESET || err == ENOTCONN || err == EBADF {
-                        // Broken pipe or client disconnected
                         return false
                     }
                     return false
