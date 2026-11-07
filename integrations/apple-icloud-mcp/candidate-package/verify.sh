@@ -22,7 +22,7 @@ echo "[1/2] Verifying Health endpoint (GET http://127.0.0.1:$PORT/health)..."
 TMP_HEALTH=$(mktemp /tmp/bridge_health_XXXXXX.json)
 trap 'rm -f "$TMP_HEALTH"' EXIT
 
-HEALTH_CODE=$(curl -s -o "$TMP_HEALTH" -w "%{http_code}" "http://127.0.0.1:$PORT/health" || echo "000")
+HEALTH_CODE=$(curl -s -o "$TMP_HEALTH" -w "%{http_code}" "http://127.0.0.1:$PORT/health" || true)
 if [ "$HEALTH_CODE" -ne 200 ]; then
     echo "ERROR: Health check failed! Expected HTTP 200, got: $HEALTH_CODE" >&2
     exit 1
@@ -51,7 +51,7 @@ fi
 TMP_LISTS=$(mktemp /tmp/bridge_lists_XXXXXX.json)
 trap 'rm -f "$TMP_HEALTH" "$TMP_LISTS"' EXIT
 
-READ_CODE=$(curl -s -H "Authorization: Bearer $TOKEN" -o "$TMP_LISTS" -w "%{http_code}" "http://127.0.0.1:$PORT/reminders/lists" || echo "000")
+READ_CODE=$(curl -s -H "Authorization: Bearer $TOKEN" -o "$TMP_LISTS" -w "%{http_code}" "http://127.0.0.1:$PORT/reminders/lists" || true)
 
 if [ "$READ_CODE" -eq 200 ]; then
     # Verify response structure: JSON array without counts or item content

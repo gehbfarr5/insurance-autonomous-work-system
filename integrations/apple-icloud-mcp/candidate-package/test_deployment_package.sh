@@ -74,11 +74,23 @@ grep -q "EVENTKIT_BRIDGE_CONFIG_FILE" "$TARGET_LAUNCHAGENTS_DIR/com.muse.macserv
 RECEIPT_MODE=$(stat -f "%OLp" "$TARGET_STATE_DIR/install_receipt.json")
 [ "$RECEIPT_MODE" = "600" ]
 
+# Append test overrides into config
+echo "EVENTKIT_BRIDGE_PORT=18781" >> "$TARGET_CONFIG_DIR/bridge.env"
+echo "EVENTKIT_BRIDGE_MODE=TEST" >> "$TARGET_CONFIG_DIR/bridge.env"
+echo "EVENTKIT_BRIDGE_ALLOWED_LIST_IDS=fake-list-icloud-001" >> "$TARGET_CONFIG_DIR/bridge.env"
+echo "EVENTKIT_BRIDGE_BINDINGS=fake-list-icloud-001:src-icloud-primary:calDAV:iCloud" >> "$TARGET_CONFIG_DIR/bridge.env"
+
 # Start server briefly using the generated config to test verify.sh
-export EVENTKIT_BRIDGE_MODE="TEST"
 "$TARGET_BIN_DIR/EventKitBridgeServer" --config-file "$TARGET_CONFIG_DIR/bridge.env" > /dev/null 2>&1 &
 SERVER_PID=$!
-sleep 0.5
+
+# Wait for server to bind
+for i in {1..20}; do
+    if curl -s "http://127.0.0.1:18781/health" > /dev/null 2>&1; then
+        break
+    fi
+    sleep 0.1
+done
 
 # Run verify.sh against live test server
 "$PACKAGE_DIR/verify.sh" 18781 "$TARGET_CONFIG_DIR/bridge.env"
