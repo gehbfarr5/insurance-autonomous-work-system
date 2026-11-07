@@ -64,7 +64,7 @@ ssh -i test_id_ed25519 \
   -p 2222 \
   -N \
   -L "$GATEWAY_IP:18765:127.0.0.1:18765" \
-  root@172.30.55.10 &
+  root@172.30.55.10 >/dev/null 2>&1 &
 
 TUNNEL_PID=$!
 echo $TUNNEL_PID > tunnel.pid
