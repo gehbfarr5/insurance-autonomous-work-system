@@ -41,7 +41,7 @@
 
 1. **版本与测试验证**：
    - 确认合并基线为 `feat/seoul-macserver-readonly-gateway`；
-   - 确认测试套件（45 项测试，含多跳隧道与 Swift 编码测试）在本地环境全部 PASS。
+   - 确认测试套件（48 项网关单元与协议测试、82 项 Swift 原生测试、真实网络集成测试 4/4、Swift 生命周期测试 4/4、MCP 候选交付与回滚演练 5/5）全部 PASS。
 2. **凭据与绑定核验**：
    - 检查 MacServer 本地受限文件 `~/.config/muse-macserver/bridge.env`（0600）中的 `EVENTKIT_BRIDGE_AUTH_TOKEN`；
    - 确认待绑定的测试列表 `M****试`（脱敏标识：`9D9A****03F3`）具备显式来源绑定（`sourceType: calDAV`, `sourceName: iCloud`）。
