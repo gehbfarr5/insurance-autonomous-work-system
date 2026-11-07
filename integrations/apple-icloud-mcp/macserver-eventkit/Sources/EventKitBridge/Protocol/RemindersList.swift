@@ -1,5 +1,5 @@
 // RemindersList.swift
-// NEW_IMPLEMENTATION | FIX-R4A-01
+// NEW_IMPLEMENTATION | FIX-R4A-01 | FIX-R4A-02
 // AG-01-B | feat/macserver-eventkit-readonly | 2026-11-07
 //
 // Reminder list metadata type.
@@ -8,11 +8,33 @@
 
 import Foundation
 
+/// Identity and type specification for an EventKit source.
+public struct SourceIdentity: Sendable, Codable, Equatable, Hashable {
+    /// Opaque source identifier (UUID, from EKSource.sourceIdentifier).
+    public let sourceID: String
+
+    /// Underlying source type (e.g. "calDAV", "local", "exchange").
+    public let sourceType: String
+
+    /// Human-readable title of the source (e.g. "iCloud").
+    public let sourceTitle: String
+
+    public init(
+        sourceID: String,
+        sourceType: String = "calDAV",
+        sourceTitle: String = "iCloud"
+    ) {
+        self.sourceID = sourceID
+        self.sourceType = sourceType
+        self.sourceTitle = sourceTitle
+    }
+}
+
 /// Metadata for a single reminder list (EKCalendar of type Reminder).
 ///
 /// - FIX-R4A-01: `reminderCount` is intentionally absent. Callers that need
 ///   count information must call `fetchReminders(listID:)` explicitly, which
-///   triggers source verification (FIX-R4A-02) and increments `contentAccessCount`.
+///   triggers source identity and type verification (FIX-R4A-02) and increments `contentAccessCount`.
 public struct RemindersList: Sendable, Codable, Equatable {
 
     /// Opaque, stable identifier for this list (from EKCalendar.calendarIdentifier).
@@ -20,6 +42,12 @@ public struct RemindersList: Sendable, Codable, Equatable {
 
     /// Human-readable title of the list.
     public let title: String
+
+    /// Unique source identifier (from EKSource.sourceIdentifier).
+    public let sourceID: String
+
+    /// Source type representation (e.g. "calDAV", "local").
+    public let sourceType: String
 
     /// Source name (e.g. "iCloud", "Local", "Exchange").
     /// Used by SourceVerifier to enforce FIX-R4A-02.
@@ -35,14 +63,18 @@ public struct RemindersList: Sendable, Codable, Equatable {
     public init(
         listID: String,
         title: String,
-        sourceName: String,
+        sourceID: String = "source-icloud-default",
+        sourceType: String = "calDAV",
+        sourceName: String = "iCloud",
         color: String = "",
         isImmutable: Bool = true
     ) {
-        self.listID  = listID
-        self.title   = title
+        self.listID = listID
+        self.title = title
+        self.sourceID = sourceID
+        self.sourceType = sourceType
         self.sourceName = sourceName
-        self.color   = color
+        self.color = color
         self.isImmutable = isImmutable
     }
 }

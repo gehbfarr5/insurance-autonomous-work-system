@@ -31,6 +31,9 @@ public enum EventKitBridgeError: Error, Sendable, Equatable {
     /// FIX-R4A-02: returned when source verification fails.
     case sourceNotAllowed
 
+    /// The list ID does not match the bound source identity.
+    case sourceMismatch
+
     // MARK: — Not Found / Missing
 
     /// The requested list ID was not found in the EventKit store.
@@ -71,6 +74,8 @@ public enum EventKitBridgeError: Error, Sendable, Equatable {
             return "The specified list is not on the allowlist."
         case .sourceNotAllowed:
             return "The list source does not meet the iCloud source requirement."
+        case .sourceMismatch:
+            return "The list source identity does not match the bound configuration."
         case .listNotFound:
             return "The specified reminder list was not found."
         case .itemNotFound:
