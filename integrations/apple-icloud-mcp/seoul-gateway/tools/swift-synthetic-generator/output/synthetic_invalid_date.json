@@ -1,0 +1,10 @@
+[
+  {
+    "dueDate": "INVALID_NOT_A_DATE_VALUE",
+    "isCompleted": false,
+    "itemID": "item-bad-date-1",
+    "listID": "9D9A****03F3",
+    "priority": 1,
+    "title": "非法日期提醒条目"
+  }
+]

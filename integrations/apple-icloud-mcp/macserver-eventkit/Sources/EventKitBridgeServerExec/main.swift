@@ -140,8 +140,8 @@ struct BridgeServerMain {
         let store: any EventKitStoreProtocol
         switch config.mode {
         case .test:
-            print("[EventKitBridge] Assembling safe offline FakeEventKitStore...")
-            store = FakeEventKitStore(sourceVerifier: sourceVerifier)
+            print("[EventKitBridge] Assembling safe offline FakeEventKitStore (authorized: \(config.isProductionAuthorized))...")
+            store = FakeEventKitStore(sourceVerifier: sourceVerifier, isAuthorized: config.isProductionAuthorized)
 
         case .production:
             print("[EventKitBridge] Assembling guarded ProductionEventKitStore via ProductionStoreAssembly...")

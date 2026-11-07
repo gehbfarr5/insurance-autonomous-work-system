@@ -1,0 +1,38 @@
+{
+  "receiptType": "AG03_INSTALL_AND_ROLLBACK_DRILL",
+  "timestamp": "2026-11-07T16:14:51Z",
+  "drillRoot": "/tmp/ag03-delivery-drill",
+  "isolation": {
+    "syntheticCredentials": true,
+    "productionSecretsMounted": false,
+    "productionDataMounted": false,
+    "independentDataDir": "/tmp/ag03-delivery-drill/isolated-data"
+  },
+  "productionBaseline": {
+    "container": "insurance-carddav-mcp-carddav-1",
+    "imageId": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+    "backupTag": "insurance-carddav-mcp-carddav:backup-pre-ag03-20261107_161434"
+  },
+  "candidateStaging": {
+    "imageTag": "insurance-carddav-mcp-carddav:candidate-ag03-drill-20261107_161434",
+    "imageId": "sha256:44863b211529f429a40bd6bfff513d51a7c450b8477339571c71846f5f892808",
+    "isolatedPort": 17799,
+    "entrypoint": "node src/server.ts (Real MCP Gateway HTTP Server)",
+    "healthcheckStatus": "healthy",
+    "externalAcceptance": {
+      "toolDiscovery": "5/5 tools discovered",
+      "boundListRead": "9D9A****03F3 read verified",
+      "remindersItemRead": "items returned verified",
+      "writeRejection": "PERMISSION_DENIED caught cleanly"
+    }
+  },
+  "rollbackVerification": {
+    "restoredFromTag": "insurance-carddav-mcp-carddav:backup-pre-ag03-20261107_161434",
+    "restoredImageId": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+    "imageIdMatch": true,
+    "healthcheckHttpCode": 200,
+    "containerStatus": "running",
+    "result": "PASS"
+  },
+  "sharedServiceImpact": "ZERO (Production container insurance-carddav-mcp-carddav-1 was never restarted or modified)"
+}

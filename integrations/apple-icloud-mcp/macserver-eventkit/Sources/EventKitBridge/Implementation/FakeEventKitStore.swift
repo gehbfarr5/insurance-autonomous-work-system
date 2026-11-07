@@ -108,6 +108,34 @@ public let defaultSeedData: [SeedList] = [
         reminders: [
             ReminderItem(itemID: "r-008", title: "Spoofed title secret item", listID: "fake-list-spoofed-001")
         ]
+    ),
+    SeedList(
+        listID: "9D9A****03F3",
+        title: "M****试",
+        sourceID: "src-icloud-test-01",
+        sourceType: "calDAV",
+        sourceName: "iCloud",
+        color: "#007AFF",
+        reminders: [
+            ReminderItem(
+                itemID: "item-swift-01",
+                title: "Swift 合成提醒事项 1",
+                isCompleted: false,
+                dueDate: Date(timeIntervalSinceReferenceDate: 815961600),
+                priority: 1,
+                notes: "核保附录条款审核",
+                listID: "9D9A****03F3"
+            ),
+            ReminderItem(
+                itemID: "item-swift-02",
+                title: "Swift 合成提醒事项 2 (无截止日期/无备注)",
+                isCompleted: true,
+                dueDate: nil,
+                priority: 0,
+                notes: nil,
+                listID: "9D9A****03F3"
+            )
+        ]
     )
 ]
 
@@ -119,6 +147,7 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     private let sourceVerifier: SourceVerifier
     private let seeds: [SeedList]
+    private let isAuthorized: Bool
 
     // Diagnostic counters (FIX-R4A-01 test assertions)
     private var _contentAccessCount: Int = 0
@@ -129,16 +158,19 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     public init(
         sourceVerifier: SourceVerifier = SourceVerifier(),
-        seeds: [SeedList] = defaultSeedData
+        seeds: [SeedList] = defaultSeedData,
+        isAuthorized: Bool = true
     ) {
         self.sourceVerifier = sourceVerifier
         self.seeds = seeds
+        self.isAuthorized = isAuthorized
     }
 
     /// Convenience init taking allowed source names for backward compatibility.
-    public init(allowedSources: Set<String>) {
+    public init(allowedSources: Set<String>, isAuthorized: Bool = true) {
         self.sourceVerifier = SourceVerifier(allowedSourceTitles: allowedSources, requireExplicitBinding: false)
         self.seeds = defaultSeedData
+        self.isAuthorized = isAuthorized
     }
 
     /// Injects hanging behavior into store calls for chaos testing.
@@ -185,6 +217,10 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     /// FIX-R4A-01: Returns ONLY list metadata. Does NOT touch reminders or counts.
     public func fetchListsMetadata() async throws -> [RemindersList] {
+        guard isAuthorized else {
+            throw EventKitBridgeError.permissionDenied
+        }
+
         while _shouldHangIndefinitely {
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
@@ -208,6 +244,10 @@ public actor FakeEventKitStore: EventKitStoreProtocol {
 
     /// FIX-R4A-02: Verifies source identity, type, and binding before returning reminders.
     public func fetchReminders(listID: String) async throws -> [ReminderItem] {
+        guard isAuthorized else {
+            throw EventKitBridgeError.permissionDenied
+        }
+
         while _shouldHangIndefinitely {
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
