@@ -83,7 +83,7 @@ cat << EOF > "$SHIM_DIR/docker"
 #!/usr/bin/env bash
 case "\${SHIM_FAIL_ACTION:-}" in
   candidate_tag)
-    if [ "\$1" = "tag" ] && [[ "\$*" == *":latest"* ]]; then
+    if [ "\$1" = "tag" ] && [[ "\$*" == *"$LOCKED_CANDIDATE_IMAGE"* ]]; then
       echo "[SHIM] Intercepted docker tag: simulating candidate image tagging failure!" >&2
       exit 1
     fi
