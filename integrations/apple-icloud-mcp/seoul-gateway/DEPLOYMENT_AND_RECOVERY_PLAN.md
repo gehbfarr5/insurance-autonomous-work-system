@@ -116,27 +116,31 @@ CANDIDATE_IMAGE_ID="sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555c
 docker tag "$CANDIDATE_IMAGE_ID" insurance-carddav-mcp-carddav:latest
 ```
 
-### 步骤 5：注入匹配既定容器网络的 Compose 配置并平滑重启容器
-1. 将与现有容器网络、存储卷及只读网关环境变量完全匹配的 Compose 候选配置（`config/compose.candidate.yaml`）部署至 `/opt/insurance-carddav-mcp/compose.yaml`：
+### 步骤 5：注入匹配既定容器网络的生产 Compose 配置并平滑重启容器
+1. 将与现有生产容器网络（`insurance-carddav-mcp_default`）、持久化数据目录及 SSH 转发端点完全匹配的生产 Compose 配置（`config/compose.production.yaml`）部署至 `/opt/insurance-carddav-mcp/compose.yaml`：
    ```bash
-   cp /path/to/integrations/apple-icloud-mcp/seoul-gateway/config/compose.candidate.yaml /opt/insurance-carddav-mcp/compose.yaml
+   cp /path/to/integrations/apple-icloud-mcp/seoul-gateway/config/compose.production.yaml /opt/insurance-carddav-mcp/compose.yaml
    ```
-2. 在 `/opt/insurance-carddav-mcp/secrets.env` 中注入网关鉴权令牌与绑定列表配置：
+2. 在 Seoul 宿主机创建受限网关配置文件 `/opt/insurance-carddav-mcp/gateway.env`（权限 `0600`，仅 root 可读）：
+   > [!IMPORTANT]
+   > **真实绑定标识隔离原则**：真实绑定列表与 Token 必须从 MacServer 本地受限文件 `~/.config/muse-macserver/bridge.env` 提取，严禁将隔离测试中的合成标识（`00000000-AAAA-...`）或测试网桥（`172.30.56.0/24`）复制写入生产！
    ```env
-   MACSERVER_EVENTKIT_AUTH_TOKEN=<SECRET_TOKEN_FROM_BRIDGE_ENV>
-   MACSERVER_EVENTKIT_ALLOWED_LISTS=00000000-AAAA-BBBB-CCCC-000000000001:src-synthetic-icloud-test:iCloud:calDAV
+   # /opt/insurance-carddav-mcp/gateway.env (0600)
+   MACSERVER_EVENTKIT_ENDPOINT=http://172.19.0.1:18765
+   MACSERVER_EVENTKIT_AUTH_TOKEN=<SECRET_TOKEN_FROM_MACSERVER_BRIDGE_ENV>
+   MACSERVER_EVENTKIT_ALLOWED_LISTS=9D9A****03F3:src-***:iCloud:calDAV
+   MACSERVER_EVENTKIT_TIMEOUT_MS=3000
    ```
-3. 以 `--no-build` 模式拉起容器，并验证运行时环境变量注入与健康状态：
+3. 调用统一生产入口执行平滑重启（或由 `scripts/production-entry.sh deploy` 自动化执行）：
    ```bash
-   cd /opt/insurance-carddav-mcp
-   docker compose up -d --no-build carddav
-   
-   # 验证环境变量进入容器
-   docker inspect insurance-carddav-mcp-carddav-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep "MACSERVER_EVENTKIT"
-   
-   # 验证健康检查
-   curl -sf http://127.0.0.1:17734/health
+   APPLY_PRODUCTION_APPROVED=1 scripts/production-entry.sh deploy
    ```
+   **执行流包含**：
+   - 配置与环境变量预检校验（Fail-Fast 强校验）；
+   - `/opt/insurance-carddav-mcp` 运行态全量快照备份；
+   - 锁定已验收候选镜像 ID `sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61`；
+   - 执行 `--no-build` 重启，约 3~5 秒瞬态维护窗口；
+   - 验证健康检查（200 OK）与运行中镜像 ID 校验。
 
 ### 步骤 6：生产只读可用性门禁核验（严禁写探针）
 1. 通过已鉴权的 MCP Client 调用 `reminders_lists`，验证仅返回白名单绑定的测试列表，且属性标记为 `writable: false`；
@@ -158,6 +162,11 @@ docker tag "$CANDIDATE_IMAGE_ID" insurance-carddav-mcp-carddav:latest
 > - **直接使用记录的基线镜像 ID**：基线容器明确使用经记录的实际生产镜像 ID `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`，不依赖可能被二次覆盖的动态 tag。
 
 #### 步骤 A：还原 Seoul 代码、配置与基线镜像
+可直接调用唯一生产恢复入口执行自动化回滚：
+```bash
+scripts/production-entry.sh rollback /opt/insurance-carddav-mcp.bak-[TIMESTAMP]
+```
+或按标准原子步骤手动执行：
 ```bash
 # 1. 停止当前候选容器
 cd /opt/insurance-carddav-mcp && docker compose stop carddav
