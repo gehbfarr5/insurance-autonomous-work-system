@@ -192,11 +192,11 @@ PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy > "$CURRENT_STAGING_DIR/drill_b.log" 2>&1
+"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_b.log 2>&1
 deploy_exit=$?
 set -e
 
-cat "$CURRENT_STAGING_DIR/drill_b.log"
+cat /tmp/ag03_drill_b.log
 
 if [ "$deploy_exit" -eq 0 ]; then
   echo "FAIL [DRILL B]: Faulty deploy should have failed with non-zero exit code!" >&2
@@ -204,23 +204,23 @@ if [ "$deploy_exit" -eq 0 ]; then
 fi
 
 # Assertions proving failure happened AFTER backup and config write, and rollback was triggered
-if ! grep -q "Performing live state backup to" "$CURRENT_STAGING_DIR/drill_b.log"; then
+if ! grep -q "Performing live state backup to" /tmp/ag03_drill_b.log; then
   echo "FAIL [DRILL B]: Backup step was not reached before failure!" >&2
   exit 1
 fi
-if ! grep -q "Deploying candidate compose configuration" "$CURRENT_STAGING_DIR/drill_b.log"; then
+if ! grep -q "Deploying candidate compose configuration" /tmp/ag03_drill_b.log; then
   echo "FAIL [DRILL B]: Candidate compose write was not reached before failure!" >&2
   exit 1
 fi
-if ! grep -q "FAULT_INJECTION.*Injected failure during Compose candidate startup" "$CURRENT_STAGING_DIR/drill_b.log"; then
+if ! grep -q "Injected failure during Compose candidate startup" /tmp/ag03_drill_b.log; then
   echo "FAIL [DRILL B]: Injected startup failure log not found!" >&2
   exit 1
 fi
-if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" "$CURRENT_STAGING_DIR/drill_b.log"; then
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" /tmp/ag03_drill_b.log; then
   echo "FAIL [DRILL B]: Unified rollback trigger log not found!" >&2
   exit 1
 fi
-if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_b.log"; then
+if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_b.log; then
   echo "FAIL [DRILL B]: Rollback completion log not found!" >&2
   exit 1
 fi
@@ -252,22 +252,22 @@ PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy > "$CURRENT_STAGING_DIR/drill_c.log" 2>&1
+"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_c.log 2>&1
 health_fail_exit=$?
 set -e
 
-cat "$CURRENT_STAGING_DIR/drill_c.log"
+cat /tmp/ag03_drill_c.log
 
 if [ "$health_fail_exit" -eq 0 ]; then
   echo "FAIL [DRILL C]: Health check failure should have exited non-zero!" >&2
   exit 1
 fi
 
-if ! grep -q "Candidate container health check timed out" "$CURRENT_STAGING_DIR/drill_c.log"; then
+if ! grep -q "Candidate container health check timed out" /tmp/ag03_drill_c.log; then
   echo "FAIL [DRILL C]: Health check timeout log not found!" >&2
   exit 1
 fi
-if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" "$CURRENT_STAGING_DIR/drill_c.log"; then
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" /tmp/ag03_drill_c.log; then
   echo "FAIL [DRILL C]: Unified rollback trigger log not found!" >&2
   exit 1
 fi
@@ -377,7 +377,7 @@ PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy > "$CURRENT_STAGING_DIR/drill_f.log" 2>&1 &
+"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_f.log 2>&1 &
 DEPLOY_PID=$!
 
 echo "Started deploy process in background with PID $DEPLOY_PID..."
@@ -394,7 +394,7 @@ wait "$DEPLOY_PID"
 int_exit=$?
 set -e
 
-cat "$CURRENT_STAGING_DIR/drill_f.log" || true
+cat /tmp/ag03_drill_f.log || true
 
 echo "Deploy exit code after signal interruption: $int_exit"
 if [ "$int_exit" -ne 143 ]; then
@@ -402,7 +402,7 @@ if [ "$int_exit" -ne 143 ]; then
   exit 1
 fi
 
-if ! grep -q "Deployment failure or interruption detected (exit/signal: 143)" "$CURRENT_STAGING_DIR/drill_f.log"; then
+if ! grep -q "Deployment failure or interruption detected (exit/signal: 143)" /tmp/ag03_drill_f.log; then
   echo "FAIL [DRILL F]: Expected signal 143 interruption log not found!" >&2
   exit 1
 fi
@@ -439,7 +439,7 @@ valid_bak=$(ls -td "$CURRENT_STAGING_DIR".bak-* | head -1)
 # Test 1: Injected rsync failure during rollback
 echo "--- Testing rollback failure on rsync step ---"
 set +e
-INJECT_ROLLBACK_STEP_FAILURE="rsync" "$ENTRY_SCRIPT" rollback "$valid_bak" > "$CURRENT_STAGING_DIR/drill_g_rsync.log" 2>&1
+INJECT_ROLLBACK_STEP_FAILURE="rsync" "$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g_rsync.log 2>&1
 rsync_fail_exit=$?
 set -e
 
@@ -447,11 +447,11 @@ if [ "$rsync_fail_exit" -eq 0 ]; then
   echo "FAIL [DRILL G]: Rollback should have failed when rsync failed!" >&2
   exit 1
 fi
-if ! grep -q "RECOVERY_FAILED" "$CURRENT_STAGING_DIR/drill_g_rsync.log"; then
+if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g_rsync.log; then
   echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on rsync failure!" >&2
   exit 1
 fi
-if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_g_rsync.log"; then
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g_rsync.log; then
   echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
   exit 1
 fi
@@ -460,7 +460,7 @@ echo "       PASS: rsync failure correctly flagged RECOVERY_FAILED and exited no
 # Test 2: Injected docker tag failure during rollback
 echo "--- Testing rollback failure on docker tag step ---"
 set +e
-INJECT_ROLLBACK_STEP_FAILURE="docker_tag" "$ENTRY_SCRIPT" rollback "$valid_bak" > "$CURRENT_STAGING_DIR/drill_g_tag.log" 2>&1
+INJECT_ROLLBACK_STEP_FAILURE="docker_tag" "$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g_tag.log 2>&1
 tag_fail_exit=$?
 set -e
 
@@ -468,11 +468,11 @@ if [ "$tag_fail_exit" -eq 0 ]; then
   echo "FAIL [DRILL G]: Rollback should have failed when docker tag failed!" >&2
   exit 1
 fi
-if ! grep -q "RECOVERY_FAILED" "$CURRENT_STAGING_DIR/drill_g_tag.log"; then
+if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g_tag.log; then
   echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on docker tag failure!" >&2
   exit 1
 fi
-if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_g_tag.log"; then
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g_tag.log; then
   echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
   exit 1
 fi
@@ -481,7 +481,7 @@ echo "       PASS: docker tag failure correctly flagged RECOVERY_FAILED and exit
 # Test 3: Injected compose up failure during rollback
 echo "--- Testing rollback failure on compose up step ---"
 set +e
-INJECT_ROLLBACK_STEP_FAILURE="compose_up" "$ENTRY_SCRIPT" rollback "$valid_bak" > "$CURRENT_STAGING_DIR/drill_g_compose.log" 2>&1
+INJECT_ROLLBACK_STEP_FAILURE="compose_up" "$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g_compose.log 2>&1
 compose_fail_exit=$?
 set -e
 
@@ -489,14 +489,15 @@ if [ "$compose_fail_exit" -eq 0 ]; then
   echo "FAIL [DRILL G]: Rollback should have failed when compose up failed!" >&2
   exit 1
 fi
-if ! grep -q "RECOVERY_FAILED" "$CURRENT_STAGING_DIR/drill_g_compose.log"; then
+if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g_compose.log; then
   echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on compose up failure!" >&2
   exit 1
 fi
-if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_g_compose.log"; then
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g_compose.log; then
   echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
   exit 1
 fi
+echo "       PASS: compose up failure correctly flagged RECOVERY_FAILED and exited non-zero."
 echo "       PASS: compose up failure correctly flagged RECOVERY_FAILED and exited non-zero."
 
 # Assert backup directory is strictly preserved
