@@ -25,22 +25,23 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATEWAY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-COMPOSE_PROD_TEMPLATE="$GATEWAY_ROOT/config/compose.production.yaml"
+COMPOSE_PROD_TEMPLATE="${COMPOSE_PROD_TEMPLATE:-$GATEWAY_ROOT/config/compose.production.yaml}"
 
 # Pinned Image IDs (Strictly locked; no on-site rebuilding)
-LOCKED_CANDIDATE_IMAGE="sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61"
-LOCKED_BASELINE_IMAGE="sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+LOCKED_CANDIDATE_IMAGE="${LOCKED_CANDIDATE_IMAGE:-sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61}"
+LOCKED_BASELINE_IMAGE="${LOCKED_BASELINE_IMAGE:-sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0}"
 
-# Production Environment Paths
-PROD_PROJECT="insurance-carddav-mcp"
-PROD_CONTAINER="insurance-carddav-mcp-carddav-1"
+# Production Environment Paths & Configurations
+PROD_PROJECT="${PROD_PROJECT:-insurance-carddav-mcp}"
+PROD_CONTAINER="${PROD_CONTAINER:-${PROD_PROJECT}-carddav-1}"
 PROD_DIR="${PROD_DIR:-/opt/insurance-carddav-mcp}"
 PROD_DATA_DIR="${PROD_DATA_DIR:-$PROD_DIR/data}"
 PROD_SECRETS_FILE="${PROD_SECRETS_FILE:-$PROD_DIR/secrets.env}"
 PROD_GATEWAY_ENV_FILE="${PROD_GATEWAY_ENV_FILE:-$PROD_DIR/gateway.env}"
 PROD_COMPOSE_FILE="${PROD_COMPOSE_FILE:-$PROD_DIR/compose.yaml}"
-PROD_HEALTH_URL="http://127.0.0.1:17734/health"
-PROD_TUNNEL_ENDPOINT="http://172.19.0.1:18765"
+PROD_PORT="${PROD_PORT:-17734}"
+PROD_HEALTH_URL="${PROD_HEALTH_URL:-http://127.0.0.1:${PROD_PORT}/health}"
+PROD_TUNNEL_ENDPOINT="${PROD_TUNNEL_ENDPOINT:-http://172.19.0.1:18765}"
 
 # Load gateway variables from local restricted file without shell account leakage
 load_gateway_vars() {
@@ -59,7 +60,7 @@ load_gateway_vars() {
   fi
 }
 
-# Desensitization Helper
+# Desensitization Helpers
 mask_token() {
   local val="$1"
   if [ -z "$val" ]; then
@@ -95,7 +96,7 @@ show_status() {
   if docker inspect "$PROD_CONTAINER" >/dev/null 2>&1; then
     local c_status c_health c_started c_image
     c_status=$(docker inspect "$PROD_CONTAINER" --format '{{.State.Status}}')
-    c_health=$(docker inspect "$PROD_CONTAINER" --format '{{.State.Health.Status}}')
+    c_health=$(docker inspect "$PROD_CONTAINER" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}')
     c_started=$(docker inspect "$PROD_CONTAINER" --format '{{.State.StartedAt}}')
     c_image=$(docker inspect "$PROD_CONTAINER" --format '{{.Image}}')
     echo "Container Name:    $PROD_CONTAINER"
@@ -130,9 +131,9 @@ show_status() {
 
   # 3. Health Endpoint
   if curl -sf "$PROD_HEALTH_URL" >/dev/null 2>&1; then
-    echo "Healthcheck Probe: 200 OK (http://127.0.0.1:17734/health)"
+    echo "Healthcheck Probe: 200 OK ($PROD_HEALTH_URL)"
   else
-    echo "Healthcheck Probe: UNREACHABLE / FAILING"
+    echo "Healthcheck Probe: UNREACHABLE / FAILING ($PROD_HEALTH_URL)"
   fi
   echo "========================================================================"
 }
@@ -239,78 +240,188 @@ deploy_candidate() {
   echo " EXECUTING AUTHORIZED PRODUCTION DEPLOYMENT"
   echo " Candidate Image: $LOCKED_CANDIDATE_IMAGE"
   echo " Target Host:     Seoul MCP (100.82.240.43)"
+  echo " Target Project:  $PROD_PROJECT"
+  echo " Target Dir:      $PROD_DIR"
   echo " Time:            $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   echo "========================================================================"
 
-  # Step 1: Pre-flight assertions
-  echo "[1/6] Running pre-flight checks..."
+  # Step 1: Pre-flight assertions & Live Container Consistency Check
+  echo "[1/6] Running pre-flight checks and live consistency inspection..."
   if ! docker image inspect "$LOCKED_CANDIDATE_IMAGE" >/dev/null 2>&1; then
-    echo "ERROR: Candidate image $LOCKED_CANDIDATE_IMAGE not found locally! Refusing on-site build." >&2
+    echo "CRITICAL ERROR: Candidate image $LOCKED_CANDIDATE_IMAGE not found locally! Refusing on-site build." >&2
     exit 1
   fi
   if [ ! -f "$PROD_SECRETS_FILE" ]; then
-    echo "ERROR: Production secrets file missing at $PROD_SECRETS_FILE!" >&2
+    echo "CRITICAL ERROR: Secrets file missing at $PROD_SECRETS_FILE!" >&2
     exit 1
   fi
   if [ ! -f "$PROD_GATEWAY_ENV_FILE" ]; then
-    echo "ERROR: Production gateway env missing at $PROD_GATEWAY_ENV_FILE!" >&2
+    echo "CRITICAL ERROR: Gateway env missing at $PROD_GATEWAY_ENV_FILE!" >&2
     exit 1
   fi
+
+  # Live container inspection
+  if ! docker inspect "$PROD_CONTAINER" >/dev/null 2>&1; then
+    echo "CRITICAL ERROR: Target container $PROD_CONTAINER is not running!" >&2
+    exit 1
+  fi
+
+  local actual_image live_compose_file live_project live_mounts orig_basename
+  actual_image=$(docker inspect "$PROD_CONTAINER" --format '{{.Image}}')
+  live_compose_file=$(docker inspect "$PROD_CONTAINER" --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}')
+  live_project=$(docker inspect "$PROD_CONTAINER" --format '{{index .Config.Labels "com.docker.compose.project"}}')
+  live_mounts=$(docker inspect "$PROD_CONTAINER" --format '{{json .Mounts}}')
+
+  echo "       Live Container:        $PROD_CONTAINER"
+  echo "       Live Container Image:  $actual_image"
+
+  # Strict consistency check against approved baseline
+  if [ "$actual_image" != "$LOCKED_BASELINE_IMAGE" ]; then
+    echo "CRITICAL ERROR: Live container image ($actual_image) does NOT match approved baseline ($LOCKED_BASELINE_IMAGE)!" >&2
+    echo "Refusing to proceed with deployment to avoid overwriting unapproved state." >&2
+    exit 1
+  fi
+
+  if [ -n "$live_project" ] && [ "$live_project" != "$PROD_PROJECT" ]; then
+    echo "CRITICAL ERROR: Running container Compose project ($live_project) does not match target ($PROD_PROJECT)!" >&2
+    exit 1
+  fi
+
+  if [ -z "$live_compose_file" ]; then
+    if [ -f "$PROD_DIR/compose.yaml" ]; then
+      live_compose_file="$PROD_DIR/compose.yaml"
+    elif [ -f "$PROD_DIR/docker-compose.yml" ]; then
+      live_compose_file="$PROD_DIR/docker-compose.yml"
+    else
+      echo "CRITICAL ERROR: Could not locate original Compose configuration file in $PROD_DIR!" >&2
+      exit 1
+    fi
+  fi
+  orig_basename="$(basename "$live_compose_file")"
+  echo "       Live Compose File:     $live_compose_file (basename: $orig_basename)"
+  echo "       Live Mounts:           $live_mounts"
 
   # Verify config interpolation
   verify_config "$COMPOSE_PROD_TEMPLATE" "$PROD_SECRETS_FILE" "$PROD_GATEWAY_ENV_FILE" 0
   load_gateway_vars "$PROD_GATEWAY_ENV_FILE"
 
   # Step 2: Full live runtime backup
-  local backup_ts
+  local backup_ts backup_dir
   backup_ts=$(date +"%Y%m%d_%H%M%S")
-  local backup_dir="${PROD_DIR}.bak-${backup_ts}"
+  backup_dir="${PROD_DIR}.bak-${backup_ts}"
   echo "[2/6] Performing live state backup to $backup_dir..."
-  cp -a "$PROD_DIR" "$backup_dir"
-  docker tag insurance-carddav-mcp-carddav:latest "insurance-carddav-mcp-carddav:backup-pre-ag03-${backup_ts}" 2>/dev/null || true
-  echo "       Backup created: $backup_dir"
+  mkdir -p "$backup_dir"
+  cp -a "$PROD_DIR/." "$backup_dir/" || {
+    echo "CRITICAL ERROR: Failed to create file backup from $PROD_DIR to $backup_dir!" >&2
+    exit 1
+  }
 
-  # Step 3: Deploy compose.production.yaml
+  # Tag image backup directly using actual container image ID (not latest tag)
+  docker tag "$actual_image" "${PROD_PROJECT}-carddav:backup-pre-ag03-${backup_ts}" || {
+    echo "CRITICAL ERROR: Failed to tag backup image for $actual_image!" >&2
+    exit 1
+  }
+
+  # Record deterministic manifest for standalone recovery
+  cat << EOF > "$backup_dir/manifest.env"
+BACKUP_TS="$backup_ts"
+BACKUP_PROD_PROJECT="$PROD_PROJECT"
+BACKUP_PROD_CONTAINER="$PROD_CONTAINER"
+BACKUP_PROD_DIR="$PROD_DIR"
+BACKUP_PROD_DATA_DIR="$PROD_DATA_DIR"
+BACKUP_PROD_SECRETS_FILE="$PROD_SECRETS_FILE"
+BACKUP_PROD_GATEWAY_ENV_FILE="$PROD_GATEWAY_ENV_FILE"
+BACKUP_PROD_PORT="$PROD_PORT"
+BACKUP_PROD_HEALTH_URL="$PROD_HEALTH_URL"
+BACKUP_ACTUAL_IMAGE_ID="$actual_image"
+BACKUP_ORIG_COMPOSE_FILE="$live_compose_file"
+BACKUP_ORIG_COMPOSE_BASENAME="$orig_basename"
+BACKUP_CONTAINER_MOUNTS='$live_mounts'
+EOF
+
+  if [ ! -s "$backup_dir/manifest.env" ]; then
+    echo "CRITICAL ERROR: Backup manifest was not created or is empty!" >&2
+    exit 1
+  fi
+  echo "       Backup created and verified: $backup_dir"
+
+  # Step 3: Setup deployment traps for unified failure and interruption handling
+  local DEPLOY_IN_PROGRESS=1
+  local ACTIVE_BACKUP_DIR="$backup_dir"
+
+  deploy_trap_handler() {
+    local exit_sig="$1"
+    trap - EXIT INT TERM
+    if [ "${DEPLOY_IN_PROGRESS:-0}" -eq 1 ] && [ -n "${ACTIVE_BACKUP_DIR:-}" ]; then
+      echo "========================================================================" >&2
+      echo " [UNIFIED-ROLLBACK-TRIGGER] Deployment failure or interruption detected (exit/signal: $exit_sig)!" >&2
+      echo " Automatically executing rollback to restore production baseline..." >&2
+      echo "========================================================================" >&2
+      DEPLOY_IN_PROGRESS=0
+      if rollback_baseline "$ACTIVE_BACKUP_DIR"; then
+        echo " Unified rollback successfully restored baseline." >&2
+      else
+        echo " CRITICAL ALARM: Unified rollback FAILED during recovery!" >&2
+      fi
+    fi
+    if [ "$exit_sig" -eq 0 ]; then
+      exit 1
+    else
+      exit "$exit_sig"
+    fi
+  }
+
+  trap 'deploy_trap_handler 130' INT
+  trap 'deploy_trap_handler 143' TERM
+  trap 'if [ "${DEPLOY_IN_PROGRESS:-0}" -eq 1 ]; then deploy_trap_handler $?; fi' EXIT
+
+  # Step 4: Deploy compose.production.yaml
   echo "[3/6] Deploying candidate compose configuration..."
-  cp "$COMPOSE_PROD_TEMPLATE" "$PROD_COMPOSE_FILE"
+  cp "$COMPOSE_PROD_TEMPLATE" "$PROD_DIR/compose.yaml"
 
   # Tag candidate image as latest
-  docker tag "$LOCKED_CANDIDATE_IMAGE" insurance-carddav-mcp-carddav:latest
+  docker tag "$LOCKED_CANDIDATE_IMAGE" "${PROD_PROJECT}-carddav:latest"
 
-  # Step 4: Restart container via Compose (--no-build)
+  # Step 5: Restart container via Compose (--no-build)
   echo "[4/6] Restarting Seoul MCP container with candidate image..."
   cd "$PROD_DIR"
   CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
-  docker compose -p "$PROD_PROJECT" -f "$PROD_COMPOSE_FILE" up -d --no-build carddav
+  BIND_PORT="127.0.0.1:${PROD_PORT}" \
+  SECRETS_FILE="$PROD_SECRETS_FILE" \
+  GATEWAY_ENV_FILE="$PROD_GATEWAY_ENV_FILE" \
+  DATA_DIR="$PROD_DATA_DIR" \
+  docker compose -p "$PROD_PROJECT" -f "$PROD_DIR/compose.yaml" up -d --no-build carddav
 
-  # Step 5: Verify health & image ID
-  echo "[5/6] Verifying container health and image correspondence..."
+  # Step 6: Verify health & image ID
+  echo "[5/6] Verifying candidate container health and image correspondence..."
   local healthy=0
   for i in $(seq 1 30); do
     if curl -sf "$PROD_HEALTH_URL" >/dev/null 2>&1; then
       healthy=1
-      echo "       Container healthy at $PROD_HEALTH_URL (attempt $i)"
+      echo "       Candidate container healthy at $PROD_HEALTH_URL (attempt $i)"
       break
     fi
     sleep 1
   done
 
   if [ "$healthy" -ne 1 ]; then
-    echo "ERROR: Candidate container health check timed out! Initiating emergency rollback..." >&2
-    rollback_baseline "$backup_dir"
-    exit 1
+    echo "CRITICAL ERROR: Candidate container health check timed out at $PROD_HEALTH_URL!" >&2
+    deploy_trap_handler 1
   fi
 
   local running_image
   running_image=$(docker inspect "$PROD_CONTAINER" --format '{{.Image}}')
   if [ "$running_image" != "$LOCKED_CANDIDATE_IMAGE" ]; then
-    echo "ERROR: Running container image mismatch! Expected: $LOCKED_CANDIDATE_IMAGE, Got: $running_image" >&2
-    rollback_baseline "$backup_dir"
-    exit 1
+    echo "CRITICAL ERROR: Running container image mismatch! Expected: $LOCKED_CANDIDATE_IMAGE, Got: $running_image" >&2
+    deploy_trap_handler 1
   fi
   echo "       Candidate image ID verified: $running_image"
 
-  # Step 6: Completion summary
+  # Clear traps upon verified success
+  DEPLOY_IN_PROGRESS=0
+  trap - EXIT INT TERM
+
+  # Step 7: Completion summary
   echo "[6/6] Production candidate deployment completed successfully!"
   echo "       Container:       $PROD_CONTAINER"
   echo "       Image:           $LOCKED_CANDIDATE_IMAGE"
@@ -321,63 +432,120 @@ deploy_candidate() {
 
 rollback_baseline() {
   local backup_dir="${1:-}"
+  if [ -z "$backup_dir" ]; then
+    echo "ERROR: Rollback requires explicit backup directory path!" >&2
+    return 1
+  fi
+  if [ ! -d "$backup_dir" ]; then
+    echo "ERROR: Backup directory not found: $backup_dir" >&2
+    return 1
+  fi
+  if [ ! -f "$backup_dir/manifest.env" ]; then
+    echo "ERROR: Backup manifest.env missing in $backup_dir!" >&2
+    return 1
+  fi
+
+  # Load manifest so execution in a clean independent shell works without leftover env vars
+  # shellcheck source=/dev/null
+  source "$backup_dir/manifest.env"
+
+  local target_project="${BACKUP_PROD_PROJECT:-$PROD_PROJECT}"
+  local target_container="${BACKUP_PROD_CONTAINER:-$PROD_CONTAINER}"
+  local target_dir="${BACKUP_PROD_DIR:-$PROD_DIR}"
+  local target_health_url="${BACKUP_PROD_HEALTH_URL:-$PROD_HEALTH_URL}"
+  local target_baseline_image="${BACKUP_ACTUAL_IMAGE_ID:-$LOCKED_BASELINE_IMAGE}"
+  local target_port="${BACKUP_PROD_PORT:-17734}"
+  local orig_basename="${BACKUP_ORIG_COMPOSE_BASENAME:-compose.yaml}"
+  local target_compose_file="$target_dir/$orig_basename"
+
   echo "========================================================================"
   echo " EXECUTING DETERMINISTIC ROLLBACK TO PRODUCTION BASELINE"
-  echo " Baseline Image: $LOCKED_BASELINE_IMAGE"
-  echo " Target Host:    Seoul MCP (100.82.240.43)"
-  echo " Time:           $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo " Backup Dir:       $backup_dir"
+  echo " Target Project:   $target_project"
+  echo " Target Container: $target_container"
+  echo " Target Dir:       $target_dir"
+  echo " Compose File:     $orig_basename"
+  echo " Baseline Image:   $target_baseline_image"
+  echo " Target Health:    $target_health_url"
+  echo " Time:             $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   echo "========================================================================"
 
   # 1. Stop candidate container
-  echo "[1/4] Stopping candidate container..."
-  cd "$PROD_DIR"
-  docker compose -p "$PROD_PROJECT" stop carddav || docker stop "$PROD_CONTAINER" || true
+  echo "[1/5] Stopping current container..."
+  cd "$target_dir"
+  docker compose -p "$target_project" stop carddav 2>/dev/null || docker stop "$target_container" 2>/dev/null || true
 
-  # 2. Restore configuration from backup if provided, preserving runtime token store
-  if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
-    echo "[2/4] Restoring configuration from backup ($backup_dir), preserving runtime data..."
-    rsync -a --exclude 'data/tokens.json.enc*' "$backup_dir/" "$PROD_DIR/"
+  # 2. Restore configuration from backup, preserving runtime OAuth tokens
+  echo "[2/5] Restoring configuration files from backup ($backup_dir)..."
+  # Note: Exclude data/tokens.json.enc* to preserve tokens issued or refreshed during runtime
+  rsync -a --exclude 'data/tokens.json.enc*' "$backup_dir/" "$target_dir/"
+
+  # Handle Compose file priority masking:
+  # Docker Compose gives priority to compose.yaml over docker-compose.yml.
+  # If the original file was NOT compose.yaml, we must delete compose.yaml so original compose file is not masked!
+  if [ "$orig_basename" != "compose.yaml" ] && [ -f "$target_dir/compose.yaml" ]; then
+    echo "       Removing deployed compose.yaml to prevent priority masking of original $orig_basename..."
+    rm -f "$target_dir/compose.yaml"
   fi
 
-  # 3. Retag latest to baseline image
-  echo "[3/4] Locking image tag to baseline image ID ($LOCKED_BASELINE_IMAGE)..."
-  docker tag "$LOCKED_BASELINE_IMAGE" insurance-carddav-mcp-carddav:latest
+  # 3. Retag baseline image
+  echo "[3/5] Restoring baseline image tag ($target_baseline_image)..."
+  docker tag "$target_baseline_image" "${target_project}-carddav:latest"
 
-  # 4. Restart baseline container
-  echo "[4/4] Restarting baseline container..."
-  cd "$PROD_DIR"
-  CARDDAV_IMAGE="$LOCKED_BASELINE_IMAGE" \
-  docker compose -p "$PROD_PROJECT" up -d --no-build carddav
+  # 4. Restart baseline container using original Compose configuration
+  echo "[4/5] Restarting baseline container via Compose with original configuration ($orig_basename)..."
+  cd "$target_dir"
+  CARDDAV_IMAGE="$target_baseline_image" \
+  BIND_PORT="127.0.0.1:${target_port}" \
+  docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav
 
-  # Verify baseline health
+  # 5. Strict verification: Healthcheck, Image ID, and Contacts/Calendar configuration correspondence
+  echo "[5/5] Performing post-rollback verification (Health, Image ID, Permissions)..."
   local healthy=0
   for i in $(seq 1 30); do
-    if curl -sf "$PROD_HEALTH_URL" >/dev/null 2>&1; then
+    if curl -sf "$target_health_url" >/dev/null 2>&1; then
       healthy=1
-      echo "       Baseline container healthy at $PROD_HEALTH_URL (attempt $i)"
+      echo "       Baseline container healthy at $target_health_url (attempt $i)"
       break
     fi
     sleep 1
   done
 
   if [ "$healthy" -ne 1 ]; then
-    echo "CRITICAL ERROR: Rollback baseline container failed to become healthy!" >&2
-    exit 1
+    echo "CRITICAL ERROR: Restored baseline container failed health probe at $target_health_url!" >&2
+    return 1
   fi
 
   local active_image
-  active_image=$(docker inspect "$PROD_CONTAINER" --format '{{.Image}}')
-  if [ "$active_image" != "$LOCKED_BASELINE_IMAGE" ]; then
-    echo "CRITICAL ERROR: Active container image after rollback is $active_image (expected $LOCKED_BASELINE_IMAGE)!" >&2
-    exit 1
+  active_image=$(docker inspect "$target_container" --format '{{.Image}}')
+  if [ "$active_image" != "$target_baseline_image" ]; then
+    echo "CRITICAL ERROR: Active image ($active_image) does not match baseline image ($target_baseline_image)!" >&2
+    return 1
   fi
+  echo "       Image ID verified: $active_image"
+
+  # Check Contacts and Calendar configuration in container
+  local c_env
+  c_env=$(docker inspect "$target_container" --format '{{range .Config.Env}}{{println .}}{{end}}')
+  if ! echo "$c_env" | grep -q 'ALLOW_CONTACTS_READ_1=true'; then
+    echo "CRITICAL ERROR: ALLOW_CONTACTS_READ_1 not found or not true in restored container!" >&2
+    return 1
+  fi
+  if ! echo "$c_env" | grep -q 'ALLOW_CALENDAR_READ_1=true'; then
+    echo "CRITICAL ERROR: ALLOW_CALENDAR_READ_1 not found or not true in restored container!" >&2
+    return 1
+  fi
+  echo "       Configuration correspondence verified: Contacts and Calendar permissions intact."
 
   echo "========================================================================"
   echo " ROLLBACK COMPLETED SUCCESSFULLY"
-  echo " Active Image: $active_image (Verified Baseline)"
-  echo " Health:       200 OK"
-  echo " Contacts/Cal: Restored to pristine baseline"
+  echo " Active Image:    $active_image (Verified Baseline)"
+  echo " Health Probe:    200 OK ($target_health_url)"
+  echo " Contacts/Cal:    Intact & Verified"
+  echo " OAuth Tokens:    Preserved (Backward-Compatible Encryption Store)"
+  echo " Masking Check:   No compose.yaml shadow over $orig_basename"
   echo "========================================================================"
+  return 0
 }
 
 case "${1:-status}" in
@@ -391,7 +559,7 @@ case "${1:-status}" in
     deploy_candidate
     ;;
   rollback)
-    rollback_baseline "${2:-}"
+    rollback_baseline "${2:-}" || exit 1
     ;;
   *)
     echo "Usage: $0 {status|verify-config|deploy|rollback}"
