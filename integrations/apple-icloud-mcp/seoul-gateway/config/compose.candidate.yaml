@@ -1,0 +1,42 @@
+# Candidate Docker Compose configuration for Seoul MCP with Reminders Gateway
+# Pinned to accepted candidate image ID; avoids on-site rebuilding.
+services:
+  carddav:
+    image: ${CARDDAV_IMAGE:-insurance-carddav-mcp-carddav:candidate}
+    restart: unless-stopped
+    command: ${CARDDAV_COMMAND:-/bin/sh -c "umask 077; exec node dist/bin/http.js"}
+    mem_limit: 256m
+    pids_limit: 128
+    labels:
+      ag03_run_id: ${RUN_ID:-production}
+    env_file:
+      - path: ${ENV_FILE:-./secrets.env}
+        format: raw
+        required: true
+    environment:
+      PORT: '17733'
+      TOKEN_STORE_PATH: /app/data/tokens.json.enc
+      TRUST_PROXY: 'true'
+      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:17734}
+      # Reminders Readonly Gateway explicit configurations
+      MACSERVER_EVENTKIT_ENDPOINT: ${MACSERVER_EVENTKIT_ENDPOINT:?Missing required MACSERVER_EVENTKIT_ENDPOINT}
+      MACSERVER_EVENTKIT_AUTH_TOKEN: ${MACSERVER_EVENTKIT_AUTH_TOKEN:?Missing required MACSERVER_EVENTKIT_AUTH_TOKEN}
+      MACSERVER_EVENTKIT_ALLOWED_LISTS: ${MACSERVER_EVENTKIT_ALLOWED_LISTS:?Missing required MACSERVER_EVENTKIT_ALLOWED_LISTS}
+      MACSERVER_EVENTKIT_TIMEOUT_MS: ${MACSERVER_EVENTKIT_TIMEOUT_MS:-3000}
+      ALLOW_REMINDERS_READ_1: ${ALLOW_REMINDERS_READ_1:-true}
+      ALLOW_REMINDERS_WRITE_1: ${ALLOW_REMINDERS_WRITE_1:-false}
+    volumes:
+      - ${DATA_DIR:-./data}:/app/data
+    ports:
+      - '${BIND_PORT:-127.0.0.1:17734}:17733'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - candidate_net
+
+networks:
+  candidate_net:
+    name: ${COMPOSE_NETWORK_NAME:-ag03_test_network}
+    external: true

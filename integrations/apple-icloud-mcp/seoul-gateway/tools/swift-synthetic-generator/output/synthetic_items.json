@@ -1,0 +1,27 @@
+[
+  {
+    "dueDate" : 815961600,
+    "isCompleted" : false,
+    "itemID" : "item-swift-01",
+    "listID" : "9D9A****03F3",
+    "notes" : "核保附录条款审核",
+    "priority" : 1,
+    "title" : "Swift 合成提醒事项 1"
+  },
+  {
+    "isCompleted" : true,
+    "itemID" : "item-swift-02",
+    "listID" : "9D9A****03F3",
+    "priority" : 0,
+    "title" : "Swift 合成提醒事项 2 (无截止日期\/无备注)"
+  },
+  {
+    "dueDate" : 816048000,
+    "isCompleted" : false,
+    "itemID" : "item-swift-03",
+    "listID" : "9D9A****03F3",
+    "notes" : "保单生效通知",
+    "priority" : 5,
+    "title" : "Swift 合成提醒事项 3"
+  }
+]

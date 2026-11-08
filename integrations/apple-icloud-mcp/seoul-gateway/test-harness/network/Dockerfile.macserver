@@ -1,0 +1,13 @@
+FROM node:22-alpine
+
+RUN apk add --no-cache openssh-server openssh-client curl bash shadow \
+    && ssh-keygen -A \
+    && mkdir -p /root/.ssh && chmod 700 /root/.ssh
+
+COPY fake-macserver.js /app/fake-macserver.js
+COPY entrypoint-macserver.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 2222
+
+ENTRYPOINT ["/entrypoint.sh"]

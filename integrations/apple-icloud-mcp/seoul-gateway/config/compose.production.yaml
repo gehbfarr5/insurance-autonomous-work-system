@@ -1,0 +1,41 @@
+# Production Docker Compose specification for Seoul MCP with Reminders Readonly Gateway
+# Locked candidate image ID: sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61
+# Compose Project: insurance-carddav-mcp
+# Production Network: insurance-carddav-mcp_default (Gateway: 172.19.0.1)
+
+services:
+  carddav:
+    image: ${CARDDAV_IMAGE:-sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61}
+    restart: unless-stopped
+    command: ["/bin/sh", "-c", "umask 077; exec node dist/bin/http.js"]
+    mem_limit: 256m
+    pids_limit: 128
+    labels:
+      service: seoul-mcp-shared
+    env_file:
+      - path: ${SECRETS_FILE:-./secrets.env}
+        format: raw
+        required: true
+      - path: ${GATEWAY_ENV_FILE:-./gateway.env}
+        format: raw
+        required: true
+    environment:
+      PORT: '17733'
+      TOKEN_STORE_PATH: /app/data/tokens.json.enc
+      TRUST_PROXY: 'true'
+      PUBLIC_URL: ${PUBLIC_URL:-https://seoul-forge-01.tail4db0d9.ts.net}
+      # Reminders Readonly Gateway Configurations (Locked fail-fast)
+      MACSERVER_EVENTKIT_ENDPOINT: ${MACSERVER_EVENTKIT_ENDPOINT:-http://172.19.0.1:18765}
+      MACSERVER_EVENTKIT_AUTH_TOKEN: ${MACSERVER_EVENTKIT_AUTH_TOKEN:?Missing required MACSERVER_EVENTKIT_AUTH_TOKEN}
+      MACSERVER_EVENTKIT_ALLOWED_LISTS: ${MACSERVER_EVENTKIT_ALLOWED_LISTS:?Missing required MACSERVER_EVENTKIT_ALLOWED_LISTS}
+      MACSERVER_EVENTKIT_TIMEOUT_MS: ${MACSERVER_EVENTKIT_TIMEOUT_MS:-3000}
+      ALLOW_REMINDERS_READ_1: 'true'
+      ALLOW_REMINDERS_WRITE_1: 'false'
+    volumes:
+      - ${DATA_DIR:-./data}:/app/data
+    ports:
+      - '${BIND_PORT:-127.0.0.1:17734}:17733'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    security_opt:
+      - no-new-privileges:true

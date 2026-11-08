@@ -1,8 +1,8 @@
-# AG-02 MacServer 试运行回执汇总（B1 安装、B2 授权元数据与 B3 绑定列表只读回执）
+# AG-02 / AG-04 试运行与恢复回执汇总
 
-- **归档日期**：2026-11-07
-- **归档 PR**：[PR #21](https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/21) (`feat/macserver-eventkit-readonly` → `reconcile/icloud-source-baseline`)
-- **目标宿主**：Intel MacServer (`macserver-ts` / `100.100.172.91`, macOS 15.7.7 x86_64, `gui/501`)
+- **归档日期**：2026-11-08
+- **归档 PR**：[PR #21](https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/21) & [PR #22](https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/22)
+- **目标宿主**：Intel MacServer (`100.100.172.91`, macOS 15.7.7) & Seoul MCP (`100.82.240.43`, Ubuntu 24.04)
 
 ---
 
@@ -62,8 +62,31 @@
 
 ---
 
-## 四、项目硬边界保持
+## 四、AG-04 生产只读试运行与基线恢复回执 (`AG04_TRIAL_AND_RECOVERY_RECEIPT.json`)
 
-- **Seoul 主机与生产网关**：保持隔离，未做任何修改。
-- **PR 状态**：PR #20 与 PR #21 维持 **OPEN** 未合并。
-- **M5 实验环境**：保持原状，未执行退役。
+经用户显式变更授权，执行 AG-04 限时受控只读生产试运行与独立恢复：
+1. **真实链路技术验证 (`REAL_LINK_READONLY: PASS`)**：
+   - 验证 MUSE 客户端脚本 → Seoul MCP → 受限反向 SSH 隧道 → MacServer EventKit → iCloud 真实只读测试列表全链路；
+   - 发现并定位 1 条核准测试列表（脱敏标识：`9D9A****03F3`，名称：`M****试`，`writable: false`）；
+   - 读取该测试列表条目返回 0 条（干净的空列表）；
+   - 写入防护：`writes_enabled=False` 全程保持，零写入、零写探针。
+2. **MUSE 独立验收状态判定 (`MUSE_INDEPENDENT_ACCEPTANCE: PENDING_MUSE_UI_EVIDENCE`)**：
+   - 本次执行由客户端 Python 脚本发起，缺乏 MUSE 原生 UI 对话交互证据；
+   - 依据交付规范，严格判定真实链路通过、MUSE 独立 UI 验收证据待补。
+3. **网络与临时变更审计**：
+   - 记录因 Tailscale ACL 策略采用 MacServer → Seoul 反向 SSH 隧道；
+   - 临时宿主配置（`GatewayPorts clientspecified`）与公钥限制已在验收完成后 100% 还原；
+   - 端口 18765 监听完全注销，临时密钥已销毁。
+4. **确定性基线恢复**：
+   - Seoul 容器恢复至基线镜像 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`；
+   - 健康检查通过（200 OK）；MacServer 业务锁定恢复（403 PERMISSION_DENIED）；
+   - OAuth Token 仓库完好保留，Contacts/Calendar 权限与基线一致。
+
+---
+
+## 五、项目硬边界保持
+
+- **PR 状态**：PR #20、PR #21 与 PR #22 严格维持 **OPEN** 未合并。
+- **只读边界**：生产试运行已彻底关闭，禁止私自重启隧道或开启 Bridge。
+- **受限备份**：生产快照留在本地宿主机，禁止上传或提交至公开仓库。
+

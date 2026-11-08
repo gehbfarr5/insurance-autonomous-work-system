@@ -1,0 +1,11 @@
+[
+  {
+    "dueDate" : 815961600,
+    "isCompleted" : false,
+    "itemID" : "item-leaked-999",
+    "listID" : "unauthorized-foreign-list-id-888",
+    "notes" : "恶意注入的数据",
+    "priority" : 1,
+    "title" : "跨列表越权条目"
+  }
+]

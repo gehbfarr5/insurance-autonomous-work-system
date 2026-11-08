@@ -1,0 +1,60 @@
+# seoul-macserver-tunnel.service.candidate
+# AG-03 Candidate Systemd Unit File for Seoul Host (VM-0-10-ubuntu)
+#
+# PURPOSE:
+# Maintains a persistent, supervised SSH local port-forwarding tunnel
+# from Seoul Host (100.82.240.43) to Intel MacServer (100.100.172.91)
+# over private Tailscale WireGuard mesh network.
+#
+# TOPOLOGY & MULTI-HOP PATH:
+# [MCP Container (172.19.0.2)]
+#    -> [Seoul Docker Gateway (172.19.0.1:18765) / Loopback (127.0.0.1:18765)]
+#    -> [SSH Tunnel Client (Seoul Host)]
+#    -> [Tailscale Mesh WireGuard (100.82.240.43 -> 100.100.172.91)]
+#    -> [MacServer SSH Server (jin@100.100.172.91, permitopen="127.0.0.1:18765")]
+#    -> [EventKit Bridge Server (MacServer 127.0.0.1:18765)]
+#
+# SECURITY & ISOLATION BOUNDARIES:
+# 1. SSH Identity: Dedicated key /root/.ssh/id_ed25519_macserver_tunnel (0600).
+# 2. Host Key Verification: StrictHostKeyChecking=yes with pinned known_hosts.
+# 3. Restricted Forwarding Privileges:
+#    MacServer authorized_keys enforces:
+#    command="",no-pty,no-X11-forwarding,no-agent-forwarding,permitopen="127.0.0.1:18765"
+# 4. Strict Loopback Boundary: Listens on 127.0.0.1:18765 and Docker bridge gateway 172.19.0.1:18765.
+#    NEVER listens on 0.0.0.0 or public interface.
+# 5. ZERO dependency on M5 Pro (100.69.145.3 completely removed).
+#
+# DEPLOYMENT NOTE:
+# Candidate preparation only. Deployment requires separate approval.
+
+[Unit]
+Description=Seoul to MacServer EventKit Bridge Tailscale Tunnel
+After=network-online.target tailscaled.service docker.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=root
+# SSH to MacServer over Tailscale WireGuard mesh, forwarding local 18765 to remote loopback 18765
+ExecStart=/usr/bin/ssh -NT \
+    -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=15 \
+    -o ServerAliveCountMax=3 \
+    -o StrictHostKeyChecking=yes \
+    -o UserKnownHostsFile=/root/.ssh/known_hosts \
+    -o IdentityFile=/root/.ssh/id_ed25519_macserver_tunnel \
+    -L 127.0.0.1:18765:127.0.0.1:18765 \
+    -L 172.19.0.1:18765:127.0.0.1:18765 \
+    jin@100.100.172.91
+
+Restart=always
+RestartSec=5s
+
+# Security Hardening
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

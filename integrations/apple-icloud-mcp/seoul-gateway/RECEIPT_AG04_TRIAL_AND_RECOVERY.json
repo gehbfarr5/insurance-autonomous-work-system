@@ -1,0 +1,138 @@
+{
+  "receipt_type": "AG04_TRIAL_AND_RECOVERY_RECEIPT",
+  "task": "AG-04",
+  "branch": "feat/seoul-macserver-readonly-gateway",
+  "pr": 22,
+  "executed_at": "2026-11-08T11:18:33Z",
+  "candidate_image_id": "sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61",
+  "baseline_image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+  "target_endpoints": {
+    "seoul_mcp": "https://seoul-forge-01.tail4db0d9.ts.net/mcp",
+    "seoul_health": "https://seoul-forge-01.tail4db0d9.ts.net/health",
+    "macserver_bridge": "http://127.0.0.1:18765"
+  },
+  "watchdog_lifecycle": {
+    "host": "MacServer (100.100.172.91)",
+    "pid": 51189,
+    "started_at": "2026-11-08T10:56:41Z",
+    "planned_deadline": "2026-11-08T11:26:41Z",
+    "max_duration_seconds": 1800,
+    "terminated_at": "2026-11-08T11:17:59Z",
+    "recovery_status": "EARLY_CLEAN_RECOVERY_BEFORE_DEADLINE",
+    "lock_verification_status": 403,
+    "lock_verification_code": "PERMISSION_DENIED"
+  },
+  "reverse_ssh_tunnel_audit": {
+    "connection_direction": "MacServer -> Seoul Host (outbound)",
+    "reason_for_reverse": "Tailscale ACL policy drops unsolicited inbound TCP traffic from tagged-devices (seoul-forge-01) to user-owned devices (macserver). Outbound connections from user devices to tagged devices are permitted.",
+    "deviation_from_proposal": "Original proposal assumed forward SSH (Seoul -> MacServer) without host sshd modifications. Actual execution required outbound reverse SSH (MacServer -> Seoul) and temporary host-level sshd configuration to allow Docker bridge forwarding.",
+    "temporary_host_configuration": {
+      "sshd_config_snippet": "/etc/ssh/sshd_config.d/60-macserver-gateway.conf (GatewayPorts clientspecified)",
+      "authorized_keys_file": "/etc/ssh/seoul-keys/mac-operator",
+      "authorized_keys_options": "restrict,port-forwarding,permitlisten=\"172.19.0.1:18765\",permitlisten=\"127.0.0.1:18765\"",
+      "wildcard_bind_exposure": "None (strictly 172.19.0.1 and 127.0.0.1 only; zero 0.0.0.0 listening)",
+      "cleanup_verified": true,
+      "restored_from_backup": true,
+      "sshd_reloaded": true
+    },
+    "tunnel_lifecycle": {
+      "client_pid": 49887,
+      "temporary_key": "~/.ssh/id_ed25519_ag04_tunnel",
+      "key_deleted": true,
+      "process_terminated": true,
+      "port_18765_closed": true
+    }
+  },
+  "acceptance_evaluation": {
+    "execution_mechanism": "Client Python script (~/workspace/carddav-mcp-client/verify_muse_test_20261108.py)",
+    "client_attribution": "Executed by user via MCP client verification script; not recorded from a native MUSE UI foreground agent chat session.",
+    "verdict": {
+      "real_link_readonly": "PASS",
+      "muse_independent_acceptance": "PENDING_MUSE_UI_EVIDENCE",
+      "formal_status": "REAL_LINK_VERIFIED_MUSE_FRONTEND_EVIDENCE_PENDING"
+    },
+    "tool_calls_desensitized": [
+      {
+        "tool": "apple_login",
+        "first_attempt": "NEEDS_APPLE_RELOGIN (HTTP 401 invalid_token, expired cache from Nov 7)",
+        "recovery": "Manager read-path auto-refresh (token renewed without iCloud writes)",
+        "retry_status": "OK (Session established)"
+      },
+      {
+        "tool": "tools/list",
+        "status": "OK",
+        "discovered_tools_count": 33,
+        "note": "Confirmed live schema for reminders_list requires session_id and list_ids array"
+      },
+      {
+        "tool": "reminders_lists",
+        "status": "OK",
+        "lists_returned_count": 1,
+        "matched_list": {
+          "title": "M****试",
+          "list_id": "9D9A****03F3",
+          "source_type": "calDAV",
+          "source_name": "iCloud",
+          "writable": false
+        }
+      },
+      {
+        "tool": "reminders_list",
+        "arguments": {
+          "list_ids": [
+            "9D9A****03F3"
+          ]
+        },
+        "status": "OK",
+        "items_returned_count": 0,
+        "empty_list_verified": true
+      }
+    ],
+    "write_safety_audit": {
+      "writes_enabled_flag": false,
+      "write_operations_attempted": 0,
+      "write_probes_sent": 0,
+      "unauthorized_lists_accessed": 0,
+      "data_pollution_count": 0
+    }
+  },
+  "recovery_verification": {
+    "rollback_mechanism": "production-entry.sh rollback /opt/insurance-carddav-mcp.bak-20261108_184721",
+    "baseline_image_matched": true,
+    "actual_active_image": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+    "healthcheck_local": "200 OK (http://127.0.0.1:17734/health)",
+    "healthcheck_tailscale": "200 OK (https://seoul-forge-01.tail4db0d9.ts.net/health)",
+    "bridge_closed_status": "403 Forbidden (PERMISSION_DENIED)",
+    "port_18765_listener": "NONE (closed)",
+    "gateway_env_removed": true,
+    "manifest_env_removed": true,
+    "temporary_files_removed": true,
+    "oauth_tokens_preserved": {
+      "path": "/opt/insurance-carddav-mcp/data/tokens.json.enc",
+      "permissions": "0600",
+      "owner": "ubuntu:netdev",
+      "preserved": true
+    },
+    "contacts_calendar_permissions": {
+      "ALLOW_CONTACTS_READ_1": "true",
+      "ALLOW_CONTACTS_WRITE_1": "true",
+      "ALLOW_CALENDAR_READ_1": "true",
+      "ALLOW_CALENDAR_WRITE_1": "true",
+      "ALLOW_REMINDERS_READ_1": "true",
+      "ALLOW_REMINDERS_WRITE_1": "false",
+      "status": "MATCHES_BASELINE_ORIGINAL"
+    },
+    "tools_reprobe_audit": {
+      "tools_33_verified_during_trial": true,
+      "post_rollback_business_reprobe": "NOT_REPROBED (Preserved baseline operational state without generating redundant production traffic; Contacts/Calendar permissions and secrets match baseline original)"
+    },
+    "restricted_backup_location": "/opt/insurance-carddav-mcp.bak-20261108_184721 (retained locally on Seoul Host, excluded from git)"
+  },
+  "next_stage_recommendations": [
+    "Non-empty Reminders Item Validation: Verify title, notes, due date, priority mapping once test list has non-empty items",
+    "Resident Tunnel & Gateway Supervisor: Production-grade systemd daemon / autossh service on MacServer with exponential backoff and keepalive",
+    "Deterministic Gateway Failover: Automated graceful degradation when MacServer bridge is unreachable",
+    "Write-Safety Architecture: Strict multi-layer token restriction and hardware/approval gate if write permissions are ever introduced",
+    "Cross-Domain Version Alignment: Synchronize schema versions and tests across Contacts, Calendar, and Reminders"
+  ]
+}

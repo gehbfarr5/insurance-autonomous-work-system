@@ -1,0 +1,2554 @@
+diff --git a/src/modules/contacts/group-tools.ts b/src/modules/contacts/group-tools.ts
+new file mode 100644
+index 0000000..20134cf
+--- /dev/null
++++ b/src/modules/contacts/group-tools.ts
+@@ -0,0 +1,129 @@
++import { z } from 'zod';
++import { AppError } from '../../core/errors.js';
++import { decodeRef, decodeUrl, encodeUrl } from '../../core/ids.js';
++import { contactSchema } from './tools.js';
++import type { ContactInput } from '../../parsers/vcard.js';
++import type { ContactService } from './service.js';
++import { wrapTool } from '../../server/wrap.js';
++import { accessKeyIdFrom, type Session } from '../../core/session.js';
++import type { ToolDeps, ToolExtra, ToolRegistrar } from '../../server/types.js';
++import type { GroupsService } from './groups.js';
++
++interface GroupToolDeps extends ToolDeps {
++  groupsFor: (session: Session) => GroupsService;
++  contactFor: (session: Session) => ContactService;
++}
++
++const session_id = z.string().describe('apple_login 返回的 session_id');
++const group_id = z.string().describe('contacts_groups_list 返回的 group_id');
++const contact_ids = z.array(z.string()).min(1).max(100).describe('contacts_search 返回的 contact_id 列表，必须属于同一通讯簿');
++const expected_etag = z.string().optional().describe('可选 ETag；服务端始终使用最新 ETag 条件写入');
++
++export function registerGroupTools(server: ToolRegistrar, deps: GroupToolDeps): void {
++  const { sessions, logger, groupsFor, contactFor } = deps;
++  const svc = (id: string, extra?: ToolExtra) => groupsFor(sessions.get(id, accessKeyIdFrom(extra)));
++
++  server.registerTool('contacts_groups_list', {
++    title: '列出联系人分组',
++    description: '列出 iCloud 原生联系人分组与成员数量。只读操作，不能把通讯簿和所有联系人误认为分组。',
++    inputSchema: { session_id, address_book_id: z.string().optional() },
++    annotations: { readOnlyHint: true },
++  }, wrapTool(logger, 'contacts_groups_list', async (a: { session_id: string; address_book_id?: string }, e) =>
++    svc(a.session_id, e).list(a.address_book_id)));
++
++  server.registerTool('contacts_groups_members', {
++    title: '读取分组成员',
++    description: '返回分组成员 contact_id 以及无法解析的成员引用，不修改任何联系人。',
++    inputSchema: { session_id, group_id },
++    annotations: { readOnlyHint: true },
++  }, wrapTool(logger, 'contacts_groups_members', async (a: { session_id: string; group_id: string }, e) =>
++    svc(a.session_id, e).members(a.group_id)));
++
++  server.registerTool('contacts_groups_create', {
++    title: '创建联系人分组',
++    description: '创建一个 iCloud 原生联系人分组。检查同一通讯簿同名分组，拒绝重复。',
++    inputSchema: { session_id, name: z.string().min(1).max(100), address_book_id: z.string().optional() },
++    annotations: { readOnlyHint: false, destructiveHint: false },
++  }, wrapTool(logger, 'contacts_groups_create', async (a: { session_id: string; name: string; address_book_id?: string }, e) =>
++    svc(a.session_id, e).create(a.name, a.address_book_id)));
++
++  server.registerTool('contacts_groups_rename', {
++    title: '重命名联系人分组',
++    description: '只重命名分组卡片，不改变成员。与其他设备更新冲突时返回 CONFLICT。',
++    inputSchema: { session_id, group_id, name: z.string().min(1).max(100), expected_etag },
++    annotations: { readOnlyHint: false, destructiveHint: false },
++  }, wrapTool(logger, 'contacts_groups_rename', async (a: { session_id: string; group_id: string; name: string; expected_etag?: string }, e) =>
++    svc(a.session_id, e).rename(a.group_id, a.name, a.expected_etag)));
++
++  server.registerTool('contacts_groups_add_members', {
++    title: '将联系人加入分组',
++    description: '使用 contact_id 添加现有联系人到原生分组；已在组内的联系人不会重复加入。失败不会删除联系人。',
++    inputSchema: { session_id, group_id, contact_ids, expected_etag },
++    annotations: { readOnlyHint: false, destructiveHint: false },
++  }, wrapTool(logger, 'contacts_groups_add_members', async (a: { session_id: string; group_id: string; contact_ids: string[]; expected_etag?: string }, e) =>
++    svc(a.session_id, e).addMembers(a.group_id, a.contact_ids, a.expected_etag)));
++
++  server.registerTool('contacts_groups_remove_members', {
++    title: '从分组中移出联系人',
++    description: '只移除分组成员引用，绝不删除联系人原始卡片。',
++    inputSchema: { session_id, group_id, contact_ids, expected_etag },
++    annotations: { readOnlyHint: false, destructiveHint: false },
++  }, wrapTool(logger, 'contacts_groups_remove_members', async (a: { session_id: string; group_id: string; contact_ids: string[]; expected_etag?: string }, e) =>
++    svc(a.session_id, e).removeMembers(a.group_id, a.contact_ids, a.expected_etag)));
++
++  server.registerTool('contacts_create_in_groups', {
++    title: '创建联系人并分配分组',
++    description: '一次调用创建联系人并加入 1–10 个已有分组。若联系人创建成功而分组部分失败，会明确返回 contact_created=true 和失败列表；只能重试分组操作，绝不能重复创建联系人。',
++    inputSchema: {
++      session_id,
++      contact: contactSchema,
++      group_ids: z.array(group_id).min(1).max(10),
++      address_book_id: z.string().optional(),
++    },
++    annotations: { readOnlyHint: false, destructiveHint: false },
++  }, wrapTool(logger, 'contacts_create_in_groups', async (
++    a: { session_id: string; contact: ContactInput; group_ids: string[]; address_book_id?: string }, e,
++  ) => {
++    const session = sessions.get(a.session_id, accessKeyIdFrom(e));
++    const groups = groupsFor(session);
++    const targetBooks = new Set(a.group_ids.map(g => decodeRef(g).collectionUrl));
++    if (targetBooks.size !== 1) throw new AppError('INVALID_INPUT', '所有分组必须属于同一个通讯簿');
++    const targetBook = [...targetBooks][0]!;
++    if (a.address_book_id !== undefined && decodeUrl(a.address_book_id) !== targetBook) {
++      throw new AppError('INVALID_INPUT', '指定的通讯簿与分组不一致');
++    }
++    const ids = [...new Set(a.group_ids)];
++    // Preflight: reject invalid and inaccessible groups before creating a contact.
++    for (const id of ids) {
++      const found = await groups.members(id);
++      if (found.group.address_book_id !== encodeUrl(targetBook)) {
++        throw new AppError('INVALID_INPUT', '分组所属通讯簿与联系人不一致');
++      }
++    }
++    const created = await contactFor(session).create(a.contact, encodeUrl(targetBook));
++    const assigned: string[] = [];
++    const failed: Array<{ group_id: string; reason: string }> = [];
++    for (const id of ids) {
++      try {
++        await groups.addMembers(id, [created.contact_id]);
++        assigned.push(id);
++      } catch (err) {
++        failed.push({ group_id: id, reason: err instanceof Error ? err.message : '分组更新失败' });
++      }
++    }
++    return {
++      contact_created: true,
++      contact: created,
++      group_assignment: { complete: failed.length === 0, assigned_group_ids: assigned, failed },
++      ...(failed.length ? { retry_hint: '联系人已成功创建。只重试 contacts_groups_add_members，不得再次调用创建联系人。' } : {}),
++    };
++  }));
++
++  server.registerTool('contacts_groups_delete', {
++    title: '删除联系人分组',
++    description: '删除分组卡片，成员联系人不删除。必须提供 confirm=true 才允许执行。',
++    inputSchema: { session_id, group_id, confirm: z.literal(true), expected_etag },
++    annotations: { readOnlyHint: false, destructiveHint: true },
++  }, wrapTool(logger, 'contacts_groups_delete', async (a: { session_id: string; group_id: string; confirm: true; expected_etag?: string }, e) =>
++    svc(a.session_id, e).remove(a.group_id, a.confirm, a.expected_etag)));
++}
+diff --git a/src/modules/contacts/groups.ts b/src/modules/contacts/groups.ts
+new file mode 100644
+index 0000000..fd4f9a9
+--- /dev/null
++++ b/src/modules/contacts/groups.ts
+@@ -0,0 +1,178 @@
++import { AppError } from '../../core/errors.js';
++import { decodeRef, decodeUrl, encodeRef, encodeUrl } from '../../core/ids.js';
++import { capabilityHint, type AccountConfig } from '../../core/config.js';
++import { isGroupVCard, readContactMeta } from '../../parsers/vcard.js';
++import {
++  buildGroupVCard, normalizeMemberUrn, parseGroupVCard, renameGroupVCard, updateGroupMembersVCard,
++} from '../../parsers/vcard-groups.js';
++import type { CardDavProvider, CardObject } from '../../providers/icloud/carddav.js';
++
++export interface GroupView {
++  group_id: string;
++  address_book_id: string;
++  name: string;
++  member_count: number;
++}
++
++export interface GroupsService {
++  list(addressBookId?: string): Promise<{ groups: GroupView[]; partial_failures?: Array<{ address_book_id: string; reason: string }> }>;
++  members(groupId: string): Promise<{ group: GroupView; contacts: Array<{ contact_id: string; uid: string }>; unresolved_member_urns: string[] }>;
++  create(name: string, addressBookId?: string): Promise<GroupView>;
++  rename(groupId: string, name: string, expectedEtag?: string): Promise<GroupView>;
++  addMembers(groupId: string, contactIds: string[], expectedEtag?: string): Promise<{ group: GroupView; added: number }>;
++  removeMembers(groupId: string, contactIds: string[], expectedEtag?: string): Promise<{ group: GroupView; removed: number }>;
++  remove(groupId: string, confirmed: boolean, expectedEtag?: string): Promise<{ deleted: true; contacts_deleted: 0 }>;
++}
++
++export function createGroupsService(deps: { account: AccountConfig; carddav: CardDavProvider }): GroupsService {
++  const { account, carddav } = deps;
++  function checkRead() {
++    if (!account.capabilities.contactsRead) throw new AppError('PERMISSION_DENIED', '通讯录读取权限未开启', { hint: capabilityHint(account, 'ALLOW_CONTACTS_READ') });
++  }
++  function checkWrite() {
++    if (!account.capabilities.contactsWrite) throw new AppError('PERMISSION_DENIED', '通讯录写入权限未开启', { hint: capabilityHint(account, 'ALLOW_CONTACTS_WRITE') });
++  }
++  function view(bookUrl: string, cardUrl: string, data: string): GroupView {
++    const group = parseGroupVCard(data);
++    return { group_id: encodeRef({ collectionUrl: bookUrl, resourceUrl: cardUrl }), address_book_id: encodeUrl(bookUrl), name: group.name, member_count: group.member_urns.length };
++  }
++  function assertResourceWithinBook(bookUrl: string, resourceUrl: string) {
++    let base: URL, card: URL;
++    try {
++      base = new URL(bookUrl);
++      card = new URL(resourceUrl);
++    } catch {
++      throw new AppError('INVALID_INPUT', '分组或联系人 ID 中的资源地址无效');
++    }
++    if (base.protocol !== 'https:' || card.protocol !== 'https:' || base.origin !== card.origin
++      || !card.pathname.startsWith(base.pathname)) {
++      throw new AppError('INVALID_INPUT', '资源地址不属于指定通讯簿');
++    }
++  }
++  async function loaded(groupId: string, expectedEtag?: string) {
++    const ref = decodeRef(groupId);
++    assertResourceWithinBook(ref.collectionUrl, ref.resourceUrl);
++    const books = await carddav.listAddressBooks();
++    if (!books.some(b => b.url === ref.collectionUrl)) {
++      throw new AppError('INVALID_INPUT', '分组 ID 不属于当前账号的通讯簿');
++    }
++    const card = await carddav.fetchOne(ref.collectionUrl, ref.resourceUrl);
++    if (!isGroupVCard(card.data)) throw new AppError('INVALID_INPUT', '目标资源不是联系人分组');
++    if (expectedEtag !== undefined && card.etag !== expectedEtag) throw new AppError('CONFLICT', '分组已被其他设备修改，请重新读取');
++    return { ref, card };
++  }
++  async function writableBook(addressBookId?: string) {
++    const books = await carddav.listAddressBooks();
++    const book = addressBookId === undefined
++      ? books.find(b => !b.readOnly)
++      : books.find(b => b.url === decodeUrl(addressBookId));
++    if (!book) throw new AppError('NOT_FOUND', '未找到可写入的通讯簿');
++    if (book.readOnly) throw new AppError('PERMISSION_DENIED', '通讯簿不允许写入');
++    return book.url;
++  }
++  async function assertNameAvailable(bookUrl: string, name: string, exceptUrl?: string) {
++    const { objects } = await carddav.fetchAll(bookUrl);
++    const duplicate = objects.some(c => c.url !== exceptUrl && isGroupVCard(c.data)
++      && parseGroupVCard(c.data).name.localeCompare(name.trim(), undefined, { sensitivity: 'accent' }) === 0);
++    if (duplicate) throw new AppError('CONFLICT', '该通讯簿已有同名分组，请直接使用已有分组');
++  }
++  async function memberUids(bookUrl: string, ids: string[]): Promise<string[]> {
++    if (!ids.length || ids.length > 100) throw new AppError('INVALID_INPUT', '每次需提供 1–100 个联系人 ID');
++    const uids: string[] = [];
++    for (const id of ids) {
++      const ref = decodeRef(id);
++      if (ref.collectionUrl !== bookUrl) throw new AppError('INVALID_INPUT', '不能将其他通讯簿的联系人加入本分组');
++      assertResourceWithinBook(bookUrl, ref.resourceUrl);
++      const card = await carddav.fetchOne(bookUrl, ref.resourceUrl);
++      if (isGroupVCard(card.data)) throw new AppError('INVALID_INPUT', '分组不能作为另一个分组的成员');
++      const uid = readContactMeta(card.data).uid;
++      if (!uid) throw new AppError('INVALID_INPUT', '联系人缺少 UID，不能修改分组成员');
++      uids.push(normalizeMemberUrn(uid));
++    }
++    return [...new Set(uids.map(v => v.toLowerCase()))];
++  }
++
++  return {
++    async list(addressBookId) {
++      checkRead();
++      const books = (await carddav.listAddressBooks()).filter(b => addressBookId === undefined || b.url === decodeUrl(addressBookId));
++      if (addressBookId !== undefined && books.length === 0) throw new AppError('NOT_FOUND', '通讯簿不存在');
++      const groups: GroupView[] = [], partial_failures: Array<{ address_book_id: string; reason: string }> = [];
++      for (const book of books) {
++        try {
++          const { objects } = await carddav.fetchAll(book.url);
++          for (const card of objects) if (isGroupVCard(card.data)) groups.push(view(book.url, card.url, card.data));
++        } catch (e) {
++          partial_failures.push({ address_book_id: encodeUrl(book.url), reason: e instanceof Error ? e.message : '通讯簿读取失败' });
++        }
++      }
++      groups.sort((a, b) => a.name.localeCompare(b.name));
++      return partial_failures.length ? { groups, partial_failures } : { groups };
++    },
++
++    async members(groupId) {
++      checkRead();
++      const { ref, card } = await loaded(groupId);
++      const group = parseGroupVCard(card.data);
++      const { objects } = await carddav.fetchAll(ref.collectionUrl);
++      const mapped = new Map<string, CardObject>();
++      for (const item of objects) {
++        if (isGroupVCard(item.data)) continue;
++        const uid = readContactMeta(item.data).uid;
++        if (uid) mapped.set(normalizeMemberUrn(uid).toLowerCase(), item);
++      }
++      const contacts: Array<{ contact_id: string; uid: string }> = [];
++      const unresolved_member_urns: string[] = [];
++      for (const urn of group.member_urns) {
++        const item = mapped.get(urn.toLowerCase());
++        if (item) contacts.push({ contact_id: encodeRef({ collectionUrl: ref.collectionUrl, resourceUrl: item.url }), uid: readContactMeta(item.data).uid! });
++        else unresolved_member_urns.push(urn);
++      }
++      return { group: view(ref.collectionUrl, ref.resourceUrl, card.data), contacts, unresolved_member_urns };
++    },
++
++    async create(name, addressBookId) {
++      checkWrite();
++      const book = await writableBook(addressBookId);
++      const { data, uid } = buildGroupVCard(name);
++      await assertNameAvailable(book, name);
++      const created = await carddav.create({ bookUrl: book, filename: uid + '.vcf', data });
++      return view(book, created.url, data);
++    },
++
++    async rename(groupId, name, expectedEtag) {
++      checkWrite();
++      const { ref, card } = await loaded(groupId, expectedEtag);
++      const changed = renameGroupVCard(card.data, name);
++      await assertNameAvailable(ref.collectionUrl, name, ref.resourceUrl);
++      await carddav.update({ bookUrl: ref.collectionUrl, url: ref.resourceUrl, etag: card.etag, data: changed });
++      return view(ref.collectionUrl, ref.resourceUrl, changed);
++    },
++
++    async addMembers(groupId, contactIds, expectedEtag) {
++      checkWrite();
++      const { ref, card } = await loaded(groupId, expectedEtag);
++      const uids = await memberUids(ref.collectionUrl, contactIds);
++      const changed = updateGroupMembersVCard(card.data, uids);
++      if (changed.changed) await carddav.update({ bookUrl: ref.collectionUrl, url: ref.resourceUrl, etag: card.etag, data: changed.data });
++      return { group: view(ref.collectionUrl, ref.resourceUrl, changed.data), added: changed.changed };
++    },
++
++    async removeMembers(groupId, contactIds, expectedEtag) {
++      checkWrite();
++      const { ref, card } = await loaded(groupId, expectedEtag);
++      const uids = await memberUids(ref.collectionUrl, contactIds);
++      const changed = updateGroupMembersVCard(card.data, [], uids);
++      if (changed.changed) await carddav.update({ bookUrl: ref.collectionUrl, url: ref.resourceUrl, etag: card.etag, data: changed.data });
++      return { group: view(ref.collectionUrl, ref.resourceUrl, changed.data), removed: changed.changed };
++    },
++
++    async remove(groupId, confirmed, expectedEtag) {
++      checkWrite();
++      if (!confirmed) throw new AppError('INVALID_INPUT', '删除分组需要明确确认，不会删除成员联系人');
++      const { ref, card } = await loaded(groupId, expectedEtag);
++      await carddav.remove({ bookUrl: ref.collectionUrl, url: ref.resourceUrl, etag: card.etag });
++      return { deleted: true, contacts_deleted: 0 };
++    },
++  };
++}
+diff --git a/src/modules/contacts/service.ts b/src/modules/contacts/service.ts
+index 6a66aa1..d1dde56 100644
+--- a/src/modules/contacts/service.ts
++++ b/src/modules/contacts/service.ts
+@@ -41,9 +41,26 @@ function parseLimit(limit?: number): number {
+   return value;
+ }
+ 
++/** 最短电话搜索数字位数，避免 1-3 位的短数字或字母后缀数字意外命中大量电话 */
++const MIN_PHONE_SEARCH_DIGITS = 4;
++
++/** 合法的电话查询格式字符：数字、+、空格、括号、连字符、斜杠、点等 */
++const PHONE_QUERY_CHARS_RE = /^[+\d\s()./–—（）-]+$/;
++
++/**
++ * 判断查询字符串是否符合电话号码输入形式。
++ * 只有全由电话合法符号组成且非空的查询，才被允许触发数字归一化电话匹配。
++ * 包含字母或汉字的混合文本（如 qz2、客户2、zz-wb-accept2）不作为电话号码解析。
++ */
++export function isPhoneQuery(query: string): boolean {
++  const trimmed = query.trim();
++  if (!trimmed) return false;
++  return PHONE_QUERY_CHARS_RE.test(trimmed);
++}
++
+ /** 去掉所有非数字字符——13800000000 和 +86 138 0000 0000 应当能互相匹配上，这是最常见的查询形态。 */
+-function digitsOnly(value: string): string {
+-  return value.replace(/\D/g, '');
++export function digitsOnly(value: string): string {
++  return value.replace(/\D/g, "");
+ }
+ 
+ function includesCI(haystack: string | undefined, needleLower: string): boolean {
+@@ -54,9 +71,9 @@ function includesCI(haystack: string | undefined, needleLower: string): boolean
+ /**
+  * 搜索的匹配范围：name.full/family/given、organization、department、title、
+  * nickname、所有 emails[].value、所有 phones[].value、note。大小写不敏感的
+- * 子串匹配；电话额外做一次去掉非数字字符后的子串匹配。
++ * 文本子串匹配；仅对符合电话格式且数字长度 >= 4 的查询，做电话数字归一化子串匹配。
+  */
+-function matchesQuery(contact: Contact, query: string): boolean {
++export function matchesQuery(contact: Contact, query: string): boolean {
+   const needle = query.toLowerCase();
+ 
+   if (includesCI(contact.name.full, needle)) return true;
+@@ -72,10 +89,18 @@ function matchesQuery(contact: Contact, query: string): boolean {
+     if (includesCI(email.value, needle)) return true;
+   }
+ 
+-  const needleDigits = digitsOnly(query);
+-  for (const phone of contact.phones ?? []) {
+-    if (includesCI(phone.value, needle)) return true;
+-    if (needleDigits.length > 0 && digitsOnly(phone.value).includes(needleDigits)) return true;
++  if (isPhoneQuery(query)) {
++    const needleDigits = digitsOnly(query);
++    if (needleDigits.length >= MIN_PHONE_SEARCH_DIGITS) {
++      for (const phone of contact.phones ?? []) {
++        const phoneDigits = digitsOnly(phone.value);
++        if (phoneDigits.includes(needleDigits)) return true;
++        // 支持 +86 / 86 前缀查询匹配无国家码号码（例如查询 +86 138-0013 匹配 1380013xxxx）
++        if (needleDigits.startsWith("86") && needleDigits.length - 2 >= MIN_PHONE_SEARCH_DIGITS) {
++          if (phoneDigits.includes(needleDigits.slice(2))) return true;
++        }
++      }
++    }
+   }
+ 
+   return false;
+diff --git a/src/modules/contacts/tools.ts b/src/modules/contacts/tools.ts
+index 1d39ee6..c4338b5 100644
+--- a/src/modules/contacts/tools.ts
++++ b/src/modules/contacts/tools.ts
+@@ -68,7 +68,7 @@ const contactShape = {
+   note: z.string().nullable().optional().describe('备注。传 null 清除；省略不改动。'),
+ };
+ 
+-const contactSchema = z
++export const contactSchema = z
+   .object(contactShape)
+   .refine((value) => Boolean(value.name.full) || Boolean(value.name.family) || Boolean(value.name.given), {
+     message: 'name 至少需要 full 或 family/given 之一',
+diff --git a/src/modules/reminders/gateway/config.ts b/src/modules/reminders/gateway/config.ts
+new file mode 100644
+index 0000000..b22e5be
+--- /dev/null
++++ b/src/modules/reminders/gateway/config.ts
+@@ -0,0 +1,164 @@
++/**
++ * config.ts
++ * Gateway configuration parsing and validation.
++ */
++
++import { AppError } from '../../../core/errors.js';
++import type { BoundListConfig, MacServerGatewayConfig } from './types.js';
++
++const DEFAULT_TIMEOUT_MS = 5000;
++const DEFAULT_MAX_RESPONSE_SIZE = 2 * 1024 * 1024; // 2MB
++
++export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
++  if (!raw || typeof raw !== 'object') {
++    throw new AppError('INVALID_INPUT', '网关配置对象必须是非空 Object');
++  }
++
++  const candidate = raw as Record<string, unknown>;
++
++  // 1. Endpoint validation
++  const endpoint = candidate.macserverEndpoint;
++  if (typeof endpoint !== 'string' || !endpoint.trim()) {
++    throw new AppError('INVALID_INPUT', '配置缺失或无效的 macserverEndpoint (必须为非空字符串)');
++  }
++
++  let parsedUrl: URL;
++  try {
++    parsedUrl = new URL(endpoint.trim());
++  } catch (cause) {
++    throw new AppError('INVALID_INPUT', `macserverEndpoint URL 格式非法: ${endpoint}`, { cause });
++  }
++
++  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
++    throw new AppError('INVALID_INPUT', `macserverEndpoint 协议必须是 http 或 https, 当前为: ${parsedUrl.protocol}`);
++  }
++
++  const hostname = parsedUrl.hostname;
++  if (!hostname || hostname === '0.0.0.0' || hostname === '::' || hostname === '*') {
++    throw new AppError('INVALID_INPUT', `macserverEndpoint 禁止使用通配监听地址: ${hostname}`);
++  }
++
++  // 2. Auth token validation
++  const token = candidate.authToken;
++  if (typeof token !== 'string' || token.trim().length < 16) {
++    throw new AppError(
++      'INVALID_INPUT',
++      '配置缺失或无效的 authToken (必须为至少 16 字符的非空字符串)'
++    );
++  }
++
++  // 3. Timeout validation
++  let timeoutMs = DEFAULT_TIMEOUT_MS;
++  if (candidate.timeoutMs !== undefined) {
++    const parsed = Number(candidate.timeoutMs);
++    if (!Number.isInteger(parsed) || parsed < 500 || parsed > 60000) {
++      throw new AppError('INVALID_INPUT', 'timeoutMs 必须在 500 到 60000 毫秒之间');
++    }
++    timeoutMs = parsed;
++  }
++
++  // 4. Max response size validation
++  let maxResponseSizeBytes = DEFAULT_MAX_RESPONSE_SIZE;
++  if (candidate.maxResponseSizeBytes !== undefined) {
++    const parsed = Number(candidate.maxResponseSizeBytes);
++    if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 50 * 1024 * 1024) {
++      throw new AppError('INVALID_INPUT', 'maxResponseSizeBytes 必须在 1KB 到 50MB 之间');
++    }
++    maxResponseSizeBytes = parsed;
++  }
++
++  // 5. Explicit List-to-Source binding validation
++  if (!candidate.allowedLists || !Array.isArray(candidate.allowedLists) || candidate.allowedLists.length === 0) {
++    throw new AppError(
++      'INVALID_INPUT',
++      '配置缺失或空的 allowedLists: 列表白名单与来源 ID 绑定必须显式配置，缺失即拒绝'
++    );
++  }
++
++  const allowedLists: BoundListConfig[] = candidate.allowedLists.map((item, index) => {
++    if (!item || typeof item !== 'object') {
++      throw new AppError('INVALID_INPUT', `allowedLists[${index}] 必须为包含 listId 与 expectedSourceId 的对象`);
++    }
++    const obj = item as Record<string, unknown>;
++    const listId = typeof obj.listId === 'string' ? obj.listId.trim() : '';
++    const expectedSourceId = typeof obj.expectedSourceId === 'string' ? obj.expectedSourceId.trim() : '';
++
++    if (!listId) {
++      throw new AppError('INVALID_INPUT', `allowedLists[${index}].listId 缺失或为空`);
++    }
++    if (!expectedSourceId) {
++      throw new AppError(
++        'INVALID_INPUT',
++        `allowedLists[${index}] 缺失显式 expectedSourceId 绑定: 必须显式绑定来源 ID，缺失即拒绝`
++      );
++    }
++
++    return {
++      listId,
++      expectedSourceId,
++      expectedSourceName: typeof obj.expectedSourceName === 'string' && obj.expectedSourceName.trim()
++        ? obj.expectedSourceName.trim()
++        : 'iCloud',
++      expectedSourceType: typeof obj.expectedSourceType === 'string' && obj.expectedSourceType.trim()
++        ? obj.expectedSourceType.trim()
++        : 'calDAV',
++    };
++  });
++
++  return {
++    macserverEndpoint: parsedUrl.origin,
++    authToken: token.trim(),
++    timeoutMs,
++    maxResponseSizeBytes,
++    allowedLists,
++    expectedSourceType: typeof candidate.expectedSourceType === 'string' && candidate.expectedSourceType.trim()
++      ? candidate.expectedSourceType.trim()
++      : 'calDAV',
++    expectedSourceName: typeof candidate.expectedSourceName === 'string' && candidate.expectedSourceName.trim()
++      ? candidate.expectedSourceName.trim()
++      : 'iCloud',
++  };
++}
++
++export function loadGatewayConfigFromEnv(env: Record<string, string | undefined> = process.env): MacServerGatewayConfig {
++  const endpoint = env.MACSERVER_EVENTKIT_ENDPOINT || env.EVENTKIT_GATEWAY_ENDPOINT || env.EVENTKIT_BRIDGE_ENDPOINT || 'http://127.0.0.1:18765';
++  const token = env.MACSERVER_EVENTKIT_AUTH_TOKEN || env.MACSERVER_EVENTKIT_TOKEN || env.EVENTKIT_BRIDGE_AUTH_TOKEN || env.EVENTKIT_BRIDGE_TOKEN || '';
++  const timeoutMs = env.MACSERVER_EVENTKIT_TIMEOUT_MS || env.EVENTKIT_BRIDGE_TIMEOUT_MS
++    ? Number(env.MACSERVER_EVENTKIT_TIMEOUT_MS || env.EVENTKIT_BRIDGE_TIMEOUT_MS)
++    : DEFAULT_TIMEOUT_MS;
++  const maxResponseSizeBytes = (env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE || env.EVENTKIT_BRIDGE_MAX_RESPONSE_SIZE)
++    ? Number(env.MACSERVER_EVENTKIT_MAX_RESPONSE_SIZE || env.EVENTKIT_BRIDGE_MAX_RESPONSE_SIZE)
++    : DEFAULT_MAX_RESPONSE_SIZE;
++
++  let allowedLists: BoundListConfig[] = [];
++  const rawLists = env.MACSERVER_EVENTKIT_ALLOWED_LISTS || env.EVENTKIT_ALLOWED_LISTS;
++  if (rawLists && rawLists.trim()) {
++    const trimmed = rawLists.trim();
++    if (trimmed.startsWith('[')) {
++      try {
++        allowedLists = JSON.parse(trimmed);
++      } catch (cause) {
++        throw new AppError('INVALID_INPUT', '环境变量 MACSERVER_EVENTKIT_ALLOWED_LISTS / EVENTKIT_ALLOWED_LISTS JSON 解析失败', { cause });
++      }
++    } else {
++      allowedLists = trimmed.split(',').map((entry) => {
++        const parts = entry.split(':').map((s) => s.trim());
++        const listId = parts[0] || '';
++        const expectedSourceId = parts[1] || '';
++        const expectedSourceName = parts[2] || 'iCloud';
++        const expectedSourceType = parts[3] || 'calDAV';
++        return { listId, expectedSourceId, expectedSourceName, expectedSourceType };
++      });
++    }
++  }
++
++  return validateGatewayConfig({
++    macserverEndpoint: endpoint,
++    authToken: token,
++    timeoutMs,
++    maxResponseSizeBytes,
++    allowedLists,
++    expectedSourceType: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_TYPE || env.EVENTKIT_EXPECTED_SOURCE_TYPE || 'calDAV',
++    expectedSourceName: env.MACSERVER_EVENTKIT_EXPECTED_SOURCE_NAME || env.EVENTKIT_EXPECTED_SOURCE_NAME || 'iCloud',
++  });
++}
+diff --git a/src/modules/reminders/gateway/index.ts b/src/modules/reminders/gateway/index.ts
+new file mode 100644
+index 0000000..ae26362
+--- /dev/null
++++ b/src/modules/reminders/gateway/index.ts
+@@ -0,0 +1,68 @@
++import { AppError } from '../../../core/errors.js';
++import type { Session } from '../../../core/session.js';
++import type { ReminderService, ListRemindersParams, ReminderInput, UpdateOptions } from './types.js';
++import { createReminderService } from '../service.js';
++import { loadGatewayConfigFromEnv } from './config.js';
++import { EventKitReadonlyTransport } from './transport.js';
++import { createMacServerReminderService } from './service.js';
++
++export * from './types.js';
++export * from './config.js';
++export * from './transport.js';
++export * from './service.js';
++
++let sharedTransport: EventKitReadonlyTransport | undefined;
++let sharedConfig: ReturnType<typeof loadGatewayConfigFromEnv> | undefined;
++
++export function isMacServerGatewayConfigured(): boolean {
++  return Boolean(
++    process.env.MACSERVER_EVENTKIT_ENDPOINT ||
++    process.env.EVENTKIT_GATEWAY_ENDPOINT ||
++    process.env.EVENTKIT_BRIDGE_ENDPOINT
++  );
++}
++
++export function getGatewayReminderService(session: Session): ReminderService {
++  if (!isMacServerGatewayConfigured()) {
++    return createReminderService({ account: session.account, caldav: session.providers.caldav });
++  }
++
++  if (!sharedConfig) {
++    sharedConfig = loadGatewayConfigFromEnv(process.env);
++    sharedTransport = new EventKitReadonlyTransport(sharedConfig);
++  }
++
++  const baseGateway = createMacServerReminderService({
++    transport: sharedTransport!,
++    config: sharedConfig!,
++    account: session.account,
++  });
++
++  return {
++    async listLists() {
++      if (!session.account.capabilities.remindersRead) {
++        throw new AppError('PERMISSION_DENIED', '该账号的提醒事项读取权限未开启', {
++          hint: 'ALLOW_REMINDERS_READ',
++        });
++      }
++      return baseGateway.listLists();
++    },
++    async list(params: ListRemindersParams) {
++      if (!session.account.capabilities.remindersRead) {
++        throw new AppError('PERMISSION_DENIED', '该账号的提醒事项读取权限未开启', {
++          hint: 'ALLOW_REMINDERS_READ',
++        });
++      }
++      return baseGateway.list(params);
++    },
++    async create(input: ReminderInput, listId?: string) {
++      return baseGateway.create(input, listId);
++    },
++    async update(reminderId: string, patch: Partial<ReminderInput>, options?: UpdateOptions) {
++      return baseGateway.update(reminderId, patch, options);
++    },
++    async remove(reminderId: string, options?: UpdateOptions) {
++      return baseGateway.remove(reminderId, options);
++    },
++  };
++}
+diff --git a/src/modules/reminders/gateway/service.ts b/src/modules/reminders/gateway/service.ts
+new file mode 100644
+index 0000000..9b0e923
+--- /dev/null
++++ b/src/modules/reminders/gateway/service.ts
+@@ -0,0 +1,309 @@
++/**
++ * service.ts
++ * MacServerReminderService implementation for Seoul -> MacServer Reminders Readonly Gateway.
++ * 
++ * Adapts MacServer EventKit Bridge HTTP endpoints to standard ReminderService interface:
++ * - listLists: maps to ReminderListSummary[] with writable: false
++ * - list: maps to ListRemindersResult with Reminder[]
++ * - create/update/remove: rejects client-side with PERMISSION_DENIED (zero write forwarding)
++ * 
++ * Invariants:
++ * 1. Strictly READ-ONLY: Rejects write operations with 0 forwarding and 0 VTODO fallback.
++ * 2. Strict Item Field Validation: itemID, listID, title, isCompleted are mandatory;
++ *    missing, empty, or mismatched listID is immediately rejected with UPSTREAM_ERROR.
++ * 3. Error objects are NEVER mapped into normal reminders.
++ * 4. Bound list verification: Only allowed and bound lists are returned or queried.
++ */
++
++import { AppError } from '../../../core/errors.js';
++import { parseBridgeDate, EventKitReadonlyTransport } from './transport.js';
++import type {
++  BoundListConfig,
++  ListRemindersParams,
++  ListRemindersResult,
++  MacServerGatewayConfig,
++  PartialFailure,
++  Reminder,
++  ReminderInput,
++  ReminderItem,
++  ReminderListSummary,
++  ReminderService,
++  RemindersList,
++  UpdateOptions,
++  AccountConfig,
++} from './types.js';
++
++function parseLimit(rawLimit?: number): number {
++  if (rawLimit === undefined) return 500;
++  if (!Number.isInteger(rawLimit) || rawLimit <= 0) {
++    throw new AppError('INVALID_INPUT', `limit 必须为正整数: ${rawLimit}`);
++  }
++  return Math.min(rawLimit, 1000);
++}
++
++function parseDueBound(label: string, value?: string): Date | undefined {
++  if (!value) return undefined;
++  const d = new Date(value);
++  if (Number.isNaN(d.getTime())) {
++    throw new AppError('INVALID_INPUT', `${label} 格式无法解析为有效日期: ${value}`);
++  }
++  return d;
++}
++
++export interface MacServerReminderServiceDeps {
++  transport: EventKitReadonlyTransport;
++  config: MacServerGatewayConfig;
++  account?: AccountConfig;
++}
++
++export function createMacServerReminderService(deps: MacServerReminderServiceDeps): ReminderService {
++  const { transport, config, account } = deps;
++
++  const requireRead = (): void => {
++    if (account && account.capabilities && account.capabilities.remindersRead === false) {
++      throw new AppError('PERMISSION_DENIED', '该账号的提醒事项读取权限未开启', {
++        hint: 'ALLOW_REMINDERS_READ',
++      });
++    }
++  };
++
++  const bindingIndex = new Map<string, BoundListConfig>();
++  for (const b of config.allowedLists) {
++    bindingIndex.set(b.listId, b);
++  }
++
++  async function fetchAllowedICloudLists(): Promise<RemindersList[]> {
++    const rawLists = await transport.fetchListsMetadata();
++
++    const verifiedLists: RemindersList[] = [];
++    for (const list of rawLists) {
++      if (!list || typeof list !== 'object' || Array.isArray(list)) {
++        throw new AppError('UPSTREAM_ERROR', 'Bridge 返回的列表元数据不是有效对象');
++      }
++      if (typeof list.listID !== 'string' || !list.listID.trim()) {
++        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失或包含非法的 listID');
++      }
++      if (typeof list.title !== 'string') {
++        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失或包含非法的 title');
++      }
++      if (typeof list.sourceID !== 'string' || !list.sourceID.trim()) {
++        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失或包含非法的 sourceID');
++      }
++      if (typeof list.sourceType !== 'string' || typeof list.sourceName !== 'string') {
++        throw new AppError('UPSTREAM_ERROR', 'Bridge 列表元数据缺失有效的 source 字段');
++      }
++
++      const binding = bindingIndex.get(list.listID);
++      if (!binding) continue;
++
++      if (list.sourceID !== binding.expectedSourceId) {
++        continue;
++      }
++
++      const expType = binding.expectedSourceType || config.expectedSourceType || 'calDAV';
++      const expName = binding.expectedSourceName || config.expectedSourceName || 'iCloud';
++
++      if (list.sourceType.toLowerCase() !== expType.toLowerCase()) {
++        continue;
++      }
++      if (list.sourceName.toLowerCase() !== expName.toLowerCase()) {
++        continue;
++      }
++
++      verifiedLists.push(list);
++    }
++
++    return verifiedLists;
++  }
++
++  function rejectWriteOp(op: string): never {
++    throw new AppError(
++      'PERMISSION_DENIED',
++      `[WriteRejected] MacServer EventKit 网关运行于严格只读模式: 提醒事项 ${op} 写操作已在客户端拦截 (零转发/零VTODO回落/禁止写入并禁止回落旧 VTODO)`
++    );
++  }
++
++  return {
++    async listLists(): Promise<ReminderListSummary[]> {
++      requireRead();
++      const lists = await fetchAllowedICloudLists();
++      return lists.map((list) => ({
++        list_id: list.listID,
++        name: list.title,
++        color: list.color,
++        writable: false,
++      }));
++    },
++
++    async list(params: ListRemindersParams): Promise<ListRemindersResult> {
++      requireRead();
++      const limit = parseLimit(params.limit);
++      const dueAfter = parseDueBound('due_after', params.due_after);
++      const dueBefore = parseDueBound('due_before', params.due_before);
++
++      const availableLists = await fetchAllowedICloudLists();
++
++      let targetLists = availableLists;
++      if (params.list_ids && params.list_ids.length > 0) {
++        const missing = params.list_ids.filter(
++          (reqId) => !availableLists.some((avail) => avail.listID === reqId)
++        );
++        if (missing.length > 0) {
++          throw new AppError(
++            'NOT_FOUND',
++            `指定的提醒列表不存在或不对应任何已显式绑定的 iCloud 提醒列表: ${missing.join(', ')}`,
++            { hint: '调用 reminders_lists 查询当前可用的提醒列表' }
++          );
++        }
++        targetLists = availableLists.filter((avail) => params.list_ids!.includes(avail.listID));
++      }
++
++      const allReminders: Reminder[] = [];
++      const partialFailures: PartialFailure[] = [];
++
++      for (const targetList of targetLists) {
++        let items: ReminderItem[];
++        try {
++          items = await transport.fetchReminders(targetList.listID);
++        } catch (err: any) {
++          if (targetLists.length === 1) {
++            throw err;
++          }
++          partialFailures.push({
++            list_id: targetList.listID,
++            name: targetList.title,
++            reason: err instanceof AppError ? err.message : String(err),
++          });
++          continue;
++        }
++
++        if (!Array.isArray(items)) {
++          throw new AppError('UPSTREAM_ERROR', 'Bridge 返回的提醒条目不是 JSON 数组');
++        }
++
++        for (const rawItem of items) {
++          if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) {
++            throw new AppError('UPSTREAM_ERROR', 'Bridge 返回条目数据结构非法: 期望为 Object');
++          }
++
++          const item = rawItem as unknown as Record<string, unknown>;
++
++          if ('error' in item || 'errorMessage' in item) {
++            throw new AppError('UPSTREAM_ERROR', `Bridge 返回错误对象响应而非正常条目: ${JSON.stringify(item)}`);
++          }
++
++          if (typeof item.itemID !== 'string' || !item.itemID.trim()) {
++            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 itemID 字段: ${JSON.stringify(item)}`);
++          }
++
++          if (typeof item.listID !== 'string' || !item.listID.trim()) {
++            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 listID 字段: itemID=${item.itemID}`);
++          }
++
++          if (item.listID.trim() !== targetList.listID) {
++            throw new AppError(
++              'UPSTREAM_ERROR',
++              `Bridge 返回条目归属列表 (${item.listID}) 与请求的目标列表 (${targetList.listID}) 不匹配/不一致`
++            );
++          }
++
++          if (typeof item.title !== 'string') {
++            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 title 字段: itemID=${item.itemID}`);
++          }
++
++          if (typeof item.isCompleted !== 'boolean') {
++            throw new AppError('UPSTREAM_ERROR', `Bridge 返回条目缺失必需的 isCompleted 布尔字段: itemID=${item.itemID}`);
++          }
++
++          if (params.completed !== undefined && item.isCompleted !== params.completed) {
++            continue;
++          }
++
++          const dueIso = parseBridgeDate(item.dueDate);
++          let dueDateObj: Date | undefined;
++          if (dueIso) {
++            dueDateObj = new Date(dueIso);
++          }
++
++          if (dueAfter !== undefined) {
++            if (!dueDateObj || dueDateObj.getTime() < dueAfter.getTime()) {
++              continue;
++            }
++          }
++          if (dueBefore !== undefined) {
++            if (!dueDateObj || dueDateObj.getTime() > dueBefore.getTime()) {
++              continue;
++            }
++          }
++
++          const reminderObj: Reminder = {
++            reminder_id: String(item.itemID),
++            list_id: targetList.listID,
++            title: String(item.title),
++            completed: Boolean(item.isCompleted),
++            priority: typeof item.priority === 'number' ? item.priority : 0,
++          };
++
++          if (typeof item.notes === 'string') {
++            reminderObj.notes = item.notes;
++          }
++          if (dueIso) {
++            reminderObj.due = dueIso;
++          }
++          if (item.completionDate) {
++            try {
++              const compIso = parseBridgeDate(item.completionDate);
++              if (compIso) reminderObj.completed_at = compIso;
++            } catch {}
++          }
++          if (item.creationDate) {
++            try {
++              const crIso = parseBridgeDate(item.creationDate);
++              if (crIso) reminderObj.created = crIso;
++            } catch {}
++          }
++
++          allReminders.push(reminderObj);
++        }
++      }
++
++      allReminders.sort((a, b) => {
++        if (a.due && b.due) {
++          return new Date(a.due).getTime() - new Date(b.due).getTime();
++        }
++        if (a.due && !b.due) return -1;
++        if (!a.due && b.due) return 1;
++        return a.title.localeCompare(b.title);
++      });
++
++      const truncated = allReminders.length > limit;
++      const returnedReminders = truncated ? allReminders.slice(0, limit) : allReminders;
++
++      const result: ListRemindersResult = {
++        reminders: returnedReminders,
++      };
++
++      if (truncated) {
++        result.truncated = true;
++      }
++
++      if (partialFailures.length > 0) {
++        result.partial_failures = partialFailures;
++      }
++
++      return result;
++    },
++
++    async create(_input: ReminderInput, _listId?: string): Promise<Reminder> {
++      rejectWriteOp('create');
++    },
++
++    async update(_reminderId: string, _patch: Partial<ReminderInput>, _options?: UpdateOptions): Promise<Reminder> {
++      rejectWriteOp('update');
++    },
++
++    async remove(_reminderId: string, _options?: UpdateOptions): Promise<{ deleted: true }> {
++      rejectWriteOp('remove');
++    },
++  };
++}
+diff --git a/src/modules/reminders/gateway/transport.ts b/src/modules/reminders/gateway/transport.ts
+new file mode 100644
+index 0000000..f8deb45
+--- /dev/null
++++ b/src/modules/reminders/gateway/transport.ts
+@@ -0,0 +1,254 @@
++/**
++ * transport.ts
++ * EventKitReadonlyTransport communicating with MacServer EventKit Bridge over HTTP.
++ * 
++ * Invariants & Hardening:
++ * 1. Strictly READ-ONLY: Never sends POST, PUT, PATCH, DELETE requests.
++ * 2. Unified Deadline: A single abort timer spans connection establishment, header parsing,
++ *    and streaming response body downloading until completion.
++ * 3. Connection & Socket Release: On timeout or abort, active body reader is cancelled and
++ *    released immediately to prevent socket exhaustion.
++ * 4. Max Response Size Enforcement: Byte stream is metered; exceeding limit aborts immediately.
++ * 5. Explicit Failures: Stalled streams, network errors, timeouts, 401, 403, 404, 5xx throw AppError;
++ *    never masquerading as empty arrays.
++ */
++
++import { AppError } from '../../../core/errors.js';
++import type { MacServerGatewayConfig, RemindersList, ReminderItem } from './types.js';
++
++export const COCOA_OFFSET_SECONDS = 978307200;
++
++export function parseBridgeDate(raw: unknown): string | undefined {
++  if (raw === undefined || raw === null) return undefined;
++  if (typeof raw === 'number') {
++    if (!Number.isFinite(raw)) {
++      throw new AppError('UPSTREAM_ERROR', `Bridge 返回非法数值日期: ${raw}`);
++    }
++    const epochMs = (raw + COCOA_OFFSET_SECONDS) * 1000;
++    const d = new Date(epochMs);
++    if (Number.isNaN(d.getTime())) {
++      throw new AppError('UPSTREAM_ERROR', `Bridge 转换 Cocoa 纪元日期失败: ${raw}`);
++    }
++    return d.toISOString();
++  }
++  if (typeof raw === 'string') {
++    const trimmed = raw.trim();
++    if (!trimmed) {
++      throw new AppError('UPSTREAM_ERROR', 'Bridge 返回空日期字符串');
++    }
++    const d = new Date(trimmed);
++    if (Number.isNaN(d.getTime())) {
++      throw new AppError('UPSTREAM_ERROR', `Bridge 返回非法日期格式字符串: ${raw}`);
++    }
++    return d.toISOString();
++  }
++  throw new AppError('UPSTREAM_ERROR', `Bridge 返回非法日期编码类型: ${typeof raw}`);
++}
++
++export class EventKitReadonlyTransport {
++  private readonly config: MacServerGatewayConfig;
++
++  constructor(config: MacServerGatewayConfig) {
++    this.config = config;
++  }
++
++  async healthCheck(): Promise<boolean> {
++    const url = `${this.config.macserverEndpoint}/health`;
++    const controller = new AbortController();
++    const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
++    try {
++      const res = await fetch(url, { method: 'GET', signal: controller.signal });
++      return res.status === 200;
++    } catch {
++      return false;
++    } finally {
++      clearTimeout(timer);
++    }
++  }
++
++  async fetchListsMetadata(): Promise<RemindersList[]> {
++    const url = `${this.config.macserverEndpoint}/reminders/lists`;
++    const headers = {
++      Authorization: `Bearer ${this.config.authToken}`,
++      Accept: 'application/json',
++      'User-Agent': 'Seoul-MCP-Gateway/1.0.0 (Readonly)',
++    };
++
++    const data = await this.getBoundedJson<unknown>(url, headers);
++    if (!Array.isArray(data)) {
++      throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的列表数据结构非法: 期望为 Array');
++    }
++    return data as RemindersList[];
++  }
++
++  async fetchReminders(listId: string): Promise<ReminderItem[]> {
++    const trimmedId = listId.trim();
++    if (!trimmedId) {
++      throw new AppError('INVALID_INPUT', 'listId 不能为空');
++    }
++
++    const isAllowed = this.config.allowedLists.some((item) => item.listId === trimmedId);
++    if (!isAllowed) {
++      throw new AppError('PERMISSION_DENIED', `列表未在网关白名单中: ${trimmedId} (必须显式配置绑定)`, {
++        hint: '请在 MACSERVER_EVENTKIT_ALLOWED_LISTS 中配置该列表及来源 ID 绑定',
++      });
++    }
++
++    const url = `${this.config.macserverEndpoint}/reminders/lists/${encodeURIComponent(trimmedId)}/items`;
++    const headers = {
++      Authorization: `Bearer ${this.config.authToken}`,
++      Accept: 'application/json',
++      'User-Agent': 'Seoul-MCP-Gateway/1.0.0 (Readonly)',
++    };
++
++    const data = await this.getBoundedJson<unknown>(url, headers);
++    if (!Array.isArray(data)) {
++      throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的提醒条目数据结构非法: 期望为 Array');
++    }
++    return data as ReminderItem[];
++  }
++
++  rejectWrite(operation: 'create' | 'update' | 'delete'): never {
++    throw new AppError(
++      'PERMISSION_DENIED',
++      `MacServer EventKit 网关为只读服务: 提醒事项 ${operation} 写操作已在客户端拦截 (零转发/零VTODO回落)`
++    );
++  }
++
++  /**
++   * Unified GET execution spanning request, headers, and full body stream download
++   * under a single deadline timer. Ensures prompt socket release on timeout/abort.
++   */
++  private async getBoundedJson<T>(url: string, headers: Record<string, string>): Promise<T> {
++    const controller = new AbortController();
++    let isTimedOut = false;
++    const timer = setTimeout(() => {
++      isTimedOut = true;
++      controller.abort();
++    }, this.config.timeoutMs);
++
++    let activeReader: ReadableStreamDefaultReader<Uint8Array> | undefined;
++    const onAbort = () => {
++      if (activeReader) {
++        try { activeReader.cancel(); } catch {}
++      }
++    };
++    controller.signal.addEventListener('abort', onAbort, { once: true });
++
++    try {
++      let res: Response;
++      try {
++        res = await fetch(url, {
++          method: 'GET',
++          headers,
++          signal: controller.signal,
++        });
++      } catch (cause: any) {
++        if (isTimedOut || controller.signal.aborted || cause?.name === 'AbortError') {
++          throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
++            cause,
++            retryable: true,
++          });
++        }
++        throw new AppError('UPSTREAM_ERROR', `无法连接到 MacServer EventKit Bridge: ${cause?.message || cause}`, {
++          cause,
++          retryable: true,
++        });
++      }
++
++      if (res.status === 401) {
++        throw new AppError('AUTH_FAILED', 'MacServer EventKit Bridge 鉴权失败: 提供的 Bearer Token 无效或已过期');
++      }
++      if (res.status === 403) {
++        throw new AppError('PERMISSION_DENIED', 'MacServer EventKit 权限拒绝: Bridge 生产授权开关关闭或无权限访问');
++      }
++      if (res.status === 404) {
++        throw new AppError('NOT_FOUND', `MacServer 提醒列表未找到: ${url}`);
++      }
++      if (!res.ok) {
++        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 响应异常 (HTTP ${res.status})`);
++      }
++
++      const contentLength = res.headers.get('content-length');
++      if (contentLength && parseInt(contentLength, 10) > this.config.maxResponseSizeBytes) {
++        throw new AppError(
++          'UPSTREAM_ERROR',
++          `MacServer EventKit Bridge 响应体大小 (${contentLength} bytes) 超出限制 (${this.config.maxResponseSizeBytes} bytes)`
++        );
++      }
++
++      let text = '';
++      if (!res.body) {
++        text = await res.text();
++      } else {
++        const reader = res.body.getReader();
++        activeReader = reader;
++        const chunks: Uint8Array[] = [];
++        let receivedBytes = 0;
++
++        try {
++          while (true) {
++            const { done, value } = await reader.read();
++            if (done) break;
++            if (value) {
++              receivedBytes += value.length;
++              if (receivedBytes > this.config.maxResponseSizeBytes) {
++                controller.abort();
++                throw new AppError(
++                  'UPSTREAM_ERROR',
++                  `MacServer EventKit Bridge 响应体大小 (${receivedBytes} bytes) 超出限制 (${this.config.maxResponseSizeBytes} bytes)`
++                );
++              }
++              chunks.push(value);
++            }
++          }
++        } finally {
++          activeReader = undefined;
++          try { reader.releaseLock(); } catch {}
++        }
++
++        if (isTimedOut || controller.signal.aborted) {
++          throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
++            retryable: true,
++          });
++        }
++
++        const totalBuffer = new Uint8Array(receivedBytes);
++        let offset = 0;
++        for (const chunk of chunks) {
++          totalBuffer.set(chunk, offset);
++          offset += chunk.length;
++        }
++        text = new TextDecoder('utf-8').decode(totalBuffer);
++      }
++
++      if (isTimedOut || controller.signal.aborted) {
++        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
++          retryable: true,
++        });
++      }
++
++      if (!text.trim()) {
++        throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回空响应体');
++      }
++
++      try {
++        return JSON.parse(text) as T;
++      } catch (cause) {
++        throw new AppError('UPSTREAM_ERROR', 'MacServer EventKit Bridge 返回的成功响应非有效 JSON', { cause });
++      }
++    } catch (err: any) {
++      if (err instanceof AppError) throw err;
++      if (isTimedOut || controller.signal.aborted || err?.name === 'AbortError' || err?.message?.includes('aborted')) {
++        throw new AppError('UPSTREAM_ERROR', `MacServer EventKit Bridge 请求/读取超时 (${this.config.timeoutMs}ms): ${url}`, {
++          cause: err,
++          retryable: true,
++        });
++      }
++      throw new AppError('UPSTREAM_ERROR', `读取 MacServer EventKit 响应异常: ${err?.message || err}`, { cause: err });
++    } finally {
++      controller.signal.removeEventListener('abort', onAbort);
++      clearTimeout(timer);
++    }
++  }
++}
+diff --git a/src/modules/reminders/gateway/types.ts b/src/modules/reminders/gateway/types.ts
+new file mode 100644
+index 0000000..3e7c433
+--- /dev/null
++++ b/src/modules/reminders/gateway/types.ts
+@@ -0,0 +1,79 @@
++import type { AccountConfig } from '../../../core/config.js';
++import type {
++  ReminderListSummary,
++  ListRemindersParams,
++  ListRemindersResult,
++  PartialFailure,
++} from '../types.js';
++import type { Reminder, ReminderInput } from '../../../parsers/ical.js';
++import type { ReminderService, UpdateOptions } from '../service.js';
++
++export type {
++  ReminderListSummary,
++  ListRemindersParams,
++  ListRemindersResult,
++  Reminder,
++  ReminderInput,
++  UpdateOptions,
++  PartialFailure,
++  AccountConfig,
++  ReminderService,
++};
++
++export type ErrorCode =
++  | 'AUTH_FAILED'
++  | 'PERMISSION_DENIED'
++  | 'NOT_FOUND'
++  | 'INVALID_INPUT'
++  | 'SESSION_EXPIRED'
++  | 'CONFLICT'
++  | 'RATE_LIMITED'
++  | 'UPSTREAM_ERROR'
++  | 'INTERNAL';
++
++export interface SourceIdentity {
++  sourceID: string;
++  sourceType: string;
++  sourceName?: string;
++}
++
++export interface RemindersList {
++  listID: string;
++  title: string;
++  color?: string;
++  isImmutable?: boolean;
++  sourceID: string;
++  sourceType: string;
++  sourceName: string;
++}
++
++export interface ReminderItem {
++  itemID: string;
++  title: string;
++  notes?: string;
++  isCompleted: boolean;
++  dueDate?: number | string | null;
++  completionDate?: number | string | null;
++  priority?: number;
++  listID: string;
++  creationDate?: number | string | null;
++  lastModifiedDate?: number | string | null;
++  url?: string | null;
++}
++
++export interface BoundListConfig {
++  listId: string;
++  expectedSourceId: string;
++  expectedSourceName?: string;
++  expectedSourceType?: string;
++}
++
++export interface MacServerGatewayConfig {
++  macserverEndpoint: string;
++  authToken: string;
++  timeoutMs: number;
++  maxResponseSizeBytes: number;
++  allowedLists: BoundListConfig[];
++  expectedSourceType?: string;
++  expectedSourceName?: string;
++}
+diff --git a/src/modules/reminders/service.ts b/src/modules/reminders/service.ts
+index 3b55d98..bd9a13d 100644
+--- a/src/modules/reminders/service.ts
++++ b/src/modules/reminders/service.ts
+@@ -135,7 +135,7 @@ export function createReminderService(deps: ReminderServiceDeps): ReminderServic
+       // 按列表隔离，把失败原因带出去。
+       const settled = await Promise.allSettled(
+         lists.map(async (list) => {
+-          const objects = await caldav.fetchObjects(list.url, undefined);
++          const objects = await caldav.fetchObjects(list.url, undefined, 'VTODO');
+           const reminders: Reminder[] = [];
+           // R2 的提醒版本：单个对象解析失败不能拖垮同一列表里的其它对象——
+           // 隔离在这一层，比外层的按列表 allSettled 低一级。
+diff --git a/src/modules/session/tools.ts b/src/modules/session/tools.ts
+index 1f3f034..53322f2 100644
+--- a/src/modules/session/tools.ts
++++ b/src/modules/session/tools.ts
+@@ -3,6 +3,7 @@ import { findAccount, type AccountConfig, type AppConfig } from '../../core/conf
+ import { AppError } from '../../core/errors.js';
+ import { accessKeyIdFrom, tokenFamilyIdFrom } from '../../core/session.js';
+ import { wrapTool } from '../../server/wrap.js';
++import { isMacServerGatewayConfigured } from '../reminders/gateway/index.js';
+ import type { ToolDeps, ToolRegistrar } from '../../server/types.js';
+ 
+ /**
+@@ -118,10 +119,12 @@ export function registerSessionTools(server: ToolRegistrar, deps: SessionToolDep
+       // 一个都用不了。CardDAV 则是另一个方向的同一个毛病：从来没被验证过。
+       const caps = account.capabilities;
+       const needsImap = caps.mailRead || caps.mailWrite;
+-      const needsCalDav = caps.calendarRead || caps.calendarWrite || caps.remindersRead || caps.remindersWrite;
++      const isGateway = isMacServerGatewayConfigured();
++      const needsCalDav = caps.calendarRead || caps.calendarWrite || (!isGateway && (caps.remindersRead || caps.remindersWrite));
+       const needsCardDav = caps.contactsRead || caps.contactsWrite;
++      const hasAnyCap = needsImap || needsCalDav || needsCardDav || (isGateway && (caps.remindersRead || caps.remindersWrite));
+ 
+-      if (!needsImap && !needsCalDav && !needsCardDav) {
++      if (!hasAnyCap) {
+         // 信封账号：变量在用户自己的 .env 里，「重启服务」既做不到也没用（与 capabilityHint 同一口径）；
+         // 消息也不带 label——它默认就是邮箱，而 wrapTool 会把这条消息记进日志。
+         if (account.origin === 'envelope') {
+diff --git a/src/parsers/vcard-groups.ts b/src/parsers/vcard-groups.ts
+new file mode 100644
+index 0000000..a1d8b7f
+--- /dev/null
++++ b/src/parsers/vcard-groups.ts
+@@ -0,0 +1,117 @@
++import { randomUUID } from 'node:crypto';
++import ICAL from 'ical.js';
++import { AppError } from '../core/errors.js';
++import { isGroupVCard } from './vcard.js';
++
++export interface GroupVCard {
++  uid: string;
++  name: string;
++  member_urns: string[];
++}
++
++function rootOf(text: string): ICAL.Component {
++  try {
++    const root = new ICAL.Component(ICAL.parse(text) as unknown[]);
++    if (root.name !== 'vcard') throw new Error('not vCard');
++    return root;
++  } catch (cause) {
++    throw new AppError('UPSTREAM_ERROR', '通讯录分组 vCard 解析失败', { cause });
++  }
++}
++
++function groupOf(text: string): ICAL.Component {
++  const root = rootOf(text);
++  if (!isGroupVCard(text)) throw new AppError('INVALID_INPUT', '目标资源不是联系人分组');
++  return root;
++}
++
++function scalar(root: ICAL.Component, name: string): string {
++  const raw = root.getFirstPropertyValue(name);
++  return typeof raw === 'string' ? raw.trim() : '';
++}
++
++function memberProperty(root: ICAL.Component): string {
++  return scalar(root, 'version') === '4.0' ? 'member' : 'x-addressbookserver-member';
++}
++
++export function normalizeMemberUrn(uid: string): string {
++  const bare = uid.trim().replace(/^urn:uuid:/i, '');
++  if (!bare || /[\s\r\n]/.test(bare)) throw new AppError('INVALID_INPUT', '联系人 UID 无效，不能加入分组');
++  return 'urn:uuid:' + bare;
++}
++
++export function parseGroupVCard(text: string): GroupVCard {
++  const root = groupOf(text);
++  const uid = scalar(root, 'uid');
++  const name = scalar(root, 'fn');
++  if (!uid || !name) throw new AppError('UPSTREAM_ERROR', '分组卡片缺少 UID 或名称');
++  const urns = [
++    ...root.getAllProperties('x-addressbookserver-member'),
++    ...root.getAllProperties('member'),
++  ].map(p => String(p.getFirstValue() ?? '').trim()).filter(Boolean);
++  return { uid, name, member_urns: urns };
++}
++
++export function buildGroupVCard(name: string): { uid: string; data: string } {
++  const trimmed = name.trim();
++  if (!trimmed || trimmed.length > 100 || /[\r\n]/.test(trimmed)) {
++    throw new AppError('INVALID_INPUT', '分组名必须为 1–100 个字符，且不能包含换行');
++  }
++  const uid = randomUUID();
++  const root = new ICAL.Component('vcard');
++  // iCal.js uses the first property to detect the vCard 3.0 design set.
++  root.addPropertyWithValue('version', '3.0');
++  root.addPropertyWithValue('uid', uid);
++  root.addPropertyWithValue('fn', trimmed);
++  root.addPropertyWithValue('n', [trimmed, '', '', '', '']);
++  root.addPropertyWithValue('x-addressbookserver-kind', 'group');
++  root.addPropertyWithValue('rev', new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'));
++  return { uid, data: root.toString() };
++}
++
++function stamp(root: ICAL.Component): void {
++  root.removeAllProperties('rev');
++  root.addPropertyWithValue('rev', new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'));
++}
++
++export function renameGroupVCard(text: string, name: string): string {
++  const trimmed = name.trim();
++  if (!trimmed || trimmed.length > 100 || /[\r\n]/.test(trimmed)) {
++    throw new AppError('INVALID_INPUT', '分组名必须为 1–100 个字符，且不能包含换行');
++  }
++  const root = groupOf(text);
++  root.removeAllProperties('fn');
++  root.addPropertyWithValue('fn', trimmed);
++  root.removeAllProperties('n');
++  root.addPropertyWithValue('n', [trimmed, '', '', '', '']);
++  stamp(root);
++  return root.toString();
++}
++
++export function updateGroupMembersVCard(text: string, additions: string[] = [], removals: string[] = []): { data: string; changed: number } {
++  const root = groupOf(text);
++  const key = (v: string) => v.toLowerCase();
++  const before = parseGroupVCard(text).member_urns;
++  const remove = new Set(removals.map(v => key(normalizeMemberUrn(v))));
++  const kept = before.filter(v => !remove.has(key(v)));
++  const seen = new Set(kept.map(key));
++  const next = [...kept];
++  for (const v of additions) {
++    const urn = normalizeMemberUrn(v);
++    if (!seen.has(key(urn))) { next.push(urn); seen.add(key(urn)); }
++  }
++  const previous = new Set(before.map(key));
++  const following = new Set(next.map(key));
++  const changed = [...previous].filter(v => !following.has(v)).length
++    + [...following].filter(v => !previous.has(v)).length;
++  if (changed === 0) return { data: text, changed: 0 };
++  root.removeAllProperties('x-addressbookserver-member');
++  root.removeAllProperties('member');
++  for (const urn of next) root.addPropertyWithValue(memberProperty(root), urn);
++  stamp(root);
++  const data = root.toString();
++  if (Buffer.byteLength(data, 'utf8') > 240 * 1024) {
++    throw new AppError('INVALID_INPUT', '分组卡片接近 iCloud 容量上限，请拆分客户分组');
++  }
++  return { data, changed };
++}
+diff --git a/src/providers/icloud/caldav.ts b/src/providers/icloud/caldav.ts
+index 6942259..2077efb 100644
+--- a/src/providers/icloud/caldav.ts
++++ b/src/providers/icloud/caldav.ts
+@@ -22,7 +22,7 @@ export interface CalendarObject {
+ export interface CalDavProvider {
+   verify(): Promise<void>;
+   listCalendars(): Promise<CalendarInfo[]>;
+-  fetchObjects(calendarUrl: string, range?: { start: Date; end: Date }): Promise<CalendarObject[]>;
++  fetchObjects(calendarUrl: string, range?: { start: Date; end: Date }, component?: 'VEVENT' | 'VTODO'): Promise<CalendarObject[]>;
+   fetchOne(collectionUrl: string, resourceUrl: string): Promise<CalendarObject>;
+   create(calendarUrl: string, filename: string, ics: string): Promise<CalendarObject>;
+   update(object: CalendarObject): Promise<void>;
+@@ -185,14 +185,18 @@ export function createCalDavProvider(account: AccountConfig): CalDavProvider {
+       }
+     },
+ 
+-    async fetchObjects(calendarUrl, range) {
++    async fetchObjects(calendarUrl, range, component) {
+       const client = await getClient();
+       try {
++        const filters = component === 'VTODO' || (!range && component !== 'VEVENT')
++          ? [{ 'comp-filter': { _attributes: { name: 'VCALENDAR' }, 'comp-filter': { _attributes: { name: 'VTODO' } } } }]
++          : undefined;
+         const objects = await client.fetchCalendarObjects({
+           calendar: { url: calendarUrl },
+           timeRange: range
+             ? { start: range.start.toISOString(), end: range.end.toISOString() }
+             : undefined,
++          filters,
+         });
+         return objects.map((o) => toObject(calendarUrl, o));
+       } catch (err) {
+diff --git a/src/server/createServer.ts b/src/server/createServer.ts
+index 99d25c8..224c3f3 100644
+--- a/src/server/createServer.ts
++++ b/src/server/createServer.ts
+@@ -8,7 +8,12 @@ import { registerMailTools } from '../modules/mail/tools.js';
+ import { registerCalendarTools } from '../modules/calendar/tools.js';
+ import { registerReminderTools } from '../modules/reminders/tools.js';
+ import { registerContactTools } from '../modules/contacts/tools.js';
++import { registerGroupTools } from '../modules/contacts/group-tools.js';
++import { createGroupsService } from '../modules/contacts/groups.js';
+ import { registerSessionTools, type RemoteLoginDeps } from '../modules/session/tools.js';
++import { getGatewayReminderService } from '../modules/reminders/gateway/index.js';
++import type { ReminderService } from '../modules/reminders/service.js';
++
+ import type { AppConfig } from '../core/config.js';
+ import type { Logger } from '../core/logger.js';
+ import type { Session, SessionStore } from '../core/session.js';
+@@ -22,6 +27,7 @@ export interface ServerDeps {
+   registerAllModules?: boolean;
+   /** 远程入口的登录规则（env 账号开关、信封）；stdio / CLI 不传，会话工具与以前逐字相同。 */
+   remote?: RemoteLoginDeps;
++  reminderFor?: (session: Session) => ReminderService;
+ }
+ 
+ export function registerAllTools(server: ToolRegistrar, deps: ServerDeps): void {
+@@ -68,8 +74,7 @@ export function registerAllTools(server: ToolRegistrar, deps: ServerDeps): void
+     registerReminderTools(server, {
+       sessions,
+       logger,
+-      reminderFor: (session: Session) =>
+-        createReminderService({ account: session.account, caldav: session.providers.caldav }),
++      reminderFor: deps.reminderFor ?? ((session: Session) => getGatewayReminderService(session)),
+     });
+   }
+ 
+@@ -86,6 +91,22 @@ export function registerAllTools(server: ToolRegistrar, deps: ServerDeps): void
+         });
+       },
+     });
++    registerGroupTools(server, {
++      sessions,
++      logger,
++      groupsFor: (session: Session) => createGroupsService({
++        account: session.account,
++        carddav: session.providers.carddav,
++      }),
++      contactFor: (session: Session) => {
++        session.contactsCache ??= createContactsCache({ carddav: session.providers.carddav, logger });
++        return createContactService({
++          account: session.account,
++          carddav: session.providers.carddav,
++          cache: session.contactsCache,
++        });
++      },
++    });
+   }
+ }
+ 
+diff --git a/src/server/httpApp.ts b/src/server/httpApp.ts
+index c31b09f..4125651 100644
+--- a/src/server/httpApp.ts
++++ b/src/server/httpApp.ts
+@@ -404,7 +404,15 @@ export function createHttpApp(deps: CreateHttpAppDeps): HttpApp {
+   );
+ 
+   // /.well-known/*、/authorize、/token、/register、/revoke
+-  app.use(mcpAuthRouter({ provider, issuerUrl: httpConfig.publicUrl }));
++  app.use(
++    mcpAuthRouter({
++      provider,
++      issuerUrl: httpConfig.publicUrl,
++      tokenOptions: { rateLimit: false },
++      authorizationOptions: { rateLimit: { max: 1000, validate: false } },
++      clientRegistrationOptions: { rateLimit: { max: 1000, validate: false } },
++    }),
++  );
+ 
+   // 认证之前：谁都能问，所以什么都不说
+   app.get('/health', createHealthHandler());
+diff --git a/tests/unit/cli/batch.test.ts b/tests/unit/cli/batch.test.ts
+index 2a62de6..e1d1e3d 100644
+--- a/tests/unit/cli/batch.test.ts
++++ b/tests/unit/cli/batch.test.ts
+@@ -82,7 +82,7 @@ function makeTools(): { map: Map<string, CollectedTool>; calls: string[]; sessio
+       return { content: [{ type: 'text', text: JSON.stringify({ folders: [] }) }] };
+     },
+   };
+-  // 真实的工具表里 apple_login / work_done 是**存在**的（registry 收集全部 25 个）——
++  // 真实的工具表里 apple_login / work_done 是**存在**的（registry 收集全部 33 个）——
+   // 排除必须靠名字，靠"查不到"是假的保证。
+   const workDone: CollectedTool = {
+     name: 'work_done',
+diff --git a/tests/unit/cli/registry.test.ts b/tests/unit/cli/registry.test.ts
+index 4587663..2ffa854 100644
+--- a/tests/unit/cli/registry.test.ts
++++ b/tests/unit/cli/registry.test.ts
+@@ -35,9 +35,9 @@ function appConfig(overrides: Partial<AppConfig['accounts'][0]['capabilities']>
+ const sessions = {} as SessionStore;
+ 
+ describe('collectTools', () => {
+-  it('collects all 25 tools without starting an MCP server', () => {
++  it('collects all 33 tools without starting an MCP server', () => {
+     const tools = collectTools({ config: appConfig(), sessions, logger });
+-    expect(tools.size).toBe(25);
++    expect(tools.size).toBe(33);
+     for (const name of ['apple_accounts', 'mail_search', 'calendar_create_event', 'reminders_list', 'contacts_search']) {
+       expect(tools.has(name), `缺少 ${name}`).toBe(true);
+     }
+diff --git a/tests/unit/modules/contact-group-tools.test.ts b/tests/unit/modules/contact-group-tools.test.ts
+new file mode 100644
+index 0000000..aa11713
+--- /dev/null
++++ b/tests/unit/modules/contact-group-tools.test.ts
+@@ -0,0 +1,75 @@
++import { describe, expect, it, vi } from 'vitest';
++import { registerGroupTools } from '../../../src/modules/contacts/group-tools.js';
++import { encodeRef, encodeUrl } from '../../../src/core/ids.js';
++import { createLogger } from '../../../src/core/logger.js';
++import type { SessionStore } from '../../../src/core/session.js';
++import type { ToolConfig, ToolResult } from '../../../src/server/types.js';
++
++const BOOK = 'https://contacts.example.com/b/';
++const G = encodeRef({ collectionUrl: BOOK, resourceUrl: BOOK + 'g.vcf' });
++const session = { id: 's1' };
++const logger = createLogger('error', () => {});
++function setup(failAssignment = false) {
++  const handlers = new Map<string, { config: ToolConfig; handler: (a: any, e?: any) => Promise<ToolResult> }>();
++  const server = { registerTool(name: string, config: ToolConfig, handler: (a: any, e?: any) => Promise<ToolResult>) {
++    handlers.set(name, { config, handler });
++  } };
++  const sessions = { get: vi.fn().mockReturnValue(session) } as unknown as SessionStore;
++  const create = vi.fn().mockResolvedValue({ contact_id: 'c1', name: { full: '客户A' } });
++  const addMembers = vi.fn().mockImplementation(async () => { if (failAssignment) throw Error('iCloud conflict'); return { added: 1 }; });
++  const groupsFor = () => ({
++    list: vi.fn(), members: vi.fn().mockResolvedValue({ group: { group_id: G, address_book_id: encodeUrl(BOOK) } }),
++    create: vi.fn(), rename: vi.fn(), addMembers, removeMembers: vi.fn(), remove: vi.fn(),
++  });
++  registerGroupTools(server as never, { sessions, logger, groupsFor, contactFor: () => ({ create }) } as never);
++  return { handlers, sessions, create, addMembers };
++}
++
++describe('group MCP tools', () => {
++  it('exposes 8 group tools with safe annotations', () => {
++    const { handlers } = setup();
++    expect([...handlers.keys()].sort()).toEqual([
++      'contacts_create_in_groups', 'contacts_groups_add_members', 'contacts_groups_create',
++      'contacts_groups_delete', 'contacts_groups_list', 'contacts_groups_members',
++      'contacts_groups_remove_members', 'contacts_groups_rename',
++    ]);
++    expect(handlers.get('contacts_groups_list')!.config.annotations?.readOnlyHint).toBe(true);
++    expect(handlers.get('contacts_groups_delete')!.config.annotations?.destructiveHint).toBe(true);
++  });
++  it('creates contact exactly once before assigning group membership', async () => {
++    const { handlers, create, addMembers } = setup();
++    const res = await handlers.get('contacts_create_in_groups')!.handler({
++      session_id: 's1', contact: { name: { full: '客户A' } }, group_ids: [G],
++    });
++    const body = JSON.parse(res.content[0]!.text);
++    expect(res.isError).not.toBe(true);
++    expect(body.contact_created).toBe(true);
++    expect(body.group_assignment.complete).toBe(true);
++    expect(create).toHaveBeenCalledOnce();
++    expect(create).toHaveBeenCalledWith({ name: { full: '客户A' } }, encodeUrl(BOOK));
++    expect(addMembers).toHaveBeenCalledWith(G, ['c1']);
++  });
++  it('returns partial success and contact ID if group assignment fails', async () => {
++    const { handlers, create } = setup(true);
++    const res = await handlers.get('contacts_create_in_groups')!.handler({
++      session_id: 's1', contact: { name: { full: '客户A' } }, group_ids: [G],
++    });
++    const body = JSON.parse(res.content[0]!.text);
++    expect(body.contact_created).toBe(true);
++    expect(body.contact.contact_id).toBe('c1');
++    expect(body.group_assignment.complete).toBe(false);
++    expect(body.group_assignment.failed).toHaveLength(1);
++    expect(body.retry_hint).toMatch(/不得再次调用创建联系人/);
++    expect(create).toHaveBeenCalledOnce();
++  });
++  it('refuses conflicting address books before contact is created', async () => {
++    const { handlers, create } = setup();
++    const res = await handlers.get('contacts_create_in_groups')!.handler({
++      session_id: 's1', contact: { name: { full: '客户A' } }, group_ids: [G],
++      address_book_id: encodeUrl('https://contacts.example.com/other/'),
++    });
++    expect(res.isError).toBe(true);
++    expect(JSON.parse(res.content[0]!.text).error.code).toBe('INVALID_INPUT');
++    expect(create).not.toHaveBeenCalled();
++  });
++});
+diff --git a/tests/unit/modules/contacts-groups.test.ts b/tests/unit/modules/contacts-groups.test.ts
+new file mode 100644
+index 0000000..199e1da
+--- /dev/null
++++ b/tests/unit/modules/contacts-groups.test.ts
+@@ -0,0 +1,152 @@
++import { describe, expect, it, vi } from 'vitest';
++import { AppError } from '../../../src/core/errors.js';
++import { encodeRef, encodeUrl } from '../../../src/core/ids.js';
++import { buildGroupVCard, parseGroupVCard, renameGroupVCard, updateGroupMembersVCard } from '../../../src/parsers/vcard-groups.js';
++import { createGroupsService } from '../../../src/modules/contacts/groups.js';
++import type { AccountConfig } from '../../../src/core/config.js';
++import type { CardDavProvider } from '../../../src/providers/icloud/carddav.js';
++
++const BOOK = 'https://contacts.icloud.com/addressbook/';
++const GROUP_URL = BOOK + 'group.vcf';
++const CONTACT_URL = BOOK + 'person.vcf';
++const groupId = encodeRef({ collectionUrl: BOOK, resourceUrl: GROUP_URL });
++const contactId = encodeRef({ collectionUrl: BOOK, resourceUrl: CONTACT_URL });
++const contact = ['BEGIN:VCARD', 'VERSION:3.0', 'UID:PERSON-1', 'FN:客户A', 'N:客户A;;;;', 'END:VCARD'].join('\r\n');
++const existing = [
++  'BEGIN:VCARD', 'VERSION:3.0', 'UID:GROUP-1', 'FN:客户群', 'N:客户群;;;;',
++  'X-ADDRESSBOOKSERVER-KIND:group',
++  'X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:PERSON-2',
++  'X-APPLE-SPECIAL:preserve-me', 'END:VCARD',
++].join('\r\n');
++
++function account(read = true, write = true): AccountConfig {
++  return {
++    id: 'account_1', email: 'test@icloud.com', sender: 'test@icloud.com', label: 'test', appPassword: 'test',
++    capabilities: {
++      mailRead: false, mailWrite: false, calendarRead: false, calendarWrite: false,
++      remindersRead: false, remindersWrite: false, contactsRead: read, contactsWrite: write,
++    },
++  };
++}
++function mockDav() {
++  return {
++    listAddressBooks: vi.fn().mockResolvedValue([{ url: BOOK, name: 'Contacts', readOnly: false }]),
++    fetchAll: vi.fn().mockResolvedValue({ objects: [
++      { url: GROUP_URL, data: existing, etag: '"g1"' },
++      { url: CONTACT_URL, data: contact, etag: '"p1"' },
++    ] }),
++    fetchOne: vi.fn().mockImplementation(async (_book: string, url: string) =>
++      url === GROUP_URL
++        ? { url, data: existing, etag: '"g1"' }
++        : { url, data: contact, etag: '"p1"' }),
++    create: vi.fn().mockResolvedValue({ url: BOOK + 'created.vcf' }),
++    update: vi.fn().mockResolvedValue(undefined),
++    remove: vi.fn().mockResolvedValue(undefined),
++  };
++}
++
++describe('native iCloud group card parser', () => {
++  it('builds an iCloud group and parses its UID and name', () => {
++    const { uid, data } = buildGroupVCard(' 客户组 ');
++    expect(data).toMatch(/X-ADDRESSBOOKSERVER-KIND:group/i);
++    expect(parseGroupVCard(data)).toEqual({ uid, name: '客户组', member_urns: [] });
++  });
++  it('preserves unknown Apple metadata when renaming', () => {
++    const renamed = renameGroupVCard(existing, '新客户组');
++    expect(parseGroupVCard(renamed).name).toBe('新客户组');
++    expect(renamed).toContain('X-APPLE-SPECIAL:preserve-me');
++    expect(parseGroupVCard(renamed).member_urns).toEqual(['urn:uuid:PERSON-2']);
++  });
++  it('adds once, does not duplicate and can remove without touching other members', () => {
++    const once = updateGroupMembersVCard(existing, ['PERSON-1']);
++    expect(once.changed).toBe(1);
++    expect(parseGroupVCard(once.data).member_urns).toHaveLength(2);
++    expect(updateGroupMembersVCard(once.data, ['person-1']).changed).toBe(0);
++    const removed = updateGroupMembersVCard(once.data, [], ['PERSON-1']);
++    expect(removed.changed).toBe(1);
++    expect(parseGroupVCard(removed.data).member_urns).toEqual(['urn:uuid:PERSON-2']);
++    expect(removed.data).toContain('X-APPLE-SPECIAL:preserve-me');
++  });
++  it('refuses to mutate an ordinary contact card', () => {
++    expect(() => updateGroupMembersVCard(contact, ['PERSON-1'])).toThrow(AppError);
++  });
++});
++
++describe('group service guardrails', () => {
++  it('lists groups and ignores ordinary contact cards', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    const out = await svc.list();
++    expect(out.groups).toEqual([{ group_id: groupId, address_book_id: encodeUrl(BOOK), name: '客户群', member_count: 1 }]);
++  });
++  it('resolves members and reports missing references', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    const out = await svc.members(groupId);
++    expect(out.contacts).toEqual([]);
++    expect(out.unresolved_member_urns).toEqual(['urn:uuid:PERSON-2']);
++  });
++  it('adds existing contacts by UID, and updates only group card with ETag', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    const out = await svc.addMembers(groupId, [contactId, contactId]);
++    expect(out.added).toBe(1);
++    expect(dav.update).toHaveBeenCalledTimes(1);
++    expect(dav.update.mock.calls[0]![0]).toMatchObject({ bookUrl: BOOK, url: GROUP_URL, etag: '"g1"' });
++    expect(dav.remove).not.toHaveBeenCalled();
++  });
++  it('does not write the card for already-existing members', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    const result = await svc.addMembers(groupId, [contactId]); // first add
++    expect(result.added).toBe(1);
++    dav.fetchOne.mockImplementation(async (_book: string, url: string) =>
++      url === GROUP_URL
++        ? { url, etag: '"g2"', data: updateGroupMembersVCard(existing, ['PERSON-1']).data }
++        : { url, etag: '"p1"', data: contact });
++    dav.update.mockClear();
++    expect((await svc.addMembers(groupId, [contactId])).added).toBe(0);
++    expect(dav.update).not.toHaveBeenCalled();
++  });
++  it('refuses a stale expected etag before writing', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    await expect(svc.addMembers(groupId, [contactId], '"old"')).rejects.toMatchObject({ code: 'CONFLICT' });
++    expect(dav.update).not.toHaveBeenCalled();
++  });
++  it('never deletes contact when removing group, requires explicit confirmation', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    await expect(svc.remove(groupId, false)).rejects.toMatchObject({ code: 'INVALID_INPUT' });
++    expect(dav.remove).not.toHaveBeenCalled();
++    expect(await svc.remove(groupId, true)).toEqual({ deleted: true, contacts_deleted: 0 });
++    expect(dav.remove).toHaveBeenCalledWith({ bookUrl: BOOK, url: GROUP_URL, etag: '"g1"' });
++  });
++  it('rejects a forged group URL outside account books before network fetch', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    const forgedId = encodeRef({ collectionUrl: 'https://other.example/b/', resourceUrl: 'https://other.example/b/g.vcf' });
++    await expect(svc.members(forgedId)).rejects.toMatchObject({ code: 'INVALID_INPUT' });
++    expect(dav.fetchOne).not.toHaveBeenCalled();
++  });
++  it('rejects contact URL that is outside the group address book', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    const forgedId = encodeRef({ collectionUrl: BOOK, resourceUrl: 'https://elsewhere.example/ssrf' });
++    await expect(svc.addMembers(groupId, [forgedId])).rejects.toMatchObject({ code: 'INVALID_INPUT' });
++    expect(dav.update).not.toHaveBeenCalled();
++    expect(dav.fetchOne).toHaveBeenCalledTimes(1);
++  });
++  it('denies writes without account permission', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(true, false), carddav: dav as unknown as CardDavProvider });
++    await expect(svc.create('test')).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
++    expect(dav.create).not.toHaveBeenCalled();
++  });
++  it('denies duplicate group creation', async () => {
++    const dav = mockDav();
++    const svc = createGroupsService({ account: account(), carddav: dav as unknown as CardDavProvider });
++    await expect(svc.create('客户群')).rejects.toMatchObject({ code: 'CONFLICT' });
++    expect(dav.create).not.toHaveBeenCalled();
++  });
++});
+diff --git a/tests/unit/modules/contacts-search-phone.test.ts b/tests/unit/modules/contacts-search-phone.test.ts
+new file mode 100644
+index 0000000..34c75a8
+--- /dev/null
++++ b/tests/unit/modules/contacts-search-phone.test.ts
+@@ -0,0 +1,115 @@
++import { describe, it, expect } from "vitest";
++import { isPhoneQuery, digitsOnly, matchesQuery } from "../../../src/modules/contacts/service.js";
++import type { Contact } from "../../../src/parsers/vcard.js";
++
++function makeContact(overrides: Partial<Contact> = {}): Contact {
++  return {
++    contact_id: "id_1",
++    address_book_id: "book_1",
++    name: { full: "测试名", family: "测试", given: "名" },
++    emails: [],
++    phones: [],
++    urls: [],
++    addresses: [],
++    impp: [],
++    has_photo: false,
++    ...overrides,
++  };
++}
++
++describe("isPhoneQuery format validation", () => {
++  it("recognizes valid phone query strings", () => {
++    expect(isPhoneQuery("13800138888")).toBe(true);
++    expect(isPhoneQuery("+86 138-0013")).toBe(true);
++    expect(isPhoneQuery("(010) 8888 9999")).toBe(true);
++    expect(isPhoneQuery("+1 (555) 234-5678")).toBe(true);
++    expect(isPhoneQuery("138.0000.0000")).toBe(true);
++    expect(isPhoneQuery("010/12345678")).toBe(true);
++    expect(isPhoneQuery("010–12345678")).toBe(true); // en-dash
++    expect(isPhoneQuery("010—12345678")).toBe(true); // em-dash
++    expect(isPhoneQuery("（010）88888888")).toBe(true); // full-width parentheses
++    expect(isPhoneQuery(" 13800000000 ")).toBe(true); // with whitespace
++  });
++
++  it("rejects non-phone text queries", () => {
++    expect(isPhoneQuery("qz2")).toBe(false);
++    expect(isPhoneQuery("客户2")).toBe(false);
++    expect(isPhoneQuery("zz-wb-accept2")).toBe(false);
++    expect(isPhoneQuery("zhang@example.com")).toBe(false);
++    expect(isPhoneQuery("张三")).toBe(false);
++    expect(isPhoneQuery("")).toBe(false);
++    expect(isPhoneQuery("   ")).toBe(false);
++    expect(isPhoneQuery("user_123")).toBe(false);
++    expect(isPhoneQuery("dept#2")).toBe(false);
++  });
++});
++
++describe("digitsOnly extraction", () => {
++  it("strips all non-digit characters", () => {
++    expect(digitsOnly("+86 138-0000 0000")).toBe("8613800000000");
++    expect(digitsOnly("(010) 8888-9999")).toBe("01088889999");
++    expect(digitsOnly("qz2")).toBe("2");
++    expect(digitsOnly("")).toBe("");
++  });
++});
++
++describe("matchesQuery phone search boundaries", () => {
++  const contactWithPhone = makeContact({
++    name: { full: "张三", family: "张", given: "三" },
++    phones: [{ value: "+86 138 0000 0002" }],
++  });
++
++  const contactWithDomestic = makeContact({
++    name: { full: "李四", family: "李", given: "四" },
++    phones: [{ value: "13800138888" }],
++  });
++
++  it("does not match phone containing 2 when query is qz2", () => {
++    expect(matchesQuery(contactWithPhone, "qz2")).toBe(false);
++  });
++
++  it("does not match phone containing 2 when query is 客户2", () => {
++    expect(matchesQuery(contactWithPhone, "客户2")).toBe(false);
++  });
++
++  it("does not match phone containing 2 when query is zz-wb-accept2", () => {
++    expect(matchesQuery(contactWithPhone, "zz-wb-accept2")).toBe(false);
++  });
++
++  it("does not match phone containing 2 when query is 2 (below 4 digits)", () => {
++    expect(matchesQuery(contactWithPhone, "2")).toBe(false);
++  });
++
++  it("does not match phone when query has 3 digits (123)", () => {
++    const contact = makeContact({ phones: [{ value: "+86 138 1234 5678" }] });
++    expect(matchesQuery(contact, "123")).toBe(false);
++  });
++
++  it("matches phone when query reaches 4 digits (1234)", () => {
++    const contact = makeContact({ phones: [{ value: "+86 138 1234 5678" }] });
++    expect(matchesQuery(contact, "1234")).toBe(true);
++  });
++
++  it("matches +86 138-0013 against domestic number 13800138888", () => {
++    expect(matchesQuery(contactWithDomestic, "+86 138-0013")).toBe(true);
++  });
++
++  it("matches 1380013 against domestic number 13800138888", () => {
++    expect(matchesQuery(contactWithDomestic, "1380013")).toBe(true);
++  });
++
++  it("matches 1380000 against international number +86 138 0000 0002", () => {
++    expect(matchesQuery(contactWithPhone, "1380000")).toBe(true);
++  });
++
++  it("matches name text even if name contains digits", () => {
++    const c = makeContact({ name: { full: "客户2" }, phones: [{ value: "+86 139 0000 0000" }] });
++    expect(matchesQuery(c, "客户2")).toBe(true);
++    expect(matchesQuery(c, "2")).toBe(true);
++  });
++
++  it("matches note text even if note contains qz2", () => {
++    const c = makeContact({ note: "备注 qz2 测试" });
++    expect(matchesQuery(c, "qz2")).toBe(true);
++  });
++});
+diff --git a/tests/unit/modules/contacts-service.test.ts b/tests/unit/modules/contacts-service.test.ts
+index 3164234..f0165f6 100644
+--- a/tests/unit/modules/contacts-service.test.ts
++++ b/tests/unit/modules/contacts-service.test.ts
+@@ -383,3 +383,90 @@ describe('cache and service together', () => {
+     expect(result.partial_failures, '同时必须告诉调用方这本可能是旧的').toHaveLength(1);
+   });
+ });
++
++describe("contacts search phone number and regression tests", () => {
++  const regressionBook = cachedBook([
++    [BOOK + "p1.vcf", card("张三", ["ORG:某某科技;研发部", "EMAIL:zhang@example.com", "TEL:+86 138 0000 0002"])],
++    [BOOK + "p2.vcf", card("李四", ["ORG:另一家公司", "EMAIL:li@other.com", "TEL:13800138888"])],
++    [BOOK + "p3.vcf", card("王五", ["TEL:+86 138 0013 0000"])],
++    [BOOK + "p4.vcf", card("客户2", ["TITLE:高级客户", "NOTE:客户专属备注2", "TEL:+86 139 9999 8888"])],
++    [BOOK + "p5.vcf", card("测试员", ["NOTE:包含文本 qz2 以及 zz-wb-accept2 标识"])],
++  ]);
++
++  it("does NOT match contacts solely because phone number contains 2 when query is qz2", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const found = await svc.search({ query: "qz2" });
++    // 张三 phone has 2, but qz2 is text and should not trigger phone digits fallback
++    expect(found.contacts.map((c) => c.name.full)).not.toContain("张三");
++    // Only 测试员 has qz2 in note
++    expect(found.contacts.map((c) => c.name.full)).toEqual(["测试员"]);
++  });
++
++  it("matches 客户2 by normal text and does not match other contacts whose phone contains 2", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const found = await svc.search({ query: "客户2" });
++    expect(found.contacts.map((c) => c.name.full)).toEqual(["客户2"]);
++  });
++
++  it("does NOT trigger phone digit matching when query is zz-wb-accept2", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const found = await svc.search({ query: "zz-wb-accept2" });
++    expect(found.contacts.map((c) => c.name.full)).toEqual(["测试员"]);
++    expect(found.contacts.map((c) => c.name.full)).not.toContain("张三");
++  });
++
++  it("matches 1380013 against both domestic and international formatted phones", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const found = await svc.search({ query: "1380013" });
++    // Matches 李四 (13800138888) and 王五 (+86 138 0013 0000)
++    expect(found.contacts.map((c) => c.name.full).sort()).toEqual(["李四", "王五"]);
++  });
++
++  it("matches +86 138-0013 against normalized phone numbers", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const found = await svc.search({ query: "+86 138-0013" });
++    expect(found.contacts.map((c) => c.name.full).sort()).toEqual(["李四", "王五"]);
++  });
++
++  it("short digit query 2 does NOT match phone numbers, but preserves name/note text matches", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const found = await svc.search({ query: "2" });
++    // Should match 客户2 (name full, note) and 测试员 (note has qz2 / zz-wb-accept2), but NOT 张三 (phone has 2)
++    expect(found.contacts.map((c) => c.name.full).sort()).toEqual(["客户2", "测试员"]);
++    expect(found.contacts.map((c) => c.name.full)).not.toContain("张三");
++  });
++
++  it("short digit query under 4 digits (e.g. 123) does not match phone numbers containing 123", async () => {
++    const shortBook = cachedBook([
++      [BOOK + "s1.vcf", card("赵六", ["TEL:+86 138 1234 5678"])],
++    ]);
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([shortBook]) });
++    const found3 = await svc.search({ query: "123" });
++    expect(found3.contacts).toHaveLength(0);
++
++    const found4 = await svc.search({ query: "1234" });
++    expect(found4.contacts.map((c) => c.name.full)).toEqual(["赵六"]);
++  });
++
++  it("preserves name, email, org, title, note search behavior", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    expect((await svc.search({ query: "张三" })).contacts.map((c) => c.name.full)).toEqual(["张三"]);
++    expect((await svc.search({ query: "zhang@example.com" })).contacts.map((c) => c.name.full)).toEqual(["张三"]);
++    expect((await svc.search({ query: "研发部" })).contacts.map((c) => c.name.full)).toEqual(["张三"]);
++    expect((await svc.search({ query: "另一家公司" })).contacts.map((c) => c.name.full)).toEqual(["李四"]);
++    expect((await svc.search({ query: "高级客户" })).contacts.map((c) => c.name.full)).toEqual(["客户2"]);
++    expect((await svc.search({ query: "专属备注2" })).contacts.map((c) => c.name.full)).toEqual(["客户2"]);
++  });
++
++  it("preserves truncated and partial_failures semantics", async () => {
++    const svc = createContactService({ account: account(), carddav: makeCardDav(), cache: makeCache([regressionBook]) });
++    const resTrunc = await svc.search({ limit: 2 });
++    expect(resTrunc.contacts).toHaveLength(2);
++    expect(resTrunc.truncated).toBe(true);
++
++    const resAll = await svc.search({ limit: 50 });
++    expect(resAll.contacts).toHaveLength(5);
++    expect(resAll.truncated).toBeUndefined();
++    expect(resAll.partial_failures).toBeUndefined();
++  });
++});
+diff --git a/tests/unit/modules/reminders-gateway.test.ts b/tests/unit/modules/reminders-gateway.test.ts
+new file mode 100644
+index 0000000..c27a86f
+--- /dev/null
++++ b/tests/unit/modules/reminders-gateway.test.ts
+@@ -0,0 +1,410 @@
++import { describe, it, expect, beforeAll, afterAll } from 'vitest';
++import http from 'node:http';
++import type { AddressInfo } from 'node:net';
++import { EventKitReadonlyTransport } from '../../../src/modules/reminders/gateway/transport.js';
++import { createMacServerReminderService } from '../../../src/modules/reminders/gateway/service.js';
++import { getGatewayReminderService, isMacServerGatewayConfigured } from '../../../src/modules/reminders/gateway/index.js';
++import type { MacServerGatewayConfig } from '../../../src/modules/reminders/gateway/types.js';
++import type { Session } from '../../../src/core/session.js';
++import type { AccountConfig } from '../../../src/core/config.js';
++
++describe('MacServer Reminder Gateway Upstream Integration', () => {
++  let server: http.Server;
++  let serverUrl: string;
++  const validToken = 'test-token-valid-gateway-secret-32b';
++  let bridgeWriteCalls = 0;
++  let serverConnections = 0;
++  let activeSockets = new Set<any>();
++
++  const mockLists = [
++    {
++      listID: 'list-allowed-1',
++      title: '工作事项',
++      sourceID: 'source-icloud-1',
++      sourceType: 'calDAV',
++      sourceName: 'iCloud',
++      color: '#007AFF',
++      isImmutable: true,
++    },
++    {
++      listID: 'list-unallowed-2',
++      title: '私密事项',
++      sourceID: 'source-icloud-1',
++      sourceType: 'calDAV',
++      sourceName: 'iCloud',
++      color: '#34C759',
++      isImmutable: true,
++    },
++  ];
++
++  const mockItems = [
++    {
++      itemID: 'item-001',
++      listID: 'list-allowed-1',
++      title: '测试提醒1',
++      isCompleted: false,
++      priority: 1,
++      dueDate: '2026-11-08T10:00:00.000Z',
++    },
++    {
++      itemID: 'item-002',
++      listID: 'list-allowed-1',
++      title: '测试提醒2（已完成）',
++      isCompleted: true,
++      priority: 0,
++      completionDate: '2026-11-08T12:00:00.000Z',
++    },
++  ];
++
++  let customItemsResponse: any = null;
++
++  beforeAll(async () => {
++    server = http.createServer((req, res) => {
++      const auth = req.headers['authorization'];
++      if (auth !== `Bearer ${validToken}`) {
++        res.writeHead(401, { 'Content-Type': 'application/json' });
++        res.end(JSON.stringify({ error: 'UNAUTHORIZED' }));
++        return;
++      }
++
++      if (req.method !== 'GET') {
++        bridgeWriteCalls++;
++        res.writeHead(405, { 'Content-Type': 'application/json' });
++        res.end(JSON.stringify({ error: 'METHOD_NOT_ALLOWED' }));
++        return;
++      }
++
++      const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
++
++      // Stalled body stream endpoint: sends 200 headers immediately, then stalls permanently
++      if (url.pathname === '/reminders/lists/stalled-stream' || url.pathname === '/reminders/lists/stalled-stream/items') {
++        res.writeHead(200, {
++          'Content-Type': 'application/json',
++          'Transfer-Encoding': 'chunked',
++        });
++        res.flushHeaders?.();
++        // Never send body data and never close
++        return;
++      }
++
++      if (url.pathname === '/reminders/lists') {
++        res.writeHead(200, { 'Content-Type': 'application/json' });
++        res.end(JSON.stringify(mockLists));
++        return;
++      }
++
++      const itemMatch = url.pathname.match(/^\/reminders\/lists\/([^/]+)\/items$/);
++      if (itemMatch) {
++        const listId = decodeURIComponent(itemMatch[1]);
++        if (customItemsResponse !== null) {
++          res.writeHead(200, { 'Content-Type': 'application/json' });
++          res.end(JSON.stringify(customItemsResponse));
++          return;
++        }
++        if (listId === 'list-allowed-1') {
++          res.writeHead(200, { 'Content-Type': 'application/json' });
++          res.end(JSON.stringify(mockItems));
++          return;
++        }
++        res.writeHead(404, { 'Content-Type': 'application/json' });
++        res.end(JSON.stringify({ error: 'NOT_FOUND' }));
++        return;
++      }
++
++      res.writeHead(404, { 'Content-Type': 'application/json' });
++      res.end(JSON.stringify({ error: 'NOT_FOUND' }));
++    });
++
++    server.on('connection', (socket) => {
++      serverConnections++;
++      activeSockets.add(socket);
++      socket.on('close', () => activeSockets.delete(socket));
++    });
++
++    await new Promise<void>((resolve) => {
++      server.listen(0, '127.0.0.1', () => resolve());
++    });
++    const addr = server.address() as AddressInfo;
++    serverUrl = `http://127.0.0.1:${addr.port}`;
++  });
++
++  afterAll(async () => {
++    for (const socket of activeSockets) {
++      socket.destroy();
++    }
++    await new Promise<void>((resolve) => server.close(() => resolve()));
++  });
++
++  function makeAccount(caps: Partial<AccountConfig['capabilities']> = {}): AccountConfig {
++    return {
++      id: 'acc_test_gateway',
++      email: 'test@icloud.com',
++      sender: 'test@icloud.com',
++      label: 'test@icloud.com',
++      capabilities: {
++        mailRead: false,
++        mailWrite: false,
++        calendarRead: false,
++        calendarWrite: false,
++        remindersRead: true,
++        remindersWrite: false,
++        contactsRead: false,
++        contactsWrite: false,
++        ...caps,
++      },
++    };
++  }
++
++  it('correctly reports isMacServerGatewayConfigured', () => {
++    delete process.env.MACSERVER_EVENTKIT_ENDPOINT;
++    delete process.env.EVENTKIT_GATEWAY_ENDPOINT;
++    delete process.env.EVENTKIT_BRIDGE_ENDPOINT;
++    expect(isMacServerGatewayConfigured()).toBe(false);
++
++    process.env.MACSERVER_EVENTKIT_ENDPOINT = serverUrl;
++    expect(isMacServerGatewayConfigured()).toBe(true);
++  });
++
++  it('lists bound lists and filters unallowed lists', async () => {
++    const config: MacServerGatewayConfig = {
++      macserverEndpoint: serverUrl,
++      authToken: validToken,
++      timeoutMs: 3000,
++      maxResponseSizeBytes: 1048576,
++      allowedLists: [
++        {
++          listId: 'list-allowed-1',
++          expectedSourceId: 'source-icloud-1',
++          expectedSourceName: 'iCloud',
++          expectedSourceType: 'calDAV',
++        },
++      ],
++      expectedSourceType: 'calDAV',
++    };
++
++    const transport = new EventKitReadonlyTransport(config);
++    const service = createMacServerReminderService({
++      transport,
++      config,
++      account: makeAccount(),
++    });
++
++    const lists = await service.listLists();
++    expect(lists).toHaveLength(1);
++    expect(lists[0].list_id).toBe('list-allowed-1');
++    expect(lists[0].name).toBe('工作事项');
++    expect(lists[0].writable).toBe(false);
++  });
++
++  it('queries reminders in allowed list with standard Reminder schema', async () => {
++    const config: MacServerGatewayConfig = {
++      macserverEndpoint: serverUrl,
++      authToken: validToken,
++      timeoutMs: 3000,
++      maxResponseSizeBytes: 1048576,
++      allowedLists: [
++        {
++          listId: 'list-allowed-1',
++          expectedSourceId: 'source-icloud-1',
++          expectedSourceName: 'iCloud',
++          expectedSourceType: 'calDAV',
++        },
++      ],
++    };
++
++    const transport = new EventKitReadonlyTransport(config);
++    const service = createMacServerReminderService({
++      transport,
++      config,
++      account: makeAccount(),
++    });
++
++    const result = await service.list({ list_ids: ['list-allowed-1'] });
++    expect(result.reminders).toHaveLength(2);
++    expect(result.reminders[0].reminder_id).toBe('item-001');
++    expect(result.reminders[0].title).toBe('测试提醒1');
++    expect(result.reminders[0].completed).toBe(false);
++    expect(result.reminders[1].reminder_id).toBe('item-002');
++    expect(result.reminders[1].completed).toBe(true);
++  });
++
++  it('Unified Deadline: stalled response body stream fails within timeout and releases connection', async () => {
++    const shortTimeoutMs = 600;
++    const config: MacServerGatewayConfig = {
++      macserverEndpoint: serverUrl,
++      authToken: validToken,
++      timeoutMs: shortTimeoutMs,
++      maxResponseSizeBytes: 1048576,
++      allowedLists: [
++        {
++          listId: 'stalled-stream',
++          expectedSourceId: 'source-icloud-1',
++        },
++      ],
++    };
++
++    const stalledTransport = new EventKitReadonlyTransport(config);
++
++    const directStart = Date.now();
++    await expect(
++      stalledTransport.fetchReminders('stalled-stream')
++    ).rejects.toThrow(/超时/);
++    const elapsed = Date.now() - directStart;
++    expect(elapsed).toBeGreaterThanOrEqual(500);
++    expect(elapsed).toBeLessThan(1500);
++  });
++
++  describe('Strict Item Field Validation', () => {
++    const getItemValidationConfig = (): MacServerGatewayConfig => ({
++      macserverEndpoint: serverUrl,
++      authToken: validToken,
++      timeoutMs: 3000,
++      maxResponseSizeBytes: 1048576,
++      allowedLists: [
++        {
++          listId: 'list-allowed-1',
++          expectedSourceId: 'source-icloud-1',
++          expectedSourceName: 'iCloud',
++          expectedSourceType: 'calDAV',
++        },
++      ],
++    });
++
++    afterAll(() => {
++      customItemsResponse = null;
++    });
++
++    it('rejects items missing itemID', async () => {
++      customItemsResponse = [
++        { listID: 'list-allowed-1', title: '有标题无ID', isCompleted: false },
++      ];
++      const config = getItemValidationConfig();
++      const transport = new EventKitReadonlyTransport(config);
++      const service = createMacServerReminderService({ transport, config, account: makeAccount() });
++      await expect(service.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow(/itemID/);
++    });
++
++    it('rejects items missing listID', async () => {
++      customItemsResponse = [
++        { itemID: 'item-missing-list', title: '无listID', isCompleted: false },
++      ];
++      const config = getItemValidationConfig();
++      const transport = new EventKitReadonlyTransport(config);
++      const service = createMacServerReminderService({ transport, config, account: makeAccount() });
++      await expect(service.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow(/listID/);
++    });
++
++    it('rejects items with empty or mismatched listID', async () => {
++      customItemsResponse = [
++        { itemID: 'item-mismatch', listID: 'foreign-list-id', title: '篡改归属', isCompleted: false },
++      ];
++      const config = getItemValidationConfig();
++      const transport = new EventKitReadonlyTransport(config);
++      const service = createMacServerReminderService({ transport, config, account: makeAccount() });
++      await expect(service.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow(/不匹配|不一致/);
++    });
++
++    it('rejects items missing title', async () => {
++      customItemsResponse = [
++        { itemID: 'item-no-title', listID: 'list-allowed-1', isCompleted: false },
++      ];
++      const config = getItemValidationConfig();
++      const transport = new EventKitReadonlyTransport(config);
++      const service = createMacServerReminderService({ transport, config, account: makeAccount() });
++      await expect(service.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow(/title/);
++    });
++
++    it('rejects items missing isCompleted or with non-boolean completed state', async () => {
++      customItemsResponse = [
++        { itemID: 'item-bad-completed', listID: 'list-allowed-1', title: '非法完成状态', isCompleted: 'yes' },
++      ];
++      const config = getItemValidationConfig();
++      const transport = new EventKitReadonlyTransport(config);
++      const service = createMacServerReminderService({ transport, config, account: makeAccount() });
++      await expect(service.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow(/isCompleted/);
++    });
++
++    it('rejects error response objects masquerading as items', async () => {
++      customItemsResponse = [
++        { error: 'Simulated bridge error' },
++      ];
++      const config = getItemValidationConfig();
++      const transport = new EventKitReadonlyTransport(config);
++      const service = createMacServerReminderService({ transport, config, account: makeAccount() });
++      await expect(service.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow(/错误对象/);
++    });
++  });
++
++  it('rejects unallowed list querying with clear error', async () => {
++    const config: MacServerGatewayConfig = {
++      macserverEndpoint: serverUrl,
++      authToken: validToken,
++      timeoutMs: 3000,
++      maxResponseSizeBytes: 1048576,
++      allowedLists: [
++        {
++          listId: 'list-allowed-1',
++          expectedSourceId: 'source-icloud-1',
++        },
++      ],
++    };
++
++    const transport = new EventKitReadonlyTransport(config);
++    const service = createMacServerReminderService({
++      transport,
++      config,
++      account: makeAccount(),
++    });
++
++    await expect(service.list({ list_ids: ['list-unallowed-2'] })).rejects.toThrow(
++      '指定的提醒列表不存在或不对应任何已显式绑定的 iCloud 提醒列表'
++    );
++  });
++
++  it('strictly rejects write operations with 0 network calls and 0 VTODO fallback', async () => {
++    const initialWriteCalls = bridgeWriteCalls;
++    const config: MacServerGatewayConfig = {
++      macserverEndpoint: serverUrl,
++      authToken: validToken,
++      timeoutMs: 3000,
++      maxResponseSizeBytes: 1048576,
++      allowedLists: [
++        {
++          listId: 'list-allowed-1',
++          expectedSourceId: 'source-icloud-1',
++        },
++      ],
++    };
++
++    const transport = new EventKitReadonlyTransport(config);
++    const service = createMacServerReminderService({
++      transport,
++      config,
++      account: makeAccount(),
++    });
++
++    await expect(service.create({ title: '新任务' })).rejects.toThrow('只读');
++    await expect(service.update('item-001', { title: '修改任务' })).rejects.toThrow('只读');
++    await expect(service.remove('item-001')).rejects.toThrow('只读');
++
++    expect(bridgeWriteCalls).toBe(initialWriteCalls);
++  });
++
++  it('enforces session account capabilities.remindersRead', async () => {
++    process.env.MACSERVER_EVENTKIT_ENDPOINT = serverUrl;
++    process.env.MACSERVER_EVENTKIT_AUTH_TOKEN = validToken;
++    process.env.MACSERVER_EVENTKIT_ALLOWED_LISTS = 'list-allowed-1:source-icloud-1';
++
++    const disabledAccount = makeAccount({ remindersRead: false });
++    const fakeSession = {
++      id: 'sess-001',
++      account: disabledAccount,
++      providers: {},
++    } as unknown as Session;
++
++    const gatewayService = getGatewayReminderService(fakeSession);
++
++    await expect(gatewayService.listLists()).rejects.toThrow('读取权限未开启');
++    await expect(gatewayService.list({ list_ids: ['list-allowed-1'] })).rejects.toThrow('读取权限未开启');
++  });
++});
+diff --git a/tests/unit/modules/reminders-service.test.ts b/tests/unit/modules/reminders-service.test.ts
+index cd8fb0d..5b6ded6 100644
+--- a/tests/unit/modules/reminders-service.test.ts
++++ b/tests/unit/modules/reminders-service.test.ts
+@@ -117,7 +117,7 @@ describe('ReminderService.list', () => {
+     const service = createReminderService({ account: makeAccount(), caldav });
+     await service.list({});
+     expect(caldav.fetchObjects).toHaveBeenCalledTimes(1);
+-    expect(caldav.fetchObjects).toHaveBeenCalledWith(LIST, undefined);
++    expect(caldav.fetchObjects).toHaveBeenCalledWith(LIST, undefined, 'VTODO');
+   });
+ 
+   it('filters by completion state', async () => {
+@@ -158,7 +158,7 @@ describe('ReminderService.list', () => {
+     const service = createReminderService({ account: makeAccount(), caldav });
+     await service.list({ list_ids: [encodeUrl(OTHER)] });
+     expect(caldav.fetchObjects).toHaveBeenCalledTimes(1);
+-    expect(caldav.fetchObjects).toHaveBeenCalledWith(OTHER, undefined);
++    expect(caldav.fetchObjects).toHaveBeenCalledWith(OTHER, undefined, 'VTODO');
+   });
+ 
+   it('raises NOT_FOUND naming a list_id that matches nothing', async () => {
+diff --git a/tests/unit/server/http-e2e.test.ts b/tests/unit/server/http-e2e.test.ts
+index eaed28f..311deae 100644
+--- a/tests/unit/server/http-e2e.test.ts
++++ b/tests/unit/server/http-e2e.test.ts
+@@ -857,7 +857,7 @@ describe('multi-person isolation', () => {
+ 
+   // 远程入口的账号在登录时才出现（信封），注册阶段看不到任何能力：按 env 账号的能力决定注册
+   // 哪些模块的话，零个 env 账号的服务器就只剩三个会话工具，信封登录进来什么也做不了。
+-  it('remote entry registers all 25 tools even with zero env accounts', async () => {
++  it('remote entry registers all 33 tools even with zero env accounts', async () => {
+     const srv = await startServer({ accounts: [] });
+     try {
+       const a = await runFullAuthFlow(srv.base, srv.accessKey);
+@@ -865,7 +865,7 @@ describe('multi-person isolation', () => {
+       const mcpSessionId = await openMcp(srv.base, token);
+       const listed = await listTools(srv.base, token, mcpSessionId);
+       expect(listed.status).toBe(200);
+-      expect(listed.names).toHaveLength(25);
++      expect(listed.names).toHaveLength(33);
+       expect(listed.names).toContain('apple_login');
+       expect(listed.names).toContain('mail_send');
+       expect(listed.names).toContain('contacts_search');
+diff --git a/tests/unit/server/register.test.ts b/tests/unit/server/register.test.ts
+index 52c49e0..6b04e13 100644
+--- a/tests/unit/server/register.test.ts
++++ b/tests/unit/server/register.test.ts
+@@ -138,11 +138,11 @@ describe('registerAllTools', () => {
+     expect(names).toContain('mail_search');
+   });
+ 
+-  it('registerAllModules registers all 25 tools with zero accounts', () => {
++  it('registerAllModules registers all 33 tools with zero accounts', () => {
+     const { server, names } = collect();
+     const config = loadConfig({}, { allowNoAccounts: true });
+     registerAllTools(server, { config, sessions, logger, registerAllModules: true });
+-    expect(names).toHaveLength(25);
++    expect(names).toHaveLength(33);
+   });
+ 
+   it('without registerAllModules zero accounts registers only the 3 session tools', () => {
+diff --git a/tests/unit/server/tool-ownership.test.ts b/tests/unit/server/tool-ownership.test.ts
+index 8f461be..9d421db 100644
+--- a/tests/unit/server/tool-ownership.test.ts
++++ b/tests/unit/server/tool-ownership.test.ts
+@@ -59,7 +59,7 @@ describe('tool-level session ownership', () => {
+       expect(JSON.parse(res.content[0]!.text).error.code, name).toBe('SESSION_EXPIRED');
+       checked += 1;
+     }
+-    expect(checked).toBe(22);
++    expect(checked).toBe(30);
+   });
+ 
+   it('work_done from another key does not destroy the session', async () => {

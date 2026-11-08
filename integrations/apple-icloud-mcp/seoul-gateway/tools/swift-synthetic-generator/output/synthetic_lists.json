@@ -1,0 +1,20 @@
+[
+  {
+    "color" : "#007AFF",
+    "isImmutable" : true,
+    "listID" : "9D9A****03F3",
+    "sourceID" : "src-icloud-test-01",
+    "sourceName" : "iCloud",
+    "sourceType" : "calDAV",
+    "title" : "M****试"
+  },
+  {
+    "color" : "#34C759",
+    "isImmutable" : true,
+    "listID" : "list-second-02",
+    "sourceID" : "src-icloud-test-01",
+    "sourceName" : "iCloud",
+    "sourceType" : "calDAV",
+    "title" : "日常提醒"
+  }
+]
