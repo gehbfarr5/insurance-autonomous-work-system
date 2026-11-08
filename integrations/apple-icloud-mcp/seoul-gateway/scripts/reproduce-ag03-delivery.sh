@@ -283,7 +283,7 @@ cat << EOF > "$WORK_DIR/fake-bridge.mjs"
 import http from 'node:http';
 
 const PORT = $BRIDGE_PORT;
-const HOST = '172.30.56.1';
+const HOST = '0.0.0.0';
 const VALID_TOKEN = 'test-valid-bearer-token-at-least-32chars!';
 const SYNTH_LIST_ID = '$SYNTH_LIST_ID';
 const SYNTH_SOURCE_ID = '$SYNTH_SOURCE_ID';
@@ -415,7 +415,7 @@ node "$WORK_DIR/fake-bridge.mjs" > "$WORK_DIR/logs/fake-bridge.log" 2>&1 &
 BRIDGE_PID=$!
 echo "       Fake Bridge started (PID: $BRIDGE_PID)"
 
-wait_for_health "http://172.30.56.1:18765/health" 30 0.5 "Fake Bridge"
+wait_for_health "http://127.0.0.1:${BRIDGE_PORT}/health" 30 0.5 "Fake Bridge"
 
 echo "[8/11] Starting Candidate container via Compose stack ($CANDIDATE_PROJECT, port $CANDIDATE_PORT)..."
 RUN_ID="$RUN_ID" \
@@ -462,7 +462,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes, createHash } from 'node:crypto';
 
 const BASE_URL = 'http://127.0.0.1:${CANDIDATE_PORT}';
-const BRIDGE_STATS_URL = 'http://172.30.56.1:18765/stats';
+const BRIDGE_STATS_URL = 'http://127.0.0.1:${BRIDGE_PORT}/stats';
 const REDIRECT_URI = 'http://127.0.0.1:9/callback';
 const PROTOCOL_VERSION = '2025-06-18';
 const NEWLINE = String.fromCharCode(10);
