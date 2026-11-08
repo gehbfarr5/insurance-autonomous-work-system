@@ -15,6 +15,8 @@
 - **中断与信号处理确定性**：捕获 INT/TERM 严格以非零状态（130/143）退出，重入守卫确保清理仅执行一次，中断绝无残留且绝无 PASS 回执
 - **部署与测试配置一致性**：部署与测试共用同一 `config/compose.candidate.yaml` 规格
 - **回执生成时序**：仅在测试完成、资源彻底清理无残留、生产容器状态前后校验一致后生成最终 PASS 回执
+- **确定性生产启动与恢复套件**：`scripts/production-entry.sh` 与 `tests/test-production-drills.sh`（全量覆盖部署、启动失败回滚、健康超时回滚、独立环境恢复、`docker-compose.yml` 优先级遮蔽防护、以及中断信号自动回滚等 6 项严格演练，实测 6/6 全部通过）
+- **运维维护窗口**：预计 3~10 秒（仅含容器平滑重启及 `/health` 就绪等待，无需拉取或重新构建镜像）
 - **目标环境**：
   - Seoul MCP 主机 (`lhins-84gffkd8` / `VM-0-10-ubuntu`)，生产容器 `insurance-carddav-mcp-carddav-1` (端口 `127.0.0.1:17734->17733/tcp`)
   - Intel MacServer (`macserver-ts`, LaunchAgent `gui/501/com.muse.macserver-eventkit`)
