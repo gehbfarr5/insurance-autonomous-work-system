@@ -396,28 +396,29 @@ EOF
 
   # Step 4: Deploy compose.production.yaml
   echo "[3/6] Deploying candidate compose configuration..."
-  cp "$COMPOSE_PROD_TEMPLATE" "$PROD_DIR/compose.yaml"
+  if ! cp "$COMPOSE_PROD_TEMPLATE" "$PROD_DIR/compose.yaml"; then
+    echo "CRITICAL ERROR: Failed to deploy candidate compose configuration to $PROD_DIR/compose.yaml!" >&2
+    deploy_trap_handler 1
+  fi
 
   # Tag candidate image as latest
-  docker tag "$LOCKED_CANDIDATE_IMAGE" "${PROD_PROJECT}-carddav:latest"
+  if ! docker tag "$LOCKED_CANDIDATE_IMAGE" "${PROD_PROJECT}-carddav:latest"; then
+    echo "CRITICAL ERROR: Failed to tag candidate image as latest!" >&2
+    deploy_trap_handler 1
+  fi
 
   # Step 5: Restart container via Compose (--no-build)
   echo "[4/6] Restarting Seoul MCP container with candidate image..."
   cd "$PROD_DIR"
-  if [ "${INJECT_COMPOSE_STARTUP_FAILURE:-0}" = "1" ]; then
-    echo "[FAULT_INJECTION] Injected failure during Compose candidate startup (post-backup and post-config-write)!" >&2
-    deploy_trap_handler 1
-  fi
-
-  CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
-  BIND_PORT="127.0.0.1:${PROD_PORT}" \
-  SECRETS_FILE="$PROD_SECRETS_FILE" \
-  GATEWAY_ENV_FILE="$PROD_GATEWAY_ENV_FILE" \
-  DATA_DIR="$PROD_DATA_DIR" \
-  docker compose -p "$PROD_PROJECT" -f "$PROD_DIR/compose.yaml" up -d --no-build carddav || {
+  if ! (CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
+    BIND_PORT="127.0.0.1:${PROD_PORT}" \
+    SECRETS_FILE="$PROD_SECRETS_FILE" \
+    GATEWAY_ENV_FILE="$PROD_GATEWAY_ENV_FILE" \
+    DATA_DIR="$PROD_DATA_DIR" \
+    docker compose -p "$PROD_PROJECT" -f "$PROD_DIR/compose.yaml" up -d --no-build carddav); then
     echo "CRITICAL ERROR: Candidate docker compose up failed!" >&2
     deploy_trap_handler 1
-  }
+  fi
 
   # Step 6: Verify health & image ID
   echo "[5/6] Verifying candidate container health and image correspondence..."
@@ -497,23 +498,38 @@ rollback_baseline() {
   echo " Time:             $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   echo "========================================================================"
 
-  # 1. Stop candidate container
+  # 1. Stop candidate container and strictly verify completion before restoring configs
   echo "[1/5] Stopping current container..."
   cd "$target_dir"
-  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "stop" ]; then
-    echo "[FAULT_INJECTION] Injected failure during container stopping!" >&2
-    echo "[RECOVERY_FAILED] Rollback failed at Step 1 (stop container)." >&2
+  local stop_ok=0
+  if docker compose -p "$target_project" stop carddav >/dev/null 2>&1; then
+    stop_ok=1
+  elif docker stop "$target_container" >/dev/null 2>&1; then
+    stop_ok=1
+  fi
+
+  if [ "$stop_ok" -eq 0 ]; then
+    echo "CRITICAL ERROR: Failed to stop container via docker compose stop or docker stop!" >&2
+  fi
+
+  # Confirm container has stopped before proceeding with configuration restore
+  if docker inspect "$target_container" >/dev/null 2>&1; then
+    local c_status
+    c_status=$(docker inspect "$target_container" --format '{{.State.Status}}' 2>/dev/null || echo "unknown")
+    if [ "$c_status" = "running" ] || [ "$c_status" = "restarting" ]; then
+      echo "CRITICAL ERROR: Container $target_container is confirmed still active (status: $c_status)!" >&2
+      echo "[RECOVERY_FAILED] Rollback failed at Step 1 (container stop confirmation failed)." >&2
+      return 1
+    fi
+  elif [ "$stop_ok" -eq 0 ]; then
+    echo "CRITICAL ERROR: Container stop command failed and status cannot be verified!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 1 (container stop command failed)." >&2
     return 1
   fi
-  docker compose -p "$target_project" stop carddav 2>/dev/null || docker stop "$target_container" 2>/dev/null || true
+  echo "       Container $target_container stopped successfully."
 
   # 2. Restore configuration from backup, preserving runtime OAuth tokens
   echo "[2/5] Restoring configuration files from backup ($backup_dir)..."
-  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "rsync" ]; then
-    echo "[FAULT_INJECTION] Injected failure during rsync configuration restoration!" >&2
-    echo "[RECOVERY_FAILED] Rollback failed at Step 2 (rsync restore)." >&2
-    return 1
-  fi
   if ! rsync -a --exclude 'data/tokens.json.enc*' "$backup_dir/" "$target_dir/"; then
     echo "CRITICAL ERROR: Failed to restore configuration files via rsync from $backup_dir to $target_dir!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 2 (rsync restore)." >&2
@@ -532,11 +548,6 @@ rollback_baseline() {
 
   # 3. Retag baseline image
   echo "[3/5] Restoring baseline image tag ($target_baseline_image)..."
-  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "docker_tag" ]; then
-    echo "[FAULT_INJECTION] Injected failure during baseline image tagging!" >&2
-    echo "[RECOVERY_FAILED] Rollback failed at Step 3 (docker tag)." >&2
-    return 1
-  fi
   if ! docker tag "$target_baseline_image" "${target_project}-carddav:latest"; then
     echo "CRITICAL ERROR: Failed to tag baseline image $target_baseline_image as latest!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 3 (docker tag)." >&2
@@ -545,11 +556,6 @@ rollback_baseline() {
 
   # 4. Restart baseline container using original Compose configuration
   echo "[4/5] Restarting baseline container via Compose with original configuration ($orig_basename)..."
-  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "compose_up" ]; then
-    echo "[FAULT_INJECTION] Injected failure during baseline container compose up!" >&2
-    echo "[RECOVERY_FAILED] Rollback failed at Step 4 (compose up)." >&2
-    return 1
-  fi
   if ! (cd "$target_dir" && CARDDAV_IMAGE="$target_baseline_image" BIND_PORT="127.0.0.1:${target_port}" docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav); then
     echo "CRITICAL ERROR: Docker compose up failed while restarting baseline container!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 4 (compose up)." >&2

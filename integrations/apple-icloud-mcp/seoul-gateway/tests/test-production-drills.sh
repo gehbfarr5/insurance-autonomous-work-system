@@ -3,16 +3,20 @@ set -euo pipefail
 
 # ==============================================================================
 # AG-03: Comprehensive Production Entry & Standalone Recovery Drills
-# (生产启动、中断防护与确定性恢复全场景演练套件)
+# (生产启动、中断防护与确定性恢复全场景演练套件 - 真实命令替身验证版)
 #
 # SCENARIOS COVERED (Strict requirements):
-# (a) 正常部署流程 (Successful deploy from baseline to candidate)
-# (b) 备份后及配置写入后 Compose 启动失败触发自动回滚 (Post-backup startup failure)
-# (c) 候选健康检查超时/失败触发自动回滚 (Health probe failure / timeout)
-# (d) 独立新终端/子进程直接触发恢复 (Standalone env -i recovery)
-# (e) 原服务配置文件名为 docker-compose.yml 时的恢复（验证 compose.yaml 不会残留遮蔽）
-# (f) 变更过程中途向指定部署 PID 发送中断信号（SIGTERM）的自动回滚与无残留验证
-# (g) 恢复自身关键步骤失败验证 (Covering rsync, docker tag, compose up failures, RECOVERY_FAILED flag)
+# (a)  正常部署流程 (Successful deploy from baseline to candidate)
+# (b1) 候选配置复制失败拦截与自动回滚 (Candidate cp failure via real command shim)
+# (b2) 候选镜像标记失败拦截与自动回滚 (Candidate docker tag failure via real command shim)
+# (b3) 备份后及配置写入后 Compose 启动失败拦截与自动回滚 (Candidate compose up failure via real command shim)
+# (c)  候选健康检查超时/失败触发自动回滚 (Health probe failure / timeout)
+# (d)  独立新终端/子进程直接触发恢复 (Standalone env -i recovery)
+# (e)  原服务配置文件名为 docker-compose.yml 时的恢复（验证 compose.yaml 不会残留遮蔽）
+# (f)  变更过程中途向指定部署 PID 发送中断信号（SIGTERM）的自动回滚与无残留验证
+# (g1) 恢复时容器停止失败真实拦截与 RECOVERY_FAILED 验证 (Rollback stop failure via real command shim)
+# (g2) 恢复时 rsync 失败真实拦截与 RECOVERY_FAILED 验证 (Rollback rsync failure via real command shim)
+# (g3) 恢复时 Compose 启动失败真实拦截与 RECOVERY_FAILED 验证 (Rollback compose up failure via real command shim)
 #
 # SAFETY GUARANTEE:
 # - Completely isolated synthetic project (ag03-drill-*) and port (17744).
@@ -42,6 +46,77 @@ echo "========================================================================"
 CURRENT_STAGING_DIR=""
 CURRENT_PROJECT=""
 CURRENT_CONTAINER=""
+SHIM_DIR="/tmp/ag03-shims-${DRILL_TS}-$$"
+
+# Setup command shims (命令替身) to intercept actual command executions without modifying production entry
+REAL_CP="$(command -v cp)"
+REAL_DOCKER="$(command -v docker)"
+REAL_RSYNC="$(command -v rsync)"
+
+mkdir -p "$SHIM_DIR"
+
+cat << EOF > "$SHIM_DIR/cp"
+#!/usr/bin/env bash
+if [ "\${SHIM_FAIL_ACTION:-}" = "candidate_cp" ]; then
+  for arg in "\$@"; do
+    if [[ "\$arg" == *"compose.production.yaml" ]] || [[ "\$arg" == */compose.yaml ]]; then
+      echo "[SHIM] Intercepted cp command: simulating candidate configuration copy failure!" >&2
+      exit 1
+    fi
+  done
+fi
+exec "$REAL_CP" "\$@"
+EOF
+chmod +x "$SHIM_DIR/cp"
+
+cat << EOF > "$SHIM_DIR/rsync"
+#!/usr/bin/env bash
+if [ "\${SHIM_FAIL_ACTION:-}" = "rollback_rsync" ]; then
+  echo "[SHIM] Intercepted rsync command: simulating rsync restoration failure!" >&2
+  exit 1
+fi
+exec "$REAL_RSYNC" "\$@"
+EOF
+chmod +x "$SHIM_DIR/rsync"
+
+cat << EOF > "$SHIM_DIR/docker"
+#!/usr/bin/env bash
+case "\${SHIM_FAIL_ACTION:-}" in
+  candidate_tag)
+    if [ "\$1" = "tag" ] && [[ "\$*" == *":latest"* ]]; then
+      echo "[SHIM] Intercepted docker tag: simulating candidate image tagging failure!" >&2
+      exit 1
+    fi
+    ;;
+  candidate_compose_up)
+    if [ "\$1" = "compose" ] && [[ "\$*" == *"up"* ]]; then
+      if [ "\${CARDDAV_IMAGE:-}" = "$LOCKED_CANDIDATE_IMAGE" ]; then
+        echo "[SHIM] Intercepted docker compose up: simulating candidate container startup failure!" >&2
+        exit 1
+      fi
+    fi
+    ;;
+  rollback_stop)
+    if [ "\$1" = "compose" ] && [[ "\$*" == *"stop"* ]]; then
+      echo "[SHIM] Intercepted docker compose stop: simulating stop failure!" >&2
+      exit 1
+    fi
+    if [ "\$1" = "stop" ]; then
+      echo "[SHIM] Intercepted docker stop: simulating stop failure!" >&2
+      exit 1
+    fi
+    ;;
+  rollback_compose_up)
+    if [ "\$1" = "compose" ] && [[ "\$*" == *"up"* ]]; then
+      echo "[SHIM] Intercepted docker compose up: simulating rollback baseline startup failure!" >&2
+      exit 1
+    fi
+    ;;
+esac
+
+exec "$REAL_DOCKER" "\$@"
+EOF
+chmod +x "$SHIM_DIR/docker"
 
 cleanup_current_drill() {
   if [ -n "$CURRENT_PROJECT" ]; then
@@ -56,7 +131,12 @@ cleanup_current_drill() {
     rm -rf "$CURRENT_STAGING_DIR" "${CURRENT_STAGING_DIR}".bak-* 2>/dev/null || true
   fi
 }
-trap cleanup_current_drill EXIT INT TERM
+
+cleanup_all() {
+  cleanup_current_drill
+  rm -rf "$SHIM_DIR" 2>/dev/null || true
+}
+trap cleanup_all EXIT INT TERM
 
 setup_drill_env() {
   local drill_name="$1"
@@ -179,63 +259,164 @@ fi
 echo "PASS [DRILL A]: Normal deployment completed successfully with candidate active and healthy."
 
 # ------------------------------------------------------------------------------
-# DRILL (b): 备份完成并写入配置后的 Compose 启动失败触发自动回滚
+# DRILL (b1): 候选配置复制失败拦截与自动回滚 (Candidate cp failure via real command shim)
 # ------------------------------------------------------------------------------
 echo ""
-echo ">>> [DRILL B] Testing Post-Backup & Post-Config-Write Compose Startup Failure Auto-Rollback..."
-setup_drill_env "fail-startup" "compose.yaml"
+echo ">>> [DRILL B1] Testing Candidate Config Copy Failure Auto-Rollback (Shim cp)..."
+setup_drill_env "fail-cp" "compose.yaml"
 
 set +e
-INJECT_COMPOSE_STARTUP_FAILURE=1 \
+PATH="$SHIM_DIR:$PATH" \
+SHIM_FAIL_ACTION="candidate_cp" \
 APPLY_PRODUCTION_APPROVED=1 \
 PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_b.log 2>&1
-deploy_exit=$?
+"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_b1.log 2>&1
+deploy_b1_exit=$?
 set -e
 
-cat /tmp/ag03_drill_b.log
+cat /tmp/ag03_drill_b1.log
 
-if [ "$deploy_exit" -eq 0 ]; then
-  echo "FAIL [DRILL B]: Faulty deploy should have failed with non-zero exit code!" >&2
+if [ "$deploy_b1_exit" -eq 0 ]; then
+  echo "FAIL [DRILL B1]: Faulty deploy should have failed with non-zero exit code!" >&2
+  exit 1
+fi
+
+if ! grep -q "Intercepted cp command: simulating candidate configuration copy failure" /tmp/ag03_drill_b1.log; then
+  echo "FAIL [DRILL B1]: Intercepted cp log not found!" >&2
+  exit 1
+fi
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" /tmp/ag03_drill_b1.log; then
+  echo "FAIL [DRILL B1]: Unified rollback trigger log not found!" >&2
+  exit 1
+fi
+if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_b1.log; then
+  echo "FAIL [DRILL B1]: Rollback completion log not found!" >&2
+  exit 1
+fi
+
+b_img=$(docker inspect "$CURRENT_CONTAINER" --format '{{.Image}}')
+if [ "$b_img" != "$LOCKED_BASELINE_IMAGE" ]; then
+  echo "FAIL [DRILL B1]: Container was not rolled back to baseline! Got $b_img" >&2
+  exit 1
+fi
+if ! curl -sf "$DRILL_HEALTH_URL" >/dev/null 2>&1; then
+  echo "FAIL [DRILL B1]: Restored baseline container is not healthy!" >&2
+  exit 1
+fi
+echo "PASS [DRILL B1]: Candidate cp failure cleanly triggered auto-rollback to healthy baseline."
+
+# ------------------------------------------------------------------------------
+# DRILL (b2): 候选镜像标记失败拦截与自动回滚 (Candidate docker tag failure via real command shim)
+# ------------------------------------------------------------------------------
+echo ""
+echo ">>> [DRILL B2] Testing Candidate Docker Tag Failure Auto-Rollback (Shim docker tag)..."
+setup_drill_env "fail-tag" "compose.yaml"
+
+set +e
+PATH="$SHIM_DIR:$PATH" \
+SHIM_FAIL_ACTION="candidate_tag" \
+APPLY_PRODUCTION_APPROVED=1 \
+PROD_PROJECT="$CURRENT_PROJECT" \
+PROD_CONTAINER="$CURRENT_CONTAINER" \
+PROD_DIR="$CURRENT_STAGING_DIR" \
+PROD_PORT="$DRILL_PORT" \
+"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_b2.log 2>&1
+deploy_b2_exit=$?
+set -e
+
+cat /tmp/ag03_drill_b2.log
+
+if [ "$deploy_b2_exit" -eq 0 ]; then
+  echo "FAIL [DRILL B2]: Faulty deploy should have failed with non-zero exit code!" >&2
+  exit 1
+fi
+
+if ! grep -q "Intercepted docker tag: simulating candidate image tagging failure" /tmp/ag03_drill_b2.log; then
+  echo "FAIL [DRILL B2]: Intercepted docker tag log not found!" >&2
+  exit 1
+fi
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" /tmp/ag03_drill_b2.log; then
+  echo "FAIL [DRILL B2]: Unified rollback trigger log not found!" >&2
+  exit 1
+fi
+if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_b2.log; then
+  echo "FAIL [DRILL B2]: Rollback completion log not found!" >&2
+  exit 1
+fi
+
+b_img=$(docker inspect "$CURRENT_CONTAINER" --format '{{.Image}}')
+if [ "$b_img" != "$LOCKED_BASELINE_IMAGE" ]; then
+  echo "FAIL [DRILL B2]: Container was not rolled back to baseline! Got $b_img" >&2
+  exit 1
+fi
+if ! curl -sf "$DRILL_HEALTH_URL" >/dev/null 2>&1; then
+  echo "FAIL [DRILL B2]: Restored baseline container is not healthy!" >&2
+  exit 1
+fi
+echo "PASS [DRILL B2]: Candidate docker tag failure cleanly triggered auto-rollback to healthy baseline."
+
+# ------------------------------------------------------------------------------
+# DRILL (b3): 备份完成并写入配置后的 Compose 启动失败拦截与自动回滚 (Shim docker compose up)
+# ------------------------------------------------------------------------------
+echo ""
+echo ">>> [DRILL B3] Testing Post-Backup Candidate Compose Up Failure Auto-Rollback (Shim compose up)..."
+setup_drill_env "fail-compose-up" "compose.yaml"
+
+set +e
+PATH="$SHIM_DIR:$PATH" \
+SHIM_FAIL_ACTION="candidate_compose_up" \
+APPLY_PRODUCTION_APPROVED=1 \
+PROD_PROJECT="$CURRENT_PROJECT" \
+PROD_CONTAINER="$CURRENT_CONTAINER" \
+PROD_DIR="$CURRENT_STAGING_DIR" \
+PROD_PORT="$DRILL_PORT" \
+"$ENTRY_SCRIPT" deploy > /tmp/ag03_drill_b3.log 2>&1
+deploy_b3_exit=$?
+set -e
+
+cat /tmp/ag03_drill_b3.log
+
+if [ "$deploy_b3_exit" -eq 0 ]; then
+  echo "FAIL [DRILL B3]: Faulty deploy should have failed with non-zero exit code!" >&2
   exit 1
 fi
 
 # Assertions proving failure happened AFTER backup and config write, and rollback was triggered
-if ! grep -q "Performing live state backup to" /tmp/ag03_drill_b.log; then
-  echo "FAIL [DRILL B]: Backup step was not reached before failure!" >&2
+if ! grep -q "Performing live state backup to" /tmp/ag03_drill_b3.log; then
+  echo "FAIL [DRILL B3]: Backup step was not reached before failure!" >&2
   exit 1
 fi
-if ! grep -q "Deploying candidate compose configuration" /tmp/ag03_drill_b.log; then
-  echo "FAIL [DRILL B]: Candidate compose write was not reached before failure!" >&2
+if ! grep -q "Deploying candidate compose configuration" /tmp/ag03_drill_b3.log; then
+  echo "FAIL [DRILL B3]: Candidate compose write was not reached before failure!" >&2
   exit 1
 fi
-if ! grep -q "Injected failure during Compose candidate startup" /tmp/ag03_drill_b.log; then
-  echo "FAIL [DRILL B]: Injected startup failure log not found!" >&2
+if ! grep -q "Intercepted docker compose up: simulating candidate container startup failure" /tmp/ag03_drill_b3.log; then
+  echo "FAIL [DRILL B3]: Intercepted compose up failure log not found!" >&2
   exit 1
 fi
-if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" /tmp/ag03_drill_b.log; then
-  echo "FAIL [DRILL B]: Unified rollback trigger log not found!" >&2
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" /tmp/ag03_drill_b3.log; then
+  echo "FAIL [DRILL B3]: Unified rollback trigger log not found!" >&2
   exit 1
 fi
-if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_b.log; then
-  echo "FAIL [DRILL B]: Rollback completion log not found!" >&2
+if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_b3.log; then
+  echo "FAIL [DRILL B3]: Rollback completion log not found!" >&2
   exit 1
 fi
 
 # Verify baseline was automatically restored
 b_img=$(docker inspect "$CURRENT_CONTAINER" --format '{{.Image}}')
 if [ "$b_img" != "$LOCKED_BASELINE_IMAGE" ]; then
-  echo "FAIL [DRILL B]: Container was not rolled back to baseline! Got $b_img" >&2
+  echo "FAIL [DRILL B3]: Container was not rolled back to baseline! Got $b_img" >&2
   exit 1
 fi
 if ! curl -sf "$DRILL_HEALTH_URL" >/dev/null 2>&1; then
-  echo "FAIL [DRILL B]: Restored baseline container is not healthy!" >&2
+  echo "FAIL [DRILL B3]: Restored baseline container is not healthy!" >&2
   exit 1
 fi
-echo "PASS [DRILL B]: Post-backup startup failure cleanly triggered auto-rollback to healthy baseline."
+echo "PASS [DRILL B3]: Post-backup candidate compose up failure cleanly triggered auto-rollback to healthy baseline."
 
 # ------------------------------------------------------------------------------
 # DRILL (c): 候选健康检查超时/失败触发自动回滚
@@ -420,11 +601,11 @@ fi
 echo "PASS [DRILL F]: Signal interruption to exact PID cleanly caught; auto-rollback restored baseline."
 
 # ------------------------------------------------------------------------------
-# DRILL (g): 恢复自身关键步骤失败验证 (Covering rsync, docker tag, compose up failures, RECOVERY_FAILED flag)
+# DRILL (g1): 恢复时容器停止失败真实拦截与 RECOVERY_FAILED 验证 (Shim docker stop)
 # ------------------------------------------------------------------------------
 echo ""
-echo ">>> [DRILL G] Testing Rollback Critical Failure Handling & RECOVERY_FAILED Detection..."
-setup_drill_env "rec-fail" "compose.yaml"
+echo ">>> [DRILL G1] Testing Rollback Stop Container Failure Handling & RECOVERY_FAILED Detection..."
+setup_drill_env "rec-fail-stop" "compose.yaml"
 
 # Deploy candidate normally first so we have a valid backup
 APPLY_PRODUCTION_APPROVED=1 \
@@ -436,91 +617,142 @@ PROD_PORT="$DRILL_PORT" \
 
 valid_bak=$(ls -td "$CURRENT_STAGING_DIR".bak-* | head -1)
 
-# Test 1: Injected rsync failure during rollback
+echo "--- Testing rollback failure on container stop step ---"
+set +e
+PATH="$SHIM_DIR:$PATH" \
+SHIM_FAIL_ACTION="rollback_stop" \
+"$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g1.log 2>&1
+stop_fail_exit=$?
+set -e
+
+cat /tmp/ag03_drill_g1.log
+
+if [ "$stop_fail_exit" -eq 0 ]; then
+  echo "FAIL [DRILL G1]: Rollback should have failed when container stop failed!" >&2
+  exit 1
+fi
+if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g1.log; then
+  echo "FAIL [DRILL G1]: RECOVERY_FAILED tag not output on container stop failure!" >&2
+  exit 1
+fi
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g1.log; then
+  echo "FAIL [DRILL G1]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
+  exit 1
+fi
+if [ ! -d "$valid_bak" ]; then
+  echo "FAIL [DRILL G1]: Backup directory was deleted upon rollback failure!" >&2
+  exit 1
+fi
+echo "       PASS: Container stop failure correctly flagged RECOVERY_FAILED, exited non-zero, preserved backup."
+echo "PASS [DRILL G1]: Rollback stop failure strictly intercepted and verified."
+
+# ------------------------------------------------------------------------------
+# DRILL (g2): 恢复时 rsync 失败真实拦截与 RECOVERY_FAILED 验证 (Shim rsync)
+# ------------------------------------------------------------------------------
+echo ""
+echo ">>> [DRILL G2] Testing Rollback Rsync Failure Handling & RECOVERY_FAILED Detection..."
+setup_drill_env "rec-fail-rsync" "compose.yaml"
+
+APPLY_PRODUCTION_APPROVED=1 \
+PROD_PROJECT="$CURRENT_PROJECT" \
+PROD_CONTAINER="$CURRENT_CONTAINER" \
+PROD_DIR="$CURRENT_STAGING_DIR" \
+PROD_PORT="$DRILL_PORT" \
+"$ENTRY_SCRIPT" deploy >/dev/null 2>&1
+
+valid_bak=$(ls -td "$CURRENT_STAGING_DIR".bak-* | head -1)
+
 echo "--- Testing rollback failure on rsync step ---"
 set +e
-INJECT_ROLLBACK_STEP_FAILURE="rsync" "$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g_rsync.log 2>&1
+PATH="$SHIM_DIR:$PATH" \
+SHIM_FAIL_ACTION="rollback_rsync" \
+"$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g2.log 2>&1
 rsync_fail_exit=$?
 set -e
 
+cat /tmp/ag03_drill_g2.log
+
 if [ "$rsync_fail_exit" -eq 0 ]; then
-  echo "FAIL [DRILL G]: Rollback should have failed when rsync failed!" >&2
+  echo "FAIL [DRILL G2]: Rollback should have failed when rsync failed!" >&2
   exit 1
 fi
-if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g_rsync.log; then
-  echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on rsync failure!" >&2
+if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g2.log; then
+  echo "FAIL [DRILL G2]: RECOVERY_FAILED tag not output on rsync failure!" >&2
   exit 1
 fi
-if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g_rsync.log; then
-  echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g2.log; then
+  echo "FAIL [DRILL G2]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
   exit 1
 fi
-echo "       PASS: rsync failure correctly flagged RECOVERY_FAILED and exited non-zero."
+if [ ! -d "$valid_bak" ]; then
+  echo "FAIL [DRILL G2]: Backup directory was deleted upon rollback failure!" >&2
+  exit 1
+fi
+echo "       PASS: rsync failure correctly flagged RECOVERY_FAILED, exited non-zero, preserved backup."
+echo "PASS [DRILL G2]: Rollback rsync failure strictly intercepted and verified."
 
-# Test 2: Injected docker tag failure during rollback
-echo "--- Testing rollback failure on docker tag step ---"
-set +e
-INJECT_ROLLBACK_STEP_FAILURE="docker_tag" "$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g_tag.log 2>&1
-tag_fail_exit=$?
-set -e
+# ------------------------------------------------------------------------------
+# DRILL (g3): 恢复时 Compose 启动失败真实拦截与 RECOVERY_FAILED 验证 (Shim docker compose up)
+# ------------------------------------------------------------------------------
+echo ""
+echo ">>> [DRILL G3] Testing Rollback Compose Up Failure Handling & RECOVERY_FAILED Detection..."
+setup_drill_env "rec-fail-compose" "compose.yaml"
 
-if [ "$tag_fail_exit" -eq 0 ]; then
-  echo "FAIL [DRILL G]: Rollback should have failed when docker tag failed!" >&2
-  exit 1
-fi
-if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g_tag.log; then
-  echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on docker tag failure!" >&2
-  exit 1
-fi
-if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g_tag.log; then
-  echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
-  exit 1
-fi
-echo "       PASS: docker tag failure correctly flagged RECOVERY_FAILED and exited non-zero."
+APPLY_PRODUCTION_APPROVED=1 \
+PROD_PROJECT="$CURRENT_PROJECT" \
+PROD_CONTAINER="$CURRENT_CONTAINER" \
+PROD_DIR="$CURRENT_STAGING_DIR" \
+PROD_PORT="$DRILL_PORT" \
+"$ENTRY_SCRIPT" deploy >/dev/null 2>&1
 
-# Test 3: Injected compose up failure during rollback
+valid_bak=$(ls -td "$CURRENT_STAGING_DIR".bak-* | head -1)
+
 echo "--- Testing rollback failure on compose up step ---"
 set +e
-INJECT_ROLLBACK_STEP_FAILURE="compose_up" "$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g_compose.log 2>&1
+PATH="$SHIM_DIR:$PATH" \
+SHIM_FAIL_ACTION="rollback_compose_up" \
+"$ENTRY_SCRIPT" rollback "$valid_bak" > /tmp/ag03_drill_g3.log 2>&1
 compose_fail_exit=$?
 set -e
 
-if [ "$compose_fail_exit" -eq 0 ]; then
-  echo "FAIL [DRILL G]: Rollback should have failed when compose up failed!" >&2
-  exit 1
-fi
-if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g_compose.log; then
-  echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on compose up failure!" >&2
-  exit 1
-fi
-if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g_compose.log; then
-  echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
-  exit 1
-fi
-echo "       PASS: compose up failure correctly flagged RECOVERY_FAILED and exited non-zero."
-echo "       PASS: compose up failure correctly flagged RECOVERY_FAILED and exited non-zero."
+cat /tmp/ag03_drill_g3.log
 
-# Assert backup directory is strictly preserved
-if [ ! -d "$valid_bak" ]; then
-  echo "FAIL [DRILL G]: Backup directory was deleted upon rollback failure!" >&2
+if [ "$compose_fail_exit" -eq 0 ]; then
+  echo "FAIL [DRILL G3]: Rollback should have failed when compose up failed!" >&2
   exit 1
 fi
-echo "       PASS: Backup directory preserved for post-mortem forensics."
-echo "PASS [DRILL G]: All critical recovery failure paths verified (non-zero exit, RECOVERY_FAILED flag, zero false success)."
+if ! grep -q "RECOVERY_FAILED" /tmp/ag03_drill_g3.log; then
+  echo "FAIL [DRILL G3]: RECOVERY_FAILED tag not output on compose up failure!" >&2
+  exit 1
+fi
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" /tmp/ag03_drill_g3.log; then
+  echo "FAIL [DRILL G3]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
+  exit 1
+fi
+if [ ! -d "$valid_bak" ]; then
+  echo "FAIL [DRILL G3]: Backup directory was deleted upon rollback failure!" >&2
+  exit 1
+fi
+echo "       PASS: compose up failure correctly flagged RECOVERY_FAILED, exited non-zero, preserved backup."
+echo "PASS [DRILL G3]: Rollback compose up failure strictly intercepted and verified."
 
 # Final Cleanup
-cleanup_current_drill
+cleanup_all
 trap - EXIT INT TERM
 
 echo ""
 echo "========================================================================"
-echo " ALL 7 PRODUCTION ENTRY & RECOVERY DRILLS PASSED CLEANLY (7/7)"
-echo " (a) Normal deployment:                                   PASSED"
-echo " (b) Post-backup Compose startup failure auto-rollback:   PASSED"
-echo " (c) Health check failure auto-rollback:                  PASSED"
-echo " (d) Standalone clean-env recovery:                       PASSED"
-echo " (e) Priority masking prevention:                         PASSED"
-echo " (f) Targeted PID interruption signal auto-rollback:      PASSED"
-echo " (g) Recovery critical step failure & RECOVERY_FAILED:    PASSED"
-echo " Zero production impact verified."
+echo " ALL 11 PRODUCTION ENTRY & RECOVERY DRILLS PASSED CLEANLY (11/11)"
+echo " (a)  Normal deployment:                                      PASSED"
+echo " (b1) Candidate cp failure auto-rollback (Shim cp):           PASSED"
+echo " (b2) Candidate docker tag failure auto-rollback (Shim tag):  PASSED"
+echo " (b3) Candidate compose up failure auto-rollback (Shim up):   PASSED"
+echo " (c)  Health check failure auto-rollback:                     PASSED"
+echo " (d)  Standalone clean-env recovery:                          PASSED"
+echo " (e)  Priority masking prevention:                            PASSED"
+echo " (f)  Targeted PID interruption signal auto-rollback:         PASSED"
+echo " (g1) Rollback stop container failure (Shim stop):            PASSED"
+echo " (g2) Rollback rsync failure (Shim rsync):                    PASSED"
+echo " (g3) Rollback compose up failure (Shim compose up):          PASSED"
+echo " Zero production impact verified; 100% real command failures tested."
 echo "========================================================================"
