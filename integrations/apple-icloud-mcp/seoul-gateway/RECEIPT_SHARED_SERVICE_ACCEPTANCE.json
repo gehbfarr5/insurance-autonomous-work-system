@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-08T04:13:54.884Z",
+  "timestamp": "2026-11-08T04:51:08.496Z",
   "verdict": "PASS",
   "assertions": {
     "healthcheck_200": true,
@@ -60,11 +60,11 @@
     "bridgeRecordedReadCount": 7
   },
   "metadata": {
-    "run_id": "ag03-20261108_121313",
+    "run_id": "ag03-20261108_125026",
     "base_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
     "patch_sha256": "70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980",
-    "candidate_image_tag": "insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313",
-    "candidate_image_id": "sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3",
+    "candidate_image_tag": "insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_125026",
+    "candidate_image_id": "sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61",
     "baseline_image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
     "production_status_before": "running healthy 2026-11-06T15:48:25.475413677Z",
     "production_status_after": "running healthy 2026-11-06T15:48:25.475413677Z",

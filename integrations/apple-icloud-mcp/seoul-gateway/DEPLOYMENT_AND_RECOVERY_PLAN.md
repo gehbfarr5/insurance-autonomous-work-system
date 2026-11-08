@@ -7,9 +7,12 @@
 - **补丁 SHA256**：`70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980`
 - **唯一执行与复现入口**：`scripts/reproduce-ag03-delivery.sh`
 - **生产基线镜像 ID**：`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`
-- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313` (`sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`)
+- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_125026` (`sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61`)
 - **预期工具名称集合**：33 项工具（25 项基础工具 + 全部 8 项联系人分组工具恢复，逐项精准比对）
 - **进程管理原则**：零批量杀进程（禁止 `fuser -k` / `pkill -f`），端口占用直接退出拒绝，精确 PID 启停与 `ag03_run_id` 资源标签清理
+- **接口绑定与网络隔离**：Fake Bridge 严格限制在独立测试网桥接口（`172.30.56.1:18765`），零宿主通配监听（无 `0.0.0.0` / `*`）
+- **Compose 优先级与 Fail-Fast**：保留现有账户、加密密钥及 Contacts/Calendar 原权限，仅显式注入网关配置；缺失必要网关变量（`${VAR:?error}`）立即拒绝启动
+- **中断与信号处理确定性**：捕获 INT/TERM 严格以非零状态（130/143）退出，重入守卫确保清理仅执行一次，中断绝无残留且绝无 PASS 回执
 - **部署与测试配置一致性**：部署与测试共用同一 `config/compose.candidate.yaml` 规格
 - **回执生成时序**：仅在测试完成、资源彻底清理无残留、生产容器状态前后校验一致后生成最终 PASS 回执
 - **目标环境**：
@@ -104,12 +107,12 @@ docker tag insurance-carddav-mcp-carddav:latest insurance-carddav-mcp-carddav:ba
 
 ### 步骤 4：直接加载已验收镜像 ID（避免现场重新构建产生版本偏差）
 为彻底消除生产现场构建环境差异与依赖拉取风险，部署**直接使用已在干净环境全量验收通过的候选镜像 ID**：
-- **已验收候选镜像 ID**：`sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`
-- **对应镜像 Tag**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313`
+- **已验收候选镜像 ID**：`sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61`
+- **对应镜像 Tag**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_125026`
 
 执行锁定标签替换：
 ```bash
-CANDIDATE_IMAGE_ID="sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3"
+CANDIDATE_IMAGE_ID="sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61"
 docker tag "$CANDIDATE_IMAGE_ID" insurance-carddav-mcp-carddav:latest
 ```
 

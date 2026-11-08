@@ -514,24 +514,27 @@ npm test
 
 ### 3. 四项专项演练实测记录 (成功复现 + 三项针对性失败阻断)
 
-#### 演练 1：干净环境成功复现与确定性回滚验证
+#### 演练 1：干净环境成功复现与确定性回滚验证 (最新通过版本)
 - **执行命令**：`scripts/reproduce-ag03-delivery.sh`
 - **实测结果**：Exit Code = 0 (PASS)
 - **验收要点**：
-  - 端口 18765/17799/17798 可用性预检通过；
-  - 补丁校验值比较一致；
-  - 326 项单元测试全部通过；
-  - 成功构建候选镜像 `sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`；
-  - Compose 隔离拉起候选服务，13 项 MCP 端到端验收断言全部 PASS；
-  - 回滚 Compose 容器使用记录基线镜像 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`，健康检查在 3 次重试内返回 200 OK；
-  - 资源清理完成，零残留容器，生产容器状态前后完全一致（`running healthy 2026-11-06T15:48:25.475413677Z`）；
+  - 端口 18765/17799/17798 可用性预检通过（零批量杀进程）；
+  - 补丁校验值比较一致 (`70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980`)；
+  - 326 项全量单元与回归测试全部通过（21 个测试套件）；
+  - 成功构建候选镜像 `sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61`；
+  - 独立测试网络 `ag03_net_20261108_125026` 严格限制 Fake Bridge 监听于 `172.30.56.1:18765`，断言宿主机零通配监听（无 `0.0.0.0:18765` 或 `*:18765`）；
+  - Candidate Compose 语法验证：缺失必填网关变量时以 `${VAR:?error}` 机制立即拒绝启动（Fail-Fast）；
+  - Compose 优先级与权限保留实测验证：通过纯合成 `secrets.env` 验证在未额外导出账户变量时，原有 Contacts/Calendar 权限与凭据正确载入，网关 Reminders 配置精准生效，脱敏比对无泄漏；
+  - Compose 隔离拉起候选服务，13 项 MCP 端到端验收断言全部 PASS（包含全部 33 项工具集合精确比对，流式响应体停顿超时 1225ms 明确拒绝，跨会话隔离及写拦截零转发）；
+  - 回滚 Compose 容器使用记录基线镜像 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`，健康检查在 3 次重试内返回 200 OK，镜像 ID 严格校验一致；
+  - 资源清理完成，零残留容器，独立测试网桥干净移除，生产容器状态前后完全一致（`running healthy 2026-11-06T15:48:25.475413677Z`）；
   - 最终在全部检查与清理完成后生成 PASS 回执。
 
 #### 演练 2：端口占用直接拒绝演练（零批量杀进程，保留占用者）
 - **注入场景**：预先在宿主机端口 18765 启动一个外部 dummy 监听进程（PID: 3642852）；
 - **实测输出**：
   ```
-  [1/11] Checking port availability (zero process killing policy)...
+  [1/12] Checking port availability (zero process killing policy)...
   ERROR: Port 18765 is already occupied by an external process! Aborting without modifying existing process.
   --- [CLEANUP] Executing exit cleanup (Exit code: 1) ---
   Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
@@ -555,7 +558,7 @@ npm test
 - **注入场景**：注入环境变量 `INJECT_ROLLBACK_FAILURE=1`，容器启动 command 被覆盖为 `sleep 60` 导致 `/health` 超时；
 - **实测输出**：
   ```
-  [10/11] Verifying deterministic rollback to baseline image via Compose...
+  [11/12] Verifying deterministic rollback to baseline image via Compose...
   [INJECTION] Simulating injected rollback health failure (stalled container)...
   Rollback container image ID verified: sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0
   ERROR: Health check timeout waiting for Rollback Container at http://127.0.0.1:17798/health after 5 attempts!
@@ -565,3 +568,28 @@ npm test
   Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
   ```
 - **实测结果**：脚本在第 5 次健康检查超时后严格以非零码（Exit Code = 1）退出；自动清理回滚测试容器与网络；保留日志；生产容器运行不受任何波及。
+
+#### 演练 5：SIGINT / SIGTERM 中断非零退出与单次清理防重入演练
+- **注入场景**：测试脚本执行期间向进程发送 `SIGINT` (Ctrl-C / kill -2) 或 `SIGTERM` (kill -15)；
+- **实测输出 (SIGINT 实测，PID: 3668522)**：
+  ```
+  [5/12] Running full shared service unit & regression tests (21 suites, 326 tests)...
+  --- [CLEANUP] Executing exit cleanup (Exit code: 130) ---
+         Stopping candidate compose project ag03-cand-20261108_125002...
+         Stopping rollback compose project ag03-roll-20261108_125002...
+         Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
+  --- [CLEANUP] Cleanup finished (Exit code: 130) ---
+  ```
+- **实测输出 (SIGTERM 实测)**：
+  ```
+  --- [CLEANUP] Executing exit cleanup (Exit code: 143) ---
+         Stopping candidate compose project ag03-cand-20261108_124914...
+         Stopping rollback compose project ag03-roll-20261108_124914...
+         Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
+  --- [CLEANUP] Cleanup finished (Exit code: 143) ---
+  ```
+- **实测断言**：
+  1. SIGINT 退出码严格为 `130`，SIGTERM 退出码严格为 `143`（均为显式非零状态）；
+  2. 重入保护守卫 `CLEANUP_EXECUTED` 确保清理流程仅执行一次，避免多次清理冲突；
+  3. 中断后彻底清理临时容器、Docker 测试网络与 Fake Bridge 进程，宿主机端口与容器零残留；
+  4. 绝无 PASS 回执产生；生产容器状态前后校验一致。
