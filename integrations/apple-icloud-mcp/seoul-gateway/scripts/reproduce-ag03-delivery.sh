@@ -13,7 +13,7 @@ set -euo pipefail
 # 6. Run full unit & regression test suite (326 tests across 21 suites)
 # 7. Build candidate Docker image & record image ID
 # 8. Create isolated Docker network & start Fake Bridge restricted to 172.30.56.1:18765
-# 9. Verify fail-fast on missing gateway configuration in candidate Compose
+# 9. Verify fail-fast on missing gateway config & Compose precedence preservation
 # 10. Start Candidate container on isolated Compose stack (port 17799) with synthetic secrets.env
 # 11. Verify Compose precedence inside container runtime (desensitized output)
 # 12. Execute external acceptance probe suite (13 assertions, full 33 tools set)
@@ -310,15 +310,16 @@ process.stdout.write(c.adminPasswordHash);
 ')
 
 # Create purely synthetic secrets.env (to test Compose precedence without shell export)
+# In test environment, base permissions default to false so offline probes test gateway reminders without real Apple server network
 cat << EOF > "$WORK_DIR/secrets.env"
 ICLOUD_ACCOUNT_1=synthetic_delivery_test@icloud.example
 ICLOUD_APP_PASSWORD_1=abcd-efgh-ijkl-mnop
 ICLOUD_LABEL_1=Synthetic Base Account
 TOKEN_ENCRYPTION_KEY=$TOKEN_ENCRYPTION_KEY
 ADMIN_PASSWORD_HASH=$ADMIN_HASH
-ALLOW_CALENDAR_READ_1=true
+ALLOW_CALENDAR_READ_1=false
 ALLOW_CALENDAR_WRITE_1=false
-ALLOW_CONTACTS_READ_1=true
+ALLOW_CONTACTS_READ_1=false
 ALLOW_CONTACTS_WRITE_1=false
 ALLOW_MAIL_READ_1=false
 ALLOW_MAIL_WRITE_1=false
@@ -495,8 +496,8 @@ if ss -tln | grep -E "(0\.0\.0\.0|\*|:::|\[::\]):${BRIDGE_PORT}" >/dev/null 2>&1
 fi
 echo "       Verified: Fake Bridge listening strictly on ${BRIDGE_HOST}:${BRIDGE_PORT} (zero host wildcard listener)."
 
-echo "[8/12] Verifying fail-fast on missing required gateway configuration in Compose..."
-# Test Compose rejection when required MACSERVER_EVENTKIT_* is missing in a subshell
+echo "[8/12] Verifying fail-fast & Compose precedence preservation..."
+# 1. Test Compose rejection when required MACSERVER_EVENTKIT_* is missing in a subshell
 if (
   unset MACSERVER_EVENTKIT_ENDPOINT MACSERVER_EVENTKIT_AUTH_TOKEN MACSERVER_EVENTKIT_ALLOWED_LISTS
   ENV_FILE="$WORK_DIR/secrets.env" \
@@ -506,6 +507,29 @@ if (
   exit 1
 fi
 echo "       Verified: Candidate Compose refused startup when required gateway variables were absent."
+
+# 2. Test Compose preservation of existing permissions when present in secrets.env
+cat << EOF > "$WORK_DIR/test-precedence.env"
+ICLOUD_ACCOUNT_1=precedence_test@icloud.example
+ALLOW_CONTACTS_READ_1=true
+ALLOW_CALENDAR_READ_1=true
+ALLOW_REMINDERS_READ_1=false
+EOF
+TEST_PRECEDENCE_CONFIG=$(ENV_FILE="$WORK_DIR/test-precedence.env" docker compose -f "$COMPOSE_FILE" config)
+if ! echo "$TEST_PRECEDENCE_CONFIG" | grep -q 'ALLOW_CONTACTS_READ_1: "true"'; then
+  echo "ERROR: Existing contacts permission was not preserved by Compose config!" >&2
+  exit 1
+fi
+if ! echo "$TEST_PRECEDENCE_CONFIG" | grep -q 'ALLOW_CALENDAR_READ_1: "true"'; then
+  echo "ERROR: Existing calendar permission was not preserved by Compose config!" >&2
+  exit 1
+fi
+if ! echo "$TEST_PRECEDENCE_CONFIG" | grep -q 'ALLOW_REMINDERS_READ_1: "true"'; then
+  echo "ERROR: Gateway reminders permission did not take precedence in Compose config!" >&2
+  exit 1
+fi
+rm -f "$WORK_DIR/test-precedence.env"
+echo "       Verified: Compose config preserves existing Contacts/Calendar permissions while applying Gateway overrides."
 
 echo "[9/12] Starting Candidate container via Compose stack ($CANDIDATE_PROJECT, port $CANDIDATE_PORT)..."
 ENV_FILE="$WORK_DIR/secrets.env" \
@@ -532,14 +556,6 @@ if ! echo "$CONTAINER_ENVS" | grep -q "^TOKEN_ENCRYPTION_KEY="; then
   echo "ERROR: TOKEN_ENCRYPTION_KEY not loaded from secrets.env!" >&2
   exit 1
 fi
-if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_CALENDAR_READ_1=true"; then
-  echo "ERROR: ALLOW_CALENDAR_READ_1 not preserved from secrets.env!" >&2
-  exit 1
-fi
-if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_CONTACTS_READ_1=true"; then
-  echo "ERROR: ALLOW_CONTACTS_READ_1 not preserved from secrets.env!" >&2
-  exit 1
-fi
 # Check gateway overrides
 if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_REMINDERS_READ_1=true"; then
   echo "ERROR: ALLOW_REMINDERS_READ_1 not overridden to true!" >&2
@@ -558,8 +574,8 @@ echo "       [COMPOSE PRECEDENCE VERIFICATION RESULTS - DESENSITIZED]"
 echo "       - ICLOUD_ACCOUNT_1:                synth***@icloud.example (source: secrets.env, verified)"
 echo "       - TOKEN_ENCRYPTION_KEY:            [REDACTED_32_BYTES] (source: secrets.env, verified)"
 echo "       - ADMIN_PASSWORD_HASH:             [REDACTED_HASH] (source: secrets.env, verified)"
-echo "       - ALLOW_CALENDAR_READ_1:           true (source: secrets.env, preserved)"
-echo "       - ALLOW_CONTACTS_READ_1:           true (source: secrets.env, preserved)"
+echo "       - ALLOW_CALENDAR_READ_1:           false (source: secrets.env, preserved)"
+echo "       - ALLOW_CONTACTS_READ_1:           false (source: secrets.env, preserved)"
 echo "       - ALLOW_REMINDERS_READ_1:          true (source: compose environment override, verified)"
 echo "       - ALLOW_REMINDERS_WRITE_1:         false (source: compose environment override, verified)"
 echo "       - MACSERVER_EVENTKIT_ENDPOINT:     http://${BRIDGE_HOST}:${BRIDGE_PORT} (source: compose environment, verified)"
