@@ -99,17 +99,26 @@ cleanup() {
     BRIDGE_PID=""
   fi
 
-  # 2. Stop and remove test containers via Compose
+  # 2. Stop and remove test containers via Compose (pass dummy ENV_FILE if deleted)
+  local cleanup_env_file="${WORK_DIR:-/tmp}/secrets.env"
+  if [ ! -f "$cleanup_env_file" ]; then
+    touch /tmp/ag03-dummy-cleanup.env
+    cleanup_env_file="/tmp/ag03-dummy-cleanup.env"
+  fi
+
   if [ -n "$CANDIDATE_PROJECT" ]; then
     echo "       Stopping candidate compose project $CANDIDATE_PROJECT..."
-    docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
+    ENV_FILE="$cleanup_env_file" COMPOSE_NETWORK_NAME="${TEST_NETWORK_NAME:-ag03_default}" \
+      docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
     CANDIDATE_PROJECT=""
   fi
   if [ -n "$ROLLBACK_PROJECT" ]; then
     echo "       Stopping rollback compose project $ROLLBACK_PROJECT..."
-    docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
+    ENV_FILE="$cleanup_env_file" COMPOSE_NETWORK_NAME="${TEST_NETWORK_NAME:-ag03_default}" \
+      docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
     ROLLBACK_PROJECT=""
   fi
+  rm -f /tmp/ag03-dummy-cleanup.env 2>/dev/null || true
 
   # 3. Clean any labeled containers specifically created by this run
   if [ -n "$RUN_ID" ]; then
@@ -152,7 +161,7 @@ cleanup() {
   exit "$exit_code"
 }
 
-trap 'cleanup 0' EXIT
+trap 'cleanup $?' EXIT
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
@@ -244,7 +253,6 @@ echo "       Candidate image ID:   $CANDIDATE_IMAGE_ID"
 
 echo "[7/12] Initializing synthetic test credentials & starting Fake Bridge on isolated interface..."
 TOKEN_ENCRYPTION_KEY=$(openssl rand -base64 32)
-export TOKEN_ENCRYPTION_KEY
 
 # Create synthetic auth store
 cat << EOF > "$WORK_DIR/init-auth-store.mjs"
@@ -292,7 +300,7 @@ init().catch(err => {
 });
 EOF
 
-node "$WORK_DIR/init-auth-store.mjs"
+TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" node "$WORK_DIR/init-auth-store.mjs"
 chmod 777 "$WORK_DIR/data/tokens.json.enc"
 
 ADMIN_HASH=$(node -e '
@@ -319,14 +327,23 @@ ALLOW_REMINDERS_WRITE_1=false
 EOF
 chmod 600 "$WORK_DIR/secrets.env"
 
-# Unset exported variables so caller environment cannot leak into Compose
-unset TOKEN_ENCRYPTION_KEY
+# Explicitly unset all account & credential variables so caller environment CANNOT leak
+unset TOKEN_ENCRYPTION_KEY ADMIN_HASH
 unset ICLOUD_ACCOUNT_1 ICLOUD_APP_PASSWORD_1 ICLOUD_LABEL_1 ADMIN_PASSWORD_HASH
 unset ALLOW_CALENDAR_READ_1 ALLOW_CALENDAR_WRITE_1 ALLOW_CONTACTS_READ_1 ALLOW_CONTACTS_WRITE_1 ALLOW_MAIL_READ_1 ALLOW_MAIL_WRITE_1
 
 # Create isolated Docker bridge network prior to Fake Bridge bind
 echo "       Creating isolated test network ($TEST_NETWORK_NAME, gateway: $BRIDGE_HOST)..."
 docker network create --subnet "$TEST_SUBNET" --gateway "$BRIDGE_HOST" "$TEST_NETWORK_NAME"
+
+# Export gateway configurations for Compose interpolation
+export COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME"
+export MACSERVER_EVENTKIT_ENDPOINT="http://${BRIDGE_HOST}:${BRIDGE_PORT}"
+export MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!"
+export MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV,stalled-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV,corrupted-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV"
+export MACSERVER_EVENTKIT_TIMEOUT_MS="1200"
+export ALLOW_REMINDERS_READ_1="true"
+export ALLOW_REMINDERS_WRITE_1="false"
 
 # Start Fake EventKit Bridge bound strictly to isolated interface
 cat << EOF > "$WORK_DIR/fake-bridge.mjs"
@@ -479,10 +496,12 @@ fi
 echo "       Verified: Fake Bridge listening strictly on ${BRIDGE_HOST}:${BRIDGE_PORT} (zero host wildcard listener)."
 
 echo "[8/12] Verifying fail-fast on missing required gateway configuration in Compose..."
-# Test Compose rejection when required MACSERVER_EVENTKIT_* is missing
-if ENV_FILE="$WORK_DIR/secrets.env" \
-   COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME" \
-   docker compose -f "$COMPOSE_FILE" config >/dev/null 2>&1; then
+# Test Compose rejection when required MACSERVER_EVENTKIT_* is missing in a subshell
+if (
+  unset MACSERVER_EVENTKIT_ENDPOINT MACSERVER_EVENTKIT_AUTH_TOKEN MACSERVER_EVENTKIT_ALLOWED_LISTS
+  ENV_FILE="$WORK_DIR/secrets.env" \
+  docker compose -f "$COMPOSE_FILE" config >/dev/null 2>&1
+); then
   echo "ERROR: docker compose config should have failed fast when MACSERVER_EVENTKIT_* variables are unset!" >&2
   exit 1
 fi
@@ -490,25 +509,18 @@ echo "       Verified: Candidate Compose refused startup when required gateway v
 
 echo "[9/12] Starting Candidate container via Compose stack ($CANDIDATE_PROJECT, port $CANDIDATE_PORT)..."
 ENV_FILE="$WORK_DIR/secrets.env" \
-COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME" \
 RUN_ID="$RUN_ID" \
 CARDDAV_IMAGE="$CANDIDATE_TAG" \
 BIND_PORT="127.0.0.1:${CANDIDATE_PORT}" \
 PUBLIC_URL="http://127.0.0.1:${CANDIDATE_PORT}" \
 DATA_DIR="$WORK_DIR/data" \
-MACSERVER_EVENTKIT_ENDPOINT="http://${BRIDGE_HOST}:${BRIDGE_PORT}" \
-MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!" \
-MACSERVER_EVENTKIT_TIMEOUT_MS="1200" \
-MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV,stalled-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV,corrupted-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV" \
-ALLOW_REMINDERS_READ_1="true" \
-ALLOW_REMINDERS_WRITE_1="false" \
 docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" up -d
 
 wait_for_health "http://127.0.0.1:${CANDIDATE_PORT}/health" 30 1 "Candidate Container"
 
 # Verify environment variables entered container and test Compose precedence
 echo "       Verifying Compose precedence & configuration correspondence inside container runtime..."
-CANDIDATE_CONTAINER_NAME=$(docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
+CANDIDATE_CONTAINER_NAME=$(ENV_FILE="$WORK_DIR/secrets.env" docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
 CONTAINER_ENVS=$(docker inspect "$CANDIDATE_CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}')
 
 # Check credentials and original permissions inherited from secrets.env without shell export
@@ -867,7 +879,7 @@ echo "       Acceptance probe suite passed: 13/13 assertions PASS (all 33 tools 
 
 echo "[11/12] Verifying deterministic rollback to baseline image via Compose ($ROLLBACK_PROJECT, port $ROLLBACK_PORT)..."
 # Stop candidate container via Compose
-docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
+ENV_FILE="$WORK_DIR/secrets.env" docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
 CANDIDATE_PROJECT=""
 
 CARDDAV_COMMAND=""
@@ -879,23 +891,18 @@ if [ "${INJECT_ROLLBACK_FAILURE:-0}" = "1" ]; then
 fi
 
 ENV_FILE="$WORK_DIR/secrets.env" \
-COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME" \
 RUN_ID="$RUN_ID" \
 CARDDAV_IMAGE="$BASELINE_IMAGE_ID" \
 CARDDAV_COMMAND="$CARDDAV_COMMAND" \
 BIND_PORT="127.0.0.1:${ROLLBACK_PORT}" \
 PUBLIC_URL="http://127.0.0.1:${ROLLBACK_PORT}" \
 DATA_DIR="$WORK_DIR/data" \
-MACSERVER_EVENTKIT_ENDPOINT="http://${BRIDGE_HOST}:${BRIDGE_PORT}" \
-MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!" \
-MACSERVER_EVENTKIT_TIMEOUT_MS="1200" \
-MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV" \
 ALLOW_REMINDERS_READ_1="false" \
 ALLOW_REMINDERS_WRITE_1="false" \
 docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" up -d
 
 # 1. Verify actual image ID of running rollback container matches recorded baseline image ID
-ROLLBACK_CONTAINER_NAME=$(docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
+ROLLBACK_CONTAINER_NAME=$(ENV_FILE="$WORK_DIR/secrets.env" docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
 ACTUAL_ROLLBACK_IMAGE=$(docker inspect "$ROLLBACK_CONTAINER_NAME" --format '{{.Image}}')
 if [ "$ACTUAL_ROLLBACK_IMAGE" != "$BASELINE_IMAGE_ID" ]; then
   echo "ERROR: Rollback image ID mismatch! Expected: $BASELINE_IMAGE_ID, Actual: $ACTUAL_ROLLBACK_IMAGE" >&2
@@ -915,7 +922,7 @@ fi
 echo "       Rollback container configuration correspondence verified."
 
 # Stop rollback container via Compose
-docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
+ENV_FILE="$WORK_DIR/secrets.env" docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
 ROLLBACK_PROJECT=""
 
 echo "[12/12] Unified post-drill verification (zero residual resources & production integrity)..."
