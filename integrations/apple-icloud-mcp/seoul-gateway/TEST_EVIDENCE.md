@@ -623,9 +623,64 @@ npm test
 | **DRILL G2** | 恢复时 rsync 失败真实拦截与 `RECOVERY_FAILED` | 真实命令替身 (`rsync` shim) 拦截配置还原；验证脚本非零退出、明确标记 `[RECOVERY_FAILED]`、严禁输出成功，备份目录完好保留 | **PASS** | 退出码 1，输出 `[RECOVERY_FAILED]`，备份目录完好保留 |
 | **DRILL G3** | 恢复时 Compose 启动失败真实拦截与 `RECOVERY_FAILED` | 真实命令替身 (`docker compose` shim) 拦截基线 Compose 启动；验证脚本非零退出、明确标记 `[RECOVERY_FAILED]`、严禁输出成功，备份目录完好保留 | **PASS** | 退出码 1，输出 `[RECOVERY_FAILED]`，备份目录完好保留 |
 
-### 2. 首尔生产环境完整性证据（零影响核验）
+### 2. 首尔生产环境完整性证据（演练期间零影响核验）
 - **生产容器**：`insurance-carddav-mcp-carddav-1`
 - **运行状态**：`running (healthy)`
-- **连续运行时间**：自 `2026-11-06T15:48:25.475413677Z` 至今持续运行 42+ 小时无重启
 - **健康接口响应**：`curl -s http://127.0.0.1:17734/health` -> `{"status":"ok"}` (200 OK)
-- **生产配置状态**：`/opt/insurance-carddav-mcp` 配置文件完全未经修改
+- **生产配置状态**：演练全程在隔离端口 17744 及 `/tmp` 目录进行，生产环境完全未经修改
+
+---
+
+## 七、AG-04 真实只读试运行、网络审计与基线恢复记录
+
+- **执行日期**：2026-11-08
+- **执行分支**：`feat/seoul-macserver-readonly-gateway` (PR #22)
+- **执行 Commit**：`b13ae026fa0e63c7e94bd22e0971c946fd3b1303`
+- **候选镜像 ID**：`sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61`
+- **基线镜像 ID**：`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`
+- **阶段回执**：`integrations/apple-icloud-mcp/receipts/AG04_TRIAL_AND_RECOVERY_RECEIPT.json`
+
+### 1. MUSE 独立验收来源与判定
+- **执行机制**：本次试运行由用户在客户端运行 Python 验证脚本（`~/workspace/carddav-mcp-client/verify_muse_test_20261108.py`）调用统一 MCP 服务执行；
+- **会话与执行归属**：该验收由客户端脚本驱动 MCP 协议交互，并非记录自 MUSE 原生前台图形界面中的 Agent 对话交互；
+- **阶段判定**：
+  - **真实只读链路技术判定**：`PASS`（Client → Seoul MCP → 受限 SSH 隧道 → MacServer EventKit → iCloud 测试列表全链路打通并正确返回只读数据）；
+  - **MUSE 独立前台验收判定**：`PENDING_MUSE_UI_EVIDENCE`（严格遵循准则：因缺乏 MUSE 原生 UI 会话记录，不直接判定为 `MUSE_E2E_READONLY_PASS`，标记为真实链路通过、MUSE 独立 UI 验收证据待补）；
+- **用户复跑脱敏记录**：
+  - `apple_login`：首试报 `NEEDS_APPLE_RELOGIN`（由于历史 Token 过期 401），经 Manager 读路径自动续期后重试成功建立会话；
+  - `tools/list`：OK，共 33 项工具可用，核验 `reminders_list` 传参结构为 `session_id` 与 `list_ids` 数组；
+  - `reminders_lists`：OK，返回 1 条核准测试列表（脱敏标识：`9D9A****03F3`，名称：`M****试`，`writable: false`）；
+  - `reminders_list`：OK，指定测试列表返回 0 条（干净的空列表）；
+  - 写入防护：全程 `writes_enabled=False`，零写操作，零写探针。
+
+### 2. 实际变更与网络隧道审计
+- **连接拓扑原因**：
+  - 首尔 MCP 宿主机（`100.82.240.43`）在 Tailscale 中带有 `tagged-devices` 标签；MacServer（`100.100.172.91`）为个人用户节点（`gehbfarr5@`）；
+  - Tailscale ACL 策略禁止 `tagged-devices` 主动向个人节点发起入站 TCP 连接（首尔主动向 MacServer 端口 22 发起请求超时）；
+  - 个人节点主动向 tagged 节点出站连接不受阻断；因此采用 **MacServer → Seoul 主动出站反向 SSH 隧道**（`ssh -R`）。
+- **临时宿主配置与限制**：
+  - 首尔宿主机 `/etc/ssh/sshd_config.d/60-macserver-gateway.conf`：配置 `GatewayPorts clientspecified`（OpenSSH 默认 `GatewayPorts no` 会将远程转发限制在 `127.0.0.1`，由于 Docker 容器位于 bridge 网络，必须允许绑定网关 IP `172.19.0.1:18765`）；
+  - 授权公钥限制（`/etc/ssh/seoul-keys/mac-operator`）：显式添加指令前缀 `restrict,port-forwarding,permitlisten="172.19.0.1:18765",permitlisten="127.0.0.1:18765"`；
+  - **零通配暴露**：仅监听 `172.19.0.1:18765` 与 `127.0.0.1:18765`，严格杜绝 `0.0.0.0` 通配监听；
+- **申请方案与实际执行偏离审计**：
+  - 原申请方案假设可直接从首尔正向连接 MacServer 且无需更改宿主 sshd 配置；
+  - 实际执行中由于 ACL 限制调整为反向隧道，并临时增加了宿主 `GatewayPorts` 配置与公钥限制选项；
+  - **恢复结果**：临时配置文件 `60-macserver-gateway.conf` 已删除，`mac-operator` 授权公钥已从备份完全还原，`sshd` 已平滑重载，端口 18765 监听完全注销，临时私钥已删除。
+
+### 3. 生产基线恢复与环境清理证据
+- **基线镜像一致性**：恢复容器运行镜像为 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`（100% 匹配）；
+- **健康检查响应**：本地 `http://127.0.0.1:17734/health` 与 Tailscale `https://seoul-forge-01.tail4db0d9.ts.net/health` 均返回 `200 OK`；
+- **MacServer 业务锁定**：看门狗 PID `51189` 已在窗口内提前终止，`bridge.env` 恢复 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false`，LaunchAgent 重启后 `GET /reminders/lists` 断言返回 **`403 Forbidden (PERMISSION_DENIED)`**；
+- **配置与权限还原**：`compose.yaml` 还原为基线原文件，`gateway.env` 删除，容器内环境变量归零；Contacts/Calendar 权限（`ALLOW_CONTACTS_READ_1=true`, `ALLOW_CALENDAR_READ_1=true`）与基线完全一致；
+- **Token 仓库保护**：`data/tokens.json.enc`（220638 字节，权限 0600）完好保留，试运行期间合法续期的 OAuth 凭据未受破坏；
+- **工具集合核验说明**：在候选镜像试运行期间，客户端通过 `tools/list` 核验了全部 33 项工具；在回滚至基线后，已通过健康检查（200 OK）与容器 inspect 完成校验，**回滚后的基线容器未重新向真实 Apple 账号发起全量 33 项业务级工具探测**（以避免向生产引入无谓流量），如实标记为 `BASELINE_HEALTH_VERIFIED: PASS`，未行过度声称；
+- **受限本地备份**：全量运行快照保留于首尔宿主机 `/opt/insurance-carddav-mcp.bak-20261108_184721`（受限本地存储，严禁提交或上传）。
+
+### 4. 下一阶段工程建议
+1. **非空提醒条目内容校验**：在测试列表中添加受控提醒条目后，进一步验证 title、notes、due_date、priority 等字段在只读链路中的映射保真度；
+2. **常驻隧道与守护进程建设**：探索具备自动重连、心跳保持与失败指数退避的生产级反向隧道守护机制（如 autossh / systemd service）；
+3. **确定性降级与故障自愈**：在 MacServer 隧道或桥接断开时，提供更优雅的网关熔断与错误提示；
+4. **写入安全防护架构设计**：若未来探索写入能力，必须建立硬件级或不可篡改的多层授权与审计防护；
+5. **跨数据域版本对齐**：推动 Contacts、Calendar 与 Reminders 在统一网关架构下的版本基线与测试对齐；
+6. **合规准则**：任何新的生产只读窗口或常驻部署必须另行申请与批准，禁止私自操作。
+
