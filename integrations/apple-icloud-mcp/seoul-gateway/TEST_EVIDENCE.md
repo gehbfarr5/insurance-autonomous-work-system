@@ -486,15 +486,15 @@ npm test
 
 ### 1. 架构接入与测试限制
 - **真实服务装配**：通过固定基线 `apple-icloud-mcp` 真实服务入口 `src/bin/http.ts` -> `dist/bin/http.js`，复用真实 OAuth 2.1 鉴权（`POST /register`, `GET /authorize`, `POST /access-login`, `POST /token`）、会话存储与所有权校验（`SessionStore`）、账户能力（`capabilities.remindersRead`）及统一 `/mcp` Streamable HTTP 协议端点。
-- **唯一补丁与校验值**：`patches/0001-shared-gateway-wiring.patch`，SHA256 为 `e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d`，精确包含 8 个文件变更。
-- **构建产物标识**：候选镜像 Tag 为 `insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234`，镜像 ID 为 `sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1`。
-- **全模块离线回归**：在固定源码基线执行 Vitest 18 个测试套件共 285 个单元与回归测试（涵盖 modules/、server/、Reminders Gateway 及各业务模块，`--sequence.concurrent=false` 避免并发冲突），**全部 285 测试 PASS，零回归**。
+- **唯一补丁与校验值**：`patches/0001-shared-gateway-wiring.patch`，SHA256 为 `70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980`，精确包含 26 个文件变更（恢复全部 8 项联系人分组工具与电话检索，以及 Reminders Gateway 适配与统一装配）。
+- **构建产物标识**：候选镜像 Tag 为 `insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313`，镜像 ID 为 `sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`。
+- **全模块离线回归**：在固定源码基线执行 Vitest 21 个测试套件共 326 个单元与回归测试（涵盖 modules/、server/、Reminders Gateway 及 Contacts Groups 等各业务模块，`--sequence.concurrent=false` 避免并发冲突），**全部 326 测试 PASS，零回归**。
 - **生产基线镜像 ID**：记录实际运行中的基线镜像 ID 为 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`。
 - **完全虚构的测试标识**：使用全新生成的纯虚构 ID `00000000-AAAA-BBBB-CCCC-000000000001` 与 `src-synthetic-icloud-test`，公开脚本中零生产 UUID 残留。
 - **测试桩明确标识**：`src/server.ts` 已添加明确安全警告 Banner，仅保留为单组件协议级本地测试桩（Test Harness），严格禁止作为生产服务入口。
 
 ### 2. 外部验收实测证据 (`RECEIPT_SHARED_SERVICE_ACCEPTANCE.json`)
-在独立测试网络 `ag03_test_network (172.30.56.0/24)` 下，使用真实候选容器（监听 `127.0.0.1:17799`）与 Fake Bridge（监听 `172.30.56.1:18765`），从容器外部执行 13 项端到端验收断言：
+在 Docker Compose 隔离栈 `ag03-candidate-20261108_121313` 下，使用真实候选容器（监听 `127.0.0.1:17799`）与 Fake Bridge（PID 3641741，监听 `0.0.0.0:18765`），从容器外部执行 13 项端到端验收断言：
 
 | 验收编号 | 断言项目 | 预期行为 | 实测结果 | 证据 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -503,7 +503,7 @@ npm test
 | **03** | `invalid_token_rejected_401` | 无效 Bearer 访问 `/mcp` 严格拒绝 | `PASS` (401 Unauthorized) | 令牌校验拦截 |
 | **04** | `oauth2_auth_flow_pass` | 动态注册 + 访问密钥登录 + 授权码兑换 | `PASS` (Token 正常签发) | 真实 OAuth 2.1 链路 |
 | **05** | `mcp_streamable_http_session_initialized` | Streamable HTTP initialize 握手 | `PASS` (mcp-session-id 正常分配) | MCP 协议会话 |
-| **06** | `tool_discovery_all_modules_present` | 发现全部 6 大模块 25 项工具 | `PASS` (25 tools discovered) | `tools/list` 响应 |
+| **06** | `exact_33_tools_set_matched` | 发现全部 33 项工具集合（含 8 项联系人分组工具），缺任一项立即失败 | `PASS` (33/33 exact tools set matched) | `tools/list` 逐项比对集合断言 |
 | **07** | `apple_login_session_issued` | `apple_login` 调用并签发业务会话 ID | `PASS` (session_id 正常签发) | 会话管理中心 |
 | **08** | `bound_list_metadata_read_pass` | `reminders_lists` 读取绑定列表元数据 | `PASS` (`00000000-AAAA-BBBB-CCCC-000000000001`, writable: false) | 业务只读读取 |
 | **09** | `bound_items_read_pass` | `reminders_list` 查询绑定列表条目 | `PASS` (`item-ag03-001`, completed: false) | 字段保真映射 |
@@ -512,17 +512,56 @@ npm test
 | **12** | `cross_session_tampering_rejected` | 跨令牌/非法会话 ID 调用严格拒绝 | `PASS` (拒绝跨用户会话串扰) | 会话所有权绑定 |
 | **13** | `write_operations_strictly_rejected` | `create/update/delete` 拦截且后端零转发 | `PASS` (客户端拦截，Bridge 写计数=0) | 零转发 / 零 VTODO |
 
-### 3. 可恢复回滚、失败注入与生产服务零影响验证
-- **回滚验证（三项核查同过）**：
-  1. **实际镜像 ID 验证**：停止候选容器后，启动回滚容器，通过 `docker inspect` 核验运行容器实际使用的镜像 ID 严格等于 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`；
-  2. **健康响应验证**：`curl -sf http://127.0.0.1:17798/health` 严格在 30 秒超时内返回 HTTP 200 OK；
-  3. **配置对应关系验证**：核验运行时注入的环境变量（`TOKEN_ENCRYPTION_KEY`、`PUBLIC_URL` 等）与运行环境完全对应。
-- **恢复健康失败注入验证 (`INJECT_ROLLBACK_FAILURE=1`)**：
-  - 演练注入容器停顿导致健康检查超时的故障场景；
-  - 实测脚本在 5 次重试后立即抛出非零退出码（`INJECTED_EXIT_CODE=1`，输出 `ERROR: Health check timeout waiting for Rollback Container`）；
-  - `trap cleanup EXIT` 机制自动触发，顺利杀死 Fake Bridge 进程、删除测试容器、移除独立 Docker 网络并清空临时测试凭据；
-  - 验证失败路径下清理彻底、无残留进程与脏资源。
-- **生产服务状态前后对比**：
-  - 执行前记录初始状态：`running healthy 2026-11-06T15:48:25.475413677Z`；
-  - 演练结束后核对最终状态：`running healthy 2026-11-06T15:48:25.475413677Z`；
-  - 生产容器 `insurance-carddav-mcp-carddav-1` 全程持续运行 27 小时以上，零重启、零端口冲突、零配置修改。
+### 3. 四项专项演练实测记录 (成功复现 + 三项针对性失败阻断)
+
+#### 演练 1：干净环境成功复现与确定性回滚验证
+- **执行命令**：`scripts/reproduce-ag03-delivery.sh`
+- **实测结果**：Exit Code = 0 (PASS)
+- **验收要点**：
+  - 端口 18765/17799/17798 可用性预检通过；
+  - 补丁校验值比较一致；
+  - 326 项单元测试全部通过；
+  - 成功构建候选镜像 `sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`；
+  - Compose 隔离拉起候选服务，13 项 MCP 端到端验收断言全部 PASS；
+  - 回滚 Compose 容器使用记录基线镜像 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`，健康检查在 3 次重试内返回 200 OK；
+  - 资源清理完成，零残留容器，生产容器状态前后完全一致（`running healthy 2026-11-06T15:48:25.475413677Z`）；
+  - 最终在全部检查与清理完成后生成 PASS 回执。
+
+#### 演练 2：端口占用直接拒绝演练（零批量杀进程，保留占用者）
+- **注入场景**：预先在宿主机端口 18765 启动一个外部 dummy 监听进程（PID: 3642852）；
+- **实测输出**：
+  ```
+  [1/11] Checking port availability (zero process killing policy)...
+  ERROR: Port 18765 is already occupied by an external process! Aborting without modifying existing process.
+  --- [CLEANUP] Executing exit cleanup (Exit code: 1) ---
+  Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
+  ```
+- **实测结果**：脚本即刻退出（Exit Code = 1）；断言外部 dummy 进程 PID 3642852 持续存活，**未被接管亦未被杀死 (`OCCUPANT_VERIFIED_ALIVE`)**；生产容器不受任何波及。
+
+#### 演练 3：缺失联系人分组工具直接拒绝演练
+- **注入场景**：注入环境变量 `INJECT_MISSING_TOOL="contacts_groups_list"`，模拟工具发现列表中遗漏任一联系人分组工具；
+- **实测输出**：
+  ```
+  Error: Tool discovery failed: missing expected tools: contacts_groups_list
+  Acceptance suite failed: ...
+  --- [CLEANUP] Executing exit cleanup (Exit code: 1) ---
+  Stopping Fake Bridge process (PID: 3643714)...
+  Stopping candidate compose project ag03-candidate-20261108_121428...
+  Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
+  ```
+- **实测结果**：脚本严格抛出工具缺失错误并退出（Exit Code = 1）；**绝不伪装为成功，不生成 PASS 回执**；测试资源与容器自动清理，生产容器持续正常。
+
+#### 演练 4：回滚健康检查失败拒绝演练
+- **注入场景**：注入环境变量 `INJECT_ROLLBACK_FAILURE=1`，容器启动 command 被覆盖为 `sleep 60` 导致 `/health` 超时；
+- **实测输出**：
+  ```
+  [10/11] Verifying deterministic rollback to baseline image via Compose...
+  [INJECTION] Simulating injected rollback health failure (stalled container)...
+  Rollback container image ID verified: sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0
+  ERROR: Health check timeout waiting for Rollback Container at http://127.0.0.1:17798/health after 5 attempts!
+  --- [CLEANUP] Executing exit cleanup (Exit code: 1) ---
+  Stopping Fake Bridge process (PID: 3644828)...
+  Stopping rollback compose project ag03-rollback-20261108_121518...
+  Seoul Production Container Verified Untouched: running healthy 2026-11-06T15:48:25.475413677Z
+  ```
+- **实测结果**：脚本在第 5 次健康检查超时后严格以非零码（Exit Code = 1）退出；自动清理回滚测试容器与网络；保留日志；生产容器运行不受任何波及。

@@ -4,10 +4,14 @@
 - **方案基线**：`feat/seoul-macserver-readonly-gateway` (AG-03 最终交付候选)
 - **源码基准 Commit**：`92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7` (apple-icloud-mcp 上游稳定基线)
 - **唯一补丁文件**：`patches/0001-shared-gateway-wiring.patch`
-- **补丁 SHA256**：`e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d`
+- **补丁 SHA256**：`70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980`
 - **唯一执行与复现入口**：`scripts/reproduce-ag03-delivery.sh`
 - **生产基线镜像 ID**：`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`
-- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234` (`sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1`)
+- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313` (`sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`)
+- **预期工具名称集合**：33 项工具（25 项基础工具 + 全部 8 项联系人分组工具恢复，逐项精准比对）
+- **进程管理原则**：零批量杀进程（禁止 `fuser -k` / `pkill -f`），端口占用直接退出拒绝，精确 PID 启停与 `ag03_run_id` 资源标签清理
+- **部署与测试配置一致性**：部署与测试共用同一 `config/compose.candidate.yaml` 规格
+- **回执生成时序**：仅在测试完成、资源彻底清理无残留、生产容器状态前后校验一致后生成最终 PASS 回执
 - **目标环境**：
   - Seoul MCP 主机 (`lhins-84gffkd8` / `VM-0-10-ubuntu`)，生产容器 `insurance-carddav-mcp-carddav-1` (端口 `127.0.0.1:17734->17733/tcp`)
   - Intel MacServer (`macserver-ts`, LaunchAgent `gui/501/com.muse.macserver-eventkit`)
@@ -100,12 +104,12 @@ docker tag insurance-carddav-mcp-carddav:latest insurance-carddav-mcp-carddav:ba
 
 ### 步骤 4：直接加载已验收镜像 ID（避免现场重新构建产生版本偏差）
 为彻底消除生产现场构建环境差异与依赖拉取风险，部署**直接使用已在干净环境全量验收通过的候选镜像 ID**：
-- **已验收候选镜像 ID**：`sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1`
-- **对应镜像 Tag**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234`
+- **已验收候选镜像 ID**：`sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3`
+- **对应镜像 Tag**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313`
 
 执行锁定标签替换：
 ```bash
-CANDIDATE_IMAGE_ID="sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1"
+CANDIDATE_IMAGE_ID="sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3"
 docker tag "$CANDIDATE_IMAGE_ID" insurance-carddav-mcp-carddav:latest
 ```
 

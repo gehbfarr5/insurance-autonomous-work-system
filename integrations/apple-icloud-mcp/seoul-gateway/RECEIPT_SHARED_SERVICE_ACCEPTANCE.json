@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-08T03:43:13.040Z",
+  "timestamp": "2026-11-08T04:13:54.884Z",
   "verdict": "PASS",
   "assertions": {
     "healthcheck_200": true,
@@ -7,7 +7,7 @@
     "invalid_token_rejected_401": true,
     "oauth2_auth_flow_pass": true,
     "mcp_streamable_http_session_initialized": true,
-    "tool_discovery_all_modules_present": true,
+    "exact_33_tools_set_matched": true,
     "apple_login_session_issued": true,
     "bound_list_metadata_read_pass": true,
     "bound_items_read_pass": true,
@@ -42,7 +42,15 @@
     "contacts_read",
     "contacts_create",
     "contacts_update",
-    "contacts_delete"
+    "contacts_delete",
+    "contacts_groups_list",
+    "contacts_groups_members",
+    "contacts_groups_create",
+    "contacts_groups_rename",
+    "contacts_groups_add_members",
+    "contacts_groups_remove_members",
+    "contacts_create_in_groups",
+    "contacts_groups_delete"
   ],
   "writeProbeDetails": {
     "createBlocked": true,
@@ -52,12 +60,16 @@
     "bridgeRecordedReadCount": 7
   },
   "metadata": {
+    "run_id": "ag03-20261108_121313",
     "base_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
-    "patch_sha256": "e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d",
-    "candidate_image_tag": "insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234",
-    "candidate_image_id": "sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1",
+    "patch_sha256": "70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980",
+    "candidate_image_tag": "insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_121313",
+    "candidate_image_id": "sha256:a6979387fb691758f583051df029f726beabd985051926fe0250eb864a6cf4c3",
     "baseline_image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
     "production_status_before": "running healthy 2026-11-06T15:48:25.475413677Z",
-    "synthetic_list_id": "00000000-AAAA-BBBB-CCCC-000000000001"
+    "production_status_after": "running healthy 2026-11-06T15:48:25.475413677Z",
+    "synthetic_list_id": "00000000-AAAA-BBBB-CCCC-000000000001",
+    "expected_tools_count": 33,
+    "discovered_tools_count": 33
   }
 }
