@@ -7,7 +7,7 @@
 - **补丁 SHA256**：`e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d`
 - **唯一执行与复现入口**：`scripts/reproduce-ag03-delivery.sh`
 - **生产基线镜像 ID**：`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`
-- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_112151` (`sha256:6b340d24a5cfd65999824f481c16084a2eaf5e8760c8c3bd87d334fc8858013d`)
+- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234` (`sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1`)
 - **目标环境**：
   - Seoul MCP 主机 (`lhins-84gffkd8` / `VM-0-10-ubuntu`)，生产容器 `insurance-carddav-mcp-carddav-1` (端口 `127.0.0.1:17734->17733/tcp`)
   - Intel MacServer (`macserver-ts`, LaunchAgent `gui/501/com.muse.macserver-eventkit`)
@@ -98,32 +98,36 @@ docker tag insurance-carddav-mcp-carddav:latest insurance-carddav-mcp-carddav:ba
    launchctl kickstart -k gui/$(id -u)/com.muse.macserver-eventkit
    ```
 
-### 步骤 4：在生产工程应用补丁并构建候选镜像
-1. 进入工程目录并应用补丁：
+### 步骤 4：直接加载已验收镜像 ID（避免现场重新构建产生版本偏差）
+为彻底消除生产现场构建环境差异与依赖拉取风险，部署**直接使用已在干净环境全量验收通过的候选镜像 ID**：
+- **已验收候选镜像 ID**：`sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1`
+- **对应镜像 Tag**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234`
+
+执行锁定标签替换：
+```bash
+CANDIDATE_IMAGE_ID="sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1"
+docker tag "$CANDIDATE_IMAGE_ID" insurance-carddav-mcp-carddav:latest
+```
+
+### 步骤 5：注入匹配既定容器网络的 Compose 配置并平滑重启容器
+1. 将与现有容器网络、存储卷及只读网关环境变量完全匹配的 Compose 候选配置（`config/compose.candidate.yaml`）部署至 `/opt/insurance-carddav-mcp/compose.yaml`：
+   ```bash
+   cp /path/to/integrations/apple-icloud-mcp/seoul-gateway/config/compose.candidate.yaml /opt/insurance-carddav-mcp/compose.yaml
+   ```
+2. 在 `/opt/insurance-carddav-mcp/secrets.env` 中注入网关鉴权令牌与绑定列表配置：
+   ```env
+   MACSERVER_EVENTKIT_AUTH_TOKEN=<SECRET_TOKEN_FROM_BRIDGE_ENV>
+   MACSERVER_EVENTKIT_ALLOWED_LISTS=00000000-AAAA-BBBB-CCCC-000000000001:src-synthetic-icloud-test:iCloud:calDAV
+   ```
+3. 以 `--no-build` 模式拉起容器，并验证运行时环境变量注入与健康状态：
    ```bash
    cd /opt/insurance-carddav-mcp
-   git apply /path/to/0001-shared-gateway-wiring.patch
-   ```
-2. 构建生产候选镜像：
-   ```bash
-   CANDIDATE_TAG="insurance-carddav-mcp-carddav:candidate-ag03-$(date +%Y%m%d)"
-   docker build -t "$CANDIDATE_TAG" .
-   docker tag "$CANDIDATE_TAG" insurance-carddav-mcp-carddav:latest
-   ```
-
-### 步骤 5：注入生产配置并平滑重启容器
-1. 在 `/opt/insurance-carddav-mcp/.env` 中注入配置：
-   ```env
-   MACSERVER_EVENTKIT_ENDPOINT=http://127.0.0.1:18765
-   MACSERVER_EVENTKIT_AUTH_TOKEN=<SECRET_TOKEN_FROM_BRIDGE_ENV>
-   MACSERVER_EVENTKIT_TIMEOUT_MS=3000
-   MACSERVER_EVENTKIT_ALLOWED_LISTS=9D9A****03F3:REDACTED_SOURCE_UUID:iCloud:calDAV
-   ALLOW_REMINDERS_READ_1=true
-   ALLOW_REMINDERS_WRITE_1=false
-   ```
-2. 重启容器并验证健康状态：
-   ```bash
    docker compose up -d --no-build carddav
+   
+   # 验证环境变量进入容器
+   docker inspect insurance-carddav-mcp-carddav-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep "MACSERVER_EVENTKIT"
+   
+   # 验证健康检查
    curl -sf http://127.0.0.1:17734/health
    ```
 

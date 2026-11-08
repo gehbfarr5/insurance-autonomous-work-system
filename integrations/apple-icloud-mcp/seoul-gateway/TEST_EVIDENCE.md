@@ -487,9 +487,10 @@ npm test
 ### 1. 架构接入与测试限制
 - **真实服务装配**：通过固定基线 `apple-icloud-mcp` 真实服务入口 `src/bin/http.ts` -> `dist/bin/http.js`，复用真实 OAuth 2.1 鉴权（`POST /register`, `GET /authorize`, `POST /access-login`, `POST /token`）、会话存储与所有权校验（`SessionStore`）、账户能力（`capabilities.remindersRead`）及统一 `/mcp` Streamable HTTP 协议端点。
 - **唯一补丁与校验值**：`patches/0001-shared-gateway-wiring.patch`，SHA256 为 `e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d`，精确包含 8 个文件变更。
-- **构建产物标识**：候选镜像 Tag 为 `insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_112151`，镜像 ID 为 `sha256:6b340d24a5cfd65999824f481c16084a2eaf5e8760c8c3bd87d334fc8858013d`。
-- **全模块离线回归**：在固定源码基线执行 Vitest 18 个测试套件共 285 个单元与回归测试（涵盖 modules/、server/、Reminders Gateway 及各业务模块），**全部 285 测试 PASS，零回归**。
+- **构建产物标识**：候选镜像 Tag 为 `insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_114234`，镜像 ID 为 `sha256:5302c0cd0c4493f770c0f270cee8c5d468f49b74dfb876a4834cbf9ac26162d1`。
+- **全模块离线回归**：在固定源码基线执行 Vitest 18 个测试套件共 285 个单元与回归测试（涵盖 modules/、server/、Reminders Gateway 及各业务模块，`--sequence.concurrent=false` 避免并发冲突），**全部 285 测试 PASS，零回归**。
 - **生产基线镜像 ID**：记录实际运行中的基线镜像 ID 为 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`。
+- **完全虚构的测试标识**：使用全新生成的纯虚构 ID `00000000-AAAA-BBBB-CCCC-000000000001` 与 `src-synthetic-icloud-test`，公开脚本中零生产 UUID 残留。
 - **测试桩明确标识**：`src/server.ts` 已添加明确安全警告 Banner，仅保留为单组件协议级本地测试桩（Test Harness），严格禁止作为生产服务入口。
 
 ### 2. 外部验收实测证据 (`RECEIPT_SHARED_SERVICE_ACCEPTANCE.json`)
@@ -502,16 +503,26 @@ npm test
 | **03** | `invalid_token_rejected_401` | 无效 Bearer 访问 `/mcp` 严格拒绝 | `PASS` (401 Unauthorized) | 令牌校验拦截 |
 | **04** | `oauth2_auth_flow_pass` | 动态注册 + 访问密钥登录 + 授权码兑换 | `PASS` (Token 正常签发) | 真实 OAuth 2.1 链路 |
 | **05** | `mcp_streamable_http_session_initialized` | Streamable HTTP initialize 握手 | `PASS` (mcp-session-id 正常分配) | MCP 协议会话 |
-| **06** | `tool_discovery_all_modules_present` | 发现全部 6 大模块 33 项工具 | `PASS` (33 tools discovered) | `tools/list` 响应 |
+| **06** | `tool_discovery_all_modules_present` | 发现全部 6 大模块 25 项工具 | `PASS` (25 tools discovered) | `tools/list` 响应 |
 | **07** | `apple_login_session_issued` | `apple_login` 调用并签发业务会话 ID | `PASS` (session_id 正常签发) | 会话管理中心 |
-| **08** | `bound_list_metadata_read_pass` | `reminders_lists` 读取绑定列表元数据 | `PASS` (`9D9A****03F3`, writable: false) | 业务只读读取 |
+| **08** | `bound_list_metadata_read_pass` | `reminders_lists` 读取绑定列表元数据 | `PASS` (`00000000-AAAA-BBBB-CCCC-000000000001`, writable: false) | 业务只读读取 |
 | **09** | `bound_items_read_pass` | `reminders_list` 查询绑定列表条目 | `PASS` (`item-ag03-001`, completed: false) | 字段保真映射 |
 | **10** | `stalled_body_stream_timeout_pass` | 响应头立即返回但响应体永久停顿，统一截止时间在限定时限内失败并释放连接 | `PASS` (耗时 1225ms 明确抛出 `UPSTREAM_ERROR` 超时，释放流读取锁) | 贯穿请求与流式响应体的统一定时器 |
 | **11** | `corrupted_item_validation_pass` | 严格校验条目必填字段及 `listID` 归属，缺失、空值、篡改或错误对象严格拒绝 | `PASS` (归属不匹配条目明确抛出 `UPSTREAM_ERROR`，严防错误对象转为正常提醒) | 字段必填性与归属一致性强断言 |
 | **12** | `cross_session_tampering_rejected` | 跨令牌/非法会话 ID 调用严格拒绝 | `PASS` (拒绝跨用户会话串扰) | 会话所有权绑定 |
 | **13** | `write_operations_strictly_rejected` | `create/update/delete` 拦截且后端零转发 | `PASS` (客户端拦截，Bridge 写计数=0) | 零转发 / 零 VTODO |
 
-### 3. 可恢复回滚与生产服务零影响验证
-- **回滚验证**：停止候选容器后，拉起基线镜像（`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`）并挂载相同数据卷，验证 `/health` 返回 200 OK，证明配置与镜像可无缝双向恢复。
-- **环境清理**：停止并删除测试容器，销毁独立网络 `ag03_test_network`，终止 Fake Bridge 进程，宿主机恢复干净状态。
-- **生产服务未受影响**：生产容器 `insurance-carddav-mcp-carddav-1` 连续运行 27 小时以上（`Up 27 hours (healthy)`），启动时间保持为 `2026-11-06T15:48:25Z`，全程零重启、零端口冲突、零配置修改。
+### 3. 可恢复回滚、失败注入与生产服务零影响验证
+- **回滚验证（三项核查同过）**：
+  1. **实际镜像 ID 验证**：停止候选容器后，启动回滚容器，通过 `docker inspect` 核验运行容器实际使用的镜像 ID 严格等于 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`；
+  2. **健康响应验证**：`curl -sf http://127.0.0.1:17798/health` 严格在 30 秒超时内返回 HTTP 200 OK；
+  3. **配置对应关系验证**：核验运行时注入的环境变量（`TOKEN_ENCRYPTION_KEY`、`PUBLIC_URL` 等）与运行环境完全对应。
+- **恢复健康失败注入验证 (`INJECT_ROLLBACK_FAILURE=1`)**：
+  - 演练注入容器停顿导致健康检查超时的故障场景；
+  - 实测脚本在 5 次重试后立即抛出非零退出码（`INJECTED_EXIT_CODE=1`，输出 `ERROR: Health check timeout waiting for Rollback Container`）；
+  - `trap cleanup EXIT` 机制自动触发，顺利杀死 Fake Bridge 进程、删除测试容器、移除独立 Docker 网络并清空临时测试凭据；
+  - 验证失败路径下清理彻底、无残留进程与脏资源。
+- **生产服务状态前后对比**：
+  - 执行前记录初始状态：`running healthy 2026-11-06T15:48:25.475413677Z`；
+  - 演练结束后核对最终状态：`running healthy 2026-11-06T15:48:25.475413677Z`；
+  - 生产容器 `insurance-carddav-mcp-carddav-1` 全程持续运行 27 小时以上，零重启、零端口冲突、零配置修改。
