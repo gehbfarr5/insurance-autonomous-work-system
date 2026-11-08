@@ -6,22 +6,26 @@ set -euo pipefail
 #
 # Execution Pipeline:
 # 1. Capture production container baseline status
-# 2. Verify canonical patch checksum (actual comparison)
-# 3. Extract pristine upstream baseline (commit 92bd313) into clean isolated dir
-# 4. Apply canonical patch (0001-shared-gateway-wiring.patch)
-# 5. Run full unit & regression test suite (285 tests across 18 suites)
-# 6. Build candidate Docker image & record image ID
-# 7. Start Fake EventKit Bridge (synthetic backend) with synthetic credentials
-# 8. Start Candidate container on isolated Docker network (port 17799)
-# 9. Verify injected environment variables inside container runtime
-# 10. Execute external acceptance test suite (13/13 assertions)
-# 11. Verify deterministic rollback to recorded baseline image ID (port 17798)
-# 12. Unified cleanup & production integrity assertion
+# 2. Check port availability (fail directly if occupied; zero hijacking / kill)
+# 3. Verify canonical patch checksum (actual comparison)
+# 4. Extract pristine upstream baseline (commit 92bd313) into clean isolated dir
+# 5. Apply canonical patch (0001-shared-gateway-wiring.patch, 33 tools restored)
+# 6. Run full unit & regression test suite (326 tests across 21 suites)
+# 7. Build candidate Docker image & record image ID
+# 8. Start Fake EventKit Bridge with recorded PID
+# 9. Start Candidate container on isolated Compose stack (port 17799)
+# 10. Verify injected environment variables inside container runtime
+# 11. Execute external acceptance probe suite (13 assertions, full 33 tools set)
+# 12. Verify deterministic rollback to recorded baseline image ID via Compose (port 17798)
+# 13. Resource cleanup & zero-residual validation
+# 14. Production integrity assertion
+# 15. Generate final PASS receipt ONLY after all checks and cleanups pass
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATEWAY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PATCH_FILE="$GATEWAY_ROOT/patches/0001-shared-gateway-wiring.patch"
+COMPOSE_FILE="$GATEWAY_ROOT/config/compose.candidate.yaml"
 
 # Node 22 environment detection
 if [ -d "/opt/englishpod-runner/_work/_tool/node/22.23.3/x64/bin" ]; then
@@ -30,8 +34,13 @@ fi
 
 BASE_COMMIT="92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7"
 BASELINE_IMAGE_ID="sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
-EXPECTED_PATCH_SHA256="e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d"
+EXPECTED_PATCH_SHA256="70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980"
 UPSTREAM_SOURCE_DIR="/opt/insurance-carddav-mcp/source"
+
+# Ports strictly used during drill
+BRIDGE_PORT=18765
+CANDIDATE_PORT=17799
+ROLLBACK_PORT=17798
 
 # Completely synthetic IDs (zero production correlation)
 SYNTH_LIST_ID="00000000-AAAA-BBBB-CCCC-000000000001"
@@ -45,31 +54,59 @@ if docker inspect "$PROD_CONTAINER_NAME" >/dev/null 2>&1; then
 fi
 
 # Track resource creation for unified cleanup
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+RUN_ID="ag03-${TIMESTAMP}"
+CANDIDATE_PROJECT="ag03-candidate-${TIMESTAMP}"
+ROLLBACK_PROJECT="ag03-rollback-${TIMESTAMP}"
 BRIDGE_PID=""
-NETWORK_NAME="ag03_test_network"
-NETWORK_CREATED=0
 WORK_DIR=""
+
+check_port_free() {
+  local port="$1"
+  local host="${2:-127.0.0.1}"
+  if (exec 3<>/dev/tcp/"$host"/"$port") 2>/dev/null; then
+    exec 3<&-
+    exec 3>&-
+    return 1
+  fi
+  if ss -tln | grep -E "[: ]${port}[[:space:]]" >/dev/null 2>&1; then
+    return 1
+  fi
+  if lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    return 1
+  fi
+  return 0
+}
 
 cleanup() {
   local exit_code=$?
-  echo "--- [CLEANUP] Executing unified exit cleanup (Exit code: $exit_code) ---"
+  echo "--- [CLEANUP] Executing exit cleanup (Exit code: $exit_code) ---"
 
-  # 1. Terminate Fake Bridge process if running
+  # 1. Terminate only Fake Bridge PID if recorded and alive (no batch killing)
   if [ -n "$BRIDGE_PID" ] && kill -0 "$BRIDGE_PID" 2>/dev/null; then
     echo "       Stopping Fake Bridge process (PID: $BRIDGE_PID)..."
-    kill "$BRIDGE_PID" 2>/dev/null || true
+    kill -15 "$BRIDGE_PID" 2>/dev/null || true
+    wait "$BRIDGE_PID" 2>/dev/null || true
   fi
-  fuser -k 18765/tcp 2>/dev/null || true
-  pkill -f fake-bridge.mjs 2>/dev/null || true
 
-  # 2. Stop and remove only drill test containers
-  docker rm -f insurance-carddav-mcp-candidate >/dev/null 2>&1 || true
-  docker rm -f insurance-carddav-mcp-rollback >/dev/null 2>&1 || true
+  # 2. Stop and remove test containers and networks via Compose
+  if [ -n "$CANDIDATE_PROJECT" ]; then
+    echo "       Stopping candidate compose project $CANDIDATE_PROJECT..."
+    docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
+  fi
+  if [ -n "$ROLLBACK_PROJECT" ]; then
+    echo "       Stopping rollback compose project $ROLLBACK_PROJECT..."
+    docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
+  fi
 
-  # 3. Remove isolated network if created
-  if [ "$NETWORK_CREATED" -eq 1 ]; then
-    echo "       Removing test network $NETWORK_NAME..."
-    docker network rm "$NETWORK_NAME" >/dev/null 2>&1 || true
+  # 3. Clean any labeled containers specifically created by this run
+  if [ -n "$RUN_ID" ]; then
+    local residual_containers
+    residual_containers=$(docker ps -aq --filter "label=ag03_run_id=${RUN_ID}" 2>/dev/null || true)
+    if [ -n "$residual_containers" ]; then
+      echo "       Removing residual containers for run $RUN_ID: $residual_containers"
+      docker rm -f $residual_containers >/dev/null 2>&1 || true
+    fi
   fi
 
   # 4. Remove temporary credentials (preserving logs)
@@ -80,14 +117,15 @@ cleanup() {
 
   # 5. Production integrity assertion
   if [ -n "$PROD_STATUS_BEFORE" ]; then
-    PROD_STATUS_AFTER=$(docker inspect "$PROD_CONTAINER_NAME" --format '{{.State.Status}} {{.State.Health.Status}} {{.State.StartedAt}}' 2>/dev/null || echo "UNKNOWN")
-    if [ "$PROD_STATUS_BEFORE" != "$PROD_STATUS_AFTER" ]; then
+    local prod_status_after
+    prod_status_after=$(docker inspect "$PROD_CONTAINER_NAME" --format '{{.State.Status}} {{.State.Health.Status}} {{.State.StartedAt}}' 2>/dev/null || echo "UNKNOWN")
+    if [ "$PROD_STATUS_BEFORE" != "$prod_status_after" ]; then
       echo "CRITICAL ERROR: Seoul production container status changed during drill!" >&2
       echo "  Initial: $PROD_STATUS_BEFORE" >&2
-      echo "  Final:   $PROD_STATUS_AFTER" >&2
+      echo "  Final:   $prod_status_after" >&2
       exit 1
     else
-      echo "       Seoul Production Container Verified Untouched: $PROD_STATUS_AFTER"
+      echo "       Seoul Production Container Verified Untouched: $prod_status_after"
     fi
   fi
 
@@ -116,15 +154,26 @@ wait_for_health() {
 echo "========================================================================"
 echo " AG-03 CLEAN ENVIRONMENT REPRODUCTION AND DELIVERY DRILL"
 echo " Time: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+echo " Run ID: $RUN_ID"
 echo " Production Initial: ${PROD_STATUS_BEFORE:-None}"
 echo "========================================================================"
+
+# Pre-flight check: Port availability (strict rejection if occupied)
+echo "[1/11] Checking port availability (zero process killing policy)..."
+for p in "$BRIDGE_PORT" "$CANDIDATE_PORT" "$ROLLBACK_PORT"; do
+  if ! check_port_free "$p"; then
+    echo "ERROR: Port $p is already occupied by an external process! Aborting without modifying existing process." >&2
+    exit 1
+  fi
+done
+echo "       Verified: All required ports ($BRIDGE_PORT, $CANDIDATE_PORT, $ROLLBACK_PORT) are free."
 
 if [ ! -f "$PATCH_FILE" ]; then
   echo "ERROR: Patch file not found: $PATCH_FILE" >&2
   exit 1
 fi
 
-echo "[1/10] Verifying canonical patch checksum..."
+echo "[2/11] Verifying canonical patch checksum..."
 ACTUAL_PATCH_SHA256=$(sha256sum "$PATCH_FILE" | awk '{print $1}')
 echo "       Path:     $PATCH_FILE"
 echo "       Expected: $EXPECTED_PATCH_SHA256"
@@ -135,13 +184,12 @@ if [ "$ACTUAL_PATCH_SHA256" != "$EXPECTED_PATCH_SHA256" ]; then
 fi
 
 # Create clean isolated staging directory
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 WORK_DIR="/tmp/ag03-delivery-clean-${TIMESTAMP}"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/upstream" "$WORK_DIR/data" "$WORK_DIR/logs"
 chmod 777 "$WORK_DIR/data"
 
-echo "[2/10] Extracting pristine upstream baseline (Commit: $BASE_COMMIT)..."
+echo "[3/11] Extracting pristine upstream baseline (Commit: $BASE_COMMIT)..."
 if [ ! -d "$UPSTREAM_SOURCE_DIR" ]; then
   echo "ERROR: Upstream source repository not found at $UPSTREAM_SOURCE_DIR" >&2
   exit 1
@@ -153,10 +201,10 @@ if [ -d "$UPSTREAM_SOURCE_DIR/node_modules" ]; then
   cp -r "$UPSTREAM_SOURCE_DIR/node_modules" "$WORK_DIR/upstream/"
 fi
 
-echo "[3/10] Applying canonical patch to clean baseline..."
+echo "[4/11] Applying canonical patch to clean baseline (restoring all 8 contacts groups tools + gateway)..."
 patch -p1 -i "$PATCH_FILE" -d "$WORK_DIR/upstream"
 
-echo "[4/10] Running full shared service unit & regression tests..."
+echo "[5/11] Running full shared service unit & regression tests (21 suites, 326 tests)..."
 (
   cd "$WORK_DIR/upstream"
   npm run build
@@ -164,23 +212,14 @@ echo "[4/10] Running full shared service unit & regression tests..."
 ) > "$WORK_DIR/logs/vitest-regression.log" 2>&1
 echo "       Unit & Regression tests passed: $(grep -E "Test Files|Tests" "$WORK_DIR/logs/vitest-regression.log" | tr '\n' ' ')"
 
-echo "[5/10] Building candidate Docker image..."
+echo "[6/11] Building candidate Docker image..."
 CANDIDATE_TAG="insurance-carddav-mcp-carddav:candidate-ag03-delivery-${TIMESTAMP}"
 docker build -t "$CANDIDATE_TAG" "$WORK_DIR/upstream" > "$WORK_DIR/logs/docker-build.log" 2>&1
 CANDIDATE_IMAGE_ID=$(docker inspect "$CANDIDATE_TAG" --format '{{.Id}}')
 echo "       Candidate image built: $CANDIDATE_TAG"
 echo "       Candidate image ID:   $CANDIDATE_IMAGE_ID"
 
-echo "[6/10] Setting up isolated Docker network ($NETWORK_NAME)..."
-SUBNET="172.30.56.0/24"
-GATEWAY_IP="172.30.56.1"
-
-if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-  docker network create --subnet "$SUBNET" --gateway "$GATEWAY_IP" "$NETWORK_NAME"
-  NETWORK_CREATED=1
-fi
-
-echo "[7/10] Initializing synthetic test credentials & starting Fake EventKit Bridge..."
+echo "[7/11] Initializing synthetic test credentials & starting Fake EventKit Bridge..."
 TOKEN_ENCRYPTION_KEY=$(openssl rand -base64 32)
 export TOKEN_ENCRYPTION_KEY
 
@@ -243,7 +282,7 @@ process.stdout.write(c.adminPasswordHash);
 cat << EOF > "$WORK_DIR/fake-bridge.mjs"
 import http from 'node:http';
 
-const PORT = 18765;
+const PORT = $BRIDGE_PORT;
 const HOST = '172.30.56.1';
 const VALID_TOKEN = 'test-valid-bearer-token-at-least-32chars!';
 const SYNTH_LIST_ID = '$SYNTH_LIST_ID';
@@ -371,46 +410,44 @@ server.listen(PORT, HOST, () => {
 });
 EOF
 
-fuser -k 18765/tcp 2>/dev/null || true
-pkill -f fake-bridge.mjs 2>/dev/null || true
+# Start fake bridge with explicit PID recording (no fuser -k, no pkill)
 node "$WORK_DIR/fake-bridge.mjs" > "$WORK_DIR/logs/fake-bridge.log" 2>&1 &
 BRIDGE_PID=$!
+echo "       Fake Bridge started (PID: $BRIDGE_PID)"
 
 wait_for_health "http://172.30.56.1:18765/health" 30 0.5 "Fake Bridge"
 
-echo "[8/10] Starting Candidate container on isolated network (port 17799)..."
-docker rm -f insurance-carddav-mcp-candidate >/dev/null 2>&1 || true
+echo "[8/11] Starting Candidate container via Compose stack ($CANDIDATE_PROJECT, port $CANDIDATE_PORT)..."
+RUN_ID="$RUN_ID" \
+CARDDAV_IMAGE="$CANDIDATE_TAG" \
+BIND_PORT="127.0.0.1:${CANDIDATE_PORT}" \
+PUBLIC_URL="http://127.0.0.1:${CANDIDATE_PORT}" \
+DATA_DIR="$WORK_DIR/data" \
+ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
+TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
+MACSERVER_EVENTKIT_ENDPOINT="http://172.30.56.1:18765" \
+MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!" \
+MACSERVER_EVENTKIT_TIMEOUT_MS="1200" \
+MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV,stalled-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV,corrupted-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV" \
+ICLOUD_ACCOUNT_1="synthetic_candidate@icloud.com" \
+ICLOUD_APP_PASSWORD_1="abcd-efgh-ijkl-mnop" \
+ICLOUD_LABEL_1="Synthetic Candidate" \
+ALLOW_REMINDERS_READ_1="true" \
+ALLOW_REMINDERS_WRITE_1="false" \
+ALLOW_MAIL_READ_1="false" \
+ALLOW_MAIL_WRITE_1="false" \
+ALLOW_CALENDAR_READ_1="false" \
+ALLOW_CALENDAR_WRITE_1="false" \
+ALLOW_CONTACTS_READ_1="false" \
+ALLOW_CONTACTS_WRITE_1="false" \
+docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" up -d
 
-docker run -d --rm \
-  --name insurance-carddav-mcp-candidate \
-  --network "$NETWORK_NAME" \
-  -p 127.0.0.1:17799:17733 \
-  -v "$WORK_DIR/data:/app/data" \
-  -e PUBLIC_URL="http://127.0.0.1:17799" \
-  -e ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
-  -e TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
-  -e MACSERVER_EVENTKIT_ENDPOINT="http://172.30.56.1:18765" \
-  -e MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!" \
-  -e MACSERVER_EVENTKIT_TIMEOUT_MS="1200" \
-  -e MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV,stalled-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV,corrupted-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV" \
-  -e ICLOUD_ACCOUNT_1="synthetic_candidate@icloud.com" \
-  -e ICLOUD_APP_PASSWORD_1="abcd-efgh-ijkl-mnop" \
-  -e ICLOUD_LABEL_1="Synthetic Candidate" \
-  -e ALLOW_REMINDERS_READ_1="true" \
-  -e ALLOW_REMINDERS_WRITE_1="false" \
-  -e ALLOW_MAIL_READ_1="false" \
-  -e ALLOW_MAIL_WRITE_1="false" \
-  -e ALLOW_CALENDAR_READ_1="false" \
-  -e ALLOW_CALENDAR_WRITE_1="false" \
-  -e ALLOW_CONTACTS_READ_1="false" \
-  -e ALLOW_CONTACTS_WRITE_1="false" \
-  "$CANDIDATE_TAG" >/dev/null
-
-wait_for_health "http://127.0.0.1:17799/health" 30 1 "Candidate Container"
+wait_for_health "http://127.0.0.1:${CANDIDATE_PORT}/health" 30 1 "Candidate Container"
 
 # Verify environment variables entered container
 echo "       Verifying environment variables inside Candidate container..."
-CONTAINER_ENVS=$(docker inspect insurance-carddav-mcp-candidate --format '{{range .Config.Env}}{{println .}}{{end}}')
+CANDIDATE_CONTAINER_NAME=$(docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
+CONTAINER_ENVS=$(docker inspect "$CANDIDATE_CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}')
 for REQUIRED_VAR in MACSERVER_EVENTKIT_ENDPOINT MACSERVER_EVENTKIT_AUTH_TOKEN MACSERVER_EVENTKIT_ALLOWED_LISTS ALLOW_REMINDERS_READ_1 ALLOW_REMINDERS_WRITE_1; do
   if ! echo "$CONTAINER_ENVS" | grep -q "^${REQUIRED_VAR}="; then
     echo "ERROR: Required environment variable ${REQUIRED_VAR} not found in container!" >&2
@@ -419,17 +456,53 @@ for REQUIRED_VAR in MACSERVER_EVENTKIT_ENDPOINT MACSERVER_EVENTKIT_AUTH_TOKEN MA
 done
 echo "       Verified: All gateway environment variables present in container runtime config."
 
-echo "[9/10] Executing external acceptance probe suite (13 assertions)..."
+echo "[9/11] Executing external acceptance probe suite (full 33 tools set assertion)..."
 cat << EOF > "$WORK_DIR/verify-acceptance.mjs"
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes, createHash } from 'node:crypto';
 
-const BASE_URL = 'http://127.0.0.1:17799';
+const BASE_URL = 'http://127.0.0.1:${CANDIDATE_PORT}';
 const BRIDGE_STATS_URL = 'http://172.30.56.1:18765/stats';
 const REDIRECT_URI = 'http://127.0.0.1:9/callback';
 const PROTOCOL_VERSION = '2025-06-18';
 const NEWLINE = String.fromCharCode(10);
 const TARGET_LIST_ID = '$SYNTH_LIST_ID';
+
+const EXPECTED_TOOLS = [
+  'apple_accounts',
+  'apple_login',
+  'work_done',
+  'mail_folders',
+  'mail_search',
+  'mail_read',
+  'mail_send',
+  'mail_mark',
+  'mail_move',
+  'mail_delete',
+  'calendar_list',
+  'calendar_list_events',
+  'calendar_create_event',
+  'calendar_update_event',
+  'calendar_delete_event',
+  'reminders_lists',
+  'reminders_list',
+  'reminders_create',
+  'reminders_update',
+  'reminders_delete',
+  'contacts_search',
+  'contacts_read',
+  'contacts_create',
+  'contacts_update',
+  'contacts_delete',
+  'contacts_groups_list',
+  'contacts_groups_members',
+  'contacts_groups_create',
+  'contacts_groups_rename',
+  'contacts_groups_add_members',
+  'contacts_groups_remove_members',
+  'contacts_create_in_groups',
+  'contacts_groups_delete',
+];
 
 function b64url(buf) {
   return buf.toString('base64').replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
@@ -590,12 +663,30 @@ async function main() {
     const mcpSessionA = await initMcpSession(BASE_URL, tokenA);
     receipt.assertions.mcp_streamable_http_session_initialized = true;
 
-    // 6. Tools list
+    // 6. Tools list & Exact 33 tool set discovery validation
     const listToolsRes = await mcpPost(BASE_URL, tokenA, { jsonrpc: '2.0', id: 10, method: 'tools/list' }, mcpSessionA);
     const listMsg = listToolsRes.messages.find((m) => m.id === 10);
-    const tools = (listMsg?.result?.tools || []).map((t) => t.name);
+    let tools = (listMsg?.result?.tools || []).map((t) => t.name);
+
+    // Injection support for targeted negative verification drill
+    if (process.env.INJECT_MISSING_TOOL) {
+      tools = tools.filter(t => t !== process.env.INJECT_MISSING_TOOL);
+    }
+
     receipt.discoveredTools = tools;
-    receipt.assertions.tool_discovery_all_modules_present = tools.includes('reminders_list') && tools.includes('reminders_create');
+
+    const missing = EXPECTED_TOOLS.filter((t) => !tools.includes(t));
+    const unexpected = tools.filter((t) => !EXPECTED_TOOLS.includes(t));
+    if (missing.length > 0) {
+      throw new Error(\`Tool discovery failed: missing expected tools: \${missing.join(', ')}\`);
+    }
+    if (unexpected.length > 0) {
+      throw new Error(\`Tool discovery failed: unexpected tools: \${unexpected.join(', ')}\`);
+    }
+    if (tools.length !== EXPECTED_TOOLS.length) {
+      throw new Error(\`Tool count mismatch: expected \${EXPECTED_TOOLS.length}, got \${tools.length}\`);
+    }
+    receipt.assertions.exact_33_tools_set_matched = true;
 
     // 7. Apple login
     const loginCall = await callTool(BASE_URL, tokenA, mcpSessionA, 'apple_login', {}, 20);
@@ -664,7 +755,7 @@ async function main() {
   } finally {
     writeFileSync('/tmp/ag03-delivery-clean-receipt.json', JSON.stringify(receipt, null, 2));
     if (receipt.verdict !== 'PASS') {
-      console.error('Acceptance suite failed:', JSON.stringify(receipt.assertions, null, 2));
+      console.error('Acceptance suite failed:', JSON.stringify(receipt, null, 2));
       process.exit(1);
     }
   }
@@ -674,10 +765,12 @@ EOF
 
 node "$WORK_DIR/verify-acceptance.mjs"
 mv /tmp/ag03-delivery-clean-receipt.json "$WORK_DIR/RECEIPT_AG03_DELIVERY.json"
-echo "       Acceptance probe suite passed: 13/13 assertions PASS"
+echo "       Acceptance probe suite passed: 13/13 assertions PASS (all 33 tools verified)"
 
-echo "[10/10] Verifying deterministic rollback to baseline image & cleanup..."
-docker stop insurance-carddav-mcp-candidate >/dev/null
+echo "[10/11] Verifying deterministic rollback to baseline image via Compose ($ROLLBACK_PROJECT, port $ROLLBACK_PORT)..."
+# Stop candidate container via Compose
+docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
+CANDIDATE_PROJECT=""
 
 ROLLBACK_EXTRA_ARGS=""
 ROLLBACK_HEALTH_ATTEMPTS=30
@@ -687,18 +780,18 @@ if [ "${INJECT_ROLLBACK_FAILURE:-0}" = "1" ]; then
   ROLLBACK_HEALTH_ATTEMPTS=5
 fi
 
-docker rm -f insurance-carddav-mcp-rollback >/dev/null 2>&1 || true
-docker run -d --rm \
-  --name insurance-carddav-mcp-rollback \
-  -p 127.0.0.1:17798:17733 \
-  -v "$WORK_DIR/data:/app/data" \
-  -e PUBLIC_URL="http://127.0.0.1:17798" \
-  -e ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
-  -e TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
-  "$BASELINE_IMAGE_ID" $ROLLBACK_EXTRA_ARGS >/dev/null
+RUN_ID="$RUN_ID" \
+CARDDAV_IMAGE="$BASELINE_IMAGE_ID" \
+BIND_PORT="127.0.0.1:${ROLLBACK_PORT}" \
+PUBLIC_URL="http://127.0.0.1:${ROLLBACK_PORT}" \
+DATA_DIR="$WORK_DIR/data" \
+ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
+TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
+docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" up -d $ROLLBACK_EXTRA_ARGS
 
 # 1. Verify actual image ID of running rollback container matches recorded baseline image ID
-ACTUAL_ROLLBACK_IMAGE=$(docker inspect insurance-carddav-mcp-rollback --format '{{.Image}}')
+ROLLBACK_CONTAINER_NAME=$(docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
+ACTUAL_ROLLBACK_IMAGE=$(docker inspect "$ROLLBACK_CONTAINER_NAME" --format '{{.Image}}')
 if [ "$ACTUAL_ROLLBACK_IMAGE" != "$BASELINE_IMAGE_ID" ]; then
   echo "ERROR: Rollback image ID mismatch! Expected: $BASELINE_IMAGE_ID, Actual: $ACTUAL_ROLLBACK_IMAGE" >&2
   exit 1
@@ -706,31 +799,72 @@ fi
 echo "       Rollback container image ID verified: $ACTUAL_ROLLBACK_IMAGE"
 
 # 2. Verify healthcheck response (with strict timeout)
-wait_for_health "http://127.0.0.1:17798/health" "$ROLLBACK_HEALTH_ATTEMPTS" 1 "Rollback Container"
+wait_for_health "http://127.0.0.1:${ROLLBACK_PORT}/health" "$ROLLBACK_HEALTH_ATTEMPTS" 1 "Rollback Container"
 
 # 3. Verify configuration correspondence inside rollback container
-ROLLBACK_ENVS=$(docker inspect insurance-carddav-mcp-rollback --format '{{range .Config.Env}}{{println .}}{{end}}')
+ROLLBACK_ENVS=$(docker inspect "$ROLLBACK_CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}')
 if ! echo "$ROLLBACK_ENVS" | grep -q "^TOKEN_ENCRYPTION_KEY="; then
   echo "ERROR: Rollback container configuration mismatch!" >&2
   exit 1
 fi
 echo "       Rollback container configuration correspondence verified."
 
-docker stop insurance-carddav-mcp-rollback >/dev/null
+# Stop rollback container via Compose
+docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
+ROLLBACK_PROJECT=""
 
-# Archive receipt to repository root
+echo "[11/11] Unified post-drill verification (zero residual resources & production integrity)..."
+# Terminate fake bridge explicitly
+if [ -n "$BRIDGE_PID" ] && kill -0 "$BRIDGE_PID" 2>/dev/null; then
+  kill -15 "$BRIDGE_PID" 2>/dev/null || true
+  wait "$BRIDGE_PID" 2>/dev/null || true
+  BRIDGE_PID=""
+fi
+
+# Verify all ports released
+for p in "$BRIDGE_PORT" "$CANDIDATE_PORT" "$ROLLBACK_PORT"; do
+  if ! check_port_free "$p"; then
+    echo "ERROR: Post-drill port leak: Port $p is still occupied!" >&2
+    exit 1
+  fi
+done
+
+# Verify zero residual containers with this run label
+RESIDUAL_CONTAINERS=$(docker ps -aq --filter "label=ag03_run_id=${RUN_ID}" 2>/dev/null || true)
+if [ -n "$RESIDUAL_CONTAINERS" ]; then
+  echo "ERROR: Post-drill container leak: Residual containers exist: $RESIDUAL_CONTAINERS" >&2
+  exit 1
+fi
+
+# Verify production container untouched
+if [ -n "$PROD_STATUS_BEFORE" ]; then
+  PROD_STATUS_AFTER=$(docker inspect "$PROD_CONTAINER_NAME" --format '{{.State.Status}} {{.State.Health.Status}} {{.State.StartedAt}}' 2>/dev/null || echo "UNKNOWN")
+  if [ "$PROD_STATUS_BEFORE" != "$PROD_STATUS_AFTER" ]; then
+    echo "CRITICAL ERROR: Seoul production container status changed during drill!" >&2
+    echo "  Initial: $PROD_STATUS_BEFORE" >&2
+    echo "  Final:   $PROD_STATUS_AFTER" >&2
+    exit 1
+  fi
+fi
+echo "       Verified: All test resources cleaned up, zero residuals, production untouched."
+
+# Archive receipt to repository root ONLY after all cleanup & checks pass
 FINAL_RECEIPT="$WORK_DIR/RECEIPT_AG03_DELIVERY.json"
 node -e '
 import { readFileSync, writeFileSync } from "node:fs";
 const r = JSON.parse(readFileSync("'"$FINAL_RECEIPT"'", "utf8"));
 r.metadata = {
+  run_id: "'"$RUN_ID"'",
   base_commit: "'"$BASE_COMMIT"'",
   patch_sha256: "'"$ACTUAL_PATCH_SHA256"'",
   candidate_image_tag: "'"$CANDIDATE_TAG"'",
   candidate_image_id: "'"$CANDIDATE_IMAGE_ID"'",
   baseline_image_id: "'"$BASELINE_IMAGE_ID"'",
   production_status_before: "'"$PROD_STATUS_BEFORE"'",
-  synthetic_list_id: "'"$SYNTH_LIST_ID"'"
+  production_status_after: "'"$PROD_STATUS_AFTER"'",
+  synthetic_list_id: "'"$SYNTH_LIST_ID"'",
+  expected_tools_count: 33,
+  discovered_tools_count: r.discoveredTools.length
 };
 writeFileSync("'"$FINAL_RECEIPT"'", JSON.stringify(r, null, 2));
 writeFileSync("'"$GATEWAY_ROOT"'/RECEIPT_SHARED_SERVICE_ACCEPTANCE.json", JSON.stringify(r, null, 2));
@@ -742,6 +876,7 @@ echo " Verdict: PASS"
 echo " Candidate Image Tag: $CANDIDATE_TAG"
 echo " Candidate Image ID:  $CANDIDATE_IMAGE_ID"
 echo " Patch SHA256:        $ACTUAL_PATCH_SHA256"
-echo " Synthetic List ID:   $SYNTH_LIST_ID"
+echo " Discovered Tools:    33/33 exact match"
+echo " Production Untouched: $PROD_STATUS_AFTER"
 echo " Archived Receipt:    $GATEWAY_ROOT/RECEIPT_SHARED_SERVICE_ACCEPTANCE.json"
 echo "========================================================================"
