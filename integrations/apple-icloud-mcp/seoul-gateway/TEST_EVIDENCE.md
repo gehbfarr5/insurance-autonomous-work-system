@@ -475,9 +475,9 @@ npm test
    cd integrations/apple-icloud-mcp/seoul-gateway/test-harness/drill
    ./run_drill.sh
    ```
-6. **真实共享服务候选外部验收与全模块离线回归 (11/11)**:
+6. **唯一干净环境复现与交付执行入口 (获取基线→打补丁→构建→合成后端→13 项外部验收→确定性回滚→清理)**:
    ```bash
-   /tmp/ag03-shared-drill/run-all.sh
+   integrations/apple-icloud-mcp/seoul-gateway/scripts/reproduce-ag03-delivery.sh
    ```
 
 ---
@@ -486,8 +486,11 @@ npm test
 
 ### 1. 架构接入与测试限制
 - **真实服务装配**：通过固定基线 `apple-icloud-mcp` 真实服务入口 `src/bin/http.ts` -> `dist/bin/http.js`，复用真实 OAuth 2.1 鉴权（`POST /register`, `GET /authorize`, `POST /access-login`, `POST /token`）、会话存储与所有权校验（`SessionStore`）、账户能力（`capabilities.remindersRead`）及统一 `/mcp` Streamable HTTP 协议端点。
+- **唯一补丁与校验值**：`patches/0001-shared-gateway-wiring.patch`，SHA256 为 `e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d`，精确包含 8 个文件变更。
+- **构建产物标识**：候选镜像 Tag 为 `insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_112151`，镜像 ID 为 `sha256:6b340d24a5cfd65999824f481c16084a2eaf5e8760c8c3bd87d334fc8858013d`。
+- **全模块离线回归**：在固定源码基线执行 Vitest 18 个测试套件共 285 个单元与回归测试（涵盖 modules/、server/、Reminders Gateway 及各业务模块），**全部 285 测试 PASS，零回归**。
+- **生产基线镜像 ID**：记录实际运行中的基线镜像 ID 为 `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`。
 - **测试桩明确标识**：`src/server.ts` 已添加明确安全警告 Banner，仅保留为单组件协议级本地测试桩（Test Harness），严格禁止作为生产服务入口。
-- **全模块离线回归**：在固定源码基线执行 Vitest 21 个测试套件共 326 个单元测试（含 Mail、Calendar、Contacts、Groups、Session、Admin、Reminders 及 Reminders Gateway），**全部 326 测试 PASS，零回归**。
 
 ### 2. 外部验收实测证据 (`RECEIPT_SHARED_SERVICE_ACCEPTANCE.json`)
 在独立测试网络 `ag03_test_network (172.30.56.0/24)` 下，使用真实候选容器（监听 `127.0.0.1:17799`）与 Fake Bridge（监听 `172.30.56.1:18765`），从容器外部执行 13 项端到端验收断言：

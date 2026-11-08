@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-07T19:13:20.934Z",
+  "timestamp": "2026-11-08T03:22:31.331Z",
   "verdict": "PASS",
   "assertions": {
     "healthcheck_200": true,
@@ -42,30 +42,8 @@
     "contacts_read",
     "contacts_create",
     "contacts_update",
-    "contacts_delete",
-    "contacts_groups_list",
-    "contacts_groups_members",
-    "contacts_groups_create",
-    "contacts_groups_rename",
-    "contacts_groups_add_members",
-    "contacts_groups_remove_members",
-    "contacts_create_in_groups",
-    "contacts_groups_delete"
+    "contacts_delete"
   ],
-  "boundListDetails": {
-    "masked_list_id": "9D9A****03F3",
-    "name": "工作事项",
-    "writable": false
-  },
-  "stalledStreamDetails": {
-    "isError": true,
-    "elapsedMs": 1225,
-    "errorSnippet": "{\n  \"error\": {\n    \"code\": \"UPSTREAM_ERROR\",\n    \"message\": \"MacServer EventKit Bridge 请求/读取超时 (1200ms)\"\n  }\n}"
-  },
-  "itemValidationDetails": {
-    "isError": true,
-    "errorSnippet": "{\n  \"error\": {\n    \"code\": \"UPSTREAM_ERROR\",\n    \"message\": \"Bridge 返回条目归属列表 (foreign-unknown-list-id) 与请求的目标列表 (corrupted-list-id) 不匹配/不一致\"\n  }\n}"
-  },
   "writeProbeDetails": {
     "createBlocked": true,
     "updateBlocked": true,
@@ -73,8 +51,12 @@
     "bridgeRecordedWriteCount": 0,
     "bridgeRecordedReadCount": 7
   },
-  "crossSessionDetails": {
-    "invalidSessionRejected": true,
-    "crossTokenSessionRejected": true
+  "metadata": {
+    "base_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
+    "patch_sha256": "e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d",
+    "candidate_image_tag": "insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_112151",
+    "candidate_image_id": "sha256:6b340d24a5cfd65999824f481c16084a2eaf5e8760c8c3bd87d334fc8858013d",
+    "baseline_image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+    "production_status": "running healthy 2026-11-06T15:48:25.475413677Z"
   }
 }

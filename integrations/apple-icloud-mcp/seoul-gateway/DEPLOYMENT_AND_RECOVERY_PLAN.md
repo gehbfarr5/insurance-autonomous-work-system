@@ -1,9 +1,13 @@
 # AG-03: Seoul → MacServer 只读网关部署与恢复方案 (Deployment & Recovery Plan)
 
 - **编制日期**：2026-11-08
-- **方案基线**：`feat/seoul-macserver-readonly-gateway` (AG-03 最终集成收尾)
+- **方案基线**：`feat/seoul-macserver-readonly-gateway` (AG-03 最终交付候选)
 - **源码基准 Commit**：`92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7` (apple-icloud-mcp 上游稳定基线)
-- **补丁文件**：`0001-shared-gateway-wiring.patch`
+- **唯一补丁文件**：`patches/0001-shared-gateway-wiring.patch`
+- **补丁 SHA256**：`e84899f1f66b71f6310f56e113d4aec6281dfb4d583ab5509aa3d6442347883d`
+- **唯一执行与复现入口**：`scripts/reproduce-ag03-delivery.sh`
+- **生产基线镜像 ID**：`sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`
+- **候选镜像 Tag / ID**：`insurance-carddav-mcp-carddav:candidate-ag03-delivery-20261108_112151` (`sha256:6b340d24a5cfd65999824f481c16084a2eaf5e8760c8c3bd87d334fc8858013d`)
 - **目标环境**：
   - Seoul MCP 主机 (`lhins-84gffkd8` / `VM-0-10-ubuntu`)，生产容器 `insurance-carddav-mcp-carddav-1` (端口 `127.0.0.1:17734->17733/tcp`)
   - Intel MacServer (`macserver-ts`, LaunchAgent `gui/501/com.muse.macserver-eventkit`)
@@ -134,20 +138,27 @@ docker tag insurance-carddav-mcp-carddav:latest insurance-carddav-mcp-carddav:ba
 
 若试运行期间出现任何异常（连接超时、鉴权失败、响应异常或共享模块受到干扰），立即执行以下确定性回滚：
 
-### 1. 恢复步骤
+### 1. 恢复步骤与持久化状态一致性原则
 
-#### 步骤 A：还原 Seoul 现场运行目录与配置
+> [!IMPORTANT]
+> **配置与持久化状态备份一致性原则**：
+> - 在试运行期间，合法的 MCP 客户端（Antigravity / MUSE / WorkBuddy）可能会正常刷新或轮换 OAuth 2.1 Access / Refresh Token，写入持久化目录 `/opt/insurance-carddav-mcp/data/tokens.json.enc`。
+> - **严禁盲目全量覆盖持久化数据**：回滚时必须严格解耦**代码配置回滚**与**业务 Token 状态**。若试运行期间底层数据结构未损坏且无脏数据注入，保留当前 `data/` 目录中的 Token 状态，避免因覆盖导致已建立合法会话的客户端集体掉线；若必须排查数据损坏，应先将当前 `data/` 进行增量归档快照，再做选择性还原。
+> - **直接使用记录的基线镜像 ID**：基线容器明确使用经记录的实际生产镜像 ID `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`，不依赖可能被二次覆盖的动态 tag。
+
+#### 步骤 A：还原 Seoul 代码、配置与基线镜像
 ```bash
-# 停止当前运行容器
+# 1. 停止当前候选容器
 cd /opt/insurance-carddav-mcp && docker compose stop carddav
 
-# 从现场快照完整还原（包括 .env, docker-compose.yml, 未归档改动与数据目录）
-rsync -a --delete /opt/insurance-carddav-mcp.bak-${BACKUP_TS}/ /opt/insurance-carddav-mcp/
+# 2. 还原配置文件与未归档源码改动（显式排除 data/ 运行时 Token 状态以防覆盖合法 Token）
+rsync -a --exclude 'data/tokens.json.enc*' /opt/insurance-carddav-mcp.bak-${BACKUP_TS}/ /opt/insurance-carddav-mcp/
 
-# 恢复基线镜像标签
-docker tag insurance-carddav-mcp-carddav:backup-pre-ag03-${BACKUP_TS} insurance-carddav-mcp-carddav:latest
+# 3. 将生产 latest 标签锁定恢复至已确认的基线镜像 ID (sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0)
+BASELINE_IMAGE_ID="sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+docker tag "$BASELINE_IMAGE_ID" insurance-carddav-mcp-carddav:latest
 
-# 启动基线容器
+# 4. 重新启动基线容器
 cd /opt/insurance-carddav-mcp && docker compose up -d --no-build carddav
 ```
 

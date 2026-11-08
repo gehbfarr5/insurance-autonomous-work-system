@@ -139,7 +139,7 @@ export function validateGatewayConfig(raw: unknown): MacServerGatewayConfig {
  */
 export function loadGatewayConfigFromEnv(env: Record<string, string | undefined> = process.env): MacServerGatewayConfig {
   const endpoint = env.MACSERVER_EVENTKIT_ENDPOINT || env.EVENTKIT_GATEWAY_ENDPOINT || env.EVENTKIT_BRIDGE_ENDPOINT || 'http://127.0.0.1:18765';
-  const token = env.MACSERVER_EVENTKIT_TOKEN || env.EVENTKIT_BRIDGE_AUTH_TOKEN || env.EVENTKIT_BRIDGE_TOKEN || '';
+  const token = env.MACSERVER_EVENTKIT_AUTH_TOKEN || env.MACSERVER_EVENTKIT_TOKEN || env.EVENTKIT_BRIDGE_AUTH_TOKEN || env.EVENTKIT_BRIDGE_TOKEN || '';
   const timeoutMs = env.MACSERVER_EVENTKIT_TIMEOUT_MS || env.EVENTKIT_BRIDGE_TIMEOUT_MS
     ? Number(env.MACSERVER_EVENTKIT_TIMEOUT_MS || env.EVENTKIT_BRIDGE_TIMEOUT_MS)
     : DEFAULT_TIMEOUT_MS;
