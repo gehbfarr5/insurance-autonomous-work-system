@@ -15,7 +15,9 @@
 - **中断与信号处理确定性**：捕获 INT/TERM 严格以非零状态（130/143）退出，重入守卫确保清理仅执行一次，中断绝无残留且绝无 PASS 回执
 - **部署与测试配置一致性**：部署与测试共用同一 `config/compose.candidate.yaml` 规格
 - **回执生成时序**：仅在测试完成、资源彻底清理无残留、生产容器状态前后校验一致后生成最终 PASS 回执
-- **确定性生产启动与恢复套件**：`scripts/production-entry.sh` 与 `tests/test-production-drills.sh`（全量覆盖部署、启动失败回滚、健康超时回滚、独立环境恢复、`docker-compose.yml` 优先级遮蔽防护、以及中断信号自动回滚等 6 项严格演练，实测 6/6 全部通过）
+- **确定性生产启动与恢复套件**：`scripts/production-entry.sh` 与 `tests/test-production-drills.sh`（全量覆盖部署、备份后 Compose 启动失败回滚、健康超时回滚、独立环境恢复、`docker-compose.yml` 优先级遮蔽防护、指定 PID 中断信号自动回滚、以及恢复关键命令失败 `RECOVERY_FAILED` 阻断等 7 项严格演练，实测 7/7 全部通过）
+- **权限比较与业务验收区分**：备份前提取实际 Contacts/Calendar 权限状态并在恢复后逐项核对原值（不硬编码 `true`）；配置一致不等于真实业务验收，验收前必须独立执行只读探针；
+- **错误处理严格性**：`rollback_baseline` 不依赖 `set -e`，对 rsync、docker tag、compose up 及核验命令逐项判定返回值，任一步失败立即返回非零并标记 `RECOVERY_FAILED`，严禁虚报成功；
 - **运维维护窗口**：预计 3~10 秒（仅含容器平滑重启及 `/health` 就绪等待，无需拉取或重新构建镜像）
 - **目标环境**：
   - Seoul MCP 主机 (`lhins-84gffkd8` / `VM-0-10-ubuntu`)，生产容器 `insurance-carddav-mcp-carddav-1` (端口 `127.0.0.1:17734->17733/tcp`)

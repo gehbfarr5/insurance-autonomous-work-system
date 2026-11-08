@@ -597,10 +597,10 @@ npm test
 
 ---
 
-## 六、生产启动、中断防护与确定性恢复全场景演练实测记录 (6/6 PASS)
+## 六、生产启动、中断防护与确定性恢复全场景演练实测记录 (7/7 PASS)
 
 测试套件：`integrations/apple-icloud-mcp/seoul-gateway/tests/test-production-drills.sh`  
-执行时间：2026-11-08 15:40:40 (UTC+8)  
+执行时间：2026-11-08 17:20:00 (UTC+8)  
 测试环境：首尔 MCP 宿主机 (`lhins-84gffkd8` / `VM-0-10-ubuntu` / 100.82.240.43)  
 测试对象：实际生产入口脚本 `scripts/production-entry.sh`  
 候选镜像 ID：`sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61`  
@@ -612,15 +612,16 @@ npm test
 | 演练编号 | 演练场景 | 验证要点与断言 | 实测结果 | 依据与状态 |
 | :--- | :--- | :--- | :--- | :--- |
 | **DRILL A** | 正常部署流程 | 运行前基线一致性核查；自动生成 `manifest.env` 全量快照；无现场构建启动候选；验证候选镜像激活与 `/health` 200 OK | **PASS** | 退出码 0，候选镜像与 `/health` 双核验一致 |
-| **DRILL B** | Compose 启动失败自动回滚 | 注入异常 Compose 模板模拟启动失败；触发 unified trap；自动停止并回滚至基线；断言脚本非零退出且恢复基线服务可用 | **PASS** | 退出码 1，自动回滚基线镜像并验证 200 OK |
+| **DRILL B** | 备份及配置写入后 Compose 启动失败自动回滚 | 真实发生在备份完成、候选配置写入之后注入启动失败；触发 Unified Trap；恢复原配置与基线镜像；验证基线健康 200 OK 与原权限一致 | **PASS** | 退出码 1，命中 post-backup failure 路径并恢复基线 |
 | **DRILL C** | 候选健康检查超时自动回滚 | 模拟候选健康检查超时；触发统一回滚路径；恢复原配置文件与基线镜像；验证基线健康与 Contacts/Cal 权限一致性 | **PASS** | 退出码 1，超时后自动恢复基线 |
 | **DRILL D** | 独立新终端/子进程直接恢复 | 使用 `env -i` 清除全部部署环境变量；仅传入备份目录路径直接触发 `production-entry.sh rollback`；从 `manifest.env` 自主恢复 | **PASS** | 退出码 0，跨终端无残留变量依赖恢复基线 |
 | **DRILL E** | 避免 `compose.yaml` 优先级遮蔽 | 原配置名为 `docker-compose.yml`，部署注入 `compose.yaml`；回滚时自动检测并清除残留 `compose.yaml`，确保原配置文件生效 | **PASS** | 退出码 0，残留 `compose.yaml` 干净清除，原配置生效 |
-| **DRILL F** | 变更中途收到中断信号自动回滚 | 部署执行中注入 `SIGTERM` 信号；Trap 自动捕获并执行确定性回滚；进程严格以退出码 143 退出；零悬挂容器、零未回滚残留 | **PASS** | 退出码 143，自动回滚基线，零残留 |
+| **DRILL F** | 变更中途指定 PID 收到中断信号自动回滚 | 记录本次部署 PID，向指定 PID 发送 `SIGTERM`（无 `pgrep`，不影响其他进程）；Trap 自动回滚基线；进程严格以退出码 143 退出；零悬挂容器、零未回滚残留 | **PASS** | 退出码 143，精准 PID 信号捕获，自动回滚基线，零残留 |
+| **DRILL G** | 恢复自身关键步骤失败阻断验证 | 针对 rsync 失败、镜像标记失败、Compose 恢复失败等关键命令路径执行注入；证明脚本非零退出、明确标记 `RECOVERY_FAILED`、严禁虚报成功，并完整保留脱敏现场证据 | **PASS** | 退出码 1，均输出 `RECOVERY_FAILED`，备份目录完好保留 |
 
 ### 2. 首尔生产环境完整性证据（零影响核验）
 - **生产容器**：`insurance-carddav-mcp-carddav-1`
 - **运行状态**：`running (healthy)`
-- **连续运行时间**：自 `2026-11-06T15:48:25.475413677Z` 至今持续运行 38+ 小时无重启
+- **连续运行时间**：自 `2026-11-06T15:48:25.475413677Z` 至今持续运行 39+ 小时无重启
 - **健康接口响应**：`curl -s http://127.0.0.1:17734/health` -> `{"status":"ok"}` (200 OK)
 - **生产配置状态**：`/opt/insurance-carddav-mcp` 配置文件完全未经修改
