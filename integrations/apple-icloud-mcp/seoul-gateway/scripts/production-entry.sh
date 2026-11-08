@@ -42,6 +42,23 @@ PROD_COMPOSE_FILE="${PROD_COMPOSE_FILE:-$PROD_DIR/compose.yaml}"
 PROD_HEALTH_URL="http://127.0.0.1:17734/health"
 PROD_TUNNEL_ENDPOINT="http://172.19.0.1:18765"
 
+# Load gateway variables from local restricted file without shell account leakage
+load_gateway_vars() {
+  local gw_file="$1"
+  # Unset any preexisting gateway variables first
+  unset MACSERVER_EVENTKIT_AUTH_TOKEN MACSERVER_EVENTKIT_ALLOWED_LISTS MACSERVER_EVENTKIT_ENDPOINT MACSERVER_EVENTKIT_TIMEOUT_MS || true
+  if [ -f "$gw_file" ]; then
+    while IFS='=' read -r key val || [ -n "$key" ]; do
+      key=$(echo "$key" | xargs 2>/dev/null || echo "$key")
+      [[ "$key" =~ ^#.* ]] && continue
+      [ -z "$key" ] && continue
+      if [[ "$key" =~ ^MACSERVER_EVENTKIT_ ]]; then
+        export "$key"="$val"
+      fi
+    done < "$gw_file"
+  fi
+}
+
 # Desensitization Helper
 mask_token() {
   local val="$1"
@@ -58,7 +75,6 @@ mask_binding() {
     echo "(empty)"
     return
   fi
-  # If format is UUID:source:... -> mask UUID middle
   IFS=':' read -r list_id source_id source_name source_type <<< "$val"
   if [ -n "$list_id" ] && [ ${#list_id} -ge 8 ]; then
     local prefix="${list_id:0:4}"
@@ -161,19 +177,21 @@ verify_config() {
   # 1. Test fail-fast when required gateway variable is missing
   echo "Testing Fail-Fast syntax when MACSERVER_EVENTKIT_AUTH_TOKEN is missing..."
   if (
+    unset MACSERVER_EVENTKIT_AUTH_TOKEN MACSERVER_EVENTKIT_ALLOWED_LISTS
     CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
     SECRETS_FILE="$target_secrets" \
     GATEWAY_ENV_FILE="$target_gateway" \
-    MACSERVER_EVENTKIT_AUTH_TOKEN="" \
     docker compose -f "$target_compose" config >/dev/null 2>&1
   ); then
-    echo "ERROR: Compose config failed to refuse startup when MACSERVER_EVENTKIT_AUTH_TOKEN was empty!" >&2
+    echo "ERROR: Compose config failed to refuse startup when gateway variables were missing!" >&2
     return 1
   fi
-  echo "       PASS: Compose refused startup on missing MACSERVER_EVENTKIT_AUTH_TOKEN."
+  echo "       PASS: Compose refused startup on missing required gateway variables."
 
-  # 2. Test successful rendering
+  # 2. Test successful rendering after loading variables from gateway.env
   echo "Testing successful Compose interpolation with locked candidate image..."
+  load_gateway_vars "$target_gateway"
+
   local rendered_config
   rendered_config=$(
     CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
@@ -201,7 +219,7 @@ verify_config() {
   echo "       - Reminders Read:     true (gateway override)"
   echo "       - Reminders Write:    false (strictly blocked)"
   echo "       - Compose Project:    $PROD_PROJECT"
-  echo "       - Production Network: $PROD_PROJECT_default (retained)"
+  echo "       - Production Network: ${PROD_PROJECT}_default (retained)"
   echo "--- [VERIFY-CONFIG] Configuration check completed with 0 errors ---"
   return 0
 }
@@ -241,6 +259,7 @@ deploy_candidate() {
 
   # Verify config interpolation
   verify_config "$COMPOSE_PROD_TEMPLATE" "$PROD_SECRETS_FILE" "$PROD_GATEWAY_ENV_FILE" 0
+  load_gateway_vars "$PROD_GATEWAY_ENV_FILE"
 
   # Step 2: Full live runtime backup
   local backup_ts
