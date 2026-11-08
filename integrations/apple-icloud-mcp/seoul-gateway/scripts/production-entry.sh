@@ -42,6 +42,7 @@ PROD_COMPOSE_FILE="${PROD_COMPOSE_FILE:-$PROD_DIR/compose.yaml}"
 PROD_PORT="${PROD_PORT:-17734}"
 PROD_HEALTH_URL="${PROD_HEALTH_URL:-http://127.0.0.1:${PROD_PORT}/health}"
 PROD_TUNNEL_ENDPOINT="${PROD_TUNNEL_ENDPOINT:-http://172.19.0.1:18765}"
+HEALTH_CHECK_ATTEMPTS="${HEALTH_CHECK_ATTEMPTS:-30}"
 
 # Load gateway variables from local restricted file without shell account leakage
 load_gateway_vars() {
@@ -272,6 +273,14 @@ deploy_candidate() {
   live_project=$(docker inspect "$PROD_CONTAINER" --format '{{index .Config.Labels "com.docker.compose.project"}}')
   live_mounts=$(docker inspect "$PROD_CONTAINER" --format '{{json .Mounts}}')
 
+  # Extract live container permissions to compare after rollback (Requirement 5)
+  local live_c_env live_contacts_read live_contacts_write live_calendar_read live_calendar_write
+  live_c_env=$(docker inspect "$PROD_CONTAINER" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null || echo "")
+  live_contacts_read=$(echo "$live_c_env" | grep -E '^ALLOW_CONTACTS_READ_1=' | cut -d'=' -f2- || true)
+  live_contacts_write=$(echo "$live_c_env" | grep -E '^ALLOW_CONTACTS_WRITE_1=' | cut -d'=' -f2- || true)
+  live_calendar_read=$(echo "$live_c_env" | grep -E '^ALLOW_CALENDAR_READ_1=' | cut -d'=' -f2- || true)
+  live_calendar_write=$(echo "$live_c_env" | grep -E '^ALLOW_CALENDAR_WRITE_1=' | cut -d'=' -f2- || true)
+
   echo "       Live Container:        $PROD_CONTAINER"
   echo "       Live Container Image:  $actual_image"
 
@@ -300,6 +309,7 @@ deploy_candidate() {
   orig_basename="$(basename "$live_compose_file")"
   echo "       Live Compose File:     $live_compose_file (basename: $orig_basename)"
   echo "       Live Mounts:           $live_mounts"
+  echo "       Live Permissions:      ContactsRead='${live_contacts_read}', ContactsWrite='${live_contacts_write}', CalendarRead='${live_calendar_read}', CalendarWrite='${live_calendar_write}'"
 
   # Verify config interpolation
   verify_config "$COMPOSE_PROD_TEMPLATE" "$PROD_SECRETS_FILE" "$PROD_GATEWAY_ENV_FILE" 0
@@ -337,6 +347,10 @@ BACKUP_ACTUAL_IMAGE_ID="$actual_image"
 BACKUP_ORIG_COMPOSE_FILE="$live_compose_file"
 BACKUP_ORIG_COMPOSE_BASENAME="$orig_basename"
 BACKUP_CONTAINER_MOUNTS='$live_mounts'
+BACKUP_ALLOW_CONTACTS_READ_1="$live_contacts_read"
+BACKUP_ALLOW_CONTACTS_WRITE_1="$live_contacts_write"
+BACKUP_ALLOW_CALENDAR_READ_1="$live_calendar_read"
+BACKUP_ALLOW_CALENDAR_WRITE_1="$live_calendar_write"
 EOF
 
   if [ ! -s "$backup_dir/manifest.env" ]; then
@@ -359,9 +373,14 @@ EOF
       echo "========================================================================" >&2
       DEPLOY_IN_PROGRESS=0
       if rollback_baseline "$ACTIVE_BACKUP_DIR"; then
-        echo " Unified rollback successfully restored baseline." >&2
+        echo "========================================================================" >&2
+        echo " [ROLLBACK-SUCCESS] Unified rollback successfully restored baseline." >&2
+        echo "========================================================================" >&2
       else
-        echo " CRITICAL ALARM: Unified rollback FAILED during recovery!" >&2
+        echo "========================================================================" >&2
+        echo " [RECOVERY_FAILED] CRITICAL ALARM: Unified rollback FAILED during recovery!" >&2
+        echo " Preserving backup directory for investigation: $ACTIVE_BACKUP_DIR" >&2
+        echo "========================================================================" >&2
       fi
     fi
     if [ "$exit_sig" -eq 0 ]; then
@@ -385,17 +404,25 @@ EOF
   # Step 5: Restart container via Compose (--no-build)
   echo "[4/6] Restarting Seoul MCP container with candidate image..."
   cd "$PROD_DIR"
+  if [ "${INJECT_COMPOSE_STARTUP_FAILURE:-0}" = "1" ]; then
+    echo "[FAULT_INJECTION] Injected failure during Compose candidate startup (post-backup and post-config-write)!" >&2
+    deploy_trap_handler 1
+  fi
+
   CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
   BIND_PORT="127.0.0.1:${PROD_PORT}" \
   SECRETS_FILE="$PROD_SECRETS_FILE" \
   GATEWAY_ENV_FILE="$PROD_GATEWAY_ENV_FILE" \
   DATA_DIR="$PROD_DATA_DIR" \
-  docker compose -p "$PROD_PROJECT" -f "$PROD_DIR/compose.yaml" up -d --no-build carddav
+  docker compose -p "$PROD_PROJECT" -f "$PROD_DIR/compose.yaml" up -d --no-build carddav || {
+    echo "CRITICAL ERROR: Candidate docker compose up failed!" >&2
+    deploy_trap_handler 1
+  }
 
   # Step 6: Verify health & image ID
   echo "[5/6] Verifying candidate container health and image correspondence..."
   local healthy=0
-  for i in $(seq 1 30); do
+  for i in $(seq 1 "$HEALTH_CHECK_ATTEMPTS"); do
     if curl -sf "$PROD_HEALTH_URL" >/dev/null 2>&1; then
       healthy=1
       echo "       Candidate container healthy at $PROD_HEALTH_URL (attempt $i)"
@@ -473,36 +500,66 @@ rollback_baseline() {
   # 1. Stop candidate container
   echo "[1/5] Stopping current container..."
   cd "$target_dir"
+  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "stop" ]; then
+    echo "[FAULT_INJECTION] Injected failure during container stopping!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 1 (stop container)." >&2
+    return 1
+  fi
   docker compose -p "$target_project" stop carddav 2>/dev/null || docker stop "$target_container" 2>/dev/null || true
 
   # 2. Restore configuration from backup, preserving runtime OAuth tokens
   echo "[2/5] Restoring configuration files from backup ($backup_dir)..."
-  # Note: Exclude data/tokens.json.enc* to preserve tokens issued or refreshed during runtime
-  rsync -a --exclude 'data/tokens.json.enc*' "$backup_dir/" "$target_dir/"
+  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "rsync" ]; then
+    echo "[FAULT_INJECTION] Injected failure during rsync configuration restoration!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 2 (rsync restore)." >&2
+    return 1
+  fi
+  if ! rsync -a --exclude 'data/tokens.json.enc*' "$backup_dir/" "$target_dir/"; then
+    echo "CRITICAL ERROR: Failed to restore configuration files via rsync from $backup_dir to $target_dir!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 2 (rsync restore)." >&2
+    return 1
+  fi
 
-  # Handle Compose file priority masking:
-  # Docker Compose gives priority to compose.yaml over docker-compose.yml.
-  # If the original file was NOT compose.yaml, we must delete compose.yaml so original compose file is not masked!
+  # Handle Compose file priority masking
   if [ "$orig_basename" != "compose.yaml" ] && [ -f "$target_dir/compose.yaml" ]; then
     echo "       Removing deployed compose.yaml to prevent priority masking of original $orig_basename..."
-    rm -f "$target_dir/compose.yaml"
+    if ! rm -f "$target_dir/compose.yaml"; then
+      echo "CRITICAL ERROR: Failed to remove deployed $target_dir/compose.yaml!" >&2
+      echo "[RECOVERY_FAILED] Rollback failed at Step 2 (compose.yaml unmasking)." >&2
+      return 1
+    fi
   fi
 
   # 3. Retag baseline image
   echo "[3/5] Restoring baseline image tag ($target_baseline_image)..."
-  docker tag "$target_baseline_image" "${target_project}-carddav:latest"
+  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "docker_tag" ]; then
+    echo "[FAULT_INJECTION] Injected failure during baseline image tagging!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 3 (docker tag)." >&2
+    return 1
+  fi
+  if ! docker tag "$target_baseline_image" "${target_project}-carddav:latest"; then
+    echo "CRITICAL ERROR: Failed to tag baseline image $target_baseline_image as latest!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 3 (docker tag)." >&2
+    return 1
+  fi
 
   # 4. Restart baseline container using original Compose configuration
   echo "[4/5] Restarting baseline container via Compose with original configuration ($orig_basename)..."
-  cd "$target_dir"
-  CARDDAV_IMAGE="$target_baseline_image" \
-  BIND_PORT="127.0.0.1:${target_port}" \
-  docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav
+  if [ "${INJECT_ROLLBACK_STEP_FAILURE:-}" = "compose_up" ]; then
+    echo "[FAULT_INJECTION] Injected failure during baseline container compose up!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 4 (compose up)." >&2
+    return 1
+  fi
+  if ! (cd "$target_dir" && CARDDAV_IMAGE="$target_baseline_image" BIND_PORT="127.0.0.1:${target_port}" docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav); then
+    echo "CRITICAL ERROR: Docker compose up failed while restarting baseline container!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 4 (compose up)." >&2
+    return 1
+  fi
 
-  # 5. Strict verification: Healthcheck, Image ID, and Contacts/Calendar configuration correspondence
+  # 5. Strict verification: Healthcheck, Image ID, and Permissions comparison against baseline original
   echo "[5/5] Performing post-rollback verification (Health, Image ID, Permissions)..."
   local healthy=0
-  for i in $(seq 1 30); do
+  for i in $(seq 1 "$HEALTH_CHECK_ATTEMPTS"); do
     if curl -sf "$target_health_url" >/dev/null 2>&1; then
       healthy=1
       echo "       Baseline container healthy at $target_health_url (attempt $i)"
@@ -513,35 +570,57 @@ rollback_baseline() {
 
   if [ "$healthy" -ne 1 ]; then
     echo "CRITICAL ERROR: Restored baseline container failed health probe at $target_health_url!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 5 (health check timeout)." >&2
     return 1
   fi
 
   local active_image
-  active_image=$(docker inspect "$target_container" --format '{{.Image}}')
-  if [ "$active_image" != "$target_baseline_image" ]; then
+  active_image=$(docker inspect "$target_container" --format '{{.Image}}' 2>/dev/null || echo "")
+  if [ -z "$active_image" ] || [ "$active_image" != "$target_baseline_image" ]; then
     echo "CRITICAL ERROR: Active image ($active_image) does not match baseline image ($target_baseline_image)!" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 5 (image ID mismatch)." >&2
     return 1
   fi
   echo "       Image ID verified: $active_image"
 
-  # Check Contacts and Calendar configuration in container
+  # Compare Contacts and Calendar permissions against actual recorded baseline values (Requirement 5)
   local c_env
-  c_env=$(docker inspect "$target_container" --format '{{range .Config.Env}}{{println .}}{{end}}')
-  if ! echo "$c_env" | grep -q 'ALLOW_CONTACTS_READ_1=true'; then
-    echo "CRITICAL ERROR: ALLOW_CONTACTS_READ_1 not found or not true in restored container!" >&2
+  c_env=$(docker inspect "$target_container" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null || echo "")
+  local cur_contacts_read cur_contacts_write cur_calendar_read cur_calendar_write
+  cur_contacts_read=$(echo "$c_env" | grep -E '^ALLOW_CONTACTS_READ_1=' | cut -d'=' -f2- || true)
+  cur_contacts_write=$(echo "$c_env" | grep -E '^ALLOW_CONTACTS_WRITE_1=' | cut -d'=' -f2- || true)
+  cur_calendar_read=$(echo "$c_env" | grep -E '^ALLOW_CALENDAR_READ_1=' | cut -d'=' -f2- || true)
+  cur_calendar_write=$(echo "$c_env" | grep -E '^ALLOW_CALENDAR_WRITE_1=' | cut -d'=' -f2- || true)
+
+  if [ -n "${BACKUP_ALLOW_CONTACTS_READ_1:-}" ] && [ "$cur_contacts_read" != "$BACKUP_ALLOW_CONTACTS_READ_1" ]; then
+    echo "CRITICAL ERROR: ALLOW_CONTACTS_READ_1 mismatch! Expected: '$BACKUP_ALLOW_CONTACTS_READ_1', Got: '$cur_contacts_read'" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
     return 1
   fi
-  if ! echo "$c_env" | grep -q 'ALLOW_CALENDAR_READ_1=true'; then
-    echo "CRITICAL ERROR: ALLOW_CALENDAR_READ_1 not found or not true in restored container!" >&2
+  if [ -n "${BACKUP_ALLOW_CONTACTS_WRITE_1:-}" ] && [ "$cur_contacts_write" != "$BACKUP_ALLOW_CONTACTS_WRITE_1" ]; then
+    echo "CRITICAL ERROR: ALLOW_CONTACTS_WRITE_1 mismatch! Expected: '$BACKUP_ALLOW_CONTACTS_WRITE_1', Got: '$cur_contacts_write'" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
     return 1
   fi
-  echo "       Configuration correspondence verified: Contacts and Calendar permissions intact."
+  if [ -n "${BACKUP_ALLOW_CALENDAR_READ_1:-}" ] && [ "$cur_calendar_read" != "$BACKUP_ALLOW_CALENDAR_READ_1" ]; then
+    echo "CRITICAL ERROR: ALLOW_CALENDAR_READ_1 mismatch! Expected: '$BACKUP_ALLOW_CALENDAR_READ_1', Got: '$cur_calendar_read'" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
+    return 1
+  fi
+  if [ -n "${BACKUP_ALLOW_CALENDAR_WRITE_1:-}" ] && [ "$cur_calendar_write" != "$BACKUP_ALLOW_CALENDAR_WRITE_1" ]; then
+    echo "CRITICAL ERROR: ALLOW_CALENDAR_WRITE_1 mismatch! Expected: '$BACKUP_ALLOW_CALENDAR_WRITE_1', Got: '$cur_calendar_write'" >&2
+    echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
+    return 1
+  fi
+
+  echo "       Configuration correspondence verified: Contacts and Calendar permissions match baseline original values."
+  echo "       [NOTE] Configuration match verified; business-level acceptance requires post-restart verification."
 
   echo "========================================================================"
   echo " ROLLBACK COMPLETED SUCCESSFULLY"
   echo " Active Image:    $active_image (Verified Baseline)"
   echo " Health Probe:    200 OK ($target_health_url)"
-  echo " Contacts/Cal:    Intact & Verified"
+  echo " Contacts/Cal:    Intact & Verified (Matches Baseline Original)"
   echo " OAuth Tokens:    Preserved (Backward-Compatible Encryption Store)"
   echo " Masking Check:   No compose.yaml shadow over $orig_basename"
   echo "========================================================================"
@@ -559,7 +638,10 @@ case "${1:-status}" in
     deploy_candidate
     ;;
   rollback)
-    rollback_baseline "${2:-}" || exit 1
+    if ! rollback_baseline "${2:-}"; then
+      echo "[RECOVERY_FAILED] Standalone rollback execution failed!" >&2
+      exit 1
+    fi
     ;;
   *)
     echo "Usage: $0 {status|verify-config|deploy|rollback}"

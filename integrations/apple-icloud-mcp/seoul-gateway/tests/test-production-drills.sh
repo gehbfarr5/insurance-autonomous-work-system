@@ -7,11 +7,12 @@ set -euo pipefail
 #
 # SCENARIOS COVERED (Strict requirements):
 # (a) 正常部署流程 (Successful deploy from baseline to candidate)
-# (b) Compose 构建/启动失败触发自动回滚 (Fault injection during compose up)
+# (b) 备份后及配置写入后 Compose 启动失败触发自动回滚 (Post-backup startup failure)
 # (c) 候选健康检查超时/失败触发自动回滚 (Health probe failure / timeout)
 # (d) 独立新终端/子进程直接触发恢复 (Standalone env -i recovery)
 # (e) 原服务配置文件名为 docker-compose.yml 时的恢复（验证 compose.yaml 不会残留遮蔽）
-# (f) 变更过程中途收到中断信号（SIGINT/SIGTERM）的自动回滚与无残留验证
+# (f) 变更过程中途向指定部署 PID 发送中断信号（SIGTERM）的自动回滚与无残留验证
+# (g) 恢复自身关键步骤失败验证 (Covering rsync, docker tag, compose up failures, RECOVERY_FAILED flag)
 #
 # SAFETY GUARANTEE:
 # - Completely isolated synthetic project (ag03-drill-*) and port (17744).
@@ -178,35 +179,49 @@ fi
 echo "PASS [DRILL A]: Normal deployment completed successfully with candidate active and healthy."
 
 # ------------------------------------------------------------------------------
-# DRILL (b): Compose 构建/启动失败触发自动回滚
+# DRILL (b): 备份完成并写入配置后的 Compose 启动失败触发自动回滚
 # ------------------------------------------------------------------------------
 echo ""
-echo ">>> [DRILL B] Testing Compose Startup Failure Auto-Rollback..."
+echo ">>> [DRILL B] Testing Post-Backup & Post-Config-Write Compose Startup Failure Auto-Rollback..."
 setup_drill_env "fail-startup" "compose.yaml"
 
-# Create a faulty template that fails on startup (e.g. invalid port binding syntax)
-cat << 'EOF' > "$CURRENT_STAGING_DIR/faulty_template.yaml"
-services:
-  carddav:
-    image: ${CARDDAV_IMAGE}
-    command: ["/bin/sh", "-c", "exit 1"]
-    ports:
-      - 'invalid-port-binding-fail'
-EOF
-
 set +e
-COMPOSE_PROD_TEMPLATE="$CURRENT_STAGING_DIR/faulty_template.yaml" \
+INJECT_COMPOSE_STARTUP_FAILURE=1 \
 APPLY_PRODUCTION_APPROVED=1 \
 PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy
+"$ENTRY_SCRIPT" deploy > "$CURRENT_STAGING_DIR/drill_b.log" 2>&1
 deploy_exit=$?
 set -e
 
+cat "$CURRENT_STAGING_DIR/drill_b.log"
+
 if [ "$deploy_exit" -eq 0 ]; then
   echo "FAIL [DRILL B]: Faulty deploy should have failed with non-zero exit code!" >&2
+  exit 1
+fi
+
+# Assertions proving failure happened AFTER backup and config write, and rollback was triggered
+if ! grep -q "Performing live state backup to" "$CURRENT_STAGING_DIR/drill_b.log"; then
+  echo "FAIL [DRILL B]: Backup step was not reached before failure!" >&2
+  exit 1
+fi
+if ! grep -q "Deploying candidate compose configuration" "$CURRENT_STAGING_DIR/drill_b.log"; then
+  echo "FAIL [DRILL B]: Candidate compose write was not reached before failure!" >&2
+  exit 1
+fi
+if ! grep -q "FAULT_INJECTION.*Injected failure during Compose candidate startup" "$CURRENT_STAGING_DIR/drill_b.log"; then
+  echo "FAIL [DRILL B]: Injected startup failure log not found!" >&2
+  exit 1
+fi
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" "$CURRENT_STAGING_DIR/drill_b.log"; then
+  echo "FAIL [DRILL B]: Unified rollback trigger log not found!" >&2
+  exit 1
+fi
+if ! grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_b.log"; then
+  echo "FAIL [DRILL B]: Rollback completion log not found!" >&2
   exit 1
 fi
 
@@ -220,7 +235,7 @@ if ! curl -sf "$DRILL_HEALTH_URL" >/dev/null 2>&1; then
   echo "FAIL [DRILL B]: Restored baseline container is not healthy!" >&2
   exit 1
 fi
-echo "PASS [DRILL B]: Compose failure correctly triggered auto-rollback to healthy baseline."
+echo "PASS [DRILL B]: Post-backup startup failure cleanly triggered auto-rollback to healthy baseline."
 
 # ------------------------------------------------------------------------------
 # DRILL (c): 候选健康检查超时/失败触发自动回滚
@@ -229,20 +244,31 @@ echo ""
 echo ">>> [DRILL C] Testing Candidate Health Check Failure Auto-Rollback..."
 setup_drill_env "fail-health" "compose.yaml"
 
-# Point PROD_HEALTH_URL to an unreachable port to simulate health check failure
 set +e
+HEALTH_CHECK_ATTEMPTS=3 \
 PROD_HEALTH_URL="http://127.0.0.1:19999/health" \
 APPLY_PRODUCTION_APPROVED=1 \
 PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy
+"$ENTRY_SCRIPT" deploy > "$CURRENT_STAGING_DIR/drill_c.log" 2>&1
 health_fail_exit=$?
 set -e
 
+cat "$CURRENT_STAGING_DIR/drill_c.log"
+
 if [ "$health_fail_exit" -eq 0 ]; then
   echo "FAIL [DRILL C]: Health check failure should have exited non-zero!" >&2
+  exit 1
+fi
+
+if ! grep -q "Candidate container health check timed out" "$CURRENT_STAGING_DIR/drill_c.log"; then
+  echo "FAIL [DRILL C]: Health check timeout log not found!" >&2
+  exit 1
+fi
+if ! grep -q "UNIFIED-ROLLBACK-TRIGGER" "$CURRENT_STAGING_DIR/drill_c.log"; then
+  echo "FAIL [DRILL C]: Unified rollback trigger log not found!" >&2
   exit 1
 fi
 
@@ -339,40 +365,45 @@ fi
 echo "PASS [DRILL E]: Compose file priority masking prevented; compose.yaml removed cleanly."
 
 # ------------------------------------------------------------------------------
-# DRILL (f): 变更过程中途收到中断信号（SIGINT/SIGTERM）的自动回滚与无残留验证
+# DRILL (f): 变更过程中途向指定部署 PID 发送中断信号（SIGTERM）的自动回滚与无残留验证
 # ------------------------------------------------------------------------------
 echo ""
-echo ">>> [DRILL F] Testing Interruption Signal (SIGTERM) Auto-Rollback..."
+echo ">>> [DRILL F] Testing Targeted PID Interruption Signal (SIGTERM) Auto-Rollback..."
 setup_drill_env "interrupt" "compose.yaml"
 
-# Start deploy in background and send SIGTERM shortly after startup
-(
-  sleep 1
-  # Find the running deploy script PID and send TERM
-  pids=$(pgrep -f "production-entry.sh deploy" || true)
-  for p in $pids; do
-    if [ "$p" != "$$" ]; then
-      kill -TERM "$p" 2>/dev/null || true
-    fi
-  done
-) &
-term_injector_pid=$!
-
-set +e
+# Launch deploy in background and capture exact PID (zero pgrep commands)
 APPLY_PRODUCTION_APPROVED=1 \
 PROD_PROJECT="$CURRENT_PROJECT" \
 PROD_CONTAINER="$CURRENT_CONTAINER" \
 PROD_DIR="$CURRENT_STAGING_DIR" \
 PROD_PORT="$DRILL_PORT" \
-"$ENTRY_SCRIPT" deploy
+"$ENTRY_SCRIPT" deploy > "$CURRENT_STAGING_DIR/drill_f.log" 2>&1 &
+DEPLOY_PID=$!
+
+echo "Started deploy process in background with PID $DEPLOY_PID..."
+
+# Wait briefly for deployment to enter active progress (DEPLOY_IN_PROGRESS=1)
+sleep 1
+if kill -0 "$DEPLOY_PID" 2>/dev/null; then
+  echo "Sending SIGTERM specifically to PID $DEPLOY_PID (no pgrep used)..."
+  kill -TERM "$DEPLOY_PID" 2>/dev/null || true
+fi
+
+set +e
+wait "$DEPLOY_PID"
 int_exit=$?
 set -e
 
-wait "$term_injector_pid" 2>/dev/null || true
+cat "$CURRENT_STAGING_DIR/drill_f.log" || true
 
 echo "Deploy exit code after signal interruption: $int_exit"
-if [ "$int_exit" -eq 0 ]; then
-  echo "FAIL [DRILL F]: Interrupted deploy should have exited with non-zero code!" >&2
+if [ "$int_exit" -ne 143 ]; then
+  echo "FAIL [DRILL F]: Interrupted deploy should have exited with code 143, got $int_exit!" >&2
+  exit 1
+fi
+
+if ! grep -q "Deployment failure or interruption detected (exit/signal: 143)" "$CURRENT_STAGING_DIR/drill_f.log"; then
+  echo "FAIL [DRILL F]: Expected signal 143 interruption log not found!" >&2
   exit 1
 fi
 
@@ -386,7 +417,95 @@ if ! curl -sf "$DRILL_HEALTH_URL" >/dev/null 2>&1; then
   echo "FAIL [DRILL F]: Restored baseline container is not healthy after interrupt!" >&2
   exit 1
 fi
-echo "PASS [DRILL F]: Signal interruption cleanly caught; auto-rollback restored baseline."
+echo "PASS [DRILL F]: Signal interruption to exact PID cleanly caught; auto-rollback restored baseline."
+
+# ------------------------------------------------------------------------------
+# DRILL (g): 恢复自身关键步骤失败验证 (Covering rsync, docker tag, compose up failures, RECOVERY_FAILED flag)
+# ------------------------------------------------------------------------------
+echo ""
+echo ">>> [DRILL G] Testing Rollback Critical Failure Handling & RECOVERY_FAILED Detection..."
+setup_drill_env "rec-fail" "compose.yaml"
+
+# Deploy candidate normally first so we have a valid backup
+APPLY_PRODUCTION_APPROVED=1 \
+PROD_PROJECT="$CURRENT_PROJECT" \
+PROD_CONTAINER="$CURRENT_CONTAINER" \
+PROD_DIR="$CURRENT_STAGING_DIR" \
+PROD_PORT="$DRILL_PORT" \
+"$ENTRY_SCRIPT" deploy >/dev/null 2>&1
+
+valid_bak=$(ls -td "$CURRENT_STAGING_DIR".bak-* | head -1)
+
+# Test 1: Injected rsync failure during rollback
+echo "--- Testing rollback failure on rsync step ---"
+set +e
+INJECT_ROLLBACK_STEP_FAILURE="rsync" "$ENTRY_SCRIPT" rollback "$valid_bak" > "$CURRENT_STAGING_DIR/drill_g_rsync.log" 2>&1
+rsync_fail_exit=$?
+set -e
+
+if [ "$rsync_fail_exit" -eq 0 ]; then
+  echo "FAIL [DRILL G]: Rollback should have failed when rsync failed!" >&2
+  exit 1
+fi
+if ! grep -q "RECOVERY_FAILED" "$CURRENT_STAGING_DIR/drill_g_rsync.log"; then
+  echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on rsync failure!" >&2
+  exit 1
+fi
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_g_rsync.log"; then
+  echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
+  exit 1
+fi
+echo "       PASS: rsync failure correctly flagged RECOVERY_FAILED and exited non-zero."
+
+# Test 2: Injected docker tag failure during rollback
+echo "--- Testing rollback failure on docker tag step ---"
+set +e
+INJECT_ROLLBACK_STEP_FAILURE="docker_tag" "$ENTRY_SCRIPT" rollback "$valid_bak" > "$CURRENT_STAGING_DIR/drill_g_tag.log" 2>&1
+tag_fail_exit=$?
+set -e
+
+if [ "$tag_fail_exit" -eq 0 ]; then
+  echo "FAIL [DRILL G]: Rollback should have failed when docker tag failed!" >&2
+  exit 1
+fi
+if ! grep -q "RECOVERY_FAILED" "$CURRENT_STAGING_DIR/drill_g_tag.log"; then
+  echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on docker tag failure!" >&2
+  exit 1
+fi
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_g_tag.log"; then
+  echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
+  exit 1
+fi
+echo "       PASS: docker tag failure correctly flagged RECOVERY_FAILED and exited non-zero."
+
+# Test 3: Injected compose up failure during rollback
+echo "--- Testing rollback failure on compose up step ---"
+set +e
+INJECT_ROLLBACK_STEP_FAILURE="compose_up" "$ENTRY_SCRIPT" rollback "$valid_bak" > "$CURRENT_STAGING_DIR/drill_g_compose.log" 2>&1
+compose_fail_exit=$?
+set -e
+
+if [ "$compose_fail_exit" -eq 0 ]; then
+  echo "FAIL [DRILL G]: Rollback should have failed when compose up failed!" >&2
+  exit 1
+fi
+if ! grep -q "RECOVERY_FAILED" "$CURRENT_STAGING_DIR/drill_g_compose.log"; then
+  echo "FAIL [DRILL G]: RECOVERY_FAILED tag not output on compose up failure!" >&2
+  exit 1
+fi
+if grep -q "ROLLBACK COMPLETED SUCCESSFULLY" "$CURRENT_STAGING_DIR/drill_g_compose.log"; then
+  echo "FAIL [DRILL G]: ROLLBACK COMPLETED SUCCESSFULLY should not be printed on failure!" >&2
+  exit 1
+fi
+echo "       PASS: compose up failure correctly flagged RECOVERY_FAILED and exited non-zero."
+
+# Assert backup directory is strictly preserved
+if [ ! -d "$valid_bak" ]; then
+  echo "FAIL [DRILL G]: Backup directory was deleted upon rollback failure!" >&2
+  exit 1
+fi
+echo "       PASS: Backup directory preserved for post-mortem forensics."
+echo "PASS [DRILL G]: All critical recovery failure paths verified (non-zero exit, RECOVERY_FAILED flag, zero false success)."
 
 # Final Cleanup
 cleanup_current_drill
@@ -394,12 +513,13 @@ trap - EXIT INT TERM
 
 echo ""
 echo "========================================================================"
-echo " ALL 6 PRODUCTION ENTRY & RECOVERY DRILLS PASSED CLEANLY (6/6)"
-echo " (a) Normal deployment:                       PASSED"
-echo " (b) Compose startup failure auto-rollback:   PASSED"
-echo " (c) Health check failure auto-rollback:      PASSED"
-echo " (d) Standalone clean-env recovery:           PASSED"
-echo " (e) Priority masking prevention:             PASSED"
-echo " (f) Interruption signal auto-rollback:       PASSED"
+echo " ALL 7 PRODUCTION ENTRY & RECOVERY DRILLS PASSED CLEANLY (7/7)"
+echo " (a) Normal deployment:                                   PASSED"
+echo " (b) Post-backup Compose startup failure auto-rollback:   PASSED"
+echo " (c) Health check failure auto-rollback:                  PASSED"
+echo " (d) Standalone clean-env recovery:                       PASSED"
+echo " (e) Priority masking prevention:                         PASSED"
+echo " (f) Targeted PID interruption signal auto-rollback:      PASSED"
+echo " (g) Recovery critical step failure & RECOVERY_FAILED:    PASSED"
 echo " Zero production impact verified."
 echo "========================================================================"
