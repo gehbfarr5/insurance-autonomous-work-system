@@ -1,0 +1,21 @@
+# /etc/ssh/sshd_config.d/60-macserver-gateway.conf
+# AG-05 | Hardened OpenSSH server configuration for MacServer resident reverse tunnel
+#
+# Dedicated restricted block for the mac-operator tunnel account.
+# Strict least-privilege:
+# - No interactive shells (ForceCommand /bin/false)
+# - No TTY allocation (no-pty)
+# - No X11 or agent forwarding
+# - GatewayPorts restricted: client specifies 172.19.0.1 or 127.0.0.1 (never 0.0.0.0)
+# - PermitListen strictly restricted to reverse tunnel endpoints
+
+Match User __REMOTE_USER__
+    AllowTcpForwarding yes
+    GatewayPorts clientspecified
+    PermitListen 172.19.0.1:18765 127.0.0.1:18765
+    PermitOpen none
+    X11Forwarding no
+    AllowAgentForwarding no
+    ForceCommand /bin/false
+    ClientAliveInterval 15
+    ClientAliveCountMax 3

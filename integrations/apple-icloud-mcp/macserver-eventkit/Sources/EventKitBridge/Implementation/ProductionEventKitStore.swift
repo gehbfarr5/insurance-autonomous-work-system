@@ -179,14 +179,21 @@ public actor ProductionEventKitStore: EventKitStoreProtocol {
                 if resumed.compareAndExchange(expected: false, desired: true) {
                     if let reminders = fetched {
                         let mapped = reminders.map { r in
-                            ReminderItem(
+                            let isAllDay = (r.dueDateComponents != nil && r.dueDateComponents?.hour == nil)
+                            return ReminderItem(
                                 itemID: r.calendarItemIdentifier,
                                 title: r.title ?? "",
                                 isCompleted: r.isCompleted,
                                 dueDate: r.dueDateComponents?.date,
                                 priority: r.priority,
                                 notes: r.notes,
-                                listID: listID
+                                listID: listID,
+                                isAllDay: isAllDay,
+                                timeZone: r.dueDateComponents?.timeZone?.identifier,
+                                completionDate: r.completionDate,
+                                creationDate: r.creationDate,
+                                lastModifiedDate: r.lastModifiedDate,
+                                url: r.url?.absoluteString
                             )
                         }
                         continuation.resume(returning: mapped)
