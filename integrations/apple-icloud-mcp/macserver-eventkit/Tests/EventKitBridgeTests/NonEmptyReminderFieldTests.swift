@@ -30,7 +30,7 @@ final class NonEmptyReminderFieldTests: XCTestCase {
             dueDate: Date(timeIntervalSince1970: 1794200000),
             priority: 1,
             notes: multilineNotes,
-            listID: "list-9D9A-03F3",
+            listID: "fixture-list-rich-01",
             isAllDay: false,
             timeZone: "Asia/Shanghai"
         )
@@ -54,7 +54,7 @@ final class NonEmptyReminderFieldTests: XCTestCase {
             dueDate: nil,
             priority: 0,
             notes: "系统自动扣款成功",
-            listID: "list-9D9A-03F3",
+            listID: "fixture-list-rich-01",
             completionDate: completed,
             creationDate: created
         )
@@ -70,7 +70,7 @@ final class NonEmptyReminderFieldTests: XCTestCase {
             dueDate: nil,
             priority: 5,
             notes: nil,
-            listID: "list-9D9A-03F3"
+            listID: "fixture-list-rich-01"
         )
 
         XCTAssertFalse(pendingItem.isCompleted)

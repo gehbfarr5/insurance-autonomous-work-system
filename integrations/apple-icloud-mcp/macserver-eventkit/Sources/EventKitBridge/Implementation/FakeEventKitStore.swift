@@ -65,46 +65,50 @@ public let defaultSeedData: [SeedList] = [
                 itemID: "r-rich-01",
                 title: "Client Policy Review",
                 isCompleted: false,
-                dueDate: Date(timeIntervalSince1970: 1794124800), // 2026-11-09T08:00:00Z
+                dueDate: Date(timeIntervalSince1970: 1794211200), // 2026-11-09T08:00:00Z
                 priority: 1, // High
                 notes: "Detailed quarterly insurance policy portfolio review with John Doe.\nAction item: check accidental policy rider.",
                 listID: "fake-list-icloud-rich",
                 isAllDay: false,
                 timeZone: "Asia/Shanghai",
-                creationDate: Date(timeIntervalSince1970: 1794000000)
+                creationDate: Date(timeIntervalSince1970: 1794096000) // 2026-11-08T00:00:00Z
             ),
             ReminderItem(
                 itemID: "r-rich-02",
                 title: "All-Day Milestone",
                 isCompleted: false,
-                dueDate: Date(timeIntervalSince1970: 1794182400),
+                dueDate: Date(timeIntervalSince1970: 1794182400), // 2026-11-09T00:00:00Z
                 priority: 5, // Medium
                 notes: "Annual compliance report deadline.",
                 listID: "fake-list-icloud-rich",
                 isAllDay: true,
-                timeZone: nil
+                timeZone: nil,
+                creationDate: Date(timeIntervalSince1970: 1794096000) // 2026-11-08T00:00:00Z
             ),
             ReminderItem(
                 itemID: "r-rich-03",
                 title: "Completed Task",
                 isCompleted: true,
-                dueDate: Date(timeIntervalSince1970: 1794000000),
+                dueDate: Date(timeIntervalSince1970: 1794096000), // 2026-11-08T00:00:00Z
                 priority: 9, // Low
                 notes: "Signed agreement uploaded.",
                 listID: "fake-list-icloud-rich",
                 isAllDay: false,
-                completionDate: Date(timeIntervalSince1970: 1794050000)
+                timeZone: "Asia/Shanghai",
+                completionDate: Date(timeIntervalSince1970: 1794052800), // 2026-11-07T12:00:00Z
+                creationDate: Date(timeIntervalSince1970: 1794000000) // 2026-11-06T21:20:00Z
             ),
             ReminderItem(
                 itemID: "r-rich-04",
                 title: "📋 投保人回访 (高优先级 ⚠️)",
                 isCompleted: false,
-                dueDate: Date(timeIntervalSince1970: 1794200000),
+                dueDate: Date(timeIntervalSince1970: 1794232800), // 2026-11-09T14:00:00Z
                 priority: 1,
                 notes: "多行客户跟进记录：\n1. 确认医疗补充险保额\n2. 解释免赔额条款",
                 listID: "fake-list-icloud-rich",
                 isAllDay: false,
-                timeZone: "Asia/Shanghai"
+                timeZone: "Asia/Shanghai",
+                creationDate: Date(timeIntervalSince1970: 1794146000) // 2026-11-08T13:53:20Z
             ),
         ]
     ),

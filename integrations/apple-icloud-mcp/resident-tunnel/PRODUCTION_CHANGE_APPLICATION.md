@@ -1,88 +1,103 @@
-# 生产变更申请：MacServer 常驻只读候选上线与 MUSE 前台验收
-**申请编号**: RFC-20261108-AG05-RESIDENT-READONLY  
-**申请状态**: 待用户审批 (PENDING APPROVAL)  
-**基线状态**: Commit `a6f1a9c` (PR #22), 镜像 `sha256:f3e697fe...` (基线正常运行)  
+# 生产变更申请：MacServer 常驻只读候选限时前台验收窗口
+**申请编号**: RFC-20261108-AG05-LIMITED-READONLY-WINDOW  
+**申请性质**: **受限、限时（30分钟）、即开即关的 MUSE 前台独立只读验收窗口**（非永久常驻上线）  
+**申请状态**: 待用户显式审批 (PENDING EXPLICIT USER APPROVAL)  
+**当前生产基线状态**:
+- Seoul 宿主运行基线镜像: `sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0`
+- MacServer EventKit Bridge: 锁定在安全隔离模式（`writes_enabled = false`，仅监听 `127.0.0.1:18765`）
+- 归属认定: AG-04 客户端协议级链路 PASS；MUSE 原生前台独立验收待完成 (PENDING)
 **候选分支**: `feat/ag05-resident-readonly-candidate`  
-**约束声明**: 本文档仅为变更准备与方案申请，未经用户显式审批，绝对不执行生产部署、不重启生产服务、不修改生产凭据、不开启公网监听、不退役 M5。
+**候选源码 Commit**: `feat/ag05-resident-readonly-candidate` 最新提交  
+**公开脱敏声明**: 文档中出现的 `00000000-0000-0000-0000-000000000001` 均为合成占位符；真实测试列表 ID 仅保存在本地受限配置文件中，绝不上传 GitHub。
 
 ---
 
-## 1. 变更背景与目标
-在 AG-04 中已成功验证了 MUSE → Seoul 统一 MCP → 受限反向 SSH 隧道 → MacServer EventKit → iCloud 测试列表的真实只读链路。
-AG-05 的目标是：
-1. 提供彻底脱离 M5 的 MacServer 常驻只读反向隧道工程架构（通过 macOS `launchd` + 单例守护 Supervisor），具备自动重连、封顶指数退避与可观测状态；
-2. 固化 OpenSSH 最小权限配置（禁止交互 Shell、禁止任意命令、仅允许特定端口转发）；
-3. 申请一次受限、限时、即开即关的 MUSE 原生前台独立验收窗口，验证非空提醒事项字段与真实端到端只读链路。
+## 一、版本与构建产物唯一对应矩阵
 
----
-
-## 2. 变更具体内容与对象清单
-
-| 变更目标 | 操作类型 | 具体路径 / 资源 | 变更详情与最小权限防护 |
+| 组件 | 生产当前基线版本 | 本次试运行候选版本 / 构建产物 | 来源与构建依据 |
 | :--- | :--- | :--- | :--- |
-| **MacServer** | 新增常驻服务 | `/Library/LaunchAgents/com.muse.macserver-tunnel.plist` | 由 `launchd` 管理，调用 `run-resident-tunnel.sh`，仅在连接异常中断时拉起，正常退出不狂刷 |
-| **MacServer** | 部署管理脚本 | `/opt/muse-macserver/scripts/run-resident-tunnel.sh`<br>`/opt/muse-macserver/scripts/tunnel-ctl.sh` | 单例文件锁 (`tunnel.pid`)，指数退避 (2s -> 30s)，状态可观测 (`tunnel_status.json`) |
-| **MacServer** | 专用密钥对 | `~/.ssh/id_ed25519_macserver_resident_tunnel` | 权限 `0600`，仅用于反向端口转发 |
-| **Seoul 宿主** | SSH 限制配置 | `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` | `Match User mac-operator`<br>`PermitListen 172.19.0.1:18765 127.0.0.1:18765`<br>`ForceCommand /bin/false`<br>`GatewayPorts clientspecified` |
-| **Seoul 宿主** | 授权公钥限制 | `~mac-operator/.ssh/authorized_keys` | `restrict,port-forwarding,permitlisten="172.19.0.1:18765",permitlisten="127.0.0.1:18765",command="/bin/false",no-pty` |
+| **Seoul Gateway 镜像** | `sha256:f3e697fe...` (无 MacServer 路由) | `sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61` | AG-03 冻结验收镜像（含只读路由与全天/时区非空字段映射） |
+| **MacServer EventKit Bridge** | Git commit `a6f1a9c` (Safe Mode) | Git commit `feat/ag05-resident-readonly-candidate` | 包含 `ReminderItem` 扩展、时区/全天保真及编译级写隔离 |
+| **反向 SSH 隧道管理** | 无（临时反向隧道已关闭） | `run-resident-tunnel.sh` / `tunnel-ctl.sh` | PR #23 交付，具备原子单例锁、指数退避 (2s->30s) 与可观测状态 |
+| **MacServer LaunchAgent** | 无 | `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist` | 统一用户域生命周期管理 (`gui/501`) |
+| **Seoul SSH 限制配置** | 默认系统 sshd | `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` | 语法经 `sshd -T` 核验，严格绑定反向转发 |
 
 ---
 
-## 3. 共享服务中断范围与安全性分析
-- **共享服务影响**: **0 中断**。
-  - 本次变更完全独立于现有的 CardDAV / 邮件等共享生产服务。
-  - sshd 仅新增独立用户匹配块，不修改全局 `sshd_config` 主干，无需重启 sshd 守护进程（仅执行 `systemctl reload sshd` 平滑重载）。
-  - 不存在公网通配监听（`0.0.0.0`），监听严格限定在 Docker 网桥 `172.19.0.1` 及本地环回 `127.0.0.1`。
-- **只读保证与写入隔离**:
-  - MacServer `EventKitBridge` 编译级别移除全部写方法，生产开关 `writes_enabled = false`。
-  - 即使前端发起写请求，亦在网关层及 Bridge 层分别触发 `PERMISSION_DENIED` 403 拒绝，无任何 iCloud 写操作。
+## 二、业务影响与中断范围评估 (Downtime Analysis)
+
+- **Seoul MCP 容器切换业务中断**:
+  - **预计中断时长**: **5 至 10 秒**。
+  - **原因**: 替换容器需执行 `docker compose stop` 并启动候选镜像。在此秒级切换窗口内，正在发起的 MCP 请求会收到连接拒绝或超时，切换完成后自动恢复。
+  - **禁止虚假声称**: 本次明确确认存在 5-10 秒的 MCP 服务短暂切换窗口，不声称未经证明的零中断。
+- **共享服务 (CardDAV / Mail) 影响**:
+  - **0 影响**。CardDAV 与 Mail 独立运行于宿主其他容器或原生端口，本次不修改共享容器配置，sshd 仅新增专有用户 Match 块并执行 `systemctl reload sshd` 平滑重载（不杀断现有活动连接）。
+- **管理账户依赖审查**:
+  - 生产 SSH 限制仅匹配专用隧道账户（如 `mac-operator`），严禁使用全局管理员账户，保证系统管理 SSH 不受任何 `ForceCommand` 限制。
 
 ---
 
-## 4. 备份对象与确定性恢复 (Rollback) 入口
+## 三、部署步骤与超时看门狗保护 (Deployment with Watchdog)
 
-### 备份对象
-1. Seoul 宿主: `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` (若已存在)、`~mac-operator/.ssh/authorized_keys`。
-2. MacServer: `/Library/LaunchAgents/com.muse.macserver-tunnel.plist`、当前安全模式状态文件。
-
-### 一键独立恢复步骤 (Rollback Procedure)
-若在试运行期间出现任何异常，可直接在独立终端中执行以下恢复操作：
-1. **停止并卸载 MacServer 隧道**:
+1. **现场快照与原子备份**:
    ```bash
-   launchctl bootout gui/501/com.muse.macserver-tunnel || true
+   BACKUP_DIR="/root/backup/pre_ag05_$(date +%s)"
+   mkdir -p "$BACKUP_DIR"
+   cp -a /etc/ssh/sshd_config.d "$BACKUP_DIR/"
+   cp -a ~mac-operator/.ssh/authorized_keys "$BACKUP_DIR/"
+   docker inspect insurance-carddav-mcp-carddav-1 > "$BACKUP_DIR/running_container.json"
+   ```
+2. **应用 Seoul SSH 限制配置**:
+   - 部署 `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` 并经 `sshd -t` 校验通过。
+   - 向 `~mac-operator/.ssh/authorized_keys` 追加受限公钥条目。
+   - 执行 `systemctl reload sshd`。
+3. **部署 MacServer LaunchAgent**:
+   - 安装至 `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist`。
+   - 执行 `launchctl load -w ~/Library/LaunchAgents/com.muse.macserver-tunnel.plist`。
+   - 通过 `/opt/muse-macserver/scripts/tunnel-ctl.sh health` 验证链路就绪。
+4. **启动独立超时看门狗 (30 分钟硬约束)**:
+   - 启动独立 background watchdog 进程：若 30 分钟内未收到人工延长信号，看门狗自动触发一键恢复并关闭隧道。
+
+---
+
+## 四、确定性回滚步骤 (Rollback Procedure)
+
+若验收完成或出现任何异常，独立执行以下回滚操作：
+
+1. **MacServer 端**:
+   ```bash
+   launchctl unload -w ~/Library/LaunchAgents/com.muse.macserver-tunnel.plist || true
    /opt/muse-macserver/scripts/tunnel-ctl.sh stop
    rm -f ~/Library/LaunchAgents/com.muse.macserver-tunnel.plist
    ```
-2. **清理 Seoul SSH 配置**:
+2. **Seoul 端精确恢复**:
    ```bash
-   rm -f /etc/ssh/sshd_config.d/60-macserver-gateway.conf
-   sed -i '/macserver_resident_tunnel/d' ~mac-operator/.ssh/authorized_keys
+   cp -a "$BACKUP_DIR/sshd_config.d/"* /etc/ssh/sshd_config.d/
+   cp -a "$BACKUP_DIR/authorized_keys" ~mac-operator/.ssh/authorized_keys
    systemctl reload sshd
+   # 恢复基线容器
+   docker compose -f /opt/insurance-carddav-mcp/docker-compose.yml up -d
    ```
-3. **确认无残留监听**:
-   - 检查 Seoul: `ss -tulpn | grep 18765` 输出为空。
-   - 检查 MacServer: `pgrep -f run-resident-tunnel` 输出为空。
+3. **闭环核验**:
+   - 检查 `ss -tulpn | grep 18765` 输出为空。
+   - 检查 `docker ps` 确认运行容器镜像为预期基线 `sha256:f3e697fe...`。
 
 ---
 
-## 5. 建议的非空测试数据范围 (Proposed Test Data Scope)
-为了避免 AG-04 中列表虽恢复但条目为空（0 条）导致非空字段未能端到端验证的问题，建议在正式前台验收前，由用户在 Mac 本地提醒事项中向专用测试列表手动添加 2 条合成测试数据：
+## 五、建议的最小测试数据范围 (Proposed Minimal Test Data)
+为验证全天、带时间、时区及多行备注等非空字段，建议在正式开启窗口后，由用户在 Mac 本地提醒事项中向专用测试列表手动添加 2 条合成条目（**验收前不提前创建**）：
 
 | 字段 | 测试条目 1 (定时高优先级) | 测试条目 2 (全天里程碑事项) |
 | :--- | :--- | :--- |
-| **所属列表** | `MUSE 测试` (`9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3`) | `MUSE 测试` (`9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3`) |
+| **所属列表** | `MUSE 测试` (本地受限配置指定的测试列表) | `MUSE 测试` |
 | **标题 (Title)** | `[AG-05] 核心链路只读定时验收` | `[AG-05] 全天里程碑测试条目` |
-| **优先级 (Priority)** | 高 (High, 对应 Priority 1) | 无 / 默认 (None, 对应 Priority 0) |
+| **优先级 (Priority)** | 高 (High / 1) | 无 (None / 0) |
 | **截止时间 (DueDate)** | `2026-11-09 14:30:00 (Asia/Shanghai)` | `2026-11-10 (无具体时分秒)` |
 | **全天标记 (isAllDay)**| `false` | `true` |
-| **完成状态 (Completed)**| `false` (未完成) | `false` (未完成) |
-| **备注说明 (Notes)** | `多行备注测试：\n1. 验证时区解析\n2. 验证非空字段忠实传输` | `单行备注：验证全天事项日期无偏移` |
-
-> [!NOTE]
-> 本测试数据仅包含合成占位符，不包含任何个人隐私或客户敏感信息。验收完成后可一键清空或保留。
+| **完成状态 (Completed)**| `false` | `false` |
+| **备注说明 (Notes)** | `多行备注测试：\n1. 验证时区解析\n2. 验证非空字段保真` | `单行备注：验证全天事项日期无偏移` |
 
 ---
 
-## 6. 申请审批流程与时间窗口
-- **申请生效条件**: 仅在用户回复明确批准后方可执行。
-- **时间窗口建议**: 预计持续 15 分钟，验收结束后即时关闭反向隧道，恢复常驻安全模式。
+## 六、审批与执行门禁
+- **禁止操作**: 未经用户明确发送“批准执行本次受限窗口”指令前，严格禁止在生产环境执行任何命令、修改文件或开启隧道。

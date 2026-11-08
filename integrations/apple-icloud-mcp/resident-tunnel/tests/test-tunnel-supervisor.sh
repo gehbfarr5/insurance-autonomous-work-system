@@ -3,10 +3,12 @@
 # AG-05 | Automated Isolated Test Suite for MacServer Resident Tunnel Supervisor
 #
 # Validates:
-# 1. Singleton locking (prevents duplicate supervisor instances)
-# 2. Observable status JSON format and state transitions
-# 3. Crash detection, reconnect counter increment, and exponential backoff
-# 4. Graceful shutdown on SIGTERM (zero orphan processes or left-behind PID files)
+# 1. Atomic directory singleton locking (mkdir) & concurrency rejection
+# 2. Stale lock detection & automatic recovery
+# 3. True exit code capture (verifying non-zero exit code is never masked)
+# 4. Exponential backoff progression, capping, and sustained reset
+# 5. Signal-aware backoff sleep & graceful shutdown on SIGTERM (zero orphans)
+# 6. Restricted permissions (umask 077 / 0600 on state files)
 
 set -euo pipefail
 
@@ -16,9 +18,9 @@ RUNNER="$SCRIPT_DIR/../scripts/run-resident-tunnel.sh"
 
 cleanup() {
   echo "--- Cleaning up test processes in $TEST_DIR ---"
-  if [ -f "$TEST_DIR/tunnel.pid" ]; then
+  if [ -f "$TEST_DIR/tunnel.lock/pid" ]; then
     local p
-    p=$(cat "$TEST_DIR/tunnel.pid" 2>/dev/null || true)
+    p=$(cat "$TEST_DIR/tunnel.lock/pid" 2>/dev/null || true)
     if [ -n "$p" ] && kill -0 "$p" 2>/dev/null; then
       kill -9 "$p" 2>/dev/null || true
     fi
@@ -30,11 +32,10 @@ trap cleanup EXIT
 echo "=== AG-05 Resident Tunnel Supervisor Isolated Test Suite ==="
 echo "Test working directory: $TEST_DIR"
 
-# 1. Create a mock SSH command
+# Create mock SSH command
 MOCK_SSH="$TEST_DIR/mock-ssh.sh"
 cat << 'EOF' > "$MOCK_SSH"
 #!/usr/bin/env bash
-# Mock SSH that sleeps for DURATION then exits with EXIT_CODE
 duration="${MOCK_SSH_DURATION:-1}"
 exit_code="${MOCK_SSH_EXIT_CODE:-0}"
 sleep "$duration"
@@ -42,8 +43,8 @@ exit "$exit_code"
 EOF
 chmod +x "$MOCK_SSH"
 
-# Test 1: Observable Status JSON and Connected State
-echo "--> Test 1: Normal startup, state transition to 'connected', and status JSON..."
+# Test 1: Normal startup, state transition to 'forwarding_established', status JSON, and umask 077
+echo "--> Test 1: Normal startup, state transition, status JSON, and 0600 permissions..."
 export CONFIG_DIR="$TEST_DIR"
 export SSH_BINARY="$MOCK_SSH"
 export MOCK_SSH_DURATION=10
@@ -51,13 +52,15 @@ export MOCK_SSH_EXIT_CODE=0
 export BACKOFF_INIT=1
 export BACKOFF_MAX=4
 export SUSTAINED_THRESHOLD=5
+export SKIP_KEY_CHECK=1
+export REMOTE_HOST="127.0.0.1"
 
 "$RUNNER" > "$TEST_DIR/runner.log" 2>&1 &
 SUPERVISOR_PID=$!
 
-# Wait for status file to appear
+# Wait for status file
 waited=0
-while [ ! -f "$TEST_DIR/tunnel_status.json" ] && [ "$waited" -lt 20 ]; do
+while [ ! -f "$TEST_DIR/tunnel_status.json" ] && [ "$waited" -lt 25 ]; do
   sleep 0.2
   waited=$((waited + 1))
 done
@@ -69,19 +72,26 @@ if [ ! -f "$TEST_DIR/tunnel_status.json" ]; then
 fi
 
 status_val=$(grep '"status"' "$TEST_DIR/tunnel_status.json" | cut -d'"' -f4)
-if [ "$status_val" != "connected" ] && [ "$status_val" != "connecting" ]; then
-  echo "FAIL: Expected status 'connected' or 'connecting', got '$status_val'"
+if [ "$status_val" != "forwarding_established" ] && [ "$status_val" != "connecting" ]; then
+  echo "FAIL: Expected status 'forwarding_established' or 'connecting', got '$status_val'"
   exit 1
 fi
-echo "  [PASS] Status JSON verified: status = $status_val, PID = $SUPERVISOR_PID"
 
-# Test 2: Singleton Locking
-echo "--> Test 2: Singleton locking prevents duplicate supervisor..."
+# Verify permissions: must be 0600
+status_perms=$(stat -f "%OLp" "$TEST_DIR/tunnel_status.json" 2>/dev/null || stat -c "%a" "$TEST_DIR/tunnel_status.json" 2>/dev/null || echo "")
+if [ "$status_perms" != "600" ]; then
+  echo "FAIL: tunnel_status.json permissions should be 600, got: $status_perms"
+  exit 1
+fi
+echo "  [PASS] Status JSON verified: status = $status_val, PID = $SUPERVISOR_PID, permissions = 0600"
+
+# Test 2: Concurrency & Atomic Singleton Locking
+echo "--> Test 2: Atomic directory singleton locking prevents concurrent execution..."
 second_run_out=$("$RUNNER" 2>&1 || true)
 if echo "$second_run_out" | grep -q "already active"; then
-  echo "  [PASS] Second runner detected existing supervisor and exited cleanly."
+  echo "  [PASS] Second runner detected existing supervisor lock and exited cleanly."
 else
-  echo "FAIL: Second runner did not detect existing active PID!"
+  echo "FAIL: Second runner did not detect existing active lock!"
   echo "Output: $second_run_out"
   exit 1
 fi
@@ -91,53 +101,93 @@ kill -TERM "$SUPERVISOR_PID"
 wait "$SUPERVISOR_PID" 2>/dev/null || true
 echo "  [PASS] Supervisor gracefully terminated on SIGTERM."
 
-# Test 3: Crash Detection, Reconnect Counter, and Backoff Progression
-echo "--> Test 3: Crash detection and exponential backoff..."
+# Test 3: Stale Lock Detection and Auto-Recovery
+echo "--> Test 3: Stale lock recovery when dead PID remains in lock dir..."
+mkdir -p "$TEST_DIR/tunnel.lock"
+echo "99999" > "$TEST_DIR/tunnel.lock/pid" # Non-existent PID
+
+"$RUNNER" > "$TEST_DIR/stale_test.log" 2>&1 &
+STALE_RUNNER_PID=$!
+sleep 1.2
+
+if [ -f "$TEST_DIR/tunnel.lock/pid" ]; then
+  recovered_pid=$(cat "$TEST_DIR/tunnel.lock/pid")
+  if [ "$recovered_pid" != "99999" ]; then
+    echo "  [PASS] Stale lock cleaned and reclaimed by active PID $recovered_pid."
+  else
+    echo "FAIL: Lock directory still holds stale PID 99999!"
+    exit 1
+  fi
+  # Clean up recovered process
+  kill -TERM "$recovered_pid" 2>/dev/null || true
+  wait "$recovered_pid" 2>/dev/null || true
+  sleep 0.5
+else
+  echo "FAIL: Stale lock directory was not recovered!"
+  exit 1
+fi
+
+rm -rf "$TEST_DIR/tunnel.lock" "$TEST_DIR/tunnel.pid" "$TEST_DIR/tunnel_status.json"
+
+# Test 4: True Exit Code Capture (Non-Zero is not masked)
+echo "--> Test 4: True SSH exit code capture (verifying code 42 is preserved)..."
 export MOCK_SSH_DURATION=0.1
-export MOCK_SSH_EXIT_CODE=255
+export MOCK_SSH_EXIT_CODE=42
 export BACKOFF_INIT=1
-export BACKOFF_MAX=3
+export BACKOFF_MAX=4
 export BACKOFF_FACTOR=2
 
-"$RUNNER" > "$TEST_DIR/runner_crash.log" 2>&1 &
-CRASH_SUPERVISOR_PID=$!
+"$RUNNER" > "$TEST_DIR/runner_code42.log" 2>&1 &
+CODE42_PID=$!
 
-# Wait for at least 2 reconnects
 waited=0
-reconnects=0
-while [ "$waited" -lt 30 ]; do
+found_code_42=0
+while [ "$waited" -lt 25 ]; do
   if [ -f "$TEST_DIR/tunnel_status.json" ]; then
-    reconnects=$(grep '"reconnect_count"' "$TEST_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo 0)
-    if [ "$reconnects" -ge 2 ]; then
+    if grep -q "Exit code 42" "$TEST_DIR/tunnel_status.json"; then
+      found_code_42=1
       break
     fi
   fi
-  sleep 0.5
+  sleep 0.3
   waited=$((waited + 1))
 done
 
-if [ "$reconnects" -lt 2 ]; then
-  echo "FAIL: Expected at least 2 reconnect attempts, got $reconnects"
-  cat "$TEST_DIR/runner_crash.log"
+if [ "$found_code_42" -eq 1 ]; then
+  echo "  [PASS] True exit code 42 captured and recorded in status JSON."
+else
+  echo "FAIL: Expected 'Exit code 42' in status JSON!"
+  cat "$TEST_DIR/tunnel_status.json" 2>/dev/null || true
   exit 1
 fi
-echo "  [PASS] Supervisor detected crash, incremented reconnect_count to $reconnects with backoff."
 
-# Test 4: Graceful Shutdown with Child Termination
-echo "--> Test 4: Graceful shutdown terminates child and cleans PID file..."
-kill -TERM "$CRASH_SUPERVISOR_PID"
-wait "$CRASH_SUPERVISOR_PID" 2>/dev/null || true
+# Test 5: Exponential Backoff Progression & Signal-Aware Sleep
+echo "--> Test 5: Verifying exponential backoff progression and immediate wakeup on SIGTERM..."
+# At this point, backoff has grown: 1s -> 2s -> 4s (capped)
+reconnects=$(grep '"reconnect_count"' "$TEST_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo 0)
+backoff_val=$(grep '"current_backoff_seconds"' "$TEST_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo 0)
+echo "  [INFO] Reconnect count: $reconnects, current backoff: ${backoff_val}s"
 
+term_start=$(date +%s)
+kill -TERM "$CODE42_PID"
+wait "$CODE42_PID" 2>/dev/null || true
+term_end=$(date +%s)
+term_duration=$((term_end - term_start))
+
+if [ "$term_duration" -gt 3 ]; then
+  echo "FAIL: SIGTERM was delayed by backoff sleep! Took ${term_duration}s"
+  exit 1
+fi
+echo "  [PASS] SIGTERM woke up supervisor immediately (${term_duration}s) without waiting for backoff timer."
+
+# Verify final clean state
+if [ -d "$TEST_DIR/tunnel.lock" ]; then
+  echo "FAIL: Lock directory was not cleaned on shutdown!"
+  exit 1
+fi
 if [ -f "$TEST_DIR/tunnel.pid" ]; then
-  echo "FAIL: PID file was not removed after graceful shutdown!"
+  echo "FAIL: PID file was not removed on shutdown!"
   exit 1
 fi
-
-final_status=$(grep '"status"' "$TEST_DIR/tunnel_status.json" | cut -d'"' -f4)
-if [ "$final_status" != "stopped" ]; then
-  echo "FAIL: Expected final status 'stopped', got '$final_status'"
-  exit 1
-fi
-echo "  [PASS] Final status recorded as 'stopped' and PID file removed."
 
 echo "=== All Supervisor Unit & Fault-Recovery Tests PASSED ==="

@@ -74,6 +74,12 @@ export interface ReminderItem {
   priority: number; // 0..9
   notes?: string | null;
   listID: string;
+  isAllDay?: boolean;
+  timeZone?: string | null;
+  completionDate?: string | number | null;
+  creationDate?: string | number | null;
+  lastModifiedDate?: string | number | null;
+  url?: string | null;
 }
 
 export interface BridgeHealthResponse {
@@ -113,6 +119,7 @@ export interface ListRemindersParams {
 }
 
 export interface Reminder {
+  id?: string;
   reminder_id: string;
   list_id: string;
   title: string;
@@ -123,6 +130,10 @@ export interface Reminder {
   priority?: number;
   percent_complete?: number;
   created?: string;
+  is_all_day?: boolean;
+  time_zone?: string;
+  last_modified?: string;
+  url?: string;
 }
 
 export interface ListRemindersResult {

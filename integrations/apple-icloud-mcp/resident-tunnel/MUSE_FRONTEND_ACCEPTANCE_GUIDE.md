@@ -2,18 +2,19 @@
 **项目编号**: AG-05  
 **基线版本**: PR #22 (`feat/seoul-macserver-readonly-gateway`, commit `a6f1a9c`)  
 **候选分支**: `feat/ag05-resident-readonly-candidate`  
-**执行原则**: 必须由用户在 MUSE 客户端前台界面交互发起，由 MUSE 原生发现并调用工具，严禁使用非 MUSE 外部脚本代打。
+**执行原则**: 必须由用户在 MUSE 客户端前台界面交互发起，由 MUSE 原生发现并调用工具，严禁使用非 MUSE 外部脚本代打。  
+**公开脱敏声明**: 本文档中出现的 `00000000-0000-0000-0000-000000000001` 均为公开文档使用的合成 fixture 占位符。真实绑定的测试列表 ID 仅存放于 MacServer 本地受限文件（`bridge.env`，权限 `0600`），绝不上传至 GitHub。
 
 ---
 
 ## 1. 验收前置条件 (Pre-flight Checklist)
 在用户启动受限窗口前，确认以下状态：
-1. **Seoul 统一 MCP 网关**: 正常运行于 Docker 容器中，挂载只读配置。
-2. **MacServer EventKit 桥接**: 处于活跃状态，绑定指定 iCloud 账户及只读列表 `9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3`。
+1. **Seoul 统一 MCP 网关**: 候选容器正常运行，挂载只读配置。
+2. **MacServer EventKit 桥接**: 处于活跃状态，仅绑定本地受限配置指定的 iCloud 测试列表。
 3. **反向 SSH 隧道**: 通过 MacServer `launchd` 常驻守护进程 (`com.muse.macserver-tunnel`) 连接至 Seoul `172.19.0.1:18765`。
 4. **安全模式状态**:
    - `writes_enabled = false` (全链路写隔离，禁止任何写入调用)。
-   - 目标列表已预置只读测试条目（见建议测试数据）。
+   - 目标列表由用户按需置入 2 条最小合成测试条目（见建议测试数据，验收前不预先创建真实条目）。
 
 ---
 
@@ -33,14 +34,14 @@
 ```
 - **预期行为**: MUSE 自动调用 `reminders_lists`，返回 1 条列表：
   - 名称: `MUSE 测试`
-  - ID: `9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3`
+  - ID: `<返回的具体测试列表 ID>` (如 `00000000-0000-0000-0000-000000000001`)
   - 属性: `writable: false`
 
 ### 阶段三：只读拉取测试列表条目 (Non-Empty Items Verification)
 ```text
-请查询列表 ID 为 "9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3"（MUSE 测试）中的所有提醒事项条目，列出它们的标题、优先级、截止时间（注意是否全天事项及所在时区）、完成状态及备注说明。
+请查询刚才返回的测试列表中（名称为 MUSE 测试）的所有提醒事项条目，列出它们的标题、优先级、截止时间（注意是否全天事项及所在时区）、完成状态及备注说明。
 ```
-- **预期行为**: MUSE 自动调用 `reminders_list` 并传入参数 `{"list_ids": ["9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3"]}`，成功返回测试条目的完整非空字段。
+- **预期行为**: MUSE 自动调用 `reminders_list` 并传入参数 `{"list_ids": ["<步骤二返回的测试列表 ID>"]}`，成功返回测试条目的完整非空字段。
 
 ---
 
@@ -66,7 +67,7 @@
       "status": "OK",
       "returned_lists": [
         {
-          "id": "9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3",
+          "id": "00000000-0000-0000-0000-000000000001",
           "title": "MUSE 测试",
           "writable": false
         }
@@ -76,7 +77,7 @@
       "step": 3,
       "tool": "reminders_list",
       "params": {
-        "list_ids": ["9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3"]
+        "list_ids": ["00000000-0000-0000-0000-000000000001"]
       },
       "status": "OK",
       "returned_items_count": 2,
@@ -103,7 +104,7 @@
 ## 4. 判定标准与关闭流程 (Acceptance Criteria & Immediate Tear-down)
 
 ### 成功判定 (PASS Criteria)
-1. **会话归属真实**: 调用由 MUSE 前台客户端原生发起并记录。
+1. **会话归属真实**: 调用由 MUSE 前台客户端原生发起并记录（包含原始会话与工具交互记录）。
 2. **只读约束坚固**: 全程无写操作调用，返回字段 `writable: false`。
 3. **数据忠实无损**: `title`, `notes`, `priority`, `isAllDay`, `dueDate`, `timeZone` 字段忠实保留，未退化为默认值。
-4. **即开即关**: 验收对话结束，立即关闭反向隧道，MacServer 恢复安全隔离模式。
+4. **即开即关**: 验收对话结束，立即关闭反向隧道并卸载 LaunchAgent，MacServer 恢复安全隔离模式。

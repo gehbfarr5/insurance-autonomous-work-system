@@ -10,8 +10,8 @@ import { createMacServerReminderService } from '../src/service.ts';
 import { EventKitReadonlyTransport } from '../src/transport.ts';
 import { AppError, type MacServerGatewayConfig, type ReminderItem, type RemindersList } from '../src/types.ts';
 
-const TEST_LIST_ID = '9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3';
-const TEST_SOURCE_ID = '9BBBF35E-4691-4409-867D-475434A6CCB0';
+const TEST_LIST_ID = '00000000-0000-0000-0000-000000000001';
+const TEST_SOURCE_ID = '00000000-0000-0000-0000-000000000002';
 
 const testConfig: MacServerGatewayConfig = {
   macserverEndpoint: 'http://127.0.0.1:18765',
@@ -114,17 +114,26 @@ describe('AG-05: Non-Empty Reminder Fields & Semantics Verification', () => {
     assert.equal(item1.title, '📋 投保人保单复核 (高优先 ⚠️)');
     assert.equal(item1.priority, 1);
     assert.equal(item1.completed, false);
+    assert.equal(item1.is_all_day, false);
+    assert.equal(item1.time_zone, 'Asia/Shanghai');
+    assert.equal(item1.due, '2026-11-08T08:30:00.000Z');
     assert.ok(item1.notes?.includes('¥1,000,000'));
     assert.ok(item1.notes?.includes('\n'));
-    assert.ok(item1.due);
     assert.ok(item1.created);
+
+    // Verify item-002 (All-day milestone)
+    const item2 = result.reminders.find((r) => r.id === 'item-002');
+    assert.ok(item2);
+    assert.equal(item2.is_all_day, true);
+    assert.equal(item2.due, '2026-11-09T00:00:00.000Z');
 
     // Verify item-003 (Completed with completionDate)
     const item3 = result.reminders.find((r) => r.id === 'item-003');
     assert.ok(item3);
     assert.equal(item3.completed, true);
     assert.equal(item3.priority, 9);
-    assert.ok(item3.completed_at);
+    assert.equal(item3.completed_at, '2026-11-06T09:26:40.000Z');
+    assert.equal(item3.due, '2026-11-05T19:33:20.000Z');
   });
 
   it('correctly handles all-day vs timed due dates', async () => {

@@ -24,8 +24,6 @@ cleanup() {
       kill -9 "$p" 2>/dev/null || true
     fi
   fi
-  # Kill any process listening on SSH_PORT
-  lsof -ti :"$SSH_PORT" | xargs kill -9 2>/dev/null || true
   rm -rf "$TEST_DIR"
 }
 trap cleanup EXIT
