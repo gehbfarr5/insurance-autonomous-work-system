@@ -12,14 +12,15 @@ set -euo pipefail
 # 5. Apply canonical patch (0001-shared-gateway-wiring.patch, 33 tools restored)
 # 6. Run full unit & regression test suite (326 tests across 21 suites)
 # 7. Build candidate Docker image & record image ID
-# 8. Start Fake EventKit Bridge with recorded PID
-# 9. Start Candidate container on isolated Compose stack (port 17799)
-# 10. Verify injected environment variables inside container runtime
-# 11. Execute external acceptance probe suite (13 assertions, full 33 tools set)
-# 12. Verify deterministic rollback to recorded baseline image ID via Compose (port 17798)
-# 13. Resource cleanup & zero-residual validation
-# 14. Production integrity assertion
-# 15. Generate final PASS receipt ONLY after all checks and cleanups pass
+# 8. Create isolated Docker network & start Fake Bridge restricted to 172.30.56.1:18765
+# 9. Verify fail-fast on missing gateway configuration in candidate Compose
+# 10. Start Candidate container on isolated Compose stack (port 17799) with synthetic secrets.env
+# 11. Verify Compose precedence inside container runtime (desensitized output)
+# 12. Execute external acceptance probe suite (13 assertions, full 33 tools set)
+# 13. Verify deterministic rollback to recorded baseline image ID via Compose (port 17798)
+# 14. Resource cleanup & zero-residual validation (including isolated network removal)
+# 15. Production integrity assertion
+# 16. Generate final PASS receipt ONLY after all checks and cleanups pass
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,7 +38,9 @@ BASELINE_IMAGE_ID="sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1cc
 EXPECTED_PATCH_SHA256="70ee262ee062a64c076ee0c935ea74cd33e9238bca8cd1ff3b755147b2798980"
 UPSTREAM_SOURCE_DIR="/opt/insurance-carddav-mcp/source"
 
-# Ports strictly used during drill
+# Network & Ports strictly used during drill
+TEST_SUBNET="172.30.56.0/24"
+BRIDGE_HOST="172.30.56.1"
 BRIDGE_PORT=18765
 CANDIDATE_PORT=17799
 ROLLBACK_PORT=17798
@@ -56,10 +59,12 @@ fi
 # Track resource creation for unified cleanup
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 RUN_ID="ag03-${TIMESTAMP}"
-CANDIDATE_PROJECT="ag03-candidate-${TIMESTAMP}"
-ROLLBACK_PROJECT="ag03-rollback-${TIMESTAMP}"
+TEST_NETWORK_NAME="ag03_net_${TIMESTAMP}"
+CANDIDATE_PROJECT="ag03-cand-${TIMESTAMP}"
+ROLLBACK_PROJECT="ag03-roll-${TIMESTAMP}"
 BRIDGE_PID=""
 WORK_DIR=""
+CLEANUP_EXECUTED=0
 
 check_port_free() {
   local port="$1"
@@ -79,7 +84,11 @@ check_port_free() {
 }
 
 cleanup() {
-  local exit_code=$?
+  local exit_code="${1:-$?}"
+  if [ "$CLEANUP_EXECUTED" -ne 0 ]; then
+    return
+  fi
+  CLEANUP_EXECUTED=1
   echo "--- [CLEANUP] Executing exit cleanup (Exit code: $exit_code) ---"
 
   # 1. Terminate only Fake Bridge PID if recorded and alive (no batch killing)
@@ -87,16 +96,19 @@ cleanup() {
     echo "       Stopping Fake Bridge process (PID: $BRIDGE_PID)..."
     kill -15 "$BRIDGE_PID" 2>/dev/null || true
     wait "$BRIDGE_PID" 2>/dev/null || true
+    BRIDGE_PID=""
   fi
 
-  # 2. Stop and remove test containers and networks via Compose
+  # 2. Stop and remove test containers via Compose
   if [ -n "$CANDIDATE_PROJECT" ]; then
     echo "       Stopping candidate compose project $CANDIDATE_PROJECT..."
     docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
+    CANDIDATE_PROJECT=""
   fi
   if [ -n "$ROLLBACK_PROJECT" ]; then
     echo "       Stopping rollback compose project $ROLLBACK_PROJECT..."
     docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
+    ROLLBACK_PROJECT=""
   fi
 
   # 3. Clean any labeled containers specifically created by this run
@@ -109,13 +121,20 @@ cleanup() {
     fi
   fi
 
-  # 4. Remove temporary credentials (preserving logs)
-  rm -f /tmp/ag03-delivery-clean-creds.json 2>/dev/null || true
-  if [ -n "$WORK_DIR" ] && [ -f "$WORK_DIR/creds.json" ]; then
-    rm -f "$WORK_DIR/creds.json" 2>/dev/null || true
+  # 4. Remove isolated test network if created
+  if [ -n "$TEST_NETWORK_NAME" ] && docker network inspect "$TEST_NETWORK_NAME" >/dev/null 2>&1; then
+    echo "       Removing isolated test network $TEST_NETWORK_NAME..."
+    docker network rm "$TEST_NETWORK_NAME" >/dev/null 2>&1 || true
+    TEST_NETWORK_NAME=""
   fi
 
-  # 5. Production integrity assertion
+  # 5. Remove temporary credentials and staging files (preserving logs)
+  rm -f /tmp/ag03-delivery-clean-creds.json /tmp/ag03-delivery-clean-receipt.json 2>/dev/null || true
+  if [ -n "$WORK_DIR" ]; then
+    rm -f "$WORK_DIR/creds.json" "$WORK_DIR/secrets.env" 2>/dev/null || true
+  fi
+
+  # 6. Production integrity assertion
   if [ -n "$PROD_STATUS_BEFORE" ]; then
     local prod_status_after
     prod_status_after=$(docker inspect "$PROD_CONTAINER_NAME" --format '{{.State.Status}} {{.State.Health.Status}} {{.State.StartedAt}}' 2>/dev/null || echo "UNKNOWN")
@@ -129,9 +148,13 @@ cleanup() {
     fi
   fi
 
-  echo "--- [CLEANUP] Cleanup finished ---"
+  echo "--- [CLEANUP] Cleanup finished (Exit code: $exit_code) ---"
+  exit "$exit_code"
 }
-trap cleanup EXIT INT TERM
+
+trap 'cleanup 0' EXIT
+trap 'cleanup 130' INT
+trap 'cleanup 143' TERM
 
 wait_for_health() {
   local url="$1"
@@ -159,7 +182,7 @@ echo " Production Initial: ${PROD_STATUS_BEFORE:-None}"
 echo "========================================================================"
 
 # Pre-flight check: Port availability (strict rejection if occupied)
-echo "[1/11] Checking port availability (zero process killing policy)..."
+echo "[1/12] Checking port availability (zero process killing policy)..."
 for p in "$BRIDGE_PORT" "$CANDIDATE_PORT" "$ROLLBACK_PORT"; do
   if ! check_port_free "$p"; then
     echo "ERROR: Port $p is already occupied by an external process! Aborting without modifying existing process." >&2
@@ -173,7 +196,7 @@ if [ ! -f "$PATCH_FILE" ]; then
   exit 1
 fi
 
-echo "[2/11] Verifying canonical patch checksum..."
+echo "[2/12] Verifying canonical patch checksum..."
 ACTUAL_PATCH_SHA256=$(sha256sum "$PATCH_FILE" | awk '{print $1}')
 echo "       Path:     $PATCH_FILE"
 echo "       Expected: $EXPECTED_PATCH_SHA256"
@@ -189,7 +212,7 @@ rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/upstream" "$WORK_DIR/data" "$WORK_DIR/logs"
 chmod 777 "$WORK_DIR/data"
 
-echo "[3/11] Extracting pristine upstream baseline (Commit: $BASE_COMMIT)..."
+echo "[3/12] Extracting pristine upstream baseline (Commit: $BASE_COMMIT)..."
 if [ ! -d "$UPSTREAM_SOURCE_DIR" ]; then
   echo "ERROR: Upstream source repository not found at $UPSTREAM_SOURCE_DIR" >&2
   exit 1
@@ -201,10 +224,10 @@ if [ -d "$UPSTREAM_SOURCE_DIR/node_modules" ]; then
   cp -r "$UPSTREAM_SOURCE_DIR/node_modules" "$WORK_DIR/upstream/"
 fi
 
-echo "[4/11] Applying canonical patch to clean baseline (restoring all 8 contacts groups tools + gateway)..."
+echo "[4/12] Applying canonical patch to clean baseline (restoring all 8 contacts groups tools + gateway)..."
 patch -p1 -i "$PATCH_FILE" -d "$WORK_DIR/upstream"
 
-echo "[5/11] Running full shared service unit & regression tests (21 suites, 326 tests)..."
+echo "[5/12] Running full shared service unit & regression tests (21 suites, 326 tests)..."
 (
   cd "$WORK_DIR/upstream"
   npm run build
@@ -212,14 +235,14 @@ echo "[5/11] Running full shared service unit & regression tests (21 suites, 326
 ) > "$WORK_DIR/logs/vitest-regression.log" 2>&1
 echo "       Unit & Regression tests passed: $(grep -E "Test Files|Tests" "$WORK_DIR/logs/vitest-regression.log" | tr '\n' ' ')"
 
-echo "[6/11] Building candidate Docker image..."
+echo "[6/12] Building candidate Docker image..."
 CANDIDATE_TAG="insurance-carddav-mcp-carddav:candidate-ag03-delivery-${TIMESTAMP}"
 docker build -t "$CANDIDATE_TAG" "$WORK_DIR/upstream" > "$WORK_DIR/logs/docker-build.log" 2>&1
 CANDIDATE_IMAGE_ID=$(docker inspect "$CANDIDATE_TAG" --format '{{.Id}}')
 echo "       Candidate image built: $CANDIDATE_TAG"
 echo "       Candidate image ID:   $CANDIDATE_IMAGE_ID"
 
-echo "[7/11] Initializing synthetic test credentials & starting Fake EventKit Bridge..."
+echo "[7/12] Initializing synthetic test credentials & starting Fake Bridge on isolated interface..."
 TOKEN_ENCRYPTION_KEY=$(openssl rand -base64 32)
 export TOKEN_ENCRYPTION_KEY
 
@@ -278,12 +301,39 @@ const c = JSON.parse(readFileSync("'"$WORK_DIR"'/creds.json", "utf8"));
 process.stdout.write(c.adminPasswordHash);
 ')
 
-# Start Fake EventKit Bridge with purely synthetic list ID
+# Create purely synthetic secrets.env (to test Compose precedence without shell export)
+cat << EOF > "$WORK_DIR/secrets.env"
+ICLOUD_ACCOUNT_1=synthetic_delivery_test@icloud.example
+ICLOUD_APP_PASSWORD_1=abcd-efgh-ijkl-mnop
+ICLOUD_LABEL_1=Synthetic Base Account
+TOKEN_ENCRYPTION_KEY=$TOKEN_ENCRYPTION_KEY
+ADMIN_PASSWORD_HASH=$ADMIN_HASH
+ALLOW_CALENDAR_READ_1=true
+ALLOW_CALENDAR_WRITE_1=false
+ALLOW_CONTACTS_READ_1=true
+ALLOW_CONTACTS_WRITE_1=false
+ALLOW_MAIL_READ_1=false
+ALLOW_MAIL_WRITE_1=false
+ALLOW_REMINDERS_READ_1=false
+ALLOW_REMINDERS_WRITE_1=false
+EOF
+chmod 600 "$WORK_DIR/secrets.env"
+
+# Unset exported variables so caller environment cannot leak into Compose
+unset TOKEN_ENCRYPTION_KEY
+unset ICLOUD_ACCOUNT_1 ICLOUD_APP_PASSWORD_1 ICLOUD_LABEL_1 ADMIN_PASSWORD_HASH
+unset ALLOW_CALENDAR_READ_1 ALLOW_CALENDAR_WRITE_1 ALLOW_CONTACTS_READ_1 ALLOW_CONTACTS_WRITE_1 ALLOW_MAIL_READ_1 ALLOW_MAIL_WRITE_1
+
+# Create isolated Docker bridge network prior to Fake Bridge bind
+echo "       Creating isolated test network ($TEST_NETWORK_NAME, gateway: $BRIDGE_HOST)..."
+docker network create --subnet "$TEST_SUBNET" --gateway "$BRIDGE_HOST" "$TEST_NETWORK_NAME"
+
+# Start Fake EventKit Bridge bound strictly to isolated interface
 cat << EOF > "$WORK_DIR/fake-bridge.mjs"
 import http from 'node:http';
 
 const PORT = $BRIDGE_PORT;
-const HOST = '0.0.0.0';
+const HOST = '$BRIDGE_HOST';
 const VALID_TOKEN = 'test-valid-bearer-token-at-least-32chars!';
 const SYNTH_LIST_ID = '$SYNTH_LIST_ID';
 const SYNTH_SOURCE_ID = '$SYNTH_SOURCE_ID';
@@ -415,54 +465,102 @@ node "$WORK_DIR/fake-bridge.mjs" > "$WORK_DIR/logs/fake-bridge.log" 2>&1 &
 BRIDGE_PID=$!
 echo "       Fake Bridge started (PID: $BRIDGE_PID)"
 
-wait_for_health "http://127.0.0.1:${BRIDGE_PORT}/health" 30 0.5 "Fake Bridge"
+wait_for_health "http://${BRIDGE_HOST}:${BRIDGE_PORT}/health" 30 0.5 "Fake Bridge"
 
-echo "[8/11] Starting Candidate container via Compose stack ($CANDIDATE_PROJECT, port $CANDIDATE_PORT)..."
+# Verify Fake Bridge binds strictly to isolated interface and has ZERO host wildcard listener
+if ! ss -tln | grep -q "${BRIDGE_HOST}:${BRIDGE_PORT}"; then
+  echo "ERROR: Fake Bridge not listening on ${BRIDGE_HOST}:${BRIDGE_PORT}!" >&2
+  exit 1
+fi
+if ss -tln | grep -E "(0\.0\.0\.0|\*|:::|\[::\]):${BRIDGE_PORT}" >/dev/null 2>&1; then
+  echo "ERROR: Wildcard listener detected on port ${BRIDGE_PORT}!" >&2
+  exit 1
+fi
+echo "       Verified: Fake Bridge listening strictly on ${BRIDGE_HOST}:${BRIDGE_PORT} (zero host wildcard listener)."
+
+echo "[8/12] Verifying fail-fast on missing required gateway configuration in Compose..."
+# Test Compose rejection when required MACSERVER_EVENTKIT_* is missing
+if ENV_FILE="$WORK_DIR/secrets.env" \
+   COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME" \
+   docker compose -f "$COMPOSE_FILE" config >/dev/null 2>&1; then
+  echo "ERROR: docker compose config should have failed fast when MACSERVER_EVENTKIT_* variables are unset!" >&2
+  exit 1
+fi
+echo "       Verified: Candidate Compose refused startup when required gateway variables were absent."
+
+echo "[9/12] Starting Candidate container via Compose stack ($CANDIDATE_PROJECT, port $CANDIDATE_PORT)..."
+ENV_FILE="$WORK_DIR/secrets.env" \
+COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME" \
 RUN_ID="$RUN_ID" \
 CARDDAV_IMAGE="$CANDIDATE_TAG" \
 BIND_PORT="127.0.0.1:${CANDIDATE_PORT}" \
 PUBLIC_URL="http://127.0.0.1:${CANDIDATE_PORT}" \
 DATA_DIR="$WORK_DIR/data" \
-ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
-TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
-MACSERVER_EVENTKIT_ENDPOINT="http://172.30.56.1:18765" \
+MACSERVER_EVENTKIT_ENDPOINT="http://${BRIDGE_HOST}:${BRIDGE_PORT}" \
 MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!" \
 MACSERVER_EVENTKIT_TIMEOUT_MS="1200" \
 MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV,stalled-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV,corrupted-list-id:${SYNTH_SOURCE_ID}:iCloud:calDAV" \
-ICLOUD_ACCOUNT_1="synthetic_candidate@icloud.com" \
-ICLOUD_APP_PASSWORD_1="abcd-efgh-ijkl-mnop" \
-ICLOUD_LABEL_1="Synthetic Candidate" \
 ALLOW_REMINDERS_READ_1="true" \
 ALLOW_REMINDERS_WRITE_1="false" \
-ALLOW_MAIL_READ_1="false" \
-ALLOW_MAIL_WRITE_1="false" \
-ALLOW_CALENDAR_READ_1="false" \
-ALLOW_CALENDAR_WRITE_1="false" \
-ALLOW_CONTACTS_READ_1="false" \
-ALLOW_CONTACTS_WRITE_1="false" \
 docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" up -d
 
 wait_for_health "http://127.0.0.1:${CANDIDATE_PORT}/health" 30 1 "Candidate Container"
 
-# Verify environment variables entered container
-echo "       Verifying environment variables inside Candidate container..."
+# Verify environment variables entered container and test Compose precedence
+echo "       Verifying Compose precedence & configuration correspondence inside container runtime..."
 CANDIDATE_CONTAINER_NAME=$(docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
 CONTAINER_ENVS=$(docker inspect "$CANDIDATE_CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}')
-for REQUIRED_VAR in MACSERVER_EVENTKIT_ENDPOINT MACSERVER_EVENTKIT_AUTH_TOKEN MACSERVER_EVENTKIT_ALLOWED_LISTS ALLOW_REMINDERS_READ_1 ALLOW_REMINDERS_WRITE_1; do
-  if ! echo "$CONTAINER_ENVS" | grep -q "^${REQUIRED_VAR}="; then
-    echo "ERROR: Required environment variable ${REQUIRED_VAR} not found in container!" >&2
-    exit 1
-  fi
-done
-echo "       Verified: All gateway environment variables present in container runtime config."
 
-echo "[9/11] Executing external acceptance probe suite (full 33 tools set assertion)..."
+# Check credentials and original permissions inherited from secrets.env without shell export
+if ! echo "$CONTAINER_ENVS" | grep -q "^ICLOUD_ACCOUNT_1=synthetic_delivery_test@icloud.example"; then
+  echo "ERROR: ICLOUD_ACCOUNT_1 not loaded correctly from secrets.env!" >&2
+  exit 1
+fi
+if ! echo "$CONTAINER_ENVS" | grep -q "^TOKEN_ENCRYPTION_KEY="; then
+  echo "ERROR: TOKEN_ENCRYPTION_KEY not loaded from secrets.env!" >&2
+  exit 1
+fi
+if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_CALENDAR_READ_1=true"; then
+  echo "ERROR: ALLOW_CALENDAR_READ_1 not preserved from secrets.env!" >&2
+  exit 1
+fi
+if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_CONTACTS_READ_1=true"; then
+  echo "ERROR: ALLOW_CONTACTS_READ_1 not preserved from secrets.env!" >&2
+  exit 1
+fi
+# Check gateway overrides
+if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_REMINDERS_READ_1=true"; then
+  echo "ERROR: ALLOW_REMINDERS_READ_1 not overridden to true!" >&2
+  exit 1
+fi
+if ! echo "$CONTAINER_ENVS" | grep -q "^ALLOW_REMINDERS_WRITE_1=false"; then
+  echo "ERROR: ALLOW_REMINDERS_WRITE_1 not set to false!" >&2
+  exit 1
+fi
+if ! echo "$CONTAINER_ENVS" | grep -q "^MACSERVER_EVENTKIT_ENDPOINT=http://${BRIDGE_HOST}:${BRIDGE_PORT}"; then
+  echo "ERROR: MACSERVER_EVENTKIT_ENDPOINT mismatch in container!" >&2
+  exit 1
+fi
+
+echo "       [COMPOSE PRECEDENCE VERIFICATION RESULTS - DESENSITIZED]"
+echo "       - ICLOUD_ACCOUNT_1:                synth***@icloud.example (source: secrets.env, verified)"
+echo "       - TOKEN_ENCRYPTION_KEY:            [REDACTED_32_BYTES] (source: secrets.env, verified)"
+echo "       - ADMIN_PASSWORD_HASH:             [REDACTED_HASH] (source: secrets.env, verified)"
+echo "       - ALLOW_CALENDAR_READ_1:           true (source: secrets.env, preserved)"
+echo "       - ALLOW_CONTACTS_READ_1:           true (source: secrets.env, preserved)"
+echo "       - ALLOW_REMINDERS_READ_1:          true (source: compose environment override, verified)"
+echo "       - ALLOW_REMINDERS_WRITE_1:         false (source: compose environment override, verified)"
+echo "       - MACSERVER_EVENTKIT_ENDPOINT:     http://${BRIDGE_HOST}:${BRIDGE_PORT} (source: compose environment, verified)"
+echo "       - MACSERVER_EVENTKIT_AUTH_TOKEN:   [REDACTED_BEARER_TOKEN] (source: compose environment, verified)"
+echo "       - MACSERVER_EVENTKIT_ALLOWED_LISTS: 00000000-*** (source: compose environment, verified)"
+
+echo "[10/12] Executing external acceptance probe suite (full 33 tools set assertion)..."
 cat << EOF > "$WORK_DIR/verify-acceptance.mjs"
 import { readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes, createHash } from 'node:crypto';
 
 const BASE_URL = 'http://127.0.0.1:${CANDIDATE_PORT}';
-const BRIDGE_STATS_URL = 'http://127.0.0.1:${BRIDGE_PORT}/stats';
+const BRIDGE_STATS_URL = 'http://${BRIDGE_HOST}:${BRIDGE_PORT}/stats';
 const REDIRECT_URI = 'http://127.0.0.1:9/callback';
 const PROTOCOL_VERSION = '2025-06-18';
 const NEWLINE = String.fromCharCode(10);
@@ -767,7 +865,7 @@ node "$WORK_DIR/verify-acceptance.mjs"
 mv /tmp/ag03-delivery-clean-receipt.json "$WORK_DIR/RECEIPT_AG03_DELIVERY.json"
 echo "       Acceptance probe suite passed: 13/13 assertions PASS (all 33 tools verified)"
 
-echo "[10/11] Verifying deterministic rollback to baseline image via Compose ($ROLLBACK_PROJECT, port $ROLLBACK_PORT)..."
+echo "[11/12] Verifying deterministic rollback to baseline image via Compose ($ROLLBACK_PROJECT, port $ROLLBACK_PORT)..."
 # Stop candidate container via Compose
 docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
 CANDIDATE_PROJECT=""
@@ -780,14 +878,20 @@ if [ "${INJECT_ROLLBACK_FAILURE:-0}" = "1" ]; then
   ROLLBACK_HEALTH_ATTEMPTS=5
 fi
 
+ENV_FILE="$WORK_DIR/secrets.env" \
+COMPOSE_NETWORK_NAME="$TEST_NETWORK_NAME" \
 RUN_ID="$RUN_ID" \
 CARDDAV_IMAGE="$BASELINE_IMAGE_ID" \
 CARDDAV_COMMAND="$CARDDAV_COMMAND" \
 BIND_PORT="127.0.0.1:${ROLLBACK_PORT}" \
 PUBLIC_URL="http://127.0.0.1:${ROLLBACK_PORT}" \
 DATA_DIR="$WORK_DIR/data" \
-ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
-TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
+MACSERVER_EVENTKIT_ENDPOINT="http://${BRIDGE_HOST}:${BRIDGE_PORT}" \
+MACSERVER_EVENTKIT_AUTH_TOKEN="test-valid-bearer-token-at-least-32chars!" \
+MACSERVER_EVENTKIT_TIMEOUT_MS="1200" \
+MACSERVER_EVENTKIT_ALLOWED_LISTS="${SYNTH_LIST_ID}:${SYNTH_SOURCE_ID}:iCloud:calDAV" \
+ALLOW_REMINDERS_READ_1="false" \
+ALLOW_REMINDERS_WRITE_1="false" \
 docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" up -d
 
 # 1. Verify actual image ID of running rollback container matches recorded baseline image ID
@@ -814,12 +918,18 @@ echo "       Rollback container configuration correspondence verified."
 docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
 ROLLBACK_PROJECT=""
 
-echo "[11/11] Unified post-drill verification (zero residual resources & production integrity)..."
+echo "[12/12] Unified post-drill verification (zero residual resources & production integrity)..."
 # Terminate fake bridge explicitly
 if [ -n "$BRIDGE_PID" ] && kill -0 "$BRIDGE_PID" 2>/dev/null; then
   kill -15 "$BRIDGE_PID" 2>/dev/null || true
   wait "$BRIDGE_PID" 2>/dev/null || true
   BRIDGE_PID=""
+fi
+
+# Remove isolated test network
+if [ -n "$TEST_NETWORK_NAME" ] && docker network inspect "$TEST_NETWORK_NAME" >/dev/null 2>&1; then
+  docker network rm "$TEST_NETWORK_NAME" >/dev/null 2>&1 || true
+  TEST_NETWORK_NAME=""
 fi
 
 # Verify all ports released

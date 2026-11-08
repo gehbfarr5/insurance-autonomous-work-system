@@ -12,30 +12,19 @@ services:
     env_file:
       - path: ${ENV_FILE:-./secrets.env}
         format: raw
-        required: false
+        required: true
     environment:
       PORT: '17733'
       TOKEN_STORE_PATH: /app/data/tokens.json.enc
       TRUST_PROXY: 'true'
       PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1:17734}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
-      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
-      # Reminders Readonly Gateway configuration
-      MACSERVER_EVENTKIT_ENDPOINT: ${MACSERVER_EVENTKIT_ENDPOINT:-http://172.30.56.1:18765}
-      MACSERVER_EVENTKIT_AUTH_TOKEN: ${MACSERVER_EVENTKIT_AUTH_TOKEN:-}
+      # Reminders Readonly Gateway explicit configurations
+      MACSERVER_EVENTKIT_ENDPOINT: ${MACSERVER_EVENTKIT_ENDPOINT:?Missing required MACSERVER_EVENTKIT_ENDPOINT}
+      MACSERVER_EVENTKIT_AUTH_TOKEN: ${MACSERVER_EVENTKIT_AUTH_TOKEN:?Missing required MACSERVER_EVENTKIT_AUTH_TOKEN}
+      MACSERVER_EVENTKIT_ALLOWED_LISTS: ${MACSERVER_EVENTKIT_ALLOWED_LISTS:?Missing required MACSERVER_EVENTKIT_ALLOWED_LISTS}
       MACSERVER_EVENTKIT_TIMEOUT_MS: ${MACSERVER_EVENTKIT_TIMEOUT_MS:-3000}
-      MACSERVER_EVENTKIT_ALLOWED_LISTS: ${MACSERVER_EVENTKIT_ALLOWED_LISTS:-}
       ALLOW_REMINDERS_READ_1: ${ALLOW_REMINDERS_READ_1:-true}
       ALLOW_REMINDERS_WRITE_1: ${ALLOW_REMINDERS_WRITE_1:-false}
-      ICLOUD_ACCOUNT_1: ${ICLOUD_ACCOUNT_1:-}
-      ICLOUD_APP_PASSWORD_1: ${ICLOUD_APP_PASSWORD_1:-}
-      ICLOUD_LABEL_1: ${ICLOUD_LABEL_1:-}
-      ALLOW_MAIL_READ_1: ${ALLOW_MAIL_READ_1:-false}
-      ALLOW_MAIL_WRITE_1: ${ALLOW_MAIL_WRITE_1:-false}
-      ALLOW_CALENDAR_READ_1: ${ALLOW_CALENDAR_READ_1:-false}
-      ALLOW_CALENDAR_WRITE_1: ${ALLOW_CALENDAR_WRITE_1:-false}
-      ALLOW_CONTACTS_READ_1: ${ALLOW_CONTACTS_READ_1:-false}
-      ALLOW_CONTACTS_WRITE_1: ${ALLOW_CONTACTS_WRITE_1:-false}
     volumes:
       - ${DATA_DIR:-./data}:/app/data
     ports:
@@ -49,9 +38,5 @@ services:
 
 networks:
   candidate_net:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: ${CANDIDATE_SUBNET:-172.30.56.0/24}
-          gateway: ${CANDIDATE_GATEWAY:-172.30.56.1}
+    name: ${COMPOSE_NETWORK_NAME:-ag03_test_network}
+    external: true
