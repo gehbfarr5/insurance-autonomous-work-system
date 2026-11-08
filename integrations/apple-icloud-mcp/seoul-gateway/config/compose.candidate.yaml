@@ -4,7 +4,7 @@ services:
   carddav:
     image: ${CARDDAV_IMAGE:-insurance-carddav-mcp-carddav:candidate}
     restart: unless-stopped
-    command: ["/bin/sh", "-c", "umask 077; exec node dist/bin/http.js"]
+    command: ${CARDDAV_COMMAND:-/bin/sh -c "umask 077; exec node dist/bin/http.js"}
     mem_limit: 256m
     pids_limit: 128
     labels:

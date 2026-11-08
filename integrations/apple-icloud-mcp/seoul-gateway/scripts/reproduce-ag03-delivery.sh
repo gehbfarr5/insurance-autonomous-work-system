@@ -772,22 +772,23 @@ echo "[10/11] Verifying deterministic rollback to baseline image via Compose ($R
 docker compose -p "$CANDIDATE_PROJECT" -f "$COMPOSE_FILE" down -v >/dev/null
 CANDIDATE_PROJECT=""
 
-ROLLBACK_EXTRA_ARGS=""
+CARDDAV_COMMAND=""
 ROLLBACK_HEALTH_ATTEMPTS=30
 if [ "${INJECT_ROLLBACK_FAILURE:-0}" = "1" ]; then
   echo "       [INJECTION] Simulating injected rollback health failure (stalled container)..."
-  ROLLBACK_EXTRA_ARGS="sleep 60"
+  CARDDAV_COMMAND="sleep 60"
   ROLLBACK_HEALTH_ATTEMPTS=5
 fi
 
 RUN_ID="$RUN_ID" \
 CARDDAV_IMAGE="$BASELINE_IMAGE_ID" \
+CARDDAV_COMMAND="$CARDDAV_COMMAND" \
 BIND_PORT="127.0.0.1:${ROLLBACK_PORT}" \
 PUBLIC_URL="http://127.0.0.1:${ROLLBACK_PORT}" \
 DATA_DIR="$WORK_DIR/data" \
 ADMIN_PASSWORD_HASH="$ADMIN_HASH" \
 TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
-docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" up -d $ROLLBACK_EXTRA_ARGS
+docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" up -d
 
 # 1. Verify actual image ID of running rollback container matches recorded baseline image ID
 ROLLBACK_CONTAINER_NAME=$(docker compose -p "$ROLLBACK_PROJECT" -f "$COMPOSE_FILE" ps -q carddav)
