@@ -134,7 +134,33 @@
 
 ---
 
-## 七、项目硬边界保持
+## 七、AG-06 TCC 前置授权核验回执 (`AG06_TCC_PREFLIGHT_AUTHORIZATION_RECEIPT.json`)
+
+经用户显式批准，完成新签名 Universal Bridge 产物替换安装与图形前台 Reminders TCC 授权打通：
+1. **真实产物安装与目标机签名核验**：
+   - 目标路径：`/Users/shared/bin/EventKitBridgeServer` (`0755`)；
+   - 真实快照备份：`/Users/shared/backup/pre_tcc_auth_1794237357`；
+   - 实测 SHA256：`f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074`（100% 匹配冻结摘要）；
+   - 严格多架构签名门禁：`codesign --verify --strict --all-architectures` 确认切片有效并满足 Designated Requirement。
+2. **用户前台原生授权打通**：
+   - 前置检查：`--check-authorization` 返回 `{"authorization_status":"notDetermined","authorized":false}`（退出码 `2`）；
+   - 原生请求：通过 `gui/501` LaunchAgent 单次拉起 `--request-authorization`，macOS Sequoia 弹出原生系统权限申请弹窗；
+   - 用户操作：用户在屏幕上手动确认并授予提醒事项完全访问权限；
+   - 进程回执：输出 `[EventKitBridge] Authorization GRANTED by user.` 并以退出码 0 干净退出；
+   - 终态校验：在 `gui/501` 运行 `--check-authorization` 返回 `{"authorization_status":"authorized","authorized":true}`（**退出码 0，授权成功**）。
+3. **后台守护进程重载与只读健康核验**：
+   - 重载 LaunchAgent：`com.muse.macserver-eventkit`（PID `51084`）；
+   - 本地健康检查：`curl http://127.0.0.1:18765/health` 正常返回 `200 OK`（只读就绪）；
+   - 业务开关：`EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false` 全程保持关闭；
+   - 零数据探测：未调用 `/reminders/lists`，读取条目数 = 0，写操作数 = 0。
+4. **硬隔离边界保持**：
+   - Seoul 候选未部署（运行基线 `sha256:f3e697fe...`，健康检查 200 OK）；
+   - 反向 SSH 隧道未启动（宿主端口 18765 零监听）；
+   - 保真度声明：仅证明 TCC 前台授权就绪，**明确不据此宣称真实提醒读取或 MUSE E2E 已通过**。
+
+---
+
+## 八、项目硬边界保持
 
 - **PR 状态**：PR #20、PR #21、PR #22 与 PR #23 严格维持 **OPEN** 未合并。
 - **只读边界**：生产试运行已彻底关闭，禁止私自重启隧道或开启 Bridge。
