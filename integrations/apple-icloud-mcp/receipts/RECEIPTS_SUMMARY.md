@@ -160,7 +160,44 @@
 
 ---
 
-## 八、项目硬边界保持
+## 八、AG-07 60分钟 MUSE 原生前台只读验收回执 (`AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json`)
+
+经用户显式批准，执行 60 分钟（3600 秒）MUSE 原生前台只读验收窗口：
+1. **时序与双端独立保护**：
+   - 窗口开始时间：2026-11-09 23:50:18 CST（15:50:18 UTC）；
+   - 窗口绝对截止时间：2026-11-10 00:50:18 CST（16:50:18 UTC），绝对截止时间戳 `DEADLINE_EPOCH=1794243018`；
+   - Seoul 事前看门狗：PID 531350 于生产变更前成功孵化（事前保护）；
+   - MacServer 本地看门狗：Supervisor PID 52448 加载 `session_deadline.env` 严格同步该期限。
+2. **候选部署与真实反向隧道链路**：
+   - Seoul 部署网关候选镜像 `sha256:faa6e380...`，健康检查 200 OK；
+   - MacServer 建立专用反向 SSH 隧道，Seoul 宿主监听 `172.19.0.1:18765`；
+   - 激活只读业务开关 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true`。
+3. **MUSE 原生前台独立交互与结果审计**：
+   - 执行客户端：`~/workspace/carddav-mcp-client/verify_muse_test_20261110.py`（`writes_enabled=False`，全程只读，零写入）；
+   - **步骤 1（工具发现）PASS**：`reminders_lists` 与 `reminders_list` 均标明 `readOnlyHint=true`；`reminders_list` 过滤参数确认使用 `list_ids`；写工具零调用；
+   - **步骤 2（列表发现）PASS**：原生仅返回唯一绑定测试列表 `MUSE 测试`（`9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3`），元数据 `writable: false`；生产列表严格隔离不可见；
+   - **步骤 3（条目读取）UNVERIFIED**：调用 `reminders_list`（仅传测试列表 ID）服务端原生返回条目数为 0；无分段失败与截断；非空条目保真字段在真实库中无条目返回，客观记录为未核对，不编造、不伪造。
+4. **自主到期触发与完全生产基线恢复**：
+   - 到期时刻（00:50:18 CST）双端看门狗自主触发统一编排恢复；
+   - MacServer 业务开关持久化关闭，`/reminders/lists` 断言 HTTP 403 Forbidden (`PERMISSION_DENIED`)；
+   - 反向隧道完全停止，无残留进程；
+   - Seoul 容器恢复基线镜像 `sha256:f3e697fe...`，健康检查 200 OK；
+   - 宿主 `sshd` 临时配置注销，`GatewayPorts` 恢复为 `no`，端口 18765 监听完全释放。
+
+---
+
+## 九、四维度最终判定
+
+| 验收维度 | 判定结论 | 判定依据 |
+| :--- | :--- | :--- |
+| **1. 真实只读链路** | **PASS** | 反向 SSH 隧道、网关容器到 Bridge 端到端 HTTP 链路全通，MCP 协议调用正常响应 |
+| **2. 非空字段保真度** | **UNVERIFIED** | 真实调用返回 0 条，非空字段无法在真实生产库中完成核验；离线单元/替身测试 100% 通过 |
+| **3. MUSE 原生前台独立验收** | **PARTIALLY_PASSED** | 步骤 1（只读工具发现）与步骤 2（唯一列表元数据隔离）通过；步骤 3 待非空数据就绪后复验 |
+| **4. 生产基线恢复** | **PASS** | 3600 秒到期双端独立看门狗自主触发回滚，基线镜像 200 OK，业务 403，无残留监听 |
+
+---
+
+## 十、项目硬边界保持
 
 - **PR 状态**：PR #20、PR #21、PR #22 与 PR #23 严格维持 **OPEN** 未合并。
 - **只读边界**：生产试运行已彻底关闭，禁止私自重启隧道或开启 Bridge。

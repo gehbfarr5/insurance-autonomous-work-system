@@ -1,0 +1,87 @@
+{
+  "receipt_type": "AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT",
+  "task": "AG-07",
+  "component": "muse-macserver-eventkit-gateway",
+  "execution_date": "2026-11-09/2026-11-10",
+  "window_parameters": {
+    "approved_duration_seconds": 3600,
+    "beijing_window_start": "2026-11-09T23:50:18+08:00",
+    "beijing_window_deadline": "2026-11-10T00:50:18+08:00",
+    "deadline_epoch": 1794243018,
+    "actual_reversion_time": "2026-11-10T00:50:18+08:00"
+  },
+  "candidate_artifacts": {
+    "pr23_head_commit": "0da5f6e090df401da0ee78c3b5d2780b46f043f1",
+    "seoul_gateway_candidate_image": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+    "macserver_universal_bridge_sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
+    "macserver_bridge_code_signature": "valid on disk; satisfies its Designated Requirement (strict all-architectures verified)"
+  },
+  "watchdog_protection_audit": {
+    "seoul_prechange_watchdog": {
+      "pid": 531350,
+      "launch_time_utc": "2026-11-09T15:50:51Z",
+      "timeout_seconds": 3562,
+      "target_deadline_epoch": 1794243018,
+      "triggered_time_utc": "2026-11-09T16:50:18Z",
+      "action": "Autonomous rollback to baseline container sha256:f3e697fe..."
+    },
+    "macserver_local_watchdog": {
+      "supervisor_pid": 52448,
+      "session_deadline_epoch": 1794243018,
+      "stopped_time_utc": "2026-11-09T16:50:19Z",
+      "exit_signal": "SIGTERM / deadline reached",
+      "business_switch_state": "reverted to false"
+    }
+  },
+  "muse_native_frontend_execution_evidence": {
+    "client_script": "~/workspace/carddav-mcp-client/verify_muse_test_20261110.py",
+    "manager_configuration": "writes_enabled=False (strict read-only)",
+    "apple_login": "Successful (read-only token auto-refresh applied)",
+    "step1_tool_discovery": {
+      "status": "PASS",
+      "findings": [
+        "reminders_lists and reminders_list exposed with readOnlyHint=true",
+        "reminders_list live schema verified using list_ids array",
+        "reminders_create, reminders_update, reminders_delete remained uncalled (zero write calls)"
+      ]
+    },
+    "step2_list_discovery": {
+      "status": "PASS",
+      "findings": [
+        "Sole visible list: 'MUSE 测试' (ID: 9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3)",
+        "Metadata: writable=false",
+        "Production list '提醒 ⚠️' and other non-bound lists strictly isolated and invisible"
+      ]
+    },
+    "step3_nonempty_items_read": {
+      "status": "UNVERIFIED_EMPTY_RESPONSE",
+      "returned_item_count": 0,
+      "notes": "Querying list ID '9D9A5AAD-E3F0-4459-8756-BBCDBCB703F3' returned 0 items from the live EventKit store. No partial failures, no truncation. High-fidelity fields (title, multiline notes, priority, completion, timed due date, all-day date) could not be verified on live data."
+    }
+  },
+  "four_dimensional_verdicts": {
+    "1_real_readonly_link": {
+      "verdict": "PASS",
+      "summary": "Real end-to-end communication path established across reverse SSH tunnel, host port forwarding, and MCP streamable HTTP transport."
+    },
+    "2_non_empty_field_fidelity": {
+      "verdict": "UNVERIFIED",
+      "summary": "Returned 0 items on live query during the active window. Field fidelity unverified on production data (not fabricated). Offline synthetic tests remain 100% pass."
+    },
+    "3_muse_native_frontend_acceptance": {
+      "verdict": "PARTIALLY_PASSED",
+      "summary": "Steps 1 and 2 passed natively in MUSE client with strict read-only and boundary enforcement. Step 3 returned empty."
+    },
+    "4_production_baseline_recovery": {
+      "verdict": "PASS",
+      "summary": "Both hosts recovered autonomously at the exact 3600s deadline (00:50:18 CST / 16:50:18 UTC). MacServer business endpoint verified 403 Forbidden. Seoul container verified baseline image sha256:f3e697fe and healthy (200 OK). SSH drop-in removed (gatewayports no). Port 18765 released. Zero residue."
+    }
+  },
+  "immutable_constraints_compliance": {
+    "pr_unmerged": true,
+    "zero_write_probes": true,
+    "tcc_unbypassed": true,
+    "production_m5_unretired": true,
+    "desensitized_archival": true
+  }
+}
