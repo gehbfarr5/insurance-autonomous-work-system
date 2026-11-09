@@ -114,21 +114,20 @@
 
 ---
 
-## 六、AG-06 验收窗口前置检查与安全闭环回执 (`AG06_ACCEPTANCE_WINDOW_RECEIPT.json`)
+## 六、AG-06 验收窗口保护时序与安全闭环回执 (`AG06_ACCEPTANCE_WINDOW_RECEIPT.json`)
 
 经用户显式授权开启 30 分钟受限验收窗口，执行现场前置核验与缺陷闭环：
-1. **准备阶段生产操作准确核定（正式收回“零探测”表述）**：
-   - 部署 Universal Binary 候选（`6b4a0b82...`）；
-   - 设置 30 分钟看门狗期限（`DEADLINE_EPOCH=1794216687`）；
-   - 临时置业务开关为 `true`（持续 29 秒，09:01:46Z 至 09:02:15Z）；
-   - 发起主动探测请求：`GET http://127.0.0.1:18765/reminders/lists`。
-2. **两类不同事实的严格分别记录**：
+1. **保护时序与真实变更记录（更正“全过程事前保护”表述）**：
+   - **产物部署先于保护初始化**：Universal Binary 候选（`6b4a0b82...`）于 **08:58:30Z** 部署至 MacServer；看门狗与截止时间于 **09:01:27Z** 写入初始化（`DEADLINE_EPOCH=1794216687`）。部署操作先于看门狗初始化 2 分 57 秒，明确不再称全过程事前保护；
+   - **过渡期状态（08:58:30Z - 09:01:27Z）**：新产物已就位，但 `bridge.env` 业务开关维持 `false`，LaunchAgent 处于未激活态，隧道未开启；
+   - **开关开启与主动核验窗口（09:01:46Z - 09:02:15Z）**：看门狗与 1800 秒期限生效后，置业务开关为 `true`，触发 LaunchAgent 重载并向 `GET http://127.0.0.1:18765/reminders/lists` 发起权限探测（持续 29 秒）。
+2. **两类不同事实的严格分别记录（正式收回“零探测”表述）**：
    - **业务调用返回权限拒绝**：探测返回 HTTP 403 Forbidden（`PERMISSION_DENIED`，"EventKit access permission was denied or revoked."）；
    - **未读取到条目内容**：读取条目数 = 0，读取内容暴露数 = 0，写入调用 = 0。零真实数据泄露。
 3. **根因定位**：
    - 经 `codesign --verify -vvv` 查明，此前 `lipo` 产物中 `x86_64` 切片未签名（`code object is not signed at all In architecture: x86_64`），且缺少 embedded `Info.plist`；macOS 15 Sequoia 对其拒绝授权。
 4. **即刻基线锁定与完全恢复**：
-   - 立即将 MacServer 业务开关重置为 `false`，LaunchAgent 恢复，重新断言返回 403；
+   - 于 09:02:15Z 将 MacServer 业务开关重置为 `false`，09:02:43Z 还原 LaunchAgent 配置，重新断言返回 403；
    - Seoul 容器保持 baseline 镜像 `sha256:f3e697fe...`，健康检查 200 OK；
    - 隧道未建立，反向转发端口 18765 监听完全注销，零孤儿进程残留；
    - 全量实体 UUID 脱敏归档（测试列表：`9D9A****03F3`，来源：`9BBB****`）。

@@ -1,11 +1,11 @@
 {
   "build_pipeline": "build-and-sign-universal.sh",
-  "build_timestamp": "2026-11-09T13:48:46Z",
+  "build_timestamp": "2026-11-09T14:56:14Z",
   "identifier": "com.muse.macserver-eventkit",
   "universal_binary": {
     "path": ".build/release/EventKitBridgeServer",
     "sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
-    "designated_requirement": "# designated => cdhash H"f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b" or cdhash H"a25782f93277e3d6f965a3fab1a72e8ea1569a34""
+    "designated_requirement": "# designated => cdhash H\"f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b\" or cdhash H\"a25782f93277e3d6f965a3fab1a72e8ea1569a34\""
   },
   "architectures": {
     "x86_64": {

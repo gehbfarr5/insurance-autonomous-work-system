@@ -129,38 +129,67 @@ echo "  Min OS Target: macOS $ARM_MINOS"
 echo "  Info.plist:    Embedded (__TEXT,__info_plist)"
 echo "=========================================================="
 
-# 7. Write Structured BUILD_METADATA.json
+# 7. Write Structured BUILD_METADATA.json via Python JSON Serializer
 BUILD_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-cat << EOF > "$METADATA_JSON"
-{
-  "build_pipeline": "build-and-sign-universal.sh",
-  "build_timestamp": "$BUILD_TIMESTAMP",
-  "identifier": "$IDENTIFIER",
-  "universal_binary": {
-    "path": ".build/release/EventKitBridgeServer",
-    "sha256": "$UNIVERSAL_SHA",
-    "designated_requirement": "$DESIGNATED_REQ"
-  },
-  "architectures": {
-    "x86_64": {
-      "cdhash": "$X86_CDHASH",
-      "flags": "$X86_FLAGS",
-      "min_macos_version": "$X86_MINOS",
-      "embedded_info_plist": true
+
+python3 -c '
+import json, sys
+
+timestamp = sys.argv[1]
+identifier = sys.argv[2]
+universal_sha = sys.argv[3]
+designated_req = sys.argv[4]
+x86_cdhash = sys.argv[5]
+x86_flags = sys.argv[6]
+x86_minos = sys.argv[7]
+arm_cdhash = sys.argv[8]
+arm_flags = sys.argv[9]
+arm_minos = sys.argv[10]
+target_file = sys.argv[11]
+
+payload = {
+    "build_pipeline": "build-and-sign-universal.sh",
+    "build_timestamp": timestamp,
+    "identifier": identifier,
+    "universal_binary": {
+        "path": ".build/release/EventKitBridgeServer",
+        "sha256": universal_sha,
+        "designated_requirement": designated_req
     },
-    "arm64": {
-      "cdhash": "$ARM_CDHASH",
-      "flags": "$ARM_FLAGS",
-      "min_macos_version": "$ARM_MINOS",
-      "embedded_info_plist": true
+    "architectures": {
+        "x86_64": {
+            "cdhash": x86_cdhash,
+            "flags": x86_flags,
+            "min_macos_version": x86_minos,
+            "embedded_info_plist": True
+        },
+        "arm64": {
+            "cdhash": arm_cdhash,
+            "flags": arm_flags,
+            "min_macos_version": arm_minos,
+            "embedded_info_plist": True
+        }
+    },
+    "signature_verification": {
+        "method": "codesign --verify --strict --all-architectures",
+        "status": "PASSED"
     }
-  },
-  "signature_verification": {
-    "method": "codesign --verify --strict --all-architectures",
-    "status": "PASSED"
-  }
 }
-EOF
+
+with open(target_file, "w", encoding="utf-8") as f:
+    json.dump(payload, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+' "$BUILD_TIMESTAMP" "$IDENTIFIER" "$UNIVERSAL_SHA" "$DESIGNATED_REQ" \
+  "$X86_CDHASH" "$X86_FLAGS" "$X86_MINOS" \
+  "$ARM_CDHASH" "$ARM_FLAGS" "$ARM_MINOS" "$METADATA_JSON"
+
+# 8. Strict Verification of Generated Metadata JSON
+echo "--> 8. Validating generated JSON integrity..."
+if ! python3 -c 'import json, sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$METADATA_JSON" 2>/dev/null; then
+  echo "FATAL: BUILD_METADATA.json failed JSON syntax validation!" >&2
+  exit 1
+fi
+echo "  [PASS] BUILD_METADATA.json verified valid JSON syntax."
 
 echo "Build metadata written to $METADATA_JSON"
 echo "=== Build and Signing Pipeline Complete ==="

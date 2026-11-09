@@ -59,13 +59,9 @@
 3. **应用 Seoul SSH 限制配置**:
    - 部署 `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` 并经 `sshd -t` 校验通过。
    - 向 `~mac-operator/.ssh/authorized_keys` 追加受限公钥条目并执行 `systemctl reload sshd`。
-4. **部署 MacServer Universal Bridge、用户前台授权与 LaunchAgent**:
+4. **部署 MacServer Universal Bridge 与 LaunchAgent (需先完成前置 TCC 授权)**:
+   - **前置准入依赖**：必须已执行并通过 Stage 1 前置授权（参见 [`TCC_PREFLIGHT_AUTHORIZATION_APPLICATION.md`](file:///Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system/integrations/apple-icloud-mcp/macserver-eventkit/docs/TCC_PREFLIGHT_AUTHORIZATION_APPLICATION.md)），核验 `/Users/shared/bin/EventKitBridgeServer --check-authorization` 返回退出码 0 (`authorized: true`)。避免将授权排障消耗在本次业务窗口内。
    - 部署 Universal Release Binary（SHA256: `f78e24e5...`）至 `/Users/shared/bin/EventKitBridgeServer`。
-   - **TCC 权限就绪（最小前台用户操作）**：由于新构建产物拥有新 CDHash，首次部署时处于 `notDetermined` 状态。在活跃图形会话（`gui/501`）执行：
-     ```bash
-     /Users/shared/bin/EventKitBridgeServer --request-authorization
-     ```
-     macOS Sequoia 弹出原生系统权限弹窗，用户点击“允许完全访问”。核验 `--check-authorization` 返回退出码 0 (`authorized: true`)。
    - 载入 `~/Library/LaunchAgents/com.muse.macserver-eventkit.plist` 与 `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist`。
    - 执行 `/opt/muse-macserver/scripts/tunnel-ctl.sh health` 验证 4 层健康状态。
 5. **部署 Seoul 候选容器**:
