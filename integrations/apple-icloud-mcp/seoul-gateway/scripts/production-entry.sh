@@ -374,7 +374,7 @@ deploy_candidate() {
           ssh_auth_keys_path="$user_home/.ssh/authorized_keys"
         fi
       elif [[ "$sshd_ak" = /* ]]; then
-        ssh_auth_keys_path="$sshd_ak"
+        ssh_auth_keys_path="${sshd_ak//%u/$target_ssh_user}"
       fi
     fi
   fi
