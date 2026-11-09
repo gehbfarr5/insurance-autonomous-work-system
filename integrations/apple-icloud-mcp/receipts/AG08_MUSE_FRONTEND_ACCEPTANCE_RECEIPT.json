@@ -34,14 +34,17 @@
   "step_verification_matrix": {
     "step1_calendar_discovery": {
       "status": "PASS",
+      "mechanism": "read_only_query",
       "details": "Target calendar 'MUSE 测试' discovered with writable=true; Base64 ID matched pre-flight binding verbatim."
     },
     "step2_precheck_clean": {
       "status": "PASS",
+      "mechanism": "read_only_query",
       "details": "Target range (2026-11-15 to 2026-11-17) pre-checked; 0 events matching prefix '[MUSE-TEST-CAL-20261110]'."
     },
     "step3_create_timed_event": {
       "status": "PASS",
+      "mechanism": "gated_wrapper (IsolatedAdapter -> SafeWriteManager with INTENT ledger)",
       "event_title": "[MUSE-TEST-CAL-20261110] 架构评审会议",
       "start": "2026-11-15T14:00:00+08:00",
       "end": "2026-11-15T15:00:00+08:00",
@@ -51,6 +54,7 @@
     },
     "step4_create_allday_event": {
       "status": "PASS",
+      "mechanism": "gated_wrapper (IsolatedAdapter -> SafeWriteManager with INTENT ledger)",
       "event_title": "[MUSE-TEST-CAL-20261110] 全天冻结窗口",
       "start": "2026-11-16T00:00:00+08:00",
       "end": "2026-11-17T00:00:00+08:00",
@@ -60,6 +64,7 @@
     },
     "step5_readback_and_verification": {
       "status": "PASS",
+      "mechanism": "read_only_query",
       "timed_event_timezone": "2026-11-15T14:00:00+08:00 correctly formatted as 2026-11-15T06:00:00.000Z to 07:00:00.000Z",
       "allday_event_dates": "start: 2026-11-16T00:00:00.000Z, end: 2026-11-17T00:00:00.000Z (RFC 5545 exclusive end date for 1-day event)",
       "allday_flag": true,
@@ -67,33 +72,36 @@
     },
     "step6_normal_cas_update": {
       "status": "PASS",
+      "mechanism": "gated_wrapper (IsolatedAdapter -> SafeWriteManager with INTENT ledger)",
       "expected_etag_sent": "\"mw9nlf7g\"",
       "description_patched": "AG-08 合成验收定时条目 [已正常更新]",
       "etag_updated": "\"mw9nlf7h\""
     },
     "step7_etag_conflict_interception": {
       "status": "PASS",
-      "execution_path": "Direct native MCP calendar_update_event (avoided client wrapper auto-refresh)",
+      "mechanism": "direct_native_mcp_call (deliberately bypassed client wrapper to test stale ETag without auto-refresh override)",
       "stale_etag_sent": "\"mw9nlf7g\"",
-      "server_response": "CONFLICT: 该事件已被其他客户端修改 (HTTP 412 mapped to CONFLICT)",
+      "server_response": "CONFLICT: 该事件已被其他客户端修改（旧 ETag 被服务端拒绝，具体拦截层未证实）",
       "post_conflict_readback": "Description remains 'AG-08 合成验收定时条目 [已正常更新]', ETag unchanged at '\"mw9nlf7h\"', zero corruption"
     },
     "step8_precision_deletion": {
       "status": "PASS",
+      "mechanism": "gated_wrapper (IsolatedAdapter -> SafeWriteManager with INTENT ledger)",
       "timed_event_deleted": "Deleted using confirmed event_id and latest ETag '\"mw9nlf7h\"'",
       "allday_event_deleted": "Deleted using confirmed event_id and latest ETag '\"mw9nlgyb\"'"
     },
     "step9_zero_residue_confirmation": {
       "status": "PASS",
+      "mechanism": "read_only_query",
       "initial_post_delete_query": "0 residual items matching prefix '[MUSE-TEST-CAL-20261110]'",
       "independent_secondary_check": "Target window returned events: [] (100% clean, zero residue)"
     }
   },
   "governance_and_safety_audit": {
-    "gated_wrapper_usage": "5 of 6 writes routed through gated wrapper with HMAC credentials, deny files, and INTENT logging",
-    "step7_exception_justification": "Direct native MCP call to deliver stale ETag directly to upstream without client-side auto-refresh override",
+    "call_classification": "Strictly distinguishes gated wrapper operations (Steps 3, 4, 6, 8) vs direct native MCP call (Step 7)",
+    "step7_interception_boundary": "Step 7 was rejected by server with CONFLICT; because raw network packet trace was not captured, conclusion is precisely recorded as '旧 ETag 被服务端拒绝，具体拦截层未证实' rather than overclaiming upstream HTTP 412",
     "production_calendar_isolation": "All 3 production calendars ('日历', '工作', '私人') verified in deny file",
     "evidence_persistence": "Logs, credentials (HMAC removed), and state archived in ~/workspace/ag08-acceptance/ and system MEMORY"
   },
-  "final_verdict": "FULL_PASS_DELIVERY_QUALIFIED"
+  "final_verdict": "ACCEPTED_PENDING_WRAPPER_DELIVERY"
 }
