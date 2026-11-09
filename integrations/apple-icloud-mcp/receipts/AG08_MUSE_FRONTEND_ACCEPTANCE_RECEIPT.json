@@ -1,0 +1,99 @@
+{
+  "receipt_type": "AG08_MUSE_FRONTEND_ACCEPTANCE_RECEIPT",
+  "task": "AG-08",
+  "component": "apple-icloud-mcp (calendar module)",
+  "execution_date": "2026-11-10",
+  "window_parameters": {
+    "approved_duration_seconds": 3600,
+    "cleanup_threshold_minutes": 45,
+    "actual_start_time": "2026-11-10T03:21:59+08:00",
+    "actual_completion_time": "2026-11-10T03:28:40+08:00",
+    "total_duration_seconds": 401,
+    "window_compliance": "PASS (< 7m, completed well within 45m cleanup threshold and 60m authorization deadline)"
+  },
+  "candidate_artifacts": {
+    "upstream_source_repo": "https://github.com/MrZhongzq/apple-icloud-mcp.git",
+    "upstream_source_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
+    "upstream_source_commit_message": "calendar: surface CalDAV ETag in listEvents",
+    "seoul_production_image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+    "compiled_artifacts_sha256": {
+      "calendar_service_js": "c5d529b827f08a89346d26cb6d6fefa9fe97ec70e9849b9df5b8299116472c64",
+      "caldav_js": "6264c69c9f09a445861a1307db51bc0b72837958875469260fc08005f1ed76ca",
+      "calendar_tools_js": "f1578fb3b8ffbc88fe15b13f8b302bfcc15f39b8869ae453844a123eec7dd18e",
+      "ical_parser_js": "c16d1e5dcde79c529d25ae82e3fbe98b94779a0f95edf185265a548d576bf92d"
+    },
+    "workspace_git_branch": "feat/ag05-resident-readonly-candidate",
+    "associated_pr": "#23"
+  },
+  "target_calendar": {
+    "calendar_name": "MUSE 测试",
+    "writable": true,
+    "id_matched_verbatim": true,
+    "deny_list_coverage": "3 production calendars (日历, 工作, 私人) fully protected in deny list"
+  },
+  "step_verification_matrix": {
+    "step1_calendar_discovery": {
+      "status": "PASS",
+      "details": "Target calendar 'MUSE 测试' discovered with writable=true; Base64 ID matched pre-flight binding verbatim."
+    },
+    "step2_precheck_clean": {
+      "status": "PASS",
+      "details": "Target range (2026-11-15 to 2026-11-17) pre-checked; 0 events matching prefix '[MUSE-TEST-CAL-20261110]'."
+    },
+    "step3_create_timed_event": {
+      "status": "PASS",
+      "event_title": "[MUSE-TEST-CAL-20261110] 架构评审会议",
+      "start": "2026-11-15T14:00:00+08:00",
+      "end": "2026-11-15T15:00:00+08:00",
+      "all_day": false,
+      "etag_initial": "\"mw9nlf7g\"",
+      "attempts": 1
+    },
+    "step4_create_allday_event": {
+      "status": "PASS",
+      "event_title": "[MUSE-TEST-CAL-20261110] 全天冻结窗口",
+      "start": "2026-11-16T00:00:00+08:00",
+      "end": "2026-11-17T00:00:00+08:00",
+      "all_day": true,
+      "etag_initial": "\"mw9nlgyb\"",
+      "attempts": 1
+    },
+    "step5_readback_and_verification": {
+      "status": "PASS",
+      "timed_event_timezone": "2026-11-15T14:00:00+08:00 correctly formatted as 2026-11-15T06:00:00.000Z to 07:00:00.000Z",
+      "allday_event_dates": "start: 2026-11-16T00:00:00.000Z, end: 2026-11-17T00:00:00.000Z (RFC 5545 exclusive end date for 1-day event)",
+      "allday_flag": true,
+      "etags_verified": "Both ETags real and non-empty (\"mw9nlf7g\" and \"mw9nlgyb\")"
+    },
+    "step6_normal_cas_update": {
+      "status": "PASS",
+      "expected_etag_sent": "\"mw9nlf7g\"",
+      "description_patched": "AG-08 合成验收定时条目 [已正常更新]",
+      "etag_updated": "\"mw9nlf7h\""
+    },
+    "step7_etag_conflict_interception": {
+      "status": "PASS",
+      "execution_path": "Direct native MCP calendar_update_event (avoided client wrapper auto-refresh)",
+      "stale_etag_sent": "\"mw9nlf7g\"",
+      "server_response": "CONFLICT: 该事件已被其他客户端修改 (HTTP 412 mapped to CONFLICT)",
+      "post_conflict_readback": "Description remains 'AG-08 合成验收定时条目 [已正常更新]', ETag unchanged at '\"mw9nlf7h\"', zero corruption"
+    },
+    "step8_precision_deletion": {
+      "status": "PASS",
+      "timed_event_deleted": "Deleted using confirmed event_id and latest ETag '\"mw9nlf7h\"'",
+      "allday_event_deleted": "Deleted using confirmed event_id and latest ETag '\"mw9nlgyb\"'"
+    },
+    "step9_zero_residue_confirmation": {
+      "status": "PASS",
+      "initial_post_delete_query": "0 residual items matching prefix '[MUSE-TEST-CAL-20261110]'",
+      "independent_secondary_check": "Target window returned events: [] (100% clean, zero residue)"
+    }
+  },
+  "governance_and_safety_audit": {
+    "gated_wrapper_usage": "5 of 6 writes routed through gated wrapper with HMAC credentials, deny files, and INTENT logging",
+    "step7_exception_justification": "Direct native MCP call to deliver stale ETag directly to upstream without client-side auto-refresh override",
+    "production_calendar_isolation": "All 3 production calendars ('日历', '工作', '私人') verified in deny file",
+    "evidence_persistence": "Logs, credentials (HMAC removed), and state archived in ~/workspace/ag08-acceptance/ and system MEMORY"
+  },
+  "final_verdict": "FULL_PASS_DELIVERY_QUALIFIED"
+}
