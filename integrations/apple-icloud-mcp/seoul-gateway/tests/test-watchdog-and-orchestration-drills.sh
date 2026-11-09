@@ -188,6 +188,12 @@ esac
 MOCKDOCKER
 chmod +x "$MOCK_BIN/docker"
 
+cat << 'MOCKSYS' > "$MOCK_BIN/systemctl"
+#!/usr/bin/env bash
+exit 0
+MOCKSYS
+chmod +x "$MOCK_BIN/systemctl"
+
 export PATH="$MOCK_BIN:$PATH"
 export TEST_DOCKER_STATE_DIR="$STATE_DIR"
 
@@ -427,7 +433,11 @@ if ! kill -0 "$SUP_PID" 2>/dev/null; then
 fi
 
 # Wait for 3s session timeout to fire
-sleep 3.5
+waited=0
+while kill -0 "$SUP_PID" 2>/dev/null && [ "$waited" -lt 30 ]; do
+  sleep 0.2
+  waited=$((waited + 1))
+done
 
 # Supervisor should have autonomously shut down
 if kill -0 "$SUP_PID" 2>/dev/null; then

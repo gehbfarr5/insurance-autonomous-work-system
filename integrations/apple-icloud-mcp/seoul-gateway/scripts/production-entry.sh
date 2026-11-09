@@ -332,6 +332,18 @@ deploy_candidate() {
     exit 1
   }
 
+  # Backup pre-existing SSH configurations to manifest
+  local ssh_dropin_path="/etc/ssh/sshd_config.d/60-macserver-gateway.conf"
+  local ssh_dropin_preexisted=0
+  if [ -f "$ssh_dropin_path" ]; then
+    ssh_dropin_preexisted=1
+    mkdir -p "$backup_dir/sshd_config.d"
+    cp -a "$ssh_dropin_path" "$backup_dir/sshd_config.d/"
+  fi
+  if [ -f "/home/mac-operator/.ssh/authorized_keys" ]; then
+    cp -a /home/mac-operator/.ssh/authorized_keys "$backup_dir/authorized_keys" 2>/dev/null || true
+  fi
+
   # Record deterministic manifest for standalone recovery
   cat << EOF > "$backup_dir/manifest.env"
 BACKUP_TS="$backup_ts"
@@ -351,6 +363,8 @@ BACKUP_ALLOW_CONTACTS_READ_1="$live_contacts_read"
 BACKUP_ALLOW_CONTACTS_WRITE_1="$live_contacts_write"
 BACKUP_ALLOW_CALENDAR_READ_1="$live_calendar_read"
 BACKUP_ALLOW_CALENDAR_WRITE_1="$live_calendar_write"
+BACKUP_SSH_DROPIN_PREEXISTED="$ssh_dropin_preexisted"
+BACKUP_SSH_DROPIN_CREATED="1"
 EOF
 
   if [ ! -s "$backup_dir/manifest.env" ]; then
@@ -366,8 +380,8 @@ EOF
     exec </dev/null
     sleep "$watchdog_timeout"
     echo "[WATCHDOG] 30-minute trial window expired at $(date -u +"%Y-%m-%dT%H:%M:%SZ")! Auto-reverting to baseline..."
-    if ! "$SCRIPT_DIR/production-entry.sh" rollback "$backup_dir"; then
-      echo "[RECOVERY_FAILED] CRITICAL ALARM: Independent watchdog automatic rollback FAILED!" >&2
+    if ! "$SCRIPT_DIR/orchestrated-recovery.sh" "$backup_dir"; then
+      echo "[RECOVERY_FAILED] CRITICAL ALARM: Independent watchdog unified recovery FAILED!" >&2
       exit 1
     fi
   ) >> "$backup_dir/watchdog.log" 2>&1 &
@@ -393,16 +407,16 @@ EOF
     if [ "${DEPLOY_IN_PROGRESS:-0}" -eq 1 ] && [ -n "${ACTIVE_BACKUP_DIR:-}" ]; then
       echo "========================================================================" >&2
       echo " [UNIFIED-ROLLBACK-TRIGGER] Deployment failure or interruption detected (exit/signal: $exit_sig)!" >&2
-      echo " Automatically executing rollback to restore production baseline..." >&2
+      echo " Automatically executing unified recovery to restore production baseline..." >&2
       echo "========================================================================" >&2
       DEPLOY_IN_PROGRESS=0
-      if rollback_baseline "$ACTIVE_BACKUP_DIR"; then
+      if "$SCRIPT_DIR/orchestrated-recovery.sh" "$ACTIVE_BACKUP_DIR"; then
         echo "========================================================================" >&2
-        echo " [ROLLBACK-SUCCESS] Unified rollback successfully restored baseline." >&2
+        echo " [ROLLBACK-SUCCESS] Unified recovery successfully restored baseline." >&2
         echo "========================================================================" >&2
       else
         echo "========================================================================" >&2
-        echo " [RECOVERY_FAILED] CRITICAL ALARM: Unified rollback FAILED during recovery!" >&2
+        echo " [RECOVERY_FAILED] CRITICAL ALARM: Unified recovery FAILED during rollback!" >&2
         echo " Preserving backup directory for investigation: $ACTIVE_BACKUP_DIR" >&2
         echo "========================================================================" >&2
       fi
@@ -744,8 +758,8 @@ case "${1:-status}" in
     deploy_candidate
     ;;
   rollback)
-    if ! rollback_baseline "${2:-}"; then
-      echo "[RECOVERY_FAILED] Standalone rollback execution failed!" >&2
+    if ! "$SCRIPT_DIR/orchestrated-recovery.sh" "${2:-}"; then
+      echo "[RECOVERY_FAILED] Unified recovery orchestration failed!" >&2
       exit 1
     fi
     ;;

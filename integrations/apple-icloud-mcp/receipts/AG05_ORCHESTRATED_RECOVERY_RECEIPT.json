@@ -1,0 +1,58 @@
+{
+  "receipt_id": "AG05-ORCHESTRATED-RECOVERY-1794196421",
+  "task": "AG-05 MacServer Business Shutdown & Unified Orchestrated Recovery Verification",
+  "execution_timestamp": "2026-11-09T03:53:35Z",
+  "git_branch": "feat/ag05-resident-readonly-candidate",
+  "test_environment": {
+    "host_os": "macOS",
+    "test_suite": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-orchestrated-recovery-drills.sh",
+    "scripts_executed": [
+      "integrations/apple-icloud-mcp/resident-tunnel/scripts/tunnel-ctl.sh",
+      "integrations/apple-icloud-mcp/resident-tunnel/scripts/run-resident-tunnel.sh",
+      "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh"
+    ],
+    "fixtures": {
+      "list_id": "00000000-0000-0000-0000-000000000001",
+      "locked_candidate_image": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+      "locked_baseline_image": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+    }
+  },
+  "assertions": [
+    {
+      "drill": "Drill 1: MacServer Local Business Shutdown & HTTP 403 Assertion",
+      "result": "PASS",
+      "details": "tunnel-ctl.sh orchestrated-stop persisted EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false to bridge.env, reloaded bridge, verified /reminders/lists returned HTTP 403 PERMISSION_DENIED, verified /health still returned 200, and stopped supervisor while preserving bridge loopback listener."
+    },
+    {
+      "drill": "Drill 2: Local Session Hard Deadline Watchdog & Crash-Resistant Persistence",
+      "result": "PASS",
+      "details": "run-resident-tunnel.sh persisted DEADLINE_EPOCH in session_deadline.env; supervisor killed with SIGKILL, restarted, verified deadline epoch was not reset; upon deadline expiration, local watchdog executed orchestrated-stop, setting bridge.env to false and returning 403 on /reminders/lists; subsequent startup correctly rejected."
+    },
+    {
+      "drill": "Drill 3: Cross-Device Network Disconnect (Failsafe & Failure Aggregation)",
+      "result": "PASS",
+      "details": "orchestrated-recovery.sh executed with unreachable remote SSH target; remote status recorded as UNKNOWN_PENDING_VERIFICATION (not falsely claimed closed); Seoul local container and config rollback completed; script aggregated remote error, output [RECOVERY_FAILED], and exited with code 1."
+    },
+    {
+      "drill": "Drill 4: Task Process Cleanup with Zero Collateral Damage",
+      "result": "PASS",
+      "details": "orchestrated-recovery.sh terminated PID-verified task tunnel process; unrelated background process (PID 88839) remained running and unaffected; verified port 19765 listener removed without indiscriminate killing."
+    },
+    {
+      "drill": "Drill 5: Concurrent Recovery Idempotency & Mutual Exclusion",
+      "result": "PASS",
+      "details": "Two simultaneous orchestrated-recovery.sh processes invoked on the same backup directory; .rollback.lock mutual exclusion prevented race condition; both completed idempotently with exit code 0."
+    },
+    {
+      "drill": "Drill 6: SSH Manifest Restoration Fidelity",
+      "result": "PASS",
+      "details": "Manifest indicated 60-macserver-gateway.conf was created by task and did not pre-exist; 60- was removed while pre-existing 50-preexisting.conf was preserved intact (no unconditional deletion)."
+    },
+    {
+      "drill": "Drill 7: Partial Step Failure Aggregation & Non-Zero Exit Guarantee",
+      "result": "PASS",
+      "details": "Injected health check failure in Step 5; orchestrated-recovery.sh executed best-effort steps, collected error in recovery_errors, output [RECOVERY_FAILED], never output [RECOVERY-SUCCESS], and exited with code 1."
+    }
+  ],
+  "overall_status": "ALL_7_ORCHESTRATED_RECOVERY_DRILLS_PASSED"
+}

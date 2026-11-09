@@ -67,31 +67,37 @@
 
 ## 四、跨设备联动关闭与确定性回滚编排 (Orchestrated Rollback)
 
-验收完成或出现任何异常（或 30 分钟看门狗硬超时触发）时，通过编排脚本执行跨设备联动回滚：
+验收完成或出现任何异常（或 30 分钟看门狗硬超时触发）时，统一通过编排脚本执行跨设备联动回滚：
 
 ```bash
-# 统一跨设备联动回滚入口
+# 统一跨设备联动回滚入口 (看门狗、部署失败 trap 及手动回滚均走此唯一入口)
 /opt/insurance-carddav-mcp/scripts/orchestrated-recovery.sh "$BACKUP_DIR"
 ```
 
-编排脚本内联执行以下 5 项原子步骤：
-1. **联动停止 MacServer 业务开关**:
-   - 触发 MacServer 桥接进入安全隔离锁定模式，探测验证 `/health` 返回 403 阻断。
-2. **停止反向隧道与 LaunchAgent**:
-   - MacServer 执行 `tunnel-ctl.sh orchestrated-stop`，卸载 LaunchAgent。
-   - 探测验证 Seoul 宿主回环端口 `18765` 残留监听数严格为 0。
+编排脚本内联执行以下 5 项原子步骤与失败聚合：
+1. **联动关闭 MacServer 业务权限与停止隧道**:
+   - 将受限配置 (`bridge.env`) 中的业务开关持久化为 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false`。
+   - 触发 Bridge 配置重载（通过 launchd kickstart 或 SIGHUP 信号）。
+   - **严格业务端点断言**: 对受限业务端点 (`/reminders/lists`) 发起带 Token 请求断言 **HTTP 403 PERMISSION_DENIED**（明确废除以 `/health` 代替业务权限检查，Bridge `/health` 持续保持 200 OK）。
+   - 停止反向 SSH 隧道与 LaunchAgent。Bridge 本地环回监听 (`127.0.0.1:18765`) 保留处于 403 安全隔离态，不误判为隧道残留。
+   - **网络中断容错**: 若 MacServer 网络不可达或 SSH 超时，状态标记为 `UNKNOWN_PENDING_VERIFICATION`（绝不虚报远程已关闭），继续执行 Seoul 本地恢复，并依赖 MacServer 本地看门狗硬超时自主锁定。
+2. **清理任务进程（零误伤原则）**:
+   - 严格根据 PID 归属与进程参数特征终止任务相关进程，**严禁使用 `fuser -k` 或按端口全杀**，确保无关业务进程零误伤。
+   - 校验 Seoul 宿主反向转发监听端口 `18765` 残留监听数严格为 0。
 3. **恢复 Seoul MCP 容器与配置**:
-   - 停止候选容器，通过 `rsync` 还原原配置文件（排除运行时 OAuth 令牌）。
+   - 停止候选容器，确认容器退出后再执行文件恢复。
+   - 通过 `rsync` 还原原配置文件（排除运行时 OAuth 令牌）。
    - 将基线镜像 `sha256:f3e697fe...` 重新打标为 `:latest`。
    - 启动基线 Compose 服务并等待健康检查（经历 5-10 秒重启窗口）。
-4. **清理 Seoul SSH 配置与临时文件**:
-   - 彻底删除新增的 `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` 文件。
-   - 还原 `~mac-operator/.ssh/authorized_keys`，平滑重载 sshd。
-5. **端到端闭环验证**:
+4. **清理 Seoul SSH 配置（基于备份清单）**:
+   - 依据备份清单 `manifest.env` 精准判定：若 `60-macserver-gateway.conf` 为本任务新增则删除；若原先已存在则执行还原，**绝不无条件删除既有 SSH 配置**。
+   - 还原 `~mac-operator/.ssh/authorized_keys`，平滑重载 sshd（若重载失败计入故障）。
+5. **端到端闭环验证与失败聚合**:
    - 校验 Seoul MCP 健康检查通过（200 OK）。
    - 校验运行中容器镜像严格等于基线 `sha256:f3e697fe...`。
    - 校验联系人、日历权限配置与基线原始记录逐项一致。
    - 校验反向转发端口 `18765` 监听完全消失。
+   - **失败聚合治理**: 任何步骤失败或远程状态为 `UNKNOWN_PENDING_VERIFICATION`，汇总所有错误，输出 `[RECOVERY_FAILED]` 并返回非零退出码；绝不报虚假成功。
 
 ---
 

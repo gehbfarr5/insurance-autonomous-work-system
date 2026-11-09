@@ -24,6 +24,13 @@ LOG_FILE="${LOG_FILE:-$CONFIG_DIR/tunnel.log}"
 RUNNER_SCRIPT="${RUNNER_SCRIPT:-$SCRIPT_DIR/run-resident-tunnel.sh}"
 PLIST_FILE="${HOME}/Library/LaunchAgents/com.muse.macserver-tunnel.plist"
 BRIDGE_PROBE_URL="${BRIDGE_PROBE_URL:-http://127.0.0.1:18765/health}"
+BRIDGE_CONFIG_FILE="${BRIDGE_CONFIG_FILE:-$CONFIG_DIR/bridge.env}"
+BRIDGE_PID_FILE="${BRIDGE_PID_FILE:-$CONFIG_DIR/bridge.pid}"
+BRIDGE_PLIST_LABEL="${BRIDGE_PLIST_LABEL:-com.muse.macserver-eventkit}"
+BRIDGE_PLIST_FILE="${BRIDGE_PLIST_FILE:-$HOME/Library/LaunchAgents/${BRIDGE_PLIST_LABEL}.plist}"
+BRIDGE_BUSINESS_URL="${BRIDGE_BUSINESS_URL:-http://127.0.0.1:18765/reminders/lists}"
+BRIDGE_TOKEN="${BRIDGE_TOKEN:-}"
+BRIDGE_RELOAD_CMD="${BRIDGE_RELOAD_CMD:-}"
 
 if [ -f "$CONFIG_FILE" ]; then
   # shellcheck source=/dev/null
@@ -284,49 +291,188 @@ cmd_health() {
   fi
 }
 
-cmd_orchestrated_stop() {
-  echo "=== MacServer Orchestrated Shutdown Sequence ==="
-  # 1. Probe Bridge status / ensure safe mode / 403
-  echo "[1/3] Verifying Bridge status..."
-  if command -v curl >/dev/null 2>&1; then
-    local b_code
-    b_code=$(curl -s -m 2 -o /dev/null -w "%{http_code}" "$BRIDGE_PROBE_URL" 2>/dev/null || echo "000")
-    echo "       Bridge health probe: HTTP $b_code"
-  fi
-
-  # 2. Stop supervisor and unload launchd
-  echo "[2/3] Stopping reverse tunnel supervisor and unloading launchd..."
-  cmd_stop
-
-  # 3. Verify zero residual processes and listeners
-  echo "[3/3] Verifying zero residual listeners on port 18765..."
-  local residuals=0
-  if command -v lsof >/dev/null 2>&1; then
-    if lsof -i :18765 >/dev/null 2>&1; then
-      echo "       WARNING: Residual listener detected on port 18765!" >&2
-      residuals=1
+persist_business_switch_false() {
+  echo "       Persisting authorization switch to false in $BRIDGE_CONFIG_FILE..."
+  mkdir -p "$(dirname "$BRIDGE_CONFIG_FILE")"
+  if [ -f "$BRIDGE_CONFIG_FILE" ]; then
+    # Surgically replace authorization keys
+    if grep -q "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED" "$BRIDGE_CONFIG_FILE"; then
+      sed -i.bak -E 's/^([[:space:]]*EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED[[:space:]]*=[[:space:]]*).*/\1false/' "$BRIDGE_CONFIG_FILE"
+      rm -f "${BRIDGE_CONFIG_FILE}.bak"
+    else
+      echo "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false" >> "$BRIDGE_CONFIG_FILE"
     fi
-  fi
-  if [ "$residuals" -eq 0 ]; then
-    echo "       Zero residual listeners verified."
-    echo "=== MacServer Orchestrated Shutdown COMPLETED ==="
-    return 0
+    if grep -q "EVENTKIT_PRODUCTION_AUTHORIZED" "$BRIDGE_CONFIG_FILE"; then
+      sed -i.bak -E 's/^([[:space:]]*EVENTKIT_PRODUCTION_AUTHORIZED[[:space:]]*=[[:space:]]*).*/\1false/' "$BRIDGE_CONFIG_FILE"
+      rm -f "${BRIDGE_CONFIG_FILE}.bak"
+    else
+      echo "EVENTKIT_PRODUCTION_AUTHORIZED=false" >> "$BRIDGE_CONFIG_FILE"
+    fi
   else
-    echo "=== MacServer Orchestrated Shutdown FAILED (Residuals present) ===" >&2
+    cat << 'EOF' > "$BRIDGE_CONFIG_FILE"
+EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false
+EVENTKIT_PRODUCTION_AUTHORIZED=false
+EOF
+  fi
+  chmod 600 "$BRIDGE_CONFIG_FILE" 2>/dev/null || true
+  # Verify written value
+  if grep -E "^[[:space:]]*EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED[[:space:]]*=[[:space:]]*(true|1)" "$BRIDGE_CONFIG_FILE" >/dev/null 2>&1; then
+    echo "       CRITICAL ERROR: Failed to toggle EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED to false!" >&2
     return 1
   fi
+  echo "       [OK] Business authorization set to false (persisted at $BRIDGE_CONFIG_FILE)."
+  return 0
+}
+
+trigger_bridge_reload() {
+  echo "       Triggering Bridge configuration reload..."
+  if [ -n "$BRIDGE_RELOAD_CMD" ]; then
+    echo "       Executing custom BRIDGE_RELOAD_CMD: $BRIDGE_RELOAD_CMD"
+    eval "$BRIDGE_RELOAD_CMD"
+    return $?
+  fi
+
+  local reloaded=0
+  # 1. If running under launchd
+  if command -v launchctl >/dev/null 2>&1 && launchctl list "$BRIDGE_PLIST_LABEL" >/dev/null 2>&1; then
+    echo "       Bridge running under launchd ($BRIDGE_PLIST_LABEL); triggering kickstart restart..."
+    if launchctl kickstart -k "gui/${UID}/${BRIDGE_PLIST_LABEL}" 2>/dev/null; then
+      reloaded=1
+    elif launchctl kill TERM "gui/${UID}/${BRIDGE_PLIST_LABEL}" 2>/dev/null; then
+      reloaded=1
+    fi
+  fi
+
+  # 2. If PID file present
+  if [ "$reloaded" -eq 0 ] && [ -f "$BRIDGE_PID_FILE" ]; then
+    local bpid
+    bpid=$(cat "$BRIDGE_PID_FILE" 2>/dev/null || true)
+    if [ -n "$bpid" ] && kill -0 "$bpid" 2>/dev/null; then
+      echo "       Signaling Bridge PID $bpid (SIGHUP / SIGTERM)..."
+      kill -HUP "$bpid" 2>/dev/null || kill -TERM "$bpid" 2>/dev/null || true
+      reloaded=1
+    fi
+  fi
+
+  # 3. If process running matching EventKitBridgeServer
+  if [ "$reloaded" -eq 0 ]; then
+    local proc_pids
+    proc_pids=$(pgrep -f "EventKitBridgeServer" 2>/dev/null || echo "")
+    if [ -n "$proc_pids" ]; then
+      for p in $proc_pids; do
+        if kill -0 "$p" 2>/dev/null; then
+          echo "       Found EventKitBridgeServer process PID $p; signaling SIGHUP..."
+          kill -HUP "$p" 2>/dev/null || true
+          reloaded=1
+        fi
+      done
+    fi
+  fi
+
+  # Brief grace period for reload or restart to take effect
+  sleep 0.3
+  return 0
+}
+
+assert_business_endpoint_403() {
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "       CRITICAL ERROR: curl required to verify business endpoint permissions!" >&2
+    return 1
+  fi
+
+  local token="$BRIDGE_TOKEN"
+  if [ -z "$token" ] && [ -f "$BRIDGE_CONFIG_FILE" ]; then
+    token=$(grep -E "^[[:space:]]*EVENTKIT_BRIDGE_BEARER_TOKEN=" "$BRIDGE_CONFIG_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
+    if [ -z "$token" ]; then
+      token=$(grep -E "^[[:space:]]*EVENTKIT_BRIDGE_TOKENS=" "$BRIDGE_CONFIG_FILE" | cut -d'=' -f2- | cut -d',' -f1 | tr -d '"' | tr -d "'" || true)
+    fi
+  fi
+
+  local auth_header=""
+  if [ -n "$token" ]; then
+    auth_header="Authorization: Bearer $token"
+  fi
+
+  echo "       Probing business endpoint: $BRIDGE_BUSINESS_URL (expecting HTTP 403)..."
+  local code="000"
+  local attempts=0
+  local max_attempts=4
+
+  while [ "$attempts" -lt "$max_attempts" ]; do
+    if [ -n "$auth_header" ]; then
+      code=$(curl -s -m 1 -o /dev/null -w "%{http_code}" -H "$auth_header" "$BRIDGE_BUSINESS_URL" 2>/dev/null || echo "000")
+    else
+      code=$(curl -s -m 1 -o /dev/null -w "%{http_code}" "$BRIDGE_BUSINESS_URL" 2>/dev/null || echo "000")
+    fi
+
+    if [ "$code" = "403" ]; then
+      echo "       [OK] Verified business endpoint returned HTTP 403 (PERMISSION_DENIED / Safe Mode Active)."
+      return 0
+    fi
+    sleep 0.1
+    attempts=$((attempts + 1))
+  done
+
+  echo "       CRITICAL ERROR: Business endpoint returned HTTP $code (expected 403)! Business permissions NOT closed." >&2
+  return 1
+}
+
+cmd_orchestrated_stop() {
+  echo "=== MacServer Orchestrated Business Shutdown Sequence ==="
+  local err=0
+
+  # Step 1: Persist authorization switch to false in restricted config
+  echo "[1/4] Persisting business authorization switch to false..."
+  if ! persist_business_switch_false; then
+    echo "CRITICAL ERROR: Failed to persist business switch to false!" >&2
+    return 1
+  fi
+
+  # Step 2: Trigger Bridge reload
+  echo "[2/4] Triggering Bridge configuration reload..."
+  if ! trigger_bridge_reload; then
+    echo "CRITICAL ERROR: Failed to trigger Bridge reload!" >&2
+    return 1
+  fi
+
+  # Step 3: Assert HTTP 403 on business endpoint (/reminders/lists)
+  echo "[3/4] Asserting HTTP 403 on business endpoint..."
+  if ! assert_business_endpoint_403; then
+    echo "CRITICAL ERROR: Business permissions failed 403 assertion!" >&2
+    return 1
+  fi
+
+  # Step 4: Stop reverse tunnel supervisor and unload launchd
+  echo "[4/4] Stopping reverse tunnel supervisor and unloading launchd..."
+  if ! cmd_stop; then
+    echo "CRITICAL ERROR: Failed to stop reverse tunnel supervisor!" >&2
+    return 1
+  fi
+
+  # Listener distinction:
+  # On MacServer, Bridge's local loopback listener (127.0.0.1:18765) is preserved in safe 403 mode.
+  # We verify that supervisor PID is dead and child SSH process is terminated.
+  local sup_pid
+  if sup_pid=$(get_verified_supervisor_pid); then
+    echo "CRITICAL ERROR: Reverse tunnel supervisor is still active (PID: $sup_pid)!" >&2
+    return 1
+  fi
+
+  echo "=== MacServer Orchestrated Business Shutdown COMPLETED SUCCESSFULLY ==="
+  return 0
 }
 
 case "$cmd" in
   status)            cmd_status ;;
   start)             cmd_start ;;
   stop)              cmd_stop ;;
+  close-business)    persist_business_switch_false && trigger_bridge_reload && assert_business_endpoint_403 ;;
   orchestrated-stop) cmd_orchestrated_stop ;;
   restart)           cmd_restart ;;
   health)            cmd_health ;;
   verify)            cmd_verify ;;
   *)
-    echo "Usage: $0 {status|start [--test]|stop|orchestrated-stop|restart|health|verify}"
+    echo "Usage: $0 {status|start [--test]|stop|close-business|orchestrated-stop|restart|health|verify}"
     exit 1
     ;;
 esac

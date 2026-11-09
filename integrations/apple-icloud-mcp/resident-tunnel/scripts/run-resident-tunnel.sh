@@ -22,6 +22,8 @@
 set -euo pipefail
 umask 077
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Configuration defaults (overridable via environment or config file)
 CONFIG_DIR="${CONFIG_DIR:-$HOME/.config/muse-macserver}"
 CONFIG_FILE="${CONFIG_FILE:-$CONFIG_DIR/tunnel.conf}"
@@ -57,11 +59,14 @@ PROBE_TIMEOUT_SECONDS="${PROBE_TIMEOUT_SECONDS:-2}"
 SSH_BINARY="${SSH_BINARY:-ssh}"
 SKIP_KEY_CHECK="${SKIP_KEY_CHECK:-0}"
 SESSION_TIMEOUT_SECONDS="${SESSION_TIMEOUT_SECONDS:-0}"
+RESTRICTED_ACCEPTANCE_MODE="${RESTRICTED_ACCEPTANCE_MODE:-0}"
+DEADLINE_FILE="$CONFIG_DIR/session_deadline.env"
+TUNNEL_CTL="${TUNNEL_CTL:-$SCRIPT_DIR/tunnel-ctl.sh}"
 
 mkdir -p "$CONFIG_DIR"
 
 # -------------------------------------------------------------
-# 1. Preflight Validation
+# 1. Preflight Validation & Absolute Session Deadline
 # -------------------------------------------------------------
 fail_preflight() {
   local msg="$1"
@@ -83,6 +88,41 @@ EOF
   chmod 600 "$STATUS_FILE" 2>/dev/null || true
   exit 1
 }
+
+# Load persisted absolute deadline if present (survives supervisor crash, reconnect, launchd restart)
+if [ -f "$DEADLINE_FILE" ]; then
+  # shellcheck source=/dev/null
+  source "$DEADLINE_FILE"
+fi
+
+now_epoch=$(date +%s)
+if [ -z "${DEADLINE_EPOCH:-}" ] || [ "${DEADLINE_EPOCH:-0}" -le 0 ]; then
+  if [ "${SESSION_TIMEOUT_SECONDS:-0}" -gt 0 ]; then
+    DEADLINE_EPOCH=$(( now_epoch + SESSION_TIMEOUT_SECONDS ))
+    cat << EOF > "$DEADLINE_FILE"
+DEADLINE_EPOCH=$DEADLINE_EPOCH
+SESSION_TIMEOUT_SECONDS=$SESSION_TIMEOUT_SECONDS
+SESSION_INIT_EPOCH=$now_epoch
+EOF
+    chmod 600 "$DEADLINE_FILE" 2>/dev/null || true
+  fi
+fi
+
+if [ "${RESTRICTED_ACCEPTANCE_MODE:-1}" = "1" ]; then
+  if [ -z "${DEADLINE_EPOCH:-}" ] || [ "${DEADLINE_EPOCH:-0}" -le 0 ]; then
+    fail_preflight "Restricted acceptance mode requires an effective absolute deadline (DEADLINE_EPOCH or SESSION_TIMEOUT_SECONDS > 0). Startup rejected."
+  fi
+fi
+
+if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
+  if [ "$now_epoch" -ge "$DEADLINE_EPOCH" ]; then
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [DEADLINE_EXPIRED] Absolute session deadline ($DEADLINE_EPOCH) has passed ($(( now_epoch - DEADLINE_EPOCH ))s ago)! Executing local business shutdown..." >&2
+    if [ -x "$TUNNEL_CTL" ]; then
+      "$TUNNEL_CTL" orchestrated-stop || true
+    fi
+    fail_preflight "Absolute session deadline ($DEADLINE_EPOCH) expired. Startup refused and local business shut down."
+  fi
+fi
 
 if [ "$SKIP_KEY_CHECK" -ne 1 ]; then
   if [ ! -f "$IDENTITY_FILE" ]; then
@@ -173,16 +213,25 @@ acquire_lock
 # Local Session Hard Deadline Watchdog (MacServer Local Timeout)
 # -------------------------------------------------------------
 session_timeout_pid=""
-if [ "${SESSION_TIMEOUT_SECONDS:-0}" -gt 0 ]; then
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] MacServer local hard session timeout configured: ${SESSION_TIMEOUT_SECONDS}s"
+if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
+  remaining_seconds=$(( DEADLINE_EPOCH - $(date +%s) ))
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] MacServer local hard session deadline active: epoch $DEADLINE_EPOCH (${remaining_seconds}s remaining)"
   (
     exec </dev/null
-    sleep "$SESSION_TIMEOUT_SECONDS"
-    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [SESSION_TIMEOUT] MacServer local hard deadline (${SESSION_TIMEOUT_SECONDS}s) reached! Initiating autonomous supervisor shutdown..."
+    sleep_rem=$(( DEADLINE_EPOCH - $(date +%s) ))
+    if [ "$sleep_rem" -gt 0 ]; then
+      sleep "$sleep_rem"
+    fi
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [SESSION_TIMEOUT] MacServer local hard deadline ($DEADLINE_EPOCH) reached! Initiating autonomous business shutdown & permission lock..."
+    if [ -x "$TUNNEL_CTL" ]; then
+      "$TUNNEL_CTL" orchestrated-stop || true
+    fi
+    # Backstop kill to guarantee supervisor terminates even if stop had errors
     kill -TERM "$$" 2>/dev/null || true
   ) >> "$LOG_FILE" 2>&1 &
   session_timeout_pid=$!
-  disown $session_timeout_pid 2>/dev/null || true
+  disown "$session_timeout_pid" 2>/dev/null || true
+  echo "$session_timeout_pid" > "$CONFIG_DIR/watchdog.pid"
 fi
 
 # -------------------------------------------------------------

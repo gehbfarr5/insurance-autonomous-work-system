@@ -1,12 +1,12 @@
 {
-  "manifest_version": "1.1.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery & Production Admission Blocker Resolution",
-  "generated_at": "2026-11-09T03:32:00Z",
+  "manifest_version": "1.2.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery: Cross-Device Recovery & Local Business Shutdown",
+  "generated_at": "2026-11-09T03:58:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
     "upstream_baseline_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
-    "traceability_notes": "Intermediate integration receipts recorded commit 4e4c4aa and 3d04c49 during progressive test execution. Worktree additions deliver the target Intel x86_64 Universal Bridge binary, pre-change independent watchdog, and cross-device orchestration scripts."
+    "traceability_notes": "Delivers MacServer local business switch closing (persisted false, bridge reload, 403 assertion), absolute deadline watchdog with crash persistence, unified cross-device recovery orchestration, manifest-based SSH restore, and zero-collateral-damage process cleanup verified by 7 isolated drills."
   },
   "artifacts": {
     "candidate_docker_image": {
@@ -49,16 +49,29 @@
     },
     "orchestrated_recovery_script": {
       "path": "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh",
-      "description": "Cross-device shutdown & baseline recovery orchestration (MacServer switch 403 verification -> tunnel teardown -> Seoul container baseline rollback -> SSH config restoration -> baseline health verification)."
+      "description": "Unified cross-device shutdown & baseline recovery orchestration (MacServer switch 403 verification -> verified task PID teardown -> Seoul container baseline rollback -> manifest-based SSH config restore -> baseline health verification -> failure aggregation)."
     },
     "targeted_drills_suite": {
       "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-watchdog-and-orchestration-drills.sh",
       "result": "ALL 6 TARGETED DRILLS PASSED (100%)"
+    },
+    "orchestrated_recovery_drills_suite": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-orchestrated-recovery-drills.sh",
+      "result": "ALL 7 RECOVERY DRILLS PASSED (100%)",
+      "scenarios_verified": [
+        "MacServer local switch persisted false and 403 asserted on /reminders/lists",
+        "Local session deadline watchdog persistence across crash and autonomous 403 shutdown",
+        "Cross-device network severed failsafe (UNKNOWN status + non-zero exit)",
+        "Task PID cleanup with zero collateral damage to unrelated processes",
+        "Concurrent recovery idempotency (.rollback.lock mutual exclusion)",
+        "SSH manifest-based restoration fidelity (preserves pre-existing, cleans task drop-in)",
+        "Partial step failure aggregation and non-zero exit guarantee"
+      ]
     }
   },
   "build_inputs": {
     "src/config.ts": "a102299c963c23b1bd5c4e3186b7de8b1cbfde5a93bbbef528bdbbd79583f728",
-    "src/fake-bridge.ts": "c625686700a671019dbd2ec8ebb2161244686eb08f96fd37cc9cf4c511a93fa0",
+    "src/fake-bridge.ts": "cfa712e145ecd48ed9b58669e066d870cb07e751cd177fc2c3f16ae657c34a1e",
     "src/index.ts": "1e6bb6e12fe2daa406c29636ebfce3a7ffb1d24bcaa93837313ffd839489272c",
     "src/server.ts": "c0c5860879455eba0cf4958a85c9fd953eed73abd3a377d83f9be27e8c239411",
     "src/service.ts": "a4838f957ac100be8ee6680919ecf21f1c42a2559e607ca50c01d46fd36cc7fc",
