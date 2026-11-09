@@ -1,0 +1,56 @@
+{
+  "receipt_id": "AG05-FINAL-DELIVERY-ACCEPTANCE-1794210684",
+  "task": "AG-05 Resident Read-Only Candidate Final Acceptance",
+  "execution_timestamp": "2026-11-09T07:51:24Z",
+  "git": {
+    "branch": "feat/ag05-resident-readonly-candidate",
+    "commit": "d41a93c0fc93a645636995d1c8def61dbc5328e3",
+    "tree": "f9f21f7b52b35f1b9baa9b75498e6a9b21af0edf"
+  },
+  "tested_sources": [
+    {
+      "path": "integrations/apple-icloud-mcp/resident-tunnel/scripts/run-resident-tunnel.sh",
+      "sha256": "a54f070b22a1b8790231d1da65ccc06753441b5224081f683aea1b32f89d9246"
+    },
+    {
+      "path": "integrations/apple-icloud-mcp/resident-tunnel/scripts/tunnel-ctl.sh",
+      "sha256": "0533da45049b772d5b106fd5db4aaa59a11fbf8c6cfd1f0ea2dc1e4a4354df5d"
+    }
+  ],
+  "acceptance_paths": {
+    "path1_non_deadline_startup": {
+      "command": "CONFIG_DIR=\"$V1_DIR\" \"$RUNNER_SCRIPT\"",
+      "exit_code": 0,
+      "supervisor_pid": 3865,
+      "child_ssh_pid": 3906,
+      "final_status": "forwarding_established",
+      "four_layer_health": "HEALTH: OK (Local Bridge operational, SSH tunnel active, remote forward active)",
+      "forward_port_listening": true,
+      "result": "PASS"
+    },
+    "path2_deadline_timeout_close": {
+      "command": "CONFIG_DIR=\"$V2_DIR\" \"$RUNNER_SCRIPT\" (SESSION_TIMEOUT_SECONDS=4)",
+      "exit_code": 0,
+      "watchdog_pid": 4179,
+      "initial_business_status": 200,
+      "post_timeout_business_status": 403,
+      "persisted_business_switch": "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false",
+      "supervisor_cleanly_exited": true,
+      "result": "PASS"
+    },
+    "path3_manual_graceful_stop": {
+      "command": "CONFIG_DIR=\"$V4_DIR\" \"$CTL_SCRIPT\" stop",
+      "exit_code": 0,
+      "terminated_pids": {
+        "supervisor": 4336,
+        "child_ssh": 4392,
+        "watchdog": 4365
+      },
+      "residual_processes_alive": false,
+      "residual_lock_dir_exists": false,
+      "residual_pid_file_exists": false,
+      "result": "PASS"
+    }
+  },
+  "overall_verdict": "100%_PASS"
+}

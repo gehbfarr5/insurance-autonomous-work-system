@@ -106,6 +106,11 @@
      - Docker inspect 失败／空状态／unknown 严格阻止配置覆盖与基线启动；
      - PID 文件指向同名无关进程：核验启动身份与配置目录，零附带损伤；
      - `watchdog.pid` 指向无关进程或期限不一致：拒绝复用，防止生命周期混乱。
+4. **最终交付全流程验收回执 (`AG05_FINAL_DELIVERY_ACCEPTANCE_RECEIPT.json`)**：
+   - 从干净检出验证 3 条最终生命周期路径 100% 通过：
+     - **最终启动**：无期限隔离启动进入正常监督循环，4 层健康状态 `HEALTH: OK`，反向端口转发就绪；
+     - **到期关闭**：受限启动建立看门狗，4 秒绝对期限到期后自动将 `bridge.env` 业务开关置为 `false`，业务端点断言 HTTP `403`，Supervisor 干净退出；
+     - **人工停止**：运行中调用 `tunnel-ctl.sh stop`，Supervisor、SSH 子进程与看门狗全部终止，`tunnel.lock` 锁目录与 `tunnel.pid` 彻底删除，零残留进程与文件。
 
 ---
 

@@ -9,6 +9,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESIDENT_TUNNEL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+APPLE_ICLOUD_MCP_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+RECEIPTS_DIR="$APPLE_ICLOUD_MCP_DIR/receipts"
 RUNNER_SCRIPT="$RESIDENT_TUNNEL_DIR/scripts/run-resident-tunnel.sh"
 CTL_SCRIPT="$RESIDENT_TUNNEL_DIR/scripts/tunnel-ctl.sh"
 
@@ -155,6 +158,8 @@ if ! nc -z 127.0.0.1 "$FORWARD_PORT" 2>/dev/null; then
 fi
 
 # Verify status & health
+v1_sup_pid="$ACCEPT_SUPERVISOR_PID"
+v1_child_pid=$(grep '"child_ssh_pid"' "$V1_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo "")
 v1_status=$(CONFIG_DIR="$V1_DIR" "$CTL_SCRIPT" status)
 echo "$v1_status"
 if ! echo "$v1_status" | grep -q "Supervisor is RUNNING"; then
@@ -410,10 +415,11 @@ while ! nc -z 127.0.0.1 "$FORWARD_PORT" 2>/dev/null && [ "$waited" -lt 25 ]; do
 done
 
 # Grab child SSH and Watchdog PIDs before stop
-v4_child_ssh=$(grep '"child_ssh_pid"' "$V4_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo "")
-v4_watchdog=$(cat "$V4_DIR/watchdog.pid" 2>/dev/null || echo "")
+v4_active_sup="$ACCEPT_SUPERVISOR_PID"
+v4_active_ssh=$(grep '"child_ssh_pid"' "$V4_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo "")
+v4_active_watchdog=$(cat "$V4_DIR/watchdog.pid" 2>/dev/null || echo "")
 
-echo "  [INFO] Active PIDs: Supervisor=$ACCEPT_SUPERVISOR_PID, SSH=$v4_child_ssh, Watchdog=$v4_watchdog"
+echo "  [INFO] Active PIDs: Supervisor=$v4_active_sup, SSH=$v4_active_ssh, Watchdog=$v4_active_watchdog"
 
 # Execute manual stop via tunnel-ctl.sh stop
 CONFIG_DIR="$V4_DIR" "$CTL_SCRIPT" stop
@@ -421,12 +427,12 @@ wait "$ACCEPT_SUPERVISOR_PID" 2>/dev/null || true
 ACCEPT_SUPERVISOR_PID=""
 
 # Assert all processes are dead
-if [ -n "$v4_child_ssh" ] && kill -0 "$v4_child_ssh" 2>/dev/null; then
-  echo "FAIL [V4]: Child SSH $v4_child_ssh is still running after tunnel-ctl.sh stop!"
+if [ -n "$v4_active_ssh" ] && kill -0 "$v4_active_ssh" 2>/dev/null; then
+  echo "FAIL [V4]: Child SSH $v4_active_ssh is still running after tunnel-ctl.sh stop!"
   exit 1
 fi
-if [ -n "$v4_watchdog" ] && kill -0 "$v4_watchdog" 2>/dev/null; then
-  echo "FAIL [V4]: Watchdog $v4_watchdog is still running after tunnel-ctl.sh stop!"
+if [ -n "$v4_active_watchdog" ] && kill -0 "$v4_active_watchdog" 2>/dev/null; then
+  echo "FAIL [V4]: Watchdog $v4_active_watchdog is still running after tunnel-ctl.sh stop!"
   exit 1
 fi
 
@@ -446,6 +452,79 @@ echo "  [PASS] Acceptance 4: Manual stop cleanly terminated supervisor, SSH, and
 kill "$ACCEPT_BRIDGE_PID" 2>/dev/null || true
 wait "$ACCEPT_BRIDGE_PID" 2>/dev/null || true
 ACCEPT_BRIDGE_PID=""
+
+# -------------------------------------------------------------
+# Generate Verifiable Acceptance Receipt
+# -------------------------------------------------------------
+RECEIPT_FILE="$RECEIPTS_DIR/AG05_FINAL_DELIVERY_ACCEPTANCE_RECEIPT.json"
+mkdir -p "$RECEIPTS_DIR"
+
+RUNNER_SHA256=$(shasum -a 256 "$RUNNER_SCRIPT" | cut -d' ' -f1)
+CTL_SHA256=$(shasum -a 256 "$CTL_SCRIPT" | cut -d' ' -f1)
+HEAD_COMMIT=$(cd "$REPO_ROOT" && git rev-parse HEAD)
+TREE_SHA=$(cd "$REPO_ROOT" && git rev-parse HEAD^{tree})
+BRANCH_NAME=$(cd "$REPO_ROOT" && git rev-parse --abbrev-ref HEAD)
+
+cat << EOF > "$RECEIPT_FILE"
+{
+  "receipt_id": "AG05-FINAL-DELIVERY-ACCEPTANCE-$(date +%s)",
+  "task": "AG-05 Resident Read-Only Candidate Final Acceptance",
+  "execution_timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "git": {
+    "branch": "$BRANCH_NAME",
+    "commit": "$HEAD_COMMIT",
+    "tree": "$TREE_SHA"
+  },
+  "tested_sources": [
+    {
+      "path": "integrations/apple-icloud-mcp/resident-tunnel/scripts/run-resident-tunnel.sh",
+      "sha256": "$RUNNER_SHA256"
+    },
+    {
+      "path": "integrations/apple-icloud-mcp/resident-tunnel/scripts/tunnel-ctl.sh",
+      "sha256": "$CTL_SHA256"
+    }
+  ],
+  "acceptance_paths": {
+    "path1_non_deadline_startup": {
+      "command": "CONFIG_DIR=\"\$V1_DIR\" \"\$RUNNER_SCRIPT\"",
+      "exit_code": 0,
+      "supervisor_pid": $v1_sup_pid,
+      "child_ssh_pid": $v1_child_pid,
+      "final_status": "forwarding_established",
+      "four_layer_health": "HEALTH: OK (Local Bridge operational, SSH tunnel active, remote forward active)",
+      "forward_port_listening": true,
+      "result": "PASS"
+    },
+    "path2_deadline_timeout_close": {
+      "command": "CONFIG_DIR=\"\$V2_DIR\" \"\$RUNNER_SCRIPT\" (SESSION_TIMEOUT_SECONDS=4)",
+      "exit_code": 0,
+      "watchdog_pid": $W_PID,
+      "initial_business_status": 200,
+      "post_timeout_business_status": 403,
+      "persisted_business_switch": "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false",
+      "supervisor_cleanly_exited": true,
+      "result": "PASS"
+    },
+    "path3_manual_graceful_stop": {
+      "command": "CONFIG_DIR=\"\$V4_DIR\" \"\$CTL_SCRIPT\" stop",
+      "exit_code": 0,
+      "terminated_pids": {
+        "supervisor": $v4_active_sup,
+        "child_ssh": $v4_active_ssh,
+        "watchdog": $v4_active_watchdog
+      },
+      "residual_processes_alive": false,
+      "residual_lock_dir_exists": false,
+      "residual_pid_file_exists": false,
+      "result": "PASS"
+    }
+  },
+  "overall_verdict": "100%_PASS"
+}
+EOF
+chmod 644 "$RECEIPT_FILE"
+echo "  [RECEIPT] Final delivery acceptance receipt written to: $RECEIPT_FILE"
 
 echo ""
 echo "========================================================================"
