@@ -158,6 +158,215 @@ if [ -z "$REMOTE_HOST" ]; then
   fail_preflight "REMOTE_HOST is unset"
 fi
 
+# Global state & tracking variables
+has_held_lock=0
+child_ssh_pid=""
+session_timeout_pid=""
+sleep_child_pid=""
+is_shutting_down=0
+current_backoff="$BACKOFF_INIT"
+reconnect_count=0
+
+# Layer states
+l1_bridge="unknown"
+l2_ssh="disconnected"
+l3_forward="unknown"
+l4_e2e="unverified"
+
+probe_local_bridge() {
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "unknown"
+    return
+  fi
+  local code
+  code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$BRIDGE_PROBE_URL" 2>/dev/null || echo "000")
+  if [ "$code" = "200" ]; then
+    echo "ok"
+  elif [ "$code" = "403" ]; then
+    echo "locked_safe_mode"
+  else
+    echo "unreachable"
+  fi
+}
+
+probe_remote_link() {
+  if [ -z "$REMOTE_PROBE_URL" ] || ! command -v curl >/dev/null 2>&1; then
+    echo "unverified"
+    return
+  fi
+  local code
+  code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$REMOTE_PROBE_URL" 2>/dev/null || echo "000")
+  if [ "$code" = "200" ]; then
+    echo "verified"
+  elif [ "$code" = "403" ]; then
+    echo "verified_safe_mode"
+  else
+    echo "failed"
+  fi
+}
+
+evaluate_overall_status() {
+  if [ "$is_shutting_down" -eq 1 ]; then
+    echo "stopped"
+    return
+  fi
+  if [ "$l2_ssh" != "connected" ]; then
+    echo "reconnecting"
+    return
+  fi
+  if [ "$l1_bridge" = "unreachable" ]; then
+    echo "degraded"
+    return
+  fi
+  if [ "$l1_bridge" = "locked_safe_mode" ]; then
+    echo "bridge_locked"
+    return
+  fi
+  if [ "$l4_e2e" = "verified" ]; then
+    echo "healthy"
+    return
+  fi
+  echo "bridge_local_ok_remote_unverified"
+}
+
+update_status() {
+  local explicit_state="${1:-}"
+  local last_err="${2:-}"
+
+  l1_bridge=$(probe_local_bridge)
+  if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
+    l2_ssh="connected"
+    l3_forward="forwarding_active"
+  else
+    l2_ssh="disconnected"
+    l3_forward="inactive"
+  fi
+  l4_e2e=$(probe_remote_link)
+
+  local overall
+  if [ -n "$explicit_state" ]; then
+    overall="$explicit_state"
+  else
+    overall=$(evaluate_overall_status)
+  fi
+
+  local tmp_status="${STATUS_FILE}.tmp.$$"
+  local now_ts
+  now_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  cat << EOF > "$tmp_status"
+{
+  "status": "$overall",
+  "supervisor_pid": $$,
+  "child_ssh_pid": ${child_ssh_pid:-null},
+  "remote_host": "$REMOTE_HOST",
+  "remote_user": "$REMOTE_USER",
+  "layers": {
+    "layer1_local_bridge": "$l1_bridge",
+    "layer2_ssh_process": "$l2_ssh",
+    "layer3_forward_listen": "$l3_forward",
+    "layer4_end_to_end_link": "$l4_e2e"
+  },
+  "reconnect_count": $reconnect_count,
+  "current_backoff_seconds": $current_backoff,
+  "last_updated": "$now_ts",
+  "last_error": "$last_err"
+}
+EOF
+  chmod 600 "$tmp_status" 2>/dev/null || true
+  mv -f "$tmp_status" "$STATUS_FILE"
+}
+
+cleanup_and_exit() {
+  local sig="${1:-EXIT}"
+  trap - EXIT INT TERM HUP
+  if [ "$is_shutting_down" -eq 1 ]; then
+    return
+  fi
+  is_shutting_down=1
+
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Received termination signal ($sig). Shutting down supervisor..."
+
+  if [ -n "${session_timeout_pid:-}" ] && kill -0 "$session_timeout_pid" 2>/dev/null; then
+    local w_meta="$CONFIG_DIR/watchdog_metadata.env"
+    local w_kill_ok=0
+    if [ -f "$w_meta" ]; then
+      local m_pid m_uid m_cfg m_lstart proc_w_lstart
+      m_pid=$(grep '^WATCHDOG_PID=' "$w_meta" | cut -d'=' -f2- | tr -d '"' || true)
+      m_uid=$(grep '^WATCHDOG_UID=' "$w_meta" | cut -d'=' -f2- | tr -d '"' || true)
+      m_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$w_meta" | cut -d'=' -f2- | tr -d '"' || true)
+      m_lstart=$(grep '^WATCHDOG_LSTART=' "$w_meta" | cut -d'=' -f2- | tr -d '"' || true)
+      proc_w_lstart=$(ps -p "$session_timeout_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
+      if [ "$m_pid" = "$session_timeout_pid" ] && [ "$m_uid" = "$UID" ] && [ "$m_cfg" = "$CONFIG_DIR" ] && [ -n "$m_lstart" ] && [ "$m_lstart" = "$proc_w_lstart" ]; then
+        w_kill_ok=1
+      fi
+    fi
+    if [ "$w_kill_ok" -eq 1 ]; then
+      kill "$session_timeout_pid" 2>/dev/null || true
+    else
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $session_timeout_pid failed launch identity attribution check; refusing to kill!" >&2
+    fi
+    rm -f "$CONFIG_DIR/watchdog.pid" "$CONFIG_DIR/watchdog_metadata.env" 2>/dev/null || true
+  fi
+
+  if [ -n "$sleep_child_pid" ] && kill -0 "$sleep_child_pid" 2>/dev/null; then
+    kill "$sleep_child_pid" 2>/dev/null || true
+  fi
+
+  if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
+    local c_ppid c_uid c_lstart proc_c_lstart
+    c_ppid=$(ps -p "$child_ssh_pid" -o ppid= 2>/dev/null | tr -d ' ' || echo "")
+    c_uid=$(ps -p "$child_ssh_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+    proc_c_lstart=$(ps -p "$child_ssh_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
+    local c_meta="$CONFIG_DIR/tunnel_child_ssh.env"
+    local c_verified=0
+    if [ -f "$c_meta" ]; then
+      c_lstart=$(grep '^CHILD_SSH_LSTART=' "$c_meta" | cut -d'=' -f2- | tr -d '"' || true)
+      if [ "$c_ppid" = "$$" ] && [ "$c_uid" = "$UID" ] && [ -n "$c_lstart" ] && [ "$c_lstart" = "$proc_c_lstart" ]; then
+        c_verified=1
+      fi
+    fi
+    if [ "$c_verified" -eq 1 ]; then
+      kill -TERM "$child_ssh_pid" 2>/dev/null || true
+      local waited=0
+      while kill -0 "$child_ssh_pid" 2>/dev/null && [ "$waited" -lt 6 ]; do
+        sleep 0.5
+        waited=$((waited + 1))
+      done
+      if kill -0 "$child_ssh_pid" 2>/dev/null; then
+        kill -KILL "$child_ssh_pid" 2>/dev/null || true
+      fi
+    else
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Child SSH PID $child_ssh_pid failed PPID/UID/launch identity attribution check; refusing to kill!" >&2
+    fi
+    rm -f "$CONFIG_DIR/tunnel_child_ssh.env" 2>/dev/null || true
+  fi
+
+  l2_ssh="disconnected"
+  if [ -f "$CONFIG_DIR/local_recovery_status.env" ] && grep -q "RECOVERY_FAILED=1" "$CONFIG_DIR/local_recovery_status.env"; then
+    local failed_step failed_ec
+    failed_step=$(grep '^FAILED_STEP=' "$CONFIG_DIR/local_recovery_status.env" | cut -d'=' -f2- | tr -d '"' || echo "unknown")
+    failed_ec=$(grep '^STOP_EXIT_CODE=' "$CONFIG_DIR/local_recovery_status.env" | cut -d'=' -f2- || echo "1")
+    update_status "failed_stop_error" "Autonomous stop failed at step $failed_step (code $failed_ec)"
+  else
+    update_status "stopped" "Terminated on $sig"
+  fi
+
+  if [ "${has_held_lock:-0}" -eq 1 ]; then
+    rm -rf "$LOCK_DIR"
+    rm -f "$PID_FILE"
+    rm -f "$CONFIG_DIR/tunnel_supervisor.env"
+  fi
+  rm -f "$CONFIG_DIR/tunnel.lock.stage.$$"
+
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Tunnel supervisor shutdown complete."
+}
+
+trap 'cleanup_and_exit SIGTERM; exit 0' SIGTERM
+trap 'cleanup_and_exit SIGINT; exit 0' SIGINT
+trap 'cleanup_and_exit SIGHUP; exit 0' SIGHUP
+trap 'exit_code=$?; if [ "$exit_code" -ne 0 ] && [ "${is_shutting_down:-0}" -eq 0 ]; then echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Abrupt failure (code $exit_code)! Cleaning up lock, child processes and watchdog..." >&2; cleanup_and_exit "EXIT_${exit_code}"; exit "$exit_code"; fi' EXIT
+
 # -------------------------------------------------------------
 # 2. Concurrency-Safe Atomic Singleton Locking Protocol
 # -------------------------------------------------------------
@@ -173,6 +382,7 @@ acquire_lock() {
   while [ "$attempt" -lt "$max_attempts" ]; do
     if mkdir "$LOCK_DIR" 2>/dev/null; then
       # Winner of atomic directory creation
+      has_held_lock=1
       # Atomically move our staging PID into the lock dir
       mv -f "$stage_file" "$LOCK_DIR/pid"
       date +%s > "$LOCK_DIR/time"
@@ -251,11 +461,11 @@ if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
   if [ -n "$existing_watchdog_pid" ] && kill -0 "$existing_watchdog_pid" 2>/dev/null; then
     # Verify launch identity & metadata
     if [ -f "$watchdog_meta_file" ]; then
-      w_pid=$(grep '^WATCHDOG_PID=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
-      w_uid=$(grep '^WATCHDOG_UID=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
-      w_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
-      w_epoch=$(grep '^WATCHDOG_DEADLINE_EPOCH=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
-      w_lstart=$(grep '^WATCHDOG_LSTART=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
+      w_pid=$(grep '^WATCHDOG_PID=' "$watchdog_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      w_uid=$(grep '^WATCHDOG_UID=' "$watchdog_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      w_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$watchdog_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      w_epoch=$(grep '^WATCHDOG_DEADLINE_EPOCH=' "$watchdog_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      w_lstart=$(grep '^WATCHDOG_LSTART=' "$watchdog_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
       proc_uid=$(ps -p "$existing_watchdog_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
       proc_lstart=$(ps -p "$existing_watchdog_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
 
@@ -329,7 +539,6 @@ EOF
     session_timeout_pid=$!
     disown "$session_timeout_pid" 2>/dev/null || true
     echo "$session_timeout_pid" > "$CONFIG_DIR/watchdog.pid"
-    local w_spawn_lstart
     w_spawn_lstart=$(ps -p "$session_timeout_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
     cat << EOF > "$watchdog_meta_file"
 WATCHDOG_PID=$session_timeout_pid
@@ -345,217 +554,7 @@ EOF
 fi
 
 # -------------------------------------------------------------
-# 3. State & Observable JSON Status with 4-Layer Hierarchy
-# -------------------------------------------------------------
-current_backoff="$BACKOFF_INIT"
-reconnect_count=0
-child_ssh_pid=""
-sleep_child_pid=""
-is_shutting_down=0
-has_held_lock=1
-
-# Layer states
-l1_bridge="unknown"
-l2_ssh="disconnected"
-l3_forward="unknown"
-l4_e2e="unverified"
-
-probe_local_bridge() {
-  if ! command -v curl >/dev/null 2>&1; then
-    echo "unknown"
-    return
-  fi
-  local code
-  code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$BRIDGE_PROBE_URL" 2>/dev/null || echo "000")
-  if [ "$code" = "200" ]; then
-    echo "ok"
-  elif [ "$code" = "403" ]; then
-    echo "locked_safe_mode"
-  else
-    echo "unreachable"
-  fi
-}
-
-probe_remote_link() {
-  if [ -z "$REMOTE_PROBE_URL" ] || ! command -v curl >/dev/null 2>&1; then
-    echo "unverified"
-    return
-  fi
-  local code
-  code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$REMOTE_PROBE_URL" 2>/dev/null || echo "000")
-  if [ "$code" = "200" ]; then
-    echo "verified"
-  elif [ "$code" = "403" ]; then
-    echo "verified_safe_mode"
-  else
-    echo "failed"
-  fi
-}
-
-evaluate_overall_status() {
-  if [ "$is_shutting_down" -eq 1 ]; then
-    echo "stopped"
-    return
-  fi
-  if [ "$l2_ssh" != "connected" ]; then
-    echo "reconnecting"
-    return
-  fi
-  if [ "$l1_bridge" = "unreachable" ]; then
-    echo "degraded"
-    return
-  fi
-  if [ "$l1_bridge" = "locked_safe_mode" ]; then
-    echo "bridge_locked"
-    return
-  fi
-  if [ "$l4_e2e" = "verified" ]; then
-    echo "healthy"
-    return
-  fi
-  # Local bridge OK, SSH alive, remote link unverified
-  echo "bridge_local_ok_remote_unverified"
-}
-
-update_status() {
-  local explicit_state="${1:-}"
-  local last_err="${2:-}"
-
-  # Refresh probes
-  l1_bridge=$(probe_local_bridge)
-  if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
-    l2_ssh="connected"
-    l3_forward="forwarding_active"
-  else
-    l2_ssh="disconnected"
-    l3_forward="inactive"
-  fi
-  l4_e2e=$(probe_remote_link)
-
-  local overall
-  if [ -n "$explicit_state" ]; then
-    overall="$explicit_state"
-  else
-    overall=$(evaluate_overall_status)
-  fi
-
-  local tmp_status="${STATUS_FILE}.tmp.$$"
-  local now_ts
-  now_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-  cat << EOF > "$tmp_status"
-{
-  "status": "$overall",
-  "supervisor_pid": $$,
-  "child_ssh_pid": ${child_ssh_pid:-null},
-  "remote_host": "$REMOTE_HOST",
-  "remote_user": "$REMOTE_USER",
-  "layers": {
-    "layer1_local_bridge": "$l1_bridge",
-    "layer2_ssh_process": "$l2_ssh",
-    "layer3_forward_listen": "$l3_forward",
-    "layer4_end_to_end_link": "$l4_e2e"
-  },
-  "reconnect_count": $reconnect_count,
-  "current_backoff_seconds": $current_backoff,
-  "last_updated": "$now_ts",
-  "last_error": "$last_err"
-}
-EOF
-  chmod 600 "$tmp_status" 2>/dev/null || true
-  mv -f "$tmp_status" "$STATUS_FILE"
-}
-
-# -------------------------------------------------------------
-# 4. Graceful Signal Termination
-# -------------------------------------------------------------
-cleanup_and_exit() {
-  local sig="${1:-EXIT}"
-  if [ "$is_shutting_down" -eq 1 ]; then
-    return
-  fi
-  is_shutting_down=1
-
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Received termination signal ($sig). Shutting down supervisor..."
-
-  if [ -n "${session_timeout_pid:-}" ] && kill -0 "$session_timeout_pid" 2>/dev/null; then
-    local w_meta="$CONFIG_DIR/watchdog_metadata.env"
-    local w_kill_ok=0
-    if [ -f "$w_meta" ]; then
-      local m_pid m_uid m_cfg m_lstart proc_w_lstart
-      m_pid=$(grep '^WATCHDOG_PID=' "$w_meta" | cut -d'=' -f2- || true)
-      m_uid=$(grep '^WATCHDOG_UID=' "$w_meta" | cut -d'=' -f2- || true)
-      m_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$w_meta" | cut -d'=' -f2- || true)
-      m_lstart=$(grep '^WATCHDOG_LSTART=' "$w_meta" | cut -d'=' -f2- || true)
-      proc_w_lstart=$(ps -p "$session_timeout_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
-      if [ "$m_pid" = "$session_timeout_pid" ] && [ "$m_uid" = "$UID" ] && [ "$m_cfg" = "$CONFIG_DIR" ] && [ -n "$m_lstart" ] && [ "$m_lstart" = "$proc_w_lstart" ]; then
-        w_kill_ok=1
-      fi
-    fi
-    if [ "$w_kill_ok" -eq 1 ]; then
-      kill "$session_timeout_pid" 2>/dev/null || true
-    else
-      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $session_timeout_pid failed launch identity attribution check; refusing to kill!" >&2
-    fi
-  fi
-
-  if [ -n "$sleep_child_pid" ] && kill -0 "$sleep_child_pid" 2>/dev/null; then
-    kill "$sleep_child_pid" 2>/dev/null || true
-  fi
-
-  if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
-    local c_ppid c_uid c_lstart proc_c_lstart
-    c_ppid=$(ps -p "$child_ssh_pid" -o ppid= 2>/dev/null | tr -d ' ' || echo "")
-    c_uid=$(ps -p "$child_ssh_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
-    proc_c_lstart=$(ps -p "$child_ssh_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
-    local c_meta="$CONFIG_DIR/tunnel_child_ssh.env"
-    local c_verified=0
-    if [ -f "$c_meta" ]; then
-      c_lstart=$(grep '^CHILD_SSH_LSTART=' "$c_meta" | cut -d'=' -f2- || true)
-      if [ "$c_ppid" = "$$" ] && [ "$c_uid" = "$UID" ] && [ -n "$c_lstart" ] && [ "$c_lstart" = "$proc_c_lstart" ]; then
-        c_verified=1
-      fi
-    fi
-    if [ "$c_verified" -eq 1 ]; then
-      kill -TERM "$child_ssh_pid" 2>/dev/null || true
-      local waited=0
-      while kill -0 "$child_ssh_pid" 2>/dev/null && [ "$waited" -lt 6 ]; do
-        sleep 0.5
-        waited=$((waited + 1))
-      done
-      if kill -0 "$child_ssh_pid" 2>/dev/null; then
-        kill -KILL "$child_ssh_pid" 2>/dev/null || true
-      fi
-    else
-      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Child SSH PID $child_ssh_pid failed PPID/UID/launch identity attribution check; refusing to kill!" >&2
-    fi
-  fi
-
-  l2_ssh="disconnected"
-  if [ -f "$CONFIG_DIR/local_recovery_status.env" ] && grep -q "RECOVERY_FAILED=1" "$CONFIG_DIR/local_recovery_status.env"; then
-    local failed_step failed_ec
-    failed_step=$(grep '^FAILED_STEP=' "$CONFIG_DIR/local_recovery_status.env" | cut -d'=' -f2- | tr -d '"' || echo "unknown")
-    failed_ec=$(grep '^STOP_EXIT_CODE=' "$CONFIG_DIR/local_recovery_status.env" | cut -d'=' -f2- || echo "1")
-    update_status "failed_stop_error" "Autonomous stop failed at step $failed_step (code $failed_ec)"
-  else
-    update_status "stopped" "Terminated on $sig"
-  fi
-
-  if [ "$has_held_lock" -eq 1 ]; then
-    rm -rf "$LOCK_DIR"
-    rm -f "$PID_FILE"
-  fi
-
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Tunnel supervisor shutdown complete."
-  exit 0
-}
-
-trap 'cleanup_and_exit SIGTERM' SIGTERM
-trap 'cleanup_and_exit SIGINT' SIGINT
-trap 'cleanup_and_exit SIGHUP' SIGHUP
-
-# -------------------------------------------------------------
-# 5. Supervisor Loop
+# 3. Supervisor Loop
 # -------------------------------------------------------------
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Starting resident reverse tunnel supervisor (PID: $$)..."
 update_status "starting"
@@ -585,7 +584,6 @@ while [ "$is_shutting_down" -eq 0 ]; do
     "$REMOTE_USER@$REMOTE_HOST" >> "$LOG_FILE" 2>&1 &
 
   child_ssh_pid=$!
-  local child_lstart
   child_lstart=$(ps -p "$child_ssh_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
   cat << EOF > "$CONFIG_DIR/tunnel_child_ssh.env"
 CHILD_SSH_PID=$child_ssh_pid

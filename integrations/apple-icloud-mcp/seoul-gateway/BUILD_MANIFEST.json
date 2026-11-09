@@ -1,12 +1,12 @@
 {
-  "manifest_version": "1.5.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery: Elimination of SSH Guessing & Strict Process Launch Identity",
-  "generated_at": "2026-11-09T06:08:00Z",
+  "manifest_version": "1.6.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery: Variable Scope Fix, Fail-Fast Startup Cleanup & Final Acceptance Verification",
+  "generated_at": "2026-11-09T06:55:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
-    "upstream_baseline_commit": "9c988b6cedddca350614faa4bcbfb9153702d69f",
-    "traceability_notes": "Eliminated SSH path fallback guessing (strictly requires explicit path or valid sshd -T resolution; does not guess target home), enforced mandatory process launch identity verification (LSTART matching across Bridge PID fallback, supervisor, child SSH, and watchdog), refusing signals or reuse when attribution is unverified, verified by 5 targeted negative tests and 13 recovery drills."
+    "upstream_baseline_commit": "de8aa004ac3a95d74eaed02a99cc24cca027b7da",
+    "traceability_notes": "Fixed bash variable scope syntax error (removed invalid top-level 'local' declarations on w_spawn_lstart and child_lstart), re-architected run-resident-tunnel.sh with early signal/EXIT traps and fail-fast startup cleanup to eliminate half-started lingering state, normalized quote handling across tunnel-ctl.sh and run-resident-tunnel.sh metadata parsers, and verified 100% PASS on end-to-end acceptance suite (test-delivery-final-acceptance.sh), 5 safety boundary negative tests (test-safety-boundaries.sh), 13 orchestrated recovery drills (test-orchestrated-recovery-drills.sh), and 9-stage isolated integration suite (run-isolated-integration.sh)."
   },
   "artifacts": {
     "candidate_docker_image": {

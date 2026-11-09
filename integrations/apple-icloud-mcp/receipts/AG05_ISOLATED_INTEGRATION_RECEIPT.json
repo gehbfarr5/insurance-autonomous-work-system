@@ -1,9 +1,9 @@
 {
-  "receipt_id": "AG05-ISOLATED-INTEGRATION-1794191478",
+  "receipt_id": "AG05-ISOLATED-INTEGRATION-1794206999",
   "task": "AG-05 Resident Read-Only Candidate Isolated Integration",
-  "execution_timestamp": "2026-11-09T02:31:18Z",
-  "git_commit": "4e4c4aa28d6a338d279293d387c0acccd86a93a6",
-  "tree_sha": "d48733d80555af0419a45aa3007185685b18151f",
+  "execution_timestamp": "2026-11-09T06:49:59Z",
+  "git_commit": "de8aa004ac3a95d74eaed02a99cc24cca027b7da",
+  "tree_sha": "939691068a0e92a5c1a6dc36129cb712b4692f58",
   "test_environment": {
     "type": "ISOLATED_REAL_PROCESSES",
     "host_os": "macOS",

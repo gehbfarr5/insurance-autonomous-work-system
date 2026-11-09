@@ -76,10 +76,10 @@ get_verified_supervisor_pid() {
       return 1
     fi
     local meta_pid meta_cfg meta_uid meta_lstart
-    meta_pid=$(grep '^SUPERVISOR_PID=' "$sup_meta" | cut -d'=' -f2- || true)
-    meta_cfg=$(grep '^SUPERVISOR_CONFIG_DIR=' "$sup_meta" | cut -d'=' -f2- || true)
-    meta_uid=$(grep '^SUPERVISOR_UID=' "$sup_meta" | cut -d'=' -f2- || true)
-    meta_lstart=$(grep '^SUPERVISOR_LSTART=' "$sup_meta" | cut -d'=' -f2- || true)
+    meta_pid=$(grep '^SUPERVISOR_PID=' "$sup_meta" | cut -d'=' -f2- | tr -d '"' || true)
+    meta_cfg=$(grep '^SUPERVISOR_CONFIG_DIR=' "$sup_meta" | cut -d'=' -f2- | tr -d '"' || true)
+    meta_uid=$(grep '^SUPERVISOR_UID=' "$sup_meta" | cut -d'=' -f2- | tr -d '"' || true)
+    meta_lstart=$(grep '^SUPERVISOR_LSTART=' "$sup_meta" | cut -d'=' -f2- | tr -d '"' || true)
 
     if [ -n "$meta_pid" ] && [ "$meta_pid" != "$candidate_pid" ]; then
       return 1
@@ -407,10 +407,10 @@ trigger_bridge_reload() {
       fi
 
       local b_meta_pid b_meta_cfg b_meta_uid b_meta_lstart
-      b_meta_pid=$(grep '^BRIDGE_PID=' "$b_meta_file" | cut -d'=' -f2- || true)
-      b_meta_cfg=$(grep '^BRIDGE_CONFIG_FILE=' "$b_meta_file" | cut -d'=' -f2- || true)
-      b_meta_uid=$(grep '^BRIDGE_UID=' "$b_meta_file" | cut -d'=' -f2- || true)
-      b_meta_lstart=$(grep '^BRIDGE_LSTART=' "$b_meta_file" | cut -d'=' -f2- || true)
+      b_meta_pid=$(grep '^BRIDGE_PID=' "$b_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      b_meta_cfg=$(grep '^BRIDGE_CONFIG_FILE=' "$b_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      b_meta_uid=$(grep '^BRIDGE_UID=' "$b_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
+      b_meta_lstart=$(grep '^BRIDGE_LSTART=' "$b_meta_file" | cut -d'=' -f2- | tr -d '"' || true)
 
       if [ -n "$b_meta_pid" ] && [ "$b_meta_pid" != "$bpid" ]; then
         echo "       ERROR: Bridge PID $bpid does not match bridge_identity.env PID $b_meta_pid; refusing to signal!" >&2
