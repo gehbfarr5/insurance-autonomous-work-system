@@ -284,15 +284,49 @@ cmd_health() {
   fi
 }
 
+cmd_orchestrated_stop() {
+  echo "=== MacServer Orchestrated Shutdown Sequence ==="
+  # 1. Probe Bridge status / ensure safe mode / 403
+  echo "[1/3] Verifying Bridge status..."
+  if command -v curl >/dev/null 2>&1; then
+    local b_code
+    b_code=$(curl -s -m 2 -o /dev/null -w "%{http_code}" "$BRIDGE_PROBE_URL" 2>/dev/null || echo "000")
+    echo "       Bridge health probe: HTTP $b_code"
+  fi
+
+  # 2. Stop supervisor and unload launchd
+  echo "[2/3] Stopping reverse tunnel supervisor and unloading launchd..."
+  cmd_stop
+
+  # 3. Verify zero residual processes and listeners
+  echo "[3/3] Verifying zero residual listeners on port 18765..."
+  local residuals=0
+  if command -v lsof >/dev/null 2>&1; then
+    if lsof -i :18765 >/dev/null 2>&1; then
+      echo "       WARNING: Residual listener detected on port 18765!" >&2
+      residuals=1
+    fi
+  fi
+  if [ "$residuals" -eq 0 ]; then
+    echo "       Zero residual listeners verified."
+    echo "=== MacServer Orchestrated Shutdown COMPLETED ==="
+    return 0
+  else
+    echo "=== MacServer Orchestrated Shutdown FAILED (Residuals present) ===" >&2
+    return 1
+  fi
+}
+
 case "$cmd" in
-  status)  cmd_status ;;
-  start)   cmd_start ;;
-  stop)    cmd_stop ;;
-  restart) cmd_restart ;;
-  health)  cmd_health ;;
-  verify)  cmd_verify ;;
+  status)            cmd_status ;;
+  start)             cmd_start ;;
+  stop)              cmd_stop ;;
+  orchestrated-stop) cmd_orchestrated_stop ;;
+  restart)           cmd_restart ;;
+  health)            cmd_health ;;
+  verify)            cmd_verify ;;
   *)
-    echo "Usage: $0 {status|start [--test]|stop|restart|health|verify}"
+    echo "Usage: $0 {status|start [--test]|stop|orchestrated-stop|restart|health|verify}"
     exit 1
     ;;
 esac

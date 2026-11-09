@@ -1,18 +1,20 @@
 {
-  "manifest_version": "1.0.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery",
-  "generated_at": "2026-11-09T02:25:00Z",
+  "manifest_version": "1.1.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery & Production Admission Blocker Resolution",
+  "generated_at": "2026-11-09T03:32:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
-    "upstream_baseline_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7"
+    "upstream_baseline_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
+    "traceability_notes": "Intermediate integration receipts recorded commit 4e4c4aa and 3d04c49 during progressive test execution. Worktree additions deliver the target Intel x86_64 Universal Bridge binary, pre-change independent watchdog, and cross-device orchestration scripts."
   },
   "artifacts": {
     "candidate_docker_image": {
       "repository": "insurance-carddav-mcp-carddav",
       "tag": "candidate-ag05-delivery-20261108",
       "image_id": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
-      "repo_digest": "insurance-carddav-mcp-carddav@sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+      "registry_repo_digest": null,
+      "registry_note": "Local Docker build image on Seoul MCP host; distinct from remote registry RepoDigest (local build only, not pushed to external registry).",
       "supersedes": "sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61",
       "rationale": "Incorporates AG-05 non-empty rich fields (is_all_day, time_zone, last_modified, url) into Reminder mapping and protocol responses."
     },
@@ -23,9 +25,18 @@
     },
     "macserver_eventkit_bridge_release_binary": {
       "path": "integrations/apple-icloud-mcp/macserver-eventkit/.build/release/EventKitBridgeServer",
-      "platform": "arm64-apple-macosx14.0",
-      "sha256": "ab5c4cbd9dd8cb1939165411bab48fe60515fd92e6b89c740ff330827991ff0f",
+      "format": "Mach-O universal binary with 2 architectures: [x86_64: Mach-O 64-bit executable x86_64] [arm64: Mach-O 64-bit executable arm64]",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "target_device_compatibility": "Native execution on Intel x86_64 MacServer and Apple Silicon arm64",
+      "minimum_deployment_target": "macOS 14.0 (minos 14.0, sdk 14.0)",
+      "signature": "adhoc (linker-signed embedded)",
+      "sha256": "6b4a0b826b904c9d844c890e3f39062775b0fecec5df439eb78217395bf657b6",
+      "offline_verification": "tests/test-universal-bridge-offline.sh (FakeEventKitStore verified 200 OK without EventKit access)",
       "features": [
+        "Universal fat binary executing natively on target MacServer (x86_64)",
         "Pure ReminderDateMapper components conversion (zero timezone drift)",
         "Strict all-day vs timed due date separation",
         "Safe mode 403 lock switch support",
@@ -35,6 +46,14 @@
     "canonical_patch": {
       "path": "integrations/apple-icloud-mcp/seoul-gateway/patches/0001-ag05-shared-gateway-wiring.patch",
       "sha256": "2705c85122d0ef156e3d3597e8f09915e09d96171f25558b478fd3e730e6acb0"
+    },
+    "orchestrated_recovery_script": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh",
+      "description": "Cross-device shutdown & baseline recovery orchestration (MacServer switch 403 verification -> tunnel teardown -> Seoul container baseline rollback -> SSH config restoration -> baseline health verification)."
+    },
+    "targeted_drills_suite": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-watchdog-and-orchestration-drills.sh",
+      "result": "ALL 6 TARGETED DRILLS PASSED (100%)"
     }
   },
   "build_inputs": {

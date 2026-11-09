@@ -359,7 +359,31 @@ EOF
   fi
   echo "       Backup created and verified: $backup_dir"
 
-  # Step 3: Setup deployment traps for unified failure and interruption handling
+  # Step 3: Launch Pre-Flight 30-Minute Hard Watchdog timer BEFORE candidate changes
+  local watchdog_timeout="${WATCHDOG_TIMEOUT_SECONDS:-1800}"
+  echo "[PRE-CHANGE] Starting independent recovery watchdog (${watchdog_timeout}s timeout) before applying changes..."
+  (
+    exec </dev/null
+    sleep "$watchdog_timeout"
+    echo "[WATCHDOG] 30-minute trial window expired at $(date -u +"%Y-%m-%dT%H:%M:%SZ")! Auto-reverting to baseline..."
+    if ! "$SCRIPT_DIR/production-entry.sh" rollback "$backup_dir"; then
+      echo "[RECOVERY_FAILED] CRITICAL ALARM: Independent watchdog automatic rollback FAILED!" >&2
+      exit 1
+    fi
+  ) >> "$backup_dir/watchdog.log" 2>&1 &
+  local watchdog_pid=$!
+  disown "$watchdog_pid" 2>/dev/null || true
+  echo "$watchdog_pid" > "$backup_dir/watchdog.pid"
+  date +%s > "$backup_dir/watchdog.start_time"
+  echo "$watchdog_timeout" > "$backup_dir/watchdog.timeout"
+
+  if ! kill -0 "$watchdog_pid" 2>/dev/null; then
+    echo "CRITICAL ERROR: Failed to start independent recovery watchdog! Aborting deployment before changes." >&2
+    exit 1
+  fi
+  echo "       Watchdog active: PID $watchdog_pid (Hard timeout: ${watchdog_timeout}s, detached from session, no extension)"
+
+  # Step 4: Setup deployment traps for unified failure and interruption handling
   local DEPLOY_IN_PROGRESS=1
   local ACTIVE_BACKUP_DIR="$backup_dir"
 
@@ -394,8 +418,8 @@ EOF
   trap 'deploy_trap_handler 143' TERM
   trap 'if [ "${DEPLOY_IN_PROGRESS:-0}" -eq 1 ]; then deploy_trap_handler $?; fi' EXIT
 
-  # Step 4: Deploy compose.production.yaml
-  echo "[3/6] Deploying candidate compose configuration..."
+  # Step 5: Deploy compose.production.yaml
+  echo "[4/6] Deploying candidate compose configuration..."
   if ! cp "$COMPOSE_PROD_TEMPLATE" "$PROD_DIR/compose.yaml"; then
     echo "CRITICAL ERROR: Failed to deploy candidate compose configuration to $PROD_DIR/compose.yaml!" >&2
     deploy_trap_handler 1
@@ -407,8 +431,8 @@ EOF
     deploy_trap_handler 1
   fi
 
-  # Step 5: Restart container via Compose (--no-build)
-  echo "[4/6] Restarting Seoul MCP container with candidate image..."
+  # Step 6: Restart container via Compose (--no-build)
+  echo "[5/6] Restarting Seoul MCP container with candidate image..."
   cd "$PROD_DIR"
   if ! (CARDDAV_IMAGE="$LOCKED_CANDIDATE_IMAGE" \
     BIND_PORT="127.0.0.1:${PROD_PORT}" \
@@ -420,8 +444,8 @@ EOF
     deploy_trap_handler 1
   fi
 
-  # Step 6: Verify health & image ID
-  echo "[5/6] Verifying candidate container health and image correspondence..."
+  # Step 7: Verify health & image ID
+  echo "[6/6] Verifying candidate container health and image correspondence..."
   local healthy=0
   for i in $(seq 1 "$HEALTH_CHECK_ATTEMPTS"); do
     if curl -sf "$PROD_HEALTH_URL" >/dev/null 2>&1; then
@@ -445,28 +469,17 @@ EOF
   fi
   echo "       Candidate image ID verified: $running_image"
 
-  # Clear traps upon verified success
+  # Clear traps upon verified success (Watchdog continues running independently in background)
   DEPLOY_IN_PROGRESS=0
   trap - EXIT INT TERM
 
-  # Step 7: Launch 30-Minute Hard Watchdog timer
-  local watchdog_timeout="${WATCHDOG_TIMEOUT_SECONDS:-1800}"
-  echo "       Starting 30-minute hard watchdog (${watchdog_timeout}s timeout)..."
-  (
-    sleep "$watchdog_timeout"
-    echo "[WATCHDOG] 30-minute trial window expired at $(date -u +"%Y-%m-%dT%H:%M:%SZ")! Auto-reverting to baseline..."
-    "$SCRIPT_DIR/production-entry.sh" rollback "$backup_dir" || true
-  ) > "$backup_dir/watchdog.log" 2>&1 &
-  local watchdog_pid=$!
-  echo "$watchdog_pid" > "$backup_dir/watchdog.pid"
-  echo "       Watchdog active: PID $watchdog_pid (Hard timeout: ${watchdog_timeout}s, no unauthorized extension allowed)"
-
   # Step 8: Completion summary
-  echo "[6/6] Production candidate deployment completed successfully!"
+  echo "========================================================================"
+  echo " PRODUCTION CANDIDATE DEPLOYMENT COMPLETED SUCCESSFULLY"
   echo "       Container:       $PROD_CONTAINER"
   echo "       Image:           $LOCKED_CANDIDATE_IMAGE"
   echo "       Backup:          $backup_dir"
-  echo "       Watchdog PID:    $watchdog_pid"
+  echo "       Watchdog PID:    $watchdog_pid (Started BEFORE changes, timeout: ${watchdog_timeout}s)"
   echo "       Status:          Healthy (200 OK)"
   echo "========================================================================"
 }
@@ -486,11 +499,52 @@ rollback_baseline() {
     return 1
   fi
 
-  # Stop active watchdog timer if running
+  # Concurrency protection & idempotent execution
+  local rollback_lock="${backup_dir}/.rollback.lock"
+  if ! mkdir "$rollback_lock" 2>/dev/null; then
+    echo "[ROLLBACK_LOCK] Active rollback already in progress for $backup_dir. Waiting for concurrent completion..."
+    local wait_count=0
+    while [ -d "$rollback_lock" ] && [ "$wait_count" -lt 60 ]; do
+      sleep 0.5
+      wait_count=$((wait_count + 1))
+    done
+    if [ -d "$rollback_lock" ]; then
+      echo "CRITICAL ERROR: Rollback lock timed out waiting for concurrent recovery!" >&2
+      echo "[RECOVERY_FAILED] Rollback failed (lock acquisition timeout)." >&2
+      return 1
+    fi
+    echo "[ROLLBACK_IDEMPOTENT] Prior rollback completed. Verifying baseline state..."
+    # shellcheck source=/dev/null
+    source "$backup_dir/manifest.env"
+    local check_health_url="${BACKUP_PROD_HEALTH_URL:-$PROD_HEALTH_URL}"
+    local check_ok=0
+    for i in 1 2 3 4 5; do
+      if curl -sf "$check_health_url" >/dev/null 2>&1; then
+        check_ok=1
+        break
+      fi
+      sleep 0.5
+    done
+    if [ "$check_ok" -eq 1 ]; then
+      echo "[ROLLBACK_IDEMPOTENT] Baseline healthy and verified. Rollback succeeded idempotently."
+      return 0
+    else
+      echo "CRITICAL ERROR: Baseline not healthy after concurrent rollback!" >&2
+      echo "[RECOVERY_FAILED] Idempotent verification failed." >&2
+      return 1
+    fi
+  fi
+
+  # Helper to ensure lock is cleaned up on any exit path
+  cleanup_rollback_lock() {
+    rm -rf "$rollback_lock" 2>/dev/null || true
+  }
+
+  # Stop active watchdog timer if running (do not kill self if watchdog triggered rollback)
   if [ -f "$backup_dir/watchdog.pid" ]; then
     local wpid
     wpid=$(cat "$backup_dir/watchdog.pid" 2>/dev/null || true)
-    if [ -n "$wpid" ] && kill -0 "$wpid" 2>/dev/null; then
+    if [ -n "$wpid" ] && [ "$wpid" != "$$" ] && kill -0 "$wpid" 2>/dev/null; then
       echo "       Stopping active watchdog timer (PID: $wpid)..."
       kill -TERM "$wpid" 2>/dev/null || true
     fi
@@ -543,11 +597,13 @@ rollback_baseline() {
     if [ "$c_status" = "running" ] || [ "$c_status" = "restarting" ]; then
       echo "CRITICAL ERROR: Container $target_container is confirmed still active (status: $c_status)!" >&2
       echo "[RECOVERY_FAILED] Rollback failed at Step 1 (container stop confirmation failed)." >&2
+      cleanup_rollback_lock
       return 1
     fi
   elif [ "$stop_ok" -eq 0 ]; then
     echo "CRITICAL ERROR: Container stop command failed and status cannot be verified!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 1 (container stop command failed)." >&2
+    cleanup_rollback_lock
     return 1
   fi
   echo "       Container $target_container stopped successfully."
@@ -557,7 +613,17 @@ rollback_baseline() {
   if ! rsync -a --exclude 'data/tokens.json.enc*' "$backup_dir/" "$target_dir/"; then
     echo "CRITICAL ERROR: Failed to restore configuration files via rsync from $backup_dir to $target_dir!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 2 (rsync restore)." >&2
+    cleanup_rollback_lock
     return 1
+  fi
+
+  # Clean up temporary SSH drop-in configurations if present
+  if [ -f "/etc/ssh/sshd_config.d/60-macserver-gateway.conf" ]; then
+    echo "       Removing newly created SSH restriction drop-in /etc/ssh/sshd_config.d/60-macserver-gateway.conf..."
+    rm -f "/etc/ssh/sshd_config.d/60-macserver-gateway.conf"
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl reload sshd 2>/dev/null || true
+    fi
   fi
 
   # Handle Compose file priority masking
@@ -566,6 +632,7 @@ rollback_baseline() {
     if ! rm -f "$target_dir/compose.yaml"; then
       echo "CRITICAL ERROR: Failed to remove deployed $target_dir/compose.yaml!" >&2
       echo "[RECOVERY_FAILED] Rollback failed at Step 2 (compose.yaml unmasking)." >&2
+      cleanup_rollback_lock
       return 1
     fi
   fi
@@ -575,6 +642,7 @@ rollback_baseline() {
   if ! docker tag "$target_baseline_image" "${target_project}-carddav:latest"; then
     echo "CRITICAL ERROR: Failed to tag baseline image $target_baseline_image as latest!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 3 (docker tag)." >&2
+    cleanup_rollback_lock
     return 1
   fi
 
@@ -583,6 +651,7 @@ rollback_baseline() {
   if ! (cd "$target_dir" && CARDDAV_IMAGE="$target_baseline_image" BIND_PORT="127.0.0.1:${target_port}" docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav); then
     echo "CRITICAL ERROR: Docker compose up failed while restarting baseline container!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 4 (compose up)." >&2
+    cleanup_rollback_lock
     return 1
   fi
 
@@ -601,6 +670,7 @@ rollback_baseline() {
   if [ "$healthy" -ne 1 ]; then
     echo "CRITICAL ERROR: Restored baseline container failed health probe at $target_health_url!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 5 (health check timeout)." >&2
+    cleanup_rollback_lock
     return 1
   fi
 
@@ -609,6 +679,7 @@ rollback_baseline() {
   if [ -z "$active_image" ] || [ "$active_image" != "$target_baseline_image" ]; then
     echo "CRITICAL ERROR: Active image ($active_image) does not match baseline image ($target_baseline_image)!" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 5 (image ID mismatch)." >&2
+    cleanup_rollback_lock
     return 1
   fi
   echo "       Image ID verified: $active_image"
@@ -625,27 +696,32 @@ rollback_baseline() {
   if [ -n "${BACKUP_ALLOW_CONTACTS_READ_1:-}" ] && [ "$cur_contacts_read" != "$BACKUP_ALLOW_CONTACTS_READ_1" ]; then
     echo "CRITICAL ERROR: ALLOW_CONTACTS_READ_1 mismatch! Expected: '$BACKUP_ALLOW_CONTACTS_READ_1', Got: '$cur_contacts_read'" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
+    cleanup_rollback_lock
     return 1
   fi
   if [ -n "${BACKUP_ALLOW_CONTACTS_WRITE_1:-}" ] && [ "$cur_contacts_write" != "$BACKUP_ALLOW_CONTACTS_WRITE_1" ]; then
     echo "CRITICAL ERROR: ALLOW_CONTACTS_WRITE_1 mismatch! Expected: '$BACKUP_ALLOW_CONTACTS_WRITE_1', Got: '$cur_contacts_write'" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
+    cleanup_rollback_lock
     return 1
   fi
   if [ -n "${BACKUP_ALLOW_CALENDAR_READ_1:-}" ] && [ "$cur_calendar_read" != "$BACKUP_ALLOW_CALENDAR_READ_1" ]; then
     echo "CRITICAL ERROR: ALLOW_CALENDAR_READ_1 mismatch! Expected: '$BACKUP_ALLOW_CALENDAR_READ_1', Got: '$cur_calendar_read'" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
+    cleanup_rollback_lock
     return 1
   fi
   if [ -n "${BACKUP_ALLOW_CALENDAR_WRITE_1:-}" ] && [ "$cur_calendar_write" != "$BACKUP_ALLOW_CALENDAR_WRITE_1" ]; then
     echo "CRITICAL ERROR: ALLOW_CALENDAR_WRITE_1 mismatch! Expected: '$BACKUP_ALLOW_CALENDAR_WRITE_1', Got: '$cur_calendar_write'" >&2
     echo "[RECOVERY_FAILED] Rollback failed at Step 5 (permissions comparison)." >&2
+    cleanup_rollback_lock
     return 1
   fi
 
   echo "       Configuration correspondence verified: Contacts and Calendar permissions match baseline original values."
   echo "       [NOTE] Configuration match verified; business-level acceptance requires post-restart verification."
 
+  cleanup_rollback_lock
   echo "========================================================================"
   echo " ROLLBACK COMPLETED SUCCESSFULLY"
   echo " Active Image:    $active_image (Verified Baseline)"

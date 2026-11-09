@@ -56,6 +56,7 @@ PROBE_TIMEOUT_SECONDS="${PROBE_TIMEOUT_SECONDS:-2}"
 # Custom SSH command override for isolated testing
 SSH_BINARY="${SSH_BINARY:-ssh}"
 SKIP_KEY_CHECK="${SKIP_KEY_CHECK:-0}"
+SESSION_TIMEOUT_SECONDS="${SESSION_TIMEOUT_SECONDS:-0}"
 
 mkdir -p "$CONFIG_DIR"
 
@@ -167,6 +168,22 @@ acquire_lock() {
 }
 
 acquire_lock
+
+# -------------------------------------------------------------
+# Local Session Hard Deadline Watchdog (MacServer Local Timeout)
+# -------------------------------------------------------------
+session_timeout_pid=""
+if [ "${SESSION_TIMEOUT_SECONDS:-0}" -gt 0 ]; then
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] MacServer local hard session timeout configured: ${SESSION_TIMEOUT_SECONDS}s"
+  (
+    exec </dev/null
+    sleep "$SESSION_TIMEOUT_SECONDS"
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [SESSION_TIMEOUT] MacServer local hard deadline (${SESSION_TIMEOUT_SECONDS}s) reached! Initiating autonomous supervisor shutdown..."
+    kill -TERM "$$" 2>/dev/null || true
+  ) >> "$LOG_FILE" 2>&1 &
+  session_timeout_pid=$!
+  disown $session_timeout_pid 2>/dev/null || true
+fi
 
 # -------------------------------------------------------------
 # 3. State & Observable JSON Status with 4-Layer Hierarchy
@@ -301,6 +318,10 @@ cleanup_and_exit() {
   is_shutting_down=1
 
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Received termination signal ($sig). Shutting down supervisor..."
+
+  if [ -n "${session_timeout_pid:-}" ] && kill -0 "$session_timeout_pid" 2>/dev/null; then
+    kill "$session_timeout_pid" 2>/dev/null || true
+  fi
 
   if [ -n "$sleep_child_pid" ] && kill -0 "$sleep_child_pid" 2>/dev/null; then
     kill "$sleep_child_pid" 2>/dev/null || true
