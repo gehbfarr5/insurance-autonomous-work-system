@@ -1,7 +1,7 @@
 {
-  "receipt_id": "AG05-SAFETY-BOUNDARY-1794203496",
-  "task": "AG-05 Targeted Safety Boundaries Negative Verification",
-  "execution_timestamp": "2026-11-09T05:51:32Z",
+  "receipt_id": "AG05-SAFETY-BOUNDARY-1794204380",
+  "task": "AG-05 Targeted Safety Boundaries & Launch Identity Negative Verification",
+  "execution_timestamp": "2026-11-09T06:05:43Z",
   "git_branch": "feat/ag05-resident-readonly-candidate",
   "test_environment": {
     "host_os": "macOS",
@@ -25,9 +25,9 @@
       "details": "Removed '|| true' on backup command; verified content with cmp -s; simulated backup disk failure; production-entry.sh deploy aborted with exit 1 before candidate compose file copy or watchdog spawn; zero mutation occurred."
     },
     {
-      "test": "Test 2: Indeterminate SSH authorized_keys path refuses deploy",
+      "test": "Test 2: Target user home/.ssh exists but sshd config unresolvable: refused deploy",
       "result": "PASS",
-      "details": "Configured environment with unknown remote SSH user and unresolvable sshd authorizedkeysfile; verified production-entry.sh refused to fall back or guess current user's ~/.ssh/authorized_keys; aborted with exit 1 without touching any keys."
+      "details": "Deleted fallback guessing branch from production-entry.sh; configured environment where target user's home/.ssh/authorized_keys exists, but sshd -T resolution fails and SSH_AUTHORIZED_KEYS_PATH is unset; deployment strictly rejected with exit 1 without reading, copying, or touching guessed user home path."
     },
     {
       "test": "Test 3: Docker inspect fail / empty / unknown strictly blocks restore",
@@ -35,14 +35,14 @@
       "details": "Defaulted container_stopped=0; tested Subcase 3a (inspect command failure), Subcase 3b (empty inspection string), and Subcase 3c (status 'unknown'); all 3 subcases engaged [SAFETY_BARRIER], strictly skipped rsync configuration overwrite and docker compose up, and exited 1."
     },
     {
-      "test": "Test 4: PID file points to unrelated process: zero collateral damage",
+      "test": "Test 4: Same UID/name with missing or mismatched identity record: refuses signal",
       "result": "PASS",
-      "details": "Created unrelated background process matching Bridge command name; pointed PID file to it with mismatched configuration; tunnel-ctl orchestrated-stop and close-business verified attribution, refused to signal PID, returned exit 1, and left the unrelated process running and unharmed."
+      "details": "Spawned background process with matching name ('EventKitBridgeServer') and same UID; in Subcase 4A (missing bridge_identity.env), tunnel-ctl refused to signal and exited 1; in Subcase 4B (mismatched launch identity timestamp/config), tunnel-ctl refused to signal and exited 1; unrelated process remained completely unharmed in both cases."
     },
     {
-      "test": "Test 5: watchdog.pid points to unrelated process or different deadline: refuses reuse",
+      "test": "Test 5: PID/UID/config/deadline matched but launch identity mismatched: refuses reuse",
       "result": "PASS",
-      "details": "Created dummy process and configured watchdog_metadata.env with mismatched DEADLINE_EPOCH; run-resident-tunnel.sh detected deadline mismatch, refused reuse, did not signal dummy process, and spawned a fresh verified watchdog."
+      "details": "Configured watchdog_metadata.env where PID, UID, CONFIG_DIR, and DEADLINE_EPOCH all matched current task, but WATCHDOG_LSTART differed from dummy process launch timestamp; run-resident-tunnel.sh detected launch identity mismatch, refused to reuse unverified watchdog, did not signal dummy process, and spawned a fresh verified watchdog."
     }
   ],
   "overall_status": "ALL_5_SAFETY_BOUNDARY_TESTS_PASSED"

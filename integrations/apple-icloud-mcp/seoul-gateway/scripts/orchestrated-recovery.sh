@@ -206,8 +206,15 @@ if [ -f "$BACKUP_DIR/watchdog.pid" ]; then
       meta_wpid=$(grep '^WATCHDOG_PID=' "$wmeta" | cut -d'=' -f2- || true)
       meta_bdir=$(grep '^WATCHDOG_BACKUP_DIR=' "$wmeta" | cut -d'=' -f2- || true)
       meta_uid=$(grep '^WATCHDOG_UID=' "$wmeta" | cut -d'=' -f2- || true)
+      meta_lstart=$(grep '^WATCHDOG_LSTART=' "$wmeta" | cut -d'=' -f2- || true)
       proc_uid=$(ps -p "$wpid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
-      if [ "$meta_wpid" = "$wpid" ] && [ "$meta_bdir" = "$BACKUP_DIR" ] && [ "$meta_uid" = "$UID" ] && [ "$proc_uid" = "$UID" ]; then
+      proc_lstart=$(ps -p "$wpid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
+      if [ "$meta_wpid" = "$wpid" ] && \
+         [ "$meta_bdir" = "$BACKUP_DIR" ] && \
+         [ "$meta_uid" = "$UID" ] && \
+         [ "$proc_uid" = "$UID" ] && \
+         [ -n "$meta_lstart" ] && \
+         [ "$meta_lstart" = "$proc_lstart" ]; then
         w_verified=1
       fi
     fi
@@ -309,8 +316,10 @@ if [ -f "$BACKUP_DIR/task_tunnel.pid" ]; then
   if [ -f "$t_meta" ]; then
     meta_tpid=$(grep '^TASK_PID=' "$t_meta" | cut -d'=' -f2- || true)
     meta_tuid=$(grep '^TASK_UID=' "$t_meta" | cut -d'=' -f2- || true)
-    if [ "$meta_tpid" != "$t_pid" ] || [ "$meta_tuid" != "$UID" ]; then
-      echo "       WARNING: Task tunnel PID $t_pid does not match metadata ($meta_tpid, UID $meta_tuid); skipping!" >&2
+    meta_tlstart=$(grep '^TASK_LSTART=' "$t_meta" | cut -d'=' -f2- || true)
+    proc_tlstart=$(ps -p "$t_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
+    if [ "$meta_tpid" != "$t_pid" ] || [ "$meta_tuid" != "$UID" ] || ([ -n "$meta_tlstart" ] && [ "$meta_tlstart" != "$proc_tlstart" ]); then
+      echo "       WARNING: Task tunnel PID $t_pid attribution mismatch ($meta_tpid, UID $meta_tuid, lstart: '$meta_tlstart'); skipping!" >&2
       t_verified=0
     fi
   fi

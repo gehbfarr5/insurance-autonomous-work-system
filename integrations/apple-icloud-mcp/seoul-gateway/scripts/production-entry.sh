@@ -377,21 +377,10 @@ deploy_candidate() {
         ssh_auth_keys_path="$sshd_ak"
       fi
     fi
-
-    # Fallback only to target_ssh_user's home directory (NEVER guess current user's ~/.ssh/authorized_keys!)
-    if [ -z "$ssh_auth_keys_path" ]; then
-      local user_home=""
-      user_home=$(getent passwd "$target_ssh_user" 2>/dev/null | cut -d: -f6 || grep -E "^${target_ssh_user}:" /etc/passwd 2>/dev/null | cut -d: -f6 || true)
-      if [ -n "$user_home" ] && [ -d "$user_home/.ssh" ]; then
-        ssh_auth_keys_path="$user_home/.ssh/authorized_keys"
-      elif [ -d "/home/$target_ssh_user/.ssh" ]; then
-        ssh_auth_keys_path="/home/$target_ssh_user/.ssh/authorized_keys"
-      fi
-    fi
   fi
 
   if [ -z "$ssh_auth_keys_path" ]; then
-    echo "CRITICAL ERROR: Unable to deterministically identify SSH authorized_keys path for target user '${REMOTE_USER:-mac-operator}'! Refusing to guess current user's ~/.ssh/authorized_keys. Deployment rejected to protect SSH access." >&2
+    echo "CRITICAL ERROR: Unable to deterministically identify SSH authorized_keys path from explicit configuration or sshd -T for target user '${REMOTE_USER:-mac-operator}'! Refusing deployment to protect SSH access without guessing." >&2
     exit 1
   fi
 
@@ -463,6 +452,8 @@ EOF
   echo "$watchdog_pid" > "$backup_dir/watchdog.pid"
   date +%s > "$backup_dir/watchdog.start_time"
   echo "$watchdog_timeout" > "$backup_dir/watchdog.timeout"
+  local watchdog_lstart
+  watchdog_lstart=$(ps -p "$watchdog_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
   cat << EOF > "$backup_dir/watchdog_metadata.env"
 WATCHDOG_PID=$watchdog_pid
 WATCHDOG_UID=$UID
@@ -470,6 +461,7 @@ WATCHDOG_USER="${USER:-$(id -un)}"
 WATCHDOG_BACKUP_DIR="$backup_dir"
 WATCHDOG_TIMEOUT=$watchdog_timeout
 WATCHDOG_START_TIME=$(date +%s)
+WATCHDOG_LSTART="$watchdog_lstart"
 EOF
   chmod 600 "$backup_dir/watchdog.pid" "$backup_dir/watchdog_metadata.env" 2>/dev/null || true
 

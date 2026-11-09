@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import http from 'node:http';
 import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 let port = 18765;
@@ -110,6 +112,13 @@ server.listen(port, '127.0.0.1', () => {
   const actualPort = server.address().port;
   if (pidFile) {
     fs.writeFileSync(pidFile, String(process.pid), { mode: 0o600 });
+    try {
+      const lstart = execSync(`ps -p ${process.pid} -o lstart=`).toString().trim();
+      const idFile = path.join(path.dirname(pidFile), 'bridge_identity.env');
+      const uidVal = process.getuid ? process.getuid() : '';
+      const content = `BRIDGE_PID=${process.pid}\nBRIDGE_UID=${uidVal}\nBRIDGE_CONFIG_FILE=${configFile}\nBRIDGE_LSTART=${lstart}\n`;
+      fs.writeFileSync(idFile, content, { mode: 0o600 });
+    } catch (e) {}
   }
   console.log(`[FAKE_BRIDGE] Listening on http://127.0.0.1:${actualPort} (PID: ${process.pid}, authorized: ${productionAuthorized})`);
 });

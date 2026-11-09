@@ -177,6 +177,8 @@ acquire_lock() {
       mv -f "$stage_file" "$LOCK_DIR/pid"
       date +%s > "$LOCK_DIR/time"
       echo "$$" > "$PID_FILE"
+      local sup_lstart
+      sup_lstart=$(ps -p "$$" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
       cat << EOF > "$CONFIG_DIR/tunnel_supervisor.env"
 SUPERVISOR_PID=$$
 SUPERVISOR_UID=$UID
@@ -184,6 +186,7 @@ SUPERVISOR_USER="${USER:-$(id -un)}"
 SUPERVISOR_CONFIG_DIR="$CONFIG_DIR"
 SUPERVISOR_SCRIPT="$(cd "$SCRIPT_DIR" && pwd)/$(basename "$0")"
 SUPERVISOR_START_TIME=$(date +%s)
+SUPERVISOR_LSTART="$sup_lstart"
 EOF
       chmod 600 "$PID_FILE" "$LOCK_DIR/pid" "$LOCK_DIR/time" "$CONFIG_DIR/tunnel_supervisor.env" 2>/dev/null || true
       return 0
@@ -252,18 +255,22 @@ if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
       w_uid=$(grep '^WATCHDOG_UID=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
       w_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
       w_epoch=$(grep '^WATCHDOG_DEADLINE_EPOCH=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
+      w_lstart=$(grep '^WATCHDOG_LSTART=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
       proc_uid=$(ps -p "$existing_watchdog_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+      proc_lstart=$(ps -p "$existing_watchdog_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
 
       if [ "$w_pid" = "$existing_watchdog_pid" ] && \
          [ "$w_uid" = "$UID" ] && \
          [ "$proc_uid" = "$UID" ] && \
          [ "$w_cfg" = "$CONFIG_DIR" ] && \
-         [ "$w_epoch" = "$DEADLINE_EPOCH" ]; then
-        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Verified surviving watchdog PID $existing_watchdog_pid matching same task ($CONFIG_DIR) and deadline ($DEADLINE_EPOCH)."
+         [ "$w_epoch" = "$DEADLINE_EPOCH" ] && \
+         [ -n "$w_lstart" ] && \
+         [ "$w_lstart" = "$proc_lstart" ]; then
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Verified surviving watchdog PID $existing_watchdog_pid matching same task ($CONFIG_DIR), deadline ($DEADLINE_EPOCH), and launch identity."
         session_timeout_pid="$existing_watchdog_pid"
         watchdog_reusable=1
       else
-        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $existing_watchdog_pid attribution mismatch (task config or deadline differs: expected epoch $DEADLINE_EPOCH, got ${w_epoch:-none}); refusing to reuse!" >&2
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $existing_watchdog_pid attribution mismatch (task config, deadline, or launch identity differs: expected epoch $DEADLINE_EPOCH, got ${w_epoch:-none}); refusing to reuse!" >&2
       fi
     else
       echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $existing_watchdog_pid lacks identity metadata; refusing unverified reuse!" >&2
@@ -322,6 +329,8 @@ EOF
     session_timeout_pid=$!
     disown "$session_timeout_pid" 2>/dev/null || true
     echo "$session_timeout_pid" > "$CONFIG_DIR/watchdog.pid"
+    local w_spawn_lstart
+    w_spawn_lstart=$(ps -p "$session_timeout_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
     cat << EOF > "$watchdog_meta_file"
 WATCHDOG_PID=$session_timeout_pid
 WATCHDOG_UID=$UID
@@ -329,6 +338,7 @@ WATCHDOG_USER="${USER:-$(id -un)}"
 WATCHDOG_DEADLINE_EPOCH=$DEADLINE_EPOCH
 WATCHDOG_CONFIG_DIR="$CONFIG_DIR"
 WATCHDOG_SUPERVISOR_PID=$$
+WATCHDOG_LSTART="$w_spawn_lstart"
 EOF
     chmod 600 "$CONFIG_DIR/watchdog.pid" "$watchdog_meta_file" 2>/dev/null || true
   fi
@@ -470,18 +480,22 @@ cleanup_and_exit() {
 
   if [ -n "${session_timeout_pid:-}" ] && kill -0 "$session_timeout_pid" 2>/dev/null; then
     local w_meta="$CONFIG_DIR/watchdog_metadata.env"
-    local w_kill_ok=1
+    local w_kill_ok=0
     if [ -f "$w_meta" ]; then
-      local m_pid m_uid m_cfg
+      local m_pid m_uid m_cfg m_lstart proc_w_lstart
       m_pid=$(grep '^WATCHDOG_PID=' "$w_meta" | cut -d'=' -f2- || true)
       m_uid=$(grep '^WATCHDOG_UID=' "$w_meta" | cut -d'=' -f2- || true)
       m_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$w_meta" | cut -d'=' -f2- || true)
-      if [ "$m_pid" != "$session_timeout_pid" ] || [ "$m_uid" != "$UID" ] || [ "$m_cfg" != "$CONFIG_DIR" ]; then
-        w_kill_ok=0
+      m_lstart=$(grep '^WATCHDOG_LSTART=' "$w_meta" | cut -d'=' -f2- || true)
+      proc_w_lstart=$(ps -p "$session_timeout_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
+      if [ "$m_pid" = "$session_timeout_pid" ] && [ "$m_uid" = "$UID" ] && [ "$m_cfg" = "$CONFIG_DIR" ] && [ -n "$m_lstart" ] && [ "$m_lstart" = "$proc_w_lstart" ]; then
+        w_kill_ok=1
       fi
     fi
     if [ "$w_kill_ok" -eq 1 ]; then
       kill "$session_timeout_pid" 2>/dev/null || true
+    else
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $session_timeout_pid failed launch identity attribution check; refusing to kill!" >&2
     fi
   fi
 
@@ -490,10 +504,19 @@ cleanup_and_exit() {
   fi
 
   if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
-    local c_ppid c_uid
+    local c_ppid c_uid c_lstart proc_c_lstart
     c_ppid=$(ps -p "$child_ssh_pid" -o ppid= 2>/dev/null | tr -d ' ' || echo "")
     c_uid=$(ps -p "$child_ssh_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
-    if [ "$c_ppid" = "$$" ] && [ "$c_uid" = "$UID" ]; then
+    proc_c_lstart=$(ps -p "$child_ssh_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
+    local c_meta="$CONFIG_DIR/tunnel_child_ssh.env"
+    local c_verified=0
+    if [ -f "$c_meta" ]; then
+      c_lstart=$(grep '^CHILD_SSH_LSTART=' "$c_meta" | cut -d'=' -f2- || true)
+      if [ "$c_ppid" = "$$" ] && [ "$c_uid" = "$UID" ] && [ -n "$c_lstart" ] && [ "$c_lstart" = "$proc_c_lstart" ]; then
+        c_verified=1
+      fi
+    fi
+    if [ "$c_verified" -eq 1 ]; then
       kill -TERM "$child_ssh_pid" 2>/dev/null || true
       local waited=0
       while kill -0 "$child_ssh_pid" 2>/dev/null && [ "$waited" -lt 6 ]; do
@@ -504,7 +527,7 @@ cleanup_and_exit() {
         kill -KILL "$child_ssh_pid" 2>/dev/null || true
       fi
     else
-      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Child SSH PID $child_ssh_pid failed PPID/UID attribution check; refusing to kill!" >&2
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Child SSH PID $child_ssh_pid failed PPID/UID/launch identity attribution check; refusing to kill!" >&2
     fi
   fi
 
@@ -562,6 +585,8 @@ while [ "$is_shutting_down" -eq 0 ]; do
     "$REMOTE_USER@$REMOTE_HOST" >> "$LOG_FILE" 2>&1 &
 
   child_ssh_pid=$!
+  local child_lstart
+  child_lstart=$(ps -p "$child_ssh_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
   cat << EOF > "$CONFIG_DIR/tunnel_child_ssh.env"
 CHILD_SSH_PID=$child_ssh_pid
 PARENT_SUPERVISOR_PID=$$
@@ -569,6 +594,7 @@ CHILD_SSH_UID=$UID
 CHILD_SSH_CONFIG_DIR="$CONFIG_DIR"
 CHILD_SSH_REMOTE_HOST="$REMOTE_HOST"
 CHILD_SSH_REMOTE_USER="$REMOTE_USER"
+CHILD_SSH_LSTART="$child_lstart"
 EOF
   chmod 600 "$CONFIG_DIR/tunnel_child_ssh.env" 2>/dev/null || true
 

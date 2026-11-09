@@ -1,12 +1,12 @@
 {
-  "manifest_version": "1.4.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery: Safety Boundaries & Recovery State Machine",
-  "generated_at": "2026-11-09T05:52:00Z",
+  "manifest_version": "1.5.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery: Elimination of SSH Guessing & Strict Process Launch Identity",
+  "generated_at": "2026-11-09T06:08:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
-    "upstream_baseline_commit": "fe87b2102b57fceb8cd46b1faba072c7f6fd4290",
-    "traceability_notes": "Delivers strict safety boundaries: authorized_keys backup fail-fast (|| true removed, cmp -s verification), indeterminate SSH path deployment rejection (no ~/.ssh guessing), explicit container stop allow conditions (container_stopped=0 default, rsync/up skipped on non-terminal status), and rigorous process attribution (UID & metadata verification) preventing collateral damage, verified by 5 targeted negative tests and 13 recovery drills."
+    "upstream_baseline_commit": "9c988b6cedddca350614faa4bcbfb9153702d69f",
+    "traceability_notes": "Eliminated SSH path fallback guessing (strictly requires explicit path or valid sshd -T resolution; does not guess target home), enforced mandatory process launch identity verification (LSTART matching across Bridge PID fallback, supervisor, child SSH, and watchdog), refusing signals or reuse when attribution is unverified, verified by 5 targeted negative tests and 13 recovery drills."
   },
   "artifacts": {
     "candidate_docker_image": {

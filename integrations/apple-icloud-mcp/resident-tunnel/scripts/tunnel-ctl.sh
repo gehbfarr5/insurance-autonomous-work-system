@@ -56,8 +56,9 @@ get_verified_supervisor_pid() {
 
   if [ -n "$candidate_pid" ] && kill -0 "$candidate_pid" 2>/dev/null; then
     # 1. Verify launch identity (UID)
-    local proc_uid
+    local proc_uid proc_lstart
     proc_uid=$(ps -p "$candidate_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+    proc_lstart=$(ps -p "$candidate_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
     if [ -n "$proc_uid" ] && [ "$proc_uid" != "$UID" ]; then
       return 1
     fi
@@ -69,17 +70,28 @@ get_verified_supervisor_pid() {
       return 1
     fi
 
-    # 3. Verify task config location linkage if supervisor metadata exists
-    if [ -f "$CONFIG_DIR/tunnel_supervisor.env" ]; then
-      local meta_pid meta_cfg
-      meta_pid=$(grep '^SUPERVISOR_PID=' "$CONFIG_DIR/tunnel_supervisor.env" | cut -d'=' -f2- || true)
-      meta_cfg=$(grep '^SUPERVISOR_CONFIG_DIR=' "$CONFIG_DIR/tunnel_supervisor.env" | cut -d'=' -f2- || true)
-      if [ -n "$meta_pid" ] && [ "$meta_pid" != "$candidate_pid" ]; then
-        return 1
-      fi
-      if [ -n "$meta_cfg" ] && [ "$meta_cfg" != "$CONFIG_DIR" ]; then
-        return 1
-      fi
+    # 3. Verify task config location linkage & process launch identity (mandatory)
+    local sup_meta="$CONFIG_DIR/tunnel_supervisor.env"
+    if [ ! -f "$sup_meta" ]; then
+      return 1
+    fi
+    local meta_pid meta_cfg meta_uid meta_lstart
+    meta_pid=$(grep '^SUPERVISOR_PID=' "$sup_meta" | cut -d'=' -f2- || true)
+    meta_cfg=$(grep '^SUPERVISOR_CONFIG_DIR=' "$sup_meta" | cut -d'=' -f2- || true)
+    meta_uid=$(grep '^SUPERVISOR_UID=' "$sup_meta" | cut -d'=' -f2- || true)
+    meta_lstart=$(grep '^SUPERVISOR_LSTART=' "$sup_meta" | cut -d'=' -f2- || true)
+
+    if [ -n "$meta_pid" ] && [ "$meta_pid" != "$candidate_pid" ]; then
+      return 1
+    fi
+    if [ -n "$meta_cfg" ] && [ "$meta_cfg" != "$CONFIG_DIR" ]; then
+      return 1
+    fi
+    if [ -n "$meta_uid" ] && [ "$meta_uid" != "$proc_uid" ]; then
+      return 1
+    fi
+    if [ -z "$meta_lstart" ] || [ "$meta_lstart" != "$proc_lstart" ]; then
+      return 1
     fi
 
     echo "$candidate_pid"
@@ -371,9 +383,10 @@ trigger_bridge_reload() {
     local bpid
     bpid=$(cat "$BRIDGE_PID_FILE" 2>/dev/null || true)
     if [ -n "$bpid" ] && kill -0 "$bpid" 2>/dev/null; then
-      # Verify launch identity (UID)
-      local proc_uid
+      # Verify launch identity (UID and launch timestamp)
+      local proc_uid proc_lstart
       proc_uid=$(ps -p "$bpid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+      proc_lstart=$(ps -p "$bpid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
       if [ -n "$proc_uid" ] && [ "$proc_uid" != "$UID" ]; then
         echo "       ERROR: Bridge PID file points to process PID $bpid owned by UID $proc_uid != current $UID; refusing to signal unowned process!" >&2
         return 1
@@ -386,19 +399,34 @@ trigger_bridge_reload() {
         return 1
       fi
 
-      # Verify task config linkage if bridge metadata exists
-      if [ -f "$CONFIG_DIR/bridge_identity.env" ]; then
-        local b_meta_pid b_meta_cfg
-        b_meta_pid=$(grep '^BRIDGE_PID=' "$CONFIG_DIR/bridge_identity.env" | cut -d'=' -f2- || true)
-        b_meta_cfg=$(grep '^BRIDGE_CONFIG_FILE=' "$CONFIG_DIR/bridge_identity.env" | cut -d'=' -f2- || true)
-        if [ -n "$b_meta_pid" ] && [ "$b_meta_pid" != "$bpid" ]; then
-          echo "       ERROR: Bridge PID $bpid does not match bridge_identity.env PID $b_meta_pid; refusing to signal!" >&2
-          return 1
-        fi
-        if [ -n "$b_meta_cfg" ] && [ "$b_meta_cfg" != "$BRIDGE_CONFIG_FILE" ]; then
-          echo "       ERROR: Bridge config file mismatch ($b_meta_cfg != $BRIDGE_CONFIG_FILE); refusing to signal!" >&2
-          return 1
-        fi
+      # Mandatory identity record verification: MUST be present, cannot degrade to name matching
+      local b_meta_file="$CONFIG_DIR/bridge_identity.env"
+      if [ ! -f "$b_meta_file" ]; then
+        echo "       ERROR: Bridge PID fallback requires identity record ($b_meta_file); missing record - refusing to signal unverified process!" >&2
+        return 1
+      fi
+
+      local b_meta_pid b_meta_cfg b_meta_uid b_meta_lstart
+      b_meta_pid=$(grep '^BRIDGE_PID=' "$b_meta_file" | cut -d'=' -f2- || true)
+      b_meta_cfg=$(grep '^BRIDGE_CONFIG_FILE=' "$b_meta_file" | cut -d'=' -f2- || true)
+      b_meta_uid=$(grep '^BRIDGE_UID=' "$b_meta_file" | cut -d'=' -f2- || true)
+      b_meta_lstart=$(grep '^BRIDGE_LSTART=' "$b_meta_file" | cut -d'=' -f2- || true)
+
+      if [ -n "$b_meta_pid" ] && [ "$b_meta_pid" != "$bpid" ]; then
+        echo "       ERROR: Bridge PID $bpid does not match bridge_identity.env PID $b_meta_pid; refusing to signal!" >&2
+        return 1
+      fi
+      if [ -n "$b_meta_uid" ] && [ "$b_meta_uid" != "$proc_uid" ]; then
+        echo "       ERROR: Bridge UID mismatch ($b_meta_uid != $proc_uid); refusing to signal!" >&2
+        return 1
+      fi
+      if [ -n "$b_meta_cfg" ] && [ "$b_meta_cfg" != "$BRIDGE_CONFIG_FILE" ]; then
+        echo "       ERROR: Bridge config file mismatch ($b_meta_cfg != $BRIDGE_CONFIG_FILE); refusing to signal!" >&2
+        return 1
+      fi
+      if [ -z "$b_meta_lstart" ] || [ "$b_meta_lstart" != "$proc_lstart" ]; then
+        echo "       ERROR: Bridge process launch identity mismatch or missing (expected '$b_meta_lstart', actual '$proc_lstart'); refusing to signal!" >&2
+        return 1
       fi
 
       echo "       Signaling verified Bridge PID $bpid (SIGHUP / SIGTERM)..."

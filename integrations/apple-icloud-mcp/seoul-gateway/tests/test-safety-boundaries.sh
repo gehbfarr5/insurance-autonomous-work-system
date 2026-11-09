@@ -207,11 +207,11 @@ fi
 echo "  [PASS] Zero subsequent changes occurred; deployment cleanly aborted"
 
 # ------------------------------------------------------------------------------
-# TEST 2: 授权路径无法确定：拒绝部署，不触碰当前用户授权文件
+# TEST 2: 授权路径无法确定：拒绝部署，不以用户家目录存在作为授权路径证明
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo " TEST 2: Indeterminate SSH authorized_keys path refuses deploy"
+echo " TEST 2: Target user home/.ssh exists but sshd config unresolvable"
 echo "========================================================================"
 
 T2_DIR="$TEST_BASE_DIR/t2"
@@ -221,8 +221,25 @@ cp "$T1_DIR/prod/secrets.env" "$T2_DIR/prod/secrets.env"
 cp "$T1_DIR/prod/gateway.env" "$T2_DIR/prod/gateway.env"
 chmod 600 "$T2_DIR/prod/secrets.env" "$T2_DIR/prod/gateway.env"
 
-# Mock sshd that returns no authorizedkeysfile
+# Target user's home/.ssh indeed exists!
+MOCK_USER_HOME="$T2_DIR/mock_mac_operator_home"
+mkdir -p "$MOCK_USER_HOME/.ssh"
+echo "ssh-ed25519 CRITICAL_PREEXISTING_KEY_IN_USER_HOME" > "$MOCK_USER_HOME/.ssh/authorized_keys"
+chmod 600 "$MOCK_USER_HOME/.ssh/authorized_keys"
+
 mkdir -p "$T2_DIR/bin"
+# Mock getent returning this user home
+cat << MOCKGETENT > "$T2_DIR/bin/getent"
+#!/usr/bin/env bash
+if [ "\$1" = "passwd" ] && [ "\$2" = "mac-operator" ]; then
+  echo "mac-operator:x:1001:1001::$MOCK_USER_HOME:/bin/bash"
+  exit 0
+fi
+exit 1
+MOCKGETENT
+chmod +x "$T2_DIR/bin/getent"
+
+# Mock sshd that fails / returns no authorizedkeysfile
 cat << 'MOCKSSHD' > "$T2_DIR/bin/sshd"
 #!/usr/bin/env bash
 exit 1
@@ -235,28 +252,44 @@ PROD_DIR="$T2_DIR/prod" \
 PROD_SECRETS_FILE="$T2_DIR/prod/secrets.env" \
 PROD_GATEWAY_ENV_FILE="$T2_DIR/prod/gateway.env" \
 PROD_COMPOSE_FILE="$T2_DIR/prod/compose.yaml" \
-MACSERVER_SSH_TARGET="nonexistent-target-user-xyz@127.0.0.1" \
+MACSERVER_SSH_TARGET="mac-operator@127.0.0.1" \
 MACSERVER_TUNNEL_CTL="$MOCK_BIN/tunnel-ctl.sh" \
-REMOTE_USER="nonexistent-target-user-xyz" \
+REMOTE_USER="mac-operator" \
 SSH_AUTHORIZED_KEYS_PATH="" \
 APPLY_PRODUCTION_APPROVED=1 \
 "$PRODUCTION_ENTRY" deploy > "$T2_DIR/deploy.log" 2>&1
 t2_code=$?
 set -e
 
-echo "  [T2-VERIFY] Deploy exit code on indeterminate auth path: $t2_code (Expected: 1)"
+echo "  [T2-VERIFY] Deploy exit code on unresolvable sshd config: $t2_code (Expected: 1)"
 if [ "$t2_code" -ne 1 ]; then
-  echo "  [FAIL] Deploy did not fail when auth path was indeterminate!" >&2
+  echo "  [FAIL] Deploy did not fail when auth path was unresolvable!" >&2
   cat "$T2_DIR/deploy.log" >&2
   exit 1
 fi
 
-if ! grep -q "Refusing to guess current user's ~/.ssh/authorized_keys" "$T2_DIR/deploy.log"; then
-  echo "  [FAIL] Log did not contain refusal to guess current user's ~/.ssh!" >&2
+if ! grep -q "Refusing deployment to protect SSH access without guessing" "$T2_DIR/deploy.log"; then
+  echo "  [FAIL] Log did not contain expected refusal message!" >&2
   cat "$T2_DIR/deploy.log" >&2
   exit 1
 fi
-echo "  [PASS] Successfully refused deploy without guessing or touching current user's ~/.ssh"
+
+# Verify the guessed user home authorized_keys was NOT accessed or copied
+if ls -d "$T2_DIR/prod.bak-"* 2>/dev/null | grep -q "prod.bak"; then
+  for bdir in "$T2_DIR/prod.bak-"*; do
+    if [ -f "$bdir/authorized_keys" ]; then
+      echo "  [FAIL] Guessed authorized_keys was accessed and copied to backup $bdir!" >&2
+      exit 1
+    fi
+  done
+fi
+
+# Verify content in mock user home is completely untouched
+if [ "$(cat "$MOCK_USER_HOME/.ssh/authorized_keys")" != "ssh-ed25519 CRITICAL_PREEXISTING_KEY_IN_USER_HOME" ]; then
+  echo "  [FAIL] Mock user home authorized_keys was modified!" >&2
+  exit 1
+fi
+echo "  [PASS] Target user home/.ssh exists but sshd config unresolvable: refused deploy without accessing guessed path"
 
 # ------------------------------------------------------------------------------
 # TEST 3: Docker inspect 失败／空状态／unknown：不执行配置覆盖及基线启动
@@ -372,89 +405,104 @@ test_inspect_barrier "Subcase 3b" "empty_status"
 test_inspect_barrier "Subcase 3c" "unknown_status"
 
 # ------------------------------------------------------------------------------
-# TEST 4: PID 文件指向同名无关进程：不误杀
+# TEST 4: PID 指向同 UID 同名进程，缺失必需身份记录：拒绝发信号
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo " TEST 4: PID file points to unrelated process: zero collateral damage"
+echo " TEST 4: Same UID, same name process with missing identity record"
 echo "========================================================================"
 
 T4_DIR="$TEST_BASE_DIR/t4"
 mkdir -p "$T4_DIR"
 
-# 1. Spawn unrelated process
+# 1. Spawn unrelated process with matching name under current UID ($UID)
 (
   exec -a "EventKitBridgeServer --unrelated-test" sleep 100
 ) >/dev/null 2>&1 &
 unrelated_pid4=$!
 echo "$unrelated_pid4" > "$TEST_BASE_DIR/unrelated_bpid.pid"
-echo "  [T4-PRE] Spawned unrelated EventKitBridgeServer process PID: $unrelated_pid4"
+echo "  [T4-PRE] Spawned same-UID, same-name EventKitBridgeServer process PID: $unrelated_pid4 (UID: $UID)"
 
-# 2. Point BRIDGE_PID_FILE to this PID, but configure bridge_identity.env with a MISMATCH
+# Subcase 4A: Missing required identity record entirely
 echo "$unrelated_pid4" > "$T4_DIR/bridge.pid"
-cat << EOF > "$T4_DIR/bridge_identity.env"
-BRIDGE_PID=$unrelated_pid4
-BRIDGE_CONFIG_FILE=/other/path/different_config.env
-EOF
+rm -f "$T4_DIR/bridge_identity.env"
 
-# 3. Attempt close-business via tunnel-ctl.sh
 set +e
 CONFIG_DIR="$T4_DIR" \
 BRIDGE_CONFIG_FILE="$T4_DIR/bridge.env" \
 BRIDGE_PID_FILE="$T4_DIR/bridge.pid" \
-"$TUNNEL_CTL" close-business > "$T4_DIR/ctl.log" 2>&1
-t4_code=$?
+"$TUNNEL_CTL" close-business > "$T4_DIR/ctl_4a.log" 2>&1
+t4a_code=$?
 set -e
 
-echo "  [T4-VERIFY] tunnel-ctl close-business exit code with config mismatch: $t4_code (Expected: 1)"
-if [ "$t4_code" -ne 1 ]; then
-  echo "  [FAIL] tunnel-ctl should have refused signaling on identity config mismatch!" >&2
-  cat "$T4_DIR/ctl.log" >&2
+echo "  [T4A-VERIFY] tunnel-ctl close-business exit code with missing identity record: $t4a_code (Expected: 1)"
+if [ "$t4a_code" -ne 1 ]; then
+  echo "  [FAIL] tunnel-ctl should have refused signaling when identity record is missing!" >&2
+  cat "$T4_DIR/ctl_4a.log" >&2
   exit 1
 fi
 
-if ! grep -q "Bridge config file mismatch" "$T4_DIR/ctl.log"; then
-  echo "  [FAIL] Expected config mismatch error missing in log!" >&2
-  cat "$T4_DIR/ctl.log" >&2
+if ! grep -q "Bridge PID fallback requires identity record" "$T4_DIR/ctl_4a.log"; then
+  echo "  [FAIL] Missing required record error missing in log!" >&2
+  cat "$T4_DIR/ctl_4a.log" >&2
   exit 1
 fi
 
-# 4. Assert unrelated process is STILL RUNNING!
 if ! kill -0 "$unrelated_pid4" 2>/dev/null; then
   echo "  [FAIL] Unrelated process $unrelated_pid4 was killed! Collateral damage occurred!" >&2
   exit 1
 fi
-echo "  [PASS] Unrelated process $unrelated_pid4 is STILL ALIVE (Zero collateral damage verified)"
+echo "  [PASS] Subcase 4A: Missing identity record refused signaling; process $unrelated_pid4 unharmed"
+
+# Subcase 4B: Metadata present but launch identity / config mismatched
+cat << EOF > "$T4_DIR/bridge_identity.env"
+BRIDGE_PID=$unrelated_pid4
+BRIDGE_UID=$UID
+BRIDGE_CONFIG_FILE=/other/path/different_config.env
+BRIDGE_LSTART="Sun Jan 1 00:00:00 2000"
+EOF
+
+set +e
+CONFIG_DIR="$T4_DIR" \
+BRIDGE_CONFIG_FILE="$T4_DIR/bridge.env" \
+BRIDGE_PID_FILE="$T4_DIR/bridge.pid" \
+"$TUNNEL_CTL" close-business > "$T4_DIR/ctl_4b.log" 2>&1
+t4b_code=$?
+set -e
+
+echo "  [T4B-VERIFY] tunnel-ctl close-business exit code with launch identity mismatch: $t4b_code (Expected: 1)"
+if [ "$t4b_code" -ne 1 ]; then
+  echo "  [FAIL] tunnel-ctl should have refused signaling on launch identity mismatch!" >&2
+  cat "$T4_DIR/ctl_4b.log" >&2
+  exit 1
+fi
+
+if ! kill -0 "$unrelated_pid4" 2>/dev/null; then
+  echo "  [FAIL] Unrelated process $unrelated_pid4 was killed! Collateral damage occurred!" >&2
+  exit 1
+fi
+echo "  [PASS] Subcase 4B: Launch identity mismatch refused signaling; process $unrelated_pid4 unharmed"
 
 kill -9 "$unrelated_pid4" 2>/dev/null || true
 rm -f "$TEST_BASE_DIR/unrelated_bpid.pid"
 
 # ------------------------------------------------------------------------------
-# TEST 5: watchdog.pid 指向无关进程或另一期限的看门狗：不误认保护就绪
+# TEST 5: PID/UID/配置目录/期限均匹配旧元数据，但进程启动身份不匹配：拒绝复用
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo " TEST 5: watchdog.pid points to unrelated process or different deadline"
+echo " TEST 5: PID/UID/config/deadline match but launch identity mismatches"
 echo "========================================================================"
 
 T5_DIR="$TEST_BASE_DIR/t5"
 mkdir -p "$T5_DIR"
 
-# Subcase 5a: watchdog.pid points to an unrelated process (e.g. sleep 100)
 (
   exec -a "unrelated-background-daemon" sleep 100
 ) >/dev/null 2>&1 &
 dummy_wpid=$!
 echo "$dummy_wpid" > "$TEST_BASE_DIR/dummy_watchdog.pid"
 echo "$dummy_wpid" > "$T5_DIR/watchdog.pid"
-# Metadata has mismatching deadline epoch
-cat << EOF > "$T5_DIR/watchdog_metadata.env"
-WATCHDOG_PID=$dummy_wpid
-WATCHDOG_UID=$UID
-WATCHDOG_USER="${USER:-$(id -un)}"
-WATCHDOG_DEADLINE_EPOCH=1700000000
-WATCHDOG_CONFIG_DIR="$T5_DIR"
-EOF
 
 current_test_epoch=$(( $(date +%s) + 5 ))
 cat << EOF > "$T5_DIR/session_deadline.env"
@@ -462,7 +510,19 @@ DEADLINE_EPOCH=$current_test_epoch
 SESSION_TIMEOUT_SECONDS=5
 EOF
 
-echo "  [T5-ACT] Launching runner with mismatched watchdog deadline (1700000000 vs $current_test_epoch)..."
+# PID, UID, CONFIG_DIR, and DEADLINE_EPOCH all match current task!
+# BUT WATCHDOG_LSTART is intentionally set to a fake mismatched start time!
+cat << EOF > "$T5_DIR/watchdog_metadata.env"
+WATCHDOG_PID=$dummy_wpid
+WATCHDOG_UID=$UID
+WATCHDOG_USER="${USER:-$(id -un)}"
+WATCHDOG_DEADLINE_EPOCH=$current_test_epoch
+WATCHDOG_CONFIG_DIR="$T5_DIR"
+WATCHDOG_SUPERVISOR_PID=99999
+WATCHDOG_LSTART="Sun Jan 1 00:00:00 2000"
+EOF
+
+echo "  [T5-ACT] Launching runner with matched PID/UID/config/deadline but mismatched start identity..."
 CONFIG_DIR="$T5_DIR" \
 SKIP_KEY_CHECK=1 \
 REMOTE_HOST="127.0.0.1" \
@@ -475,25 +535,33 @@ kill -9 "$rpid5" 2>/dev/null || true
 
 # Check runner log: must NOT reuse dummy_wpid!
 if grep -q "Verified surviving watchdog PID $dummy_wpid" "$T5_DIR/runner5.log"; then
-  echo "  [FAIL] Runner falsely reused dummy watchdog with mismatched deadline epoch!" >&2
+  echo "  [FAIL] Runner falsely reused dummy watchdog despite launch identity mismatch!" >&2
   cat "$T5_DIR/runner5.log" >&2
   exit 1
 fi
 
 if grep -q "attribution mismatch" "$T5_DIR/runner5.log"; then
-  echo "  [PASS] Runner detected deadline mismatch and refused to reuse unverified watchdog"
+  echo "  [PASS] Runner detected launch identity mismatch and refused to reuse unverified watchdog"
 else
   echo "  [FAIL] Runner did not log attribution mismatch warning!" >&2
   cat "$T5_DIR/runner5.log" >&2
   exit 1
 fi
 
-# The dummy process must NOT have been killed by supervisor shutdown
+# The dummy process must NOT have been killed by supervisor
 if ! kill -0 "$dummy_wpid" 2>/dev/null; then
   echo "  [FAIL] Dummy unrelated process was killed by supervisor!" >&2
   exit 1
 fi
 echo "  [PASS] Dummy unrelated process is STILL ALIVE (unverified watchdog not signaled)"
+
+# Verify a fresh watchdog was spawned with genuine identity
+new_wpid=$(cat "$T5_DIR/watchdog.pid" 2>/dev/null || echo "")
+if [ "$new_wpid" = "$dummy_wpid" ]; then
+  echo "  [FAIL] watchdog.pid still points to dummy PID!" >&2
+  exit 1
+fi
+echo "  [PASS] Fresh watchdog spawned (PID: $new_wpid != dummy $dummy_wpid)"
 
 kill -9 "$dummy_wpid" 2>/dev/null || true
 rm -f "$TEST_BASE_DIR/dummy_watchdog.pid"
@@ -505,9 +573,9 @@ echo ""
 echo "========================================================================"
 echo " [ALL SAFETY BOUNDARY TESTS PASSED] 5/5 Negative Tests Passed 100%"
 echo " - Test 1: authorized_keys backup failure blocks deployment before changes"
-echo " - Test 2: Indeterminate SSH authorized_keys path refuses deploy"
+echo " - Test 2: Target user home/.ssh exists but sshd config unresolvable: refused deploy"
 echo " - Test 3: Docker inspect fail/empty/unknown strictly blocks restore"
-echo " - Test 4: PID file points to unrelated process: zero collateral damage"
-echo " - Test 5: watchdog.pid points to unrelated process: refuses reuse"
+echo " - Test 4: Same UID/name with missing or mismatched identity record: refuses signal"
+echo " - Test 5: PID/UID/config/deadline matched but launch identity mismatched: refuses reuse"
 echo "========================================================================"
 exit 0
