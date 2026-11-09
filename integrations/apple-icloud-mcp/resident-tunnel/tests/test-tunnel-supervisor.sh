@@ -96,6 +96,31 @@ else
   exit 1
 fi
 
+# Test 2b: High Concurrency Hammer Test (15 simultaneous launches)
+echo "--> Test 2b: High concurrency pressure test (15 simultaneous launches)..."
+hammer_pids=()
+for i in $(seq 1 15); do
+  "$RUNNER" > "$TEST_DIR/hammer_$i.log" 2>&1 &
+  hammer_pids+=($!)
+done
+
+for pid in "${hammer_pids[@]}"; do
+  wait "$pid"
+  code=$?
+  if [ "$code" -ne 0 ]; then
+    echo "FAIL: Concurrent runner $pid exited with non-zero code ($code)!"
+    exit 1
+  fi
+done
+
+current_lock_pid=$(cat "$TEST_DIR/tunnel.lock/pid" 2>/dev/null || echo "")
+if [ "$current_lock_pid" = "$SUPERVISOR_PID" ] && kill -0 "$SUPERVISOR_PID" 2>/dev/null; then
+  echo "  [PASS] High concurrency test PASSED: All 15 concurrent instances detected lock & exited cleanly; primary PID $SUPERVISOR_PID retained."
+else
+  echo "FAIL: Primary supervisor PID $SUPERVISOR_PID lost lock! Current: $current_lock_pid"
+  exit 1
+fi
+
 # Stop Test 1 supervisor
 kill -TERM "$SUPERVISOR_PID"
 wait "$SUPERVISOR_PID" 2>/dev/null || true

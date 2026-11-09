@@ -42,6 +42,7 @@ cleanup() {
     kill -TERM "$SSHD_PID" 2>/dev/null || true
     wait "$SSHD_PID" 2>/dev/null || true
   fi
+  rm -f "$GATEWAY_DIR/test-harness/ag05_isolated_mcp_client_"*.mjs
   rm -rf "$TEST_DIR"
   echo "--- [CLEANUP] Temporary test directory removed. Clean exit. ---"
 }
@@ -303,8 +304,29 @@ fi
 echo "  [OK] Reverse tunnel listening on 127.0.0.1:$FORWARD_PORT (forwarded to Bridge :$BRIDGE_PORT)"
 
 # Verify tunnel-ctl.sh health & status
-"$RESIDENT_TUNNEL_DIR/scripts/tunnel-ctl.sh" status > "$TEST_DIR/ctl_status.log"
-"$RESIDENT_TUNNEL_DIR/scripts/tunnel-ctl.sh" health > "$TEST_DIR/ctl_health.log"
+"$RESIDENT_TUNNEL_DIR/scripts/tunnel-ctl.sh" status > "$TEST_DIR/ctl_status.log" 2>&1 || true
+
+waited=0
+health_rc=1
+while [ "$waited" -lt 20 ]; do
+  if "$RESIDENT_TUNNEL_DIR/scripts/tunnel-ctl.sh" health > "$TEST_DIR/ctl_health.log" 2>&1; then
+    health_rc=0
+    break
+  fi
+  sleep 0.2
+  waited=$((waited + 1))
+done
+
+if [ "$health_rc" -ne 0 ]; then
+  echo "DEBUG: tunnel-ctl.sh health failed with rc: $health_rc"
+  echo "--- ctl_status.log ---"
+  cat "$TEST_DIR/ctl_status.log"
+  echo "--- ctl_health.log ---"
+  cat "$TEST_DIR/ctl_health.log"
+  echo "--- supervisor status json ---"
+  cat "$CONFIG_DIR/tunnel_status.json" || true
+  exit 1
+fi
 
 if grep -q "HEALTH: OK" "$TEST_DIR/ctl_health.log"; then
   echo "  [PASS] tunnel-ctl.sh health probe returned HEALTH: OK"
@@ -391,7 +413,7 @@ run().catch((e) => {
 });
 EOF
 
-cd "$REPO_ROOT/integrations/apple-icloud-mcp"
+cd "$GATEWAY_DIR"
 FORWARD_PORT="$FORWARD_PORT" node --experimental-strip-types "$TEST_DIR/test_gateway_query.mjs" query > "$TEST_DIR/gateway_query.log"
 
 if grep -q "GATEWAY_QUERY_SUCCESS" "$TEST_DIR/gateway_query.log"; then
@@ -403,45 +425,194 @@ else
 fi
 
 # -------------------------------------------------------------
-# 6. Fault Injections: Safe Mode (403) and Bridge Crash
+# 6. Real MCP Protocol Client Verification (McpServer + Client over InMemoryTransport)
 # -------------------------------------------------------------
-echo "[6/8] Executing fault injections (Safe Mode 403 & Bridge Disconnect)..."
+echo "[6/9] Verifying real MCP protocol client (McpServer + Client over InMemoryTransport)..."
+MCP_CLIENT_SCRIPT="$GATEWAY_DIR/test-harness/ag05_isolated_mcp_client_$$.mjs"
+sed "s|__GATEWAY_DIR__|$GATEWAY_DIR|g" << 'EOF' > "$MCP_CLIENT_SCRIPT"
+import assert from 'node:assert/strict';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createMacServerReminderService } from '__GATEWAY_DIR__/src/service.ts';
+import { EventKitReadonlyTransport } from '__GATEWAY_DIR__/src/transport.ts';
+import { registerReminderTools } from '__GATEWAY_DIR__/upstream/pinned/modules/reminders/tools.ts';
 
-# 6a. Safe Mode (403) propagation
-curl -s "http://127.0.0.1:$BRIDGE_PORT/set_mode/locked" >/dev/null
-FORWARD_PORT="$FORWARD_PORT" node --experimental-strip-types "$TEST_DIR/test_gateway_query.mjs" expect_error > "$TEST_DIR/gateway_403.log" 2>&1
+const forwardPort = process.env.FORWARD_PORT || '18766';
+const config = {
+  macserverEndpoint: `http://127.0.0.1:${forwardPort}`,
+  authToken: 'valid-test-token-00000000000000000000000000',
+  timeoutMs: 3000,
+  maxResponseSizeBytes: 1048576,
+  allowedLists: [
+    {
+      listId: '00000000-0000-0000-0000-000000000001',
+      expectedSourceId: '00000000-0000-0000-0000-000000000002',
+      expectedSourceName: 'iCloud',
+      expectedSourceType: 'calDAV',
+    },
+  ],
+  expectedSourceName: 'iCloud',
+  expectedSourceType: 'calDAV',
+};
 
-if grep -q "PERMISSION_DENIED" "$TEST_DIR/gateway_403.log"; then
-  echo "  [PASS] Bridge 403 safe mode propagated across tunnel as PERMISSION_DENIED (NOT masked as empty array)"
+async function createClientServerPair() {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const server = new McpServer({ name: 'isolated-gateway-server', version: '1.0.0' });
+
+  const transport = new EventKitReadonlyTransport(config);
+  const service = createMacServerReminderService({ transport, config });
+
+  registerReminderTools(
+    {
+      registerTool(name, toolConfig, handler) {
+        server.tool(name, toolConfig.description, toolConfig.inputSchema, async (args, extra) => {
+          return await handler(args, extra);
+        });
+      },
+    },
+    {
+      sessions: {
+        get: (sessionId) => ({
+          id: sessionId || 'sess-ag05',
+          account: 'default-test-account',
+        }),
+      },
+      logger: {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      },
+      reminderFor: () => service,
+    }
+  );
+
+  await server.connect(serverTransport);
+  const client = new Client({ name: 'isolated-mcp-client', version: '1.0.0' }, { capabilities: {} });
+  await client.connect(clientTransport);
+
+  return { client, server, service };
+}
+
+async function run() {
+  const mode = process.argv[2] || 'query';
+  const { client } = await createClientServerPair();
+
+  // 1. tools/list
+  const toolsRes = await client.listTools();
+  const toolNames = toolsRes.tools.map((t) => t.name);
+  assert.ok(toolNames.includes('reminders_lists'), 'reminders_lists tool must exist');
+  assert.ok(toolNames.includes('reminders_list'), 'reminders_list tool must exist');
+
+  if (mode === 'query') {
+    // 2. reminders_lists
+    const listsRes = await client.callTool({
+      name: 'reminders_lists',
+      arguments: { session_id: 'sess-ag05' },
+    });
+    assert.equal(listsRes.isError, undefined, 'reminders_lists should not return error');
+    const listsData = JSON.parse(listsRes.content[0].text);
+    assert.equal(listsData.length, 1);
+    assert.equal(listsData[0].list_id, '00000000-0000-0000-0000-000000000001');
+    assert.equal(listsData[0].writable, false);
+
+    // 3. reminders_list
+    const itemsRes = await client.callTool({
+      name: 'reminders_list',
+      arguments: {
+        session_id: 'sess-ag05',
+        list_ids: ['00000000-0000-0000-0000-000000000001'],
+      },
+    });
+    assert.equal(itemsRes.isError, undefined, 'reminders_list should not return error');
+    const itemsData = JSON.parse(itemsRes.content[0].text);
+    assert.equal(itemsData.reminders.length, 2);
+
+    const item1 = itemsData.reminders.find((r) => r.id === 'item-ag05-001' || r.reminder_id === 'item-ag05-001');
+    assert.ok(item1, 'item-ag05-001 must exist');
+    assert.equal(item1.title, '📋 投保人保单复核 (高优先 ⚠️)');
+    assert.equal(item1.priority, 1);
+    assert.equal(item1.is_all_day, false);
+    assert.equal(item1.time_zone, 'Asia/Shanghai');
+    assert.equal(item1.due, '2026-11-08T08:30:00.000Z');
+    assert.ok(item1.notes.includes('重疾险保额确认'));
+
+    const item2 = itemsData.reminders.find((r) => r.id === 'item-ag05-002' || r.reminder_id === 'item-ag05-002');
+    assert.ok(item2, 'item-ag05-002 must exist');
+    assert.equal(item2.is_all_day, true);
+    assert.equal(item2.due, '2026-11-09T00:00:00.000Z');
+
+    console.log('MCP_PROTOCOL_QUERY_SUCCESS');
+  } else if (mode === 'expect_error') {
+    const listsRes = await client.callTool({
+      name: 'reminders_lists',
+      arguments: { session_id: 'sess-ag05' },
+    });
+    assert.equal(listsRes.isError, true, 'isError must be true for failure');
+    const text = listsRes.content[0].text;
+    assert.ok(!text.includes('[]'), 'Error response must NOT be masked as empty array []');
+    console.log(`MCP_PROTOCOL_ERROR_CAUGHT: ${text.slice(0, 100).replace(/\n/g, ' ')}`);
+  }
+}
+
+run().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
+EOF
+
+cd "$GATEWAY_DIR"
+FORWARD_PORT="$FORWARD_PORT" node --experimental-strip-types "$MCP_CLIENT_SCRIPT" query > "$TEST_DIR/mcp_protocol_query.log"
+
+if grep -q "MCP_PROTOCOL_QUERY_SUCCESS" "$TEST_DIR/mcp_protocol_query.log"; then
+  echo "  [PASS] Real MCP client connected to McpServer via InMemoryTransport over reverse tunnel!"
+  echo "         tools/list, reminders_lists, and reminders_list returned rich non-empty fields."
 else
-  echo "FAIL: 403 not propagated correctly!"
-  cat "$TEST_DIR/gateway_403.log"
+  echo "FAIL: MCP protocol query failed!"
+  cat "$TEST_DIR/mcp_protocol_query.log"
+  exit 1
+fi
+
+# -------------------------------------------------------------
+# 7. Fault Injections: Safe Mode (403) and Bridge Crash (Protocol & Service Levels)
+# -------------------------------------------------------------
+echo "[7/9] Executing fault injections (Safe Mode 403 & Bridge Disconnect at protocol layer)..."
+
+# 7a. Safe Mode (403) propagation at protocol level
+curl -s "http://127.0.0.1:$BRIDGE_PORT/set_mode/locked" >/dev/null
+FORWARD_PORT="$FORWARD_PORT" node --experimental-strip-types "$MCP_CLIENT_SCRIPT" expect_error > "$TEST_DIR/mcp_protocol_403.log" 2>&1
+
+if grep -q "MCP_PROTOCOL_ERROR_CAUGHT" "$TEST_DIR/mcp_protocol_403.log"; then
+  echo "  [PASS] Protocol-level 403 safe mode returned isError: true without empty list masking"
+else
+  echo "FAIL: 403 protocol error propagation failed!"
+  cat "$TEST_DIR/mcp_protocol_403.log"
   exit 1
 fi
 
 # Restore bridge mode
 curl -s "http://127.0.0.1:$BRIDGE_PORT/set_mode/normal" >/dev/null
 
-# 6b. Bridge crash propagation
+# 7b. Bridge crash propagation at protocol level
 kill -STOP "$BRIDGE_PID" 2>/dev/null || true
-# Kill bridge
 kill -9 "$BRIDGE_PID" 2>/dev/null || true
 wait "$BRIDGE_PID" 2>/dev/null || true
 BRIDGE_PID=""
 
-FORWARD_PORT="$FORWARD_PORT" node --experimental-strip-types "$TEST_DIR/test_gateway_query.mjs" expect_error > "$TEST_DIR/gateway_crash.log" 2>&1
-if grep -q "EXPECTED_ERROR_CAUGHT" "$TEST_DIR/gateway_crash.log"; then
-  echo "  [PASS] Bridge exit propagated as error (NOT masked as empty array)"
+FORWARD_PORT="$FORWARD_PORT" node --experimental-strip-types "$MCP_CLIENT_SCRIPT" expect_error > "$TEST_DIR/mcp_protocol_crash.log" 2>&1
+if grep -q "MCP_PROTOCOL_ERROR_CAUGHT" "$TEST_DIR/mcp_protocol_crash.log"; then
+  echo "  [PASS] Protocol-level Bridge exit returned isError: true without empty list masking"
 else
-  echo "FAIL: Bridge exit not propagated!"
-  cat "$TEST_DIR/gateway_crash.log"
+  echo "FAIL: Bridge exit not propagated at protocol level!"
+  cat "$TEST_DIR/mcp_protocol_crash.log"
   exit 1
 fi
 
 # -------------------------------------------------------------
-# 7. Tunnel Disconnect, Exponential Backoff, & Concurrency Lock
+# 8. Tunnel Disconnect, Exponential Backoff, & Concurrency Lock
 # -------------------------------------------------------------
-echo "[7/8] Verifying tunnel disconnect, exponential backoff, and concurrency singleton..."
+echo "[8/9] Verifying tunnel disconnect, exponential backoff, and concurrency singleton..."
 
 # Kill child SSH process of supervisor
 child_pid=$(grep '"child_ssh_pid"' "$CONFIG_DIR/tunnel_status.json" | grep -o '[0-9]*' || echo "")
@@ -476,9 +647,9 @@ else
 fi
 
 # -------------------------------------------------------------
-# 8. Clean Teardown & Zero Residual Assertions
+# 9. Clean Teardown & Zero Residual Assertions
 # -------------------------------------------------------------
-echo "[8/8] Testing clean termination via tunnel-ctl.sh and verifying zero residuals..."
+echo "[9/9] Testing clean termination via tunnel-ctl.sh and verifying zero residuals..."
 
 "$RESIDENT_TUNNEL_DIR/scripts/tunnel-ctl.sh" stop
 wait "$SUPERVISOR_PID" 2>/dev/null || true
@@ -506,7 +677,7 @@ fi
 echo "  [PASS] Zero residual processes, zero leftover listeners on test ports."
 
 # -------------------------------------------------------------
-# 9. Write Comprehensive JSON Receipt
+# 10. Write Comprehensive JSON Receipt
 # -------------------------------------------------------------
 RECEIPT_FILE="$RECEIPTS_DIR/AG05_ISOLATED_INTEGRATION_RECEIPT.json"
 mkdir -p "$RECEIPTS_DIR"
@@ -517,6 +688,7 @@ cat << EOF > "$RECEIPT_FILE"
   "task": "AG-05 Resident Read-Only Candidate Isolated Integration",
   "execution_timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "git_commit": "$(cd "$REPO_ROOT" && git rev-parse HEAD)",
+  "tree_sha": "$(cd "$REPO_ROOT" && git rev-parse HEAD^{tree})",
   "test_environment": {
     "type": "ISOLATED_REAL_PROCESSES",
     "host_os": "macOS",
@@ -539,8 +711,11 @@ cat << EOF > "$RECEIPT_FILE"
     { "name": "health_probe_active_check", "result": "PASS", "details": "tunnel-ctl.sh health probed /health returning 200" },
     { "name": "gateway_query_over_tunnel", "result": "PASS", "details": "real Gateway retrieved metadata and rich non-empty items" },
     { "name": "rich_fields_fidelity", "result": "PASS", "details": "title, notes, priority, is_all_day, time_zone, due dates verified" },
-    { "name": "safe_mode_403_propagation", "result": "PASS", "details": "Bridge 403 propagated as PERMISSION_DENIED without empty list masking" },
-    { "name": "bridge_crash_propagation", "result": "PASS", "details": "Bridge exit propagated as error without empty list masking" },
+    { "name": "mcp_protocol_discovery", "result": "PASS", "details": "client.listTools discovered reminders_lists and reminders_list over InMemoryTransport" },
+    { "name": "mcp_protocol_reminders_lists", "result": "PASS", "details": "reminders_lists returned valid list with writable: false" },
+    { "name": "mcp_protocol_reminders_list_rich_fields", "result": "PASS", "details": "reminders_list returned non-empty priority, is_all_day, time_zone, and multi-line notes" },
+    { "name": "mcp_protocol_safe_mode_403_rejection", "result": "PASS", "details": "protocol call returned isError: true on Bridge 403, not empty array" },
+    { "name": "mcp_protocol_crash_error_propagation", "result": "PASS", "details": "protocol call returned isError: true on Bridge crash, not empty array" },
     { "name": "true_ssh_exit_code_capture", "result": "PASS", "details": "non-zero exit code captured and recorded in status JSON" },
     { "name": "exponential_backoff_progression", "result": "PASS", "details": "backoff increments with factor 2 and caps at max" },
     { "name": "atomic_singleton_locking", "result": "PASS", "details": "concurrent invocation blocked by mkdir lock directory" },

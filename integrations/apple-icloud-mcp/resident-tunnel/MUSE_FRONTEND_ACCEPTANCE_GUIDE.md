@@ -9,11 +9,18 @@
 
 ## 1. 验收前置条件 (Pre-flight Checklist)
 在用户启动受限窗口前，确认以下状态：
-1. **Seoul 统一 MCP 网关**: 候选容器正常运行，挂载只读配置。
-2. **MacServer EventKit 桥接**: 处于活跃状态，仅绑定本地受限配置指定的 iCloud 测试列表。
-3. **反向 SSH 隧道**: 通过 MacServer `launchd` 常驻守护进程 (`com.muse.macserver-tunnel`) 连接至 Seoul `172.19.0.1:18765`。
-4. **安全模式状态**:
+1. **Seoul 统一 MCP 网关**:
+   - 候选镜像: `sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929` (`candidate-ag05-delivery-20261108`)
+   - 业务切换停机窗口: 5-10 秒（MCP 容器重启期间暂时中断，不影响非 MCP 独立系统）
+   - 影响范围: Contacts / Calendar / CardDAV / Mail 在切换瞬间短暂重连
+2. **MacServer EventKit 桥接**:
+   - Release Binary SHA256: `ab5c4cbd9dd8cb1939165411bab48fe60515fd92e6b89c740ff330827991ff0f`
+   - 处于活跃状态，仅绑定本地受限配置指定的 iCloud 测试列表。
+3. **反向 SSH 隧道**:
+   - 通过 MacServer `launchd` 常驻守护进程 (`com.muse.macserver-tunnel`) 连接至 Seoul `127.0.0.1:18765`。
+4. **安全模式与 30 分钟看门狗状态**:
    - `writes_enabled = false` (全链路写隔离，禁止任何写入调用)。
+   - 独立后台看门狗启动，30 分钟硬约束倒计时，超时自动回滚至基线镜像 `sha256:f3e697fe...`，禁止未经审批擅自延长。
    - 目标列表由用户按需置入 2 条最小合成测试条目（见建议测试数据，验收前不预先创建真实条目）。
 
 ---

@@ -1,0 +1,51 @@
+{
+  "manifest_version": "1.0.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery",
+  "generated_at": "2026-11-09T02:25:00Z",
+  "git": {
+    "branch": "feat/ag05-resident-readonly-candidate",
+    "pr": 23,
+    "upstream_baseline_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7"
+  },
+  "artifacts": {
+    "candidate_docker_image": {
+      "repository": "insurance-carddav-mcp-carddav",
+      "tag": "candidate-ag05-delivery-20261108",
+      "image_id": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+      "repo_digest": "insurance-carddav-mcp-carddav@sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+      "supersedes": "sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61",
+      "rationale": "Incorporates AG-05 non-empty rich fields (is_all_day, time_zone, last_modified, url) into Reminder mapping and protocol responses."
+    },
+    "expected_production_baseline": {
+      "repository": "insurance-carddav-mcp-carddav",
+      "tag": "latest",
+      "image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+    },
+    "macserver_eventkit_bridge_release_binary": {
+      "path": "integrations/apple-icloud-mcp/macserver-eventkit/.build/release/EventKitBridgeServer",
+      "platform": "arm64-apple-macosx14.0",
+      "sha256": "ab5c4cbd9dd8cb1939165411bab48fe60515fd92e6b89c740ff330827991ff0f",
+      "features": [
+        "Pure ReminderDateMapper components conversion (zero timezone drift)",
+        "Strict all-day vs timed due date separation",
+        "Safe mode 403 lock switch support",
+        "Zero reminder content logging"
+      ]
+    },
+    "canonical_patch": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/patches/0001-ag05-shared-gateway-wiring.patch",
+      "sha256": "2705c85122d0ef156e3d3597e8f09915e09d96171f25558b478fd3e730e6acb0"
+    }
+  },
+  "build_inputs": {
+    "src/config.ts": "a102299c963c23b1bd5c4e3186b7de8b1cbfde5a93bbbef528bdbbd79583f728",
+    "src/fake-bridge.ts": "c625686700a671019dbd2ec8ebb2161244686eb08f96fd37cc9cf4c511a93fa0",
+    "src/index.ts": "1e6bb6e12fe2daa406c29636ebfce3a7ffb1d24bcaa93837313ffd839489272c",
+    "src/server.ts": "c0c5860879455eba0cf4958a85c9fd953eed73abd3a377d83f9be27e8c239411",
+    "src/service.ts": "a4838f957ac100be8ee6680919ecf21f1c42a2559e607ca50c01d46fd36cc7fc",
+    "src/transport.ts": "fd592c9ce1336b5f714474d3780e271e7a1a51f2c57b835c683eea418f078552",
+    "src/types.ts": "bf437f0359142c71a6b480e10bf8a1bae055678ee29f5186c2ee521ec038a113",
+    "package.json": "e3497adfc7db791141fb13db2abfc3e2debc82ae89420022840fad9e42473b15",
+    "Dockerfile.candidate": "9fa8be6d4f88cd1de075d1c77de27329b36ba9560360df3412954878fb72f11e"
+  }
+}

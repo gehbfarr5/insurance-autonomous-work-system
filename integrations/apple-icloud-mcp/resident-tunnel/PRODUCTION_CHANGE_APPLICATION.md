@@ -16,11 +16,11 @@
 
 | 组件 | 生产当前基线版本 | 本次试运行候选版本 / 构建产物 | 来源与构建依据 |
 | :--- | :--- | :--- | :--- |
-| **Seoul Gateway 镜像** | `sha256:f3e697fe...` (无 MacServer 路由) | `sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61` | AG-03 冻结验收镜像（含只读路由与全天/时区非空字段映射） |
-| **MacServer EventKit Bridge** | Git commit `a6f1a9c` (Safe Mode) | Git commit `feat/ag05-resident-readonly-candidate` | 包含 `ReminderItem` 扩展、时区/全天保真及编译级写隔离 |
-| **反向 SSH 隧道管理** | 无（临时反向隧道已关闭） | `run-resident-tunnel.sh` / `tunnel-ctl.sh` | PR #23 交付，具备原子单例锁、指数退避 (2s->30s) 与可观测状态 |
-| **MacServer LaunchAgent** | 无 | `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist` | 统一用户域生命周期管理 (`gui/501`) |
-| **Seoul SSH 限制配置** | 默认系统 sshd | `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` | 语法经 `sshd -T` 核验，严格绑定反向转发 |
+| **Seoul Gateway 镜像** | `sha256:f3e697fe...` (无 MacServer 路由) | `sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929` (`candidate-ag05-delivery-20261108`) | AG-05 交付候选镜像（更新 ical.ts 与 service.ts，包含 is_all_day, time_zone, last_modified, url 映射，取代无新字段的 AG-03 镜像） |
+| **MacServer EventKit Bridge** | Git commit `a6f1a9c` (Safe Mode) | Release Binary SHA256: `ab5c4cbd9dd8cb1939165411bab48fe60515fd92e6b89c740ff330827991ff0f` | 纯 Swift `ReminderDateMapper`，时区/全天保真及编译级写隔离，91 个单元测试全通 |
+| **反向 SSH 隧道管理** | 无（临时反向隧道已关闭） | `run-resident-tunnel.sh` / `tunnel-ctl.sh` | PR #23 交付，具备原子单例锁 (15 进程并发锤击验证)、真实退出码捕获、指数退避与 4 层可观测状态 |
+| **MacServer LaunchAgent** | 无 | `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist` | 极简原生 launchd 用户域配置，直调 supervisor |
+| **Seoul SSH 限制配置** | 默认系统 sshd | `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` | 语法经 `sshd -t` 核验，严格绑定回环反向转发 (permitlisten 127.0.0.1:18765) |
 
 ---
 

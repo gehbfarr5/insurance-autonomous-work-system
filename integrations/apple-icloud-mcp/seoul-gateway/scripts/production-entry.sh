@@ -28,7 +28,7 @@ GATEWAY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_PROD_TEMPLATE="${COMPOSE_PROD_TEMPLATE:-$GATEWAY_ROOT/config/compose.production.yaml}"
 
 # Pinned Image IDs (Strictly locked; no on-site rebuilding)
-LOCKED_CANDIDATE_IMAGE="${LOCKED_CANDIDATE_IMAGE:-sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61}"
+LOCKED_CANDIDATE_IMAGE="${LOCKED_CANDIDATE_IMAGE:-sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929}"
 LOCKED_BASELINE_IMAGE="${LOCKED_BASELINE_IMAGE:-sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0}"
 
 # Production Environment Paths & Configurations
@@ -449,11 +449,24 @@ EOF
   DEPLOY_IN_PROGRESS=0
   trap - EXIT INT TERM
 
-  # Step 7: Completion summary
+  # Step 7: Launch 30-Minute Hard Watchdog timer
+  local watchdog_timeout="${WATCHDOG_TIMEOUT_SECONDS:-1800}"
+  echo "       Starting 30-minute hard watchdog (${watchdog_timeout}s timeout)..."
+  (
+    sleep "$watchdog_timeout"
+    echo "[WATCHDOG] 30-minute trial window expired at $(date -u +"%Y-%m-%dT%H:%M:%SZ")! Auto-reverting to baseline..."
+    "$SCRIPT_DIR/production-entry.sh" rollback "$backup_dir" || true
+  ) > "$backup_dir/watchdog.log" 2>&1 &
+  local watchdog_pid=$!
+  echo "$watchdog_pid" > "$backup_dir/watchdog.pid"
+  echo "       Watchdog active: PID $watchdog_pid (Hard timeout: ${watchdog_timeout}s, no unauthorized extension allowed)"
+
+  # Step 8: Completion summary
   echo "[6/6] Production candidate deployment completed successfully!"
   echo "       Container:       $PROD_CONTAINER"
   echo "       Image:           $LOCKED_CANDIDATE_IMAGE"
   echo "       Backup:          $backup_dir"
+  echo "       Watchdog PID:    $watchdog_pid"
   echo "       Status:          Healthy (200 OK)"
   echo "========================================================================"
 }
@@ -471,6 +484,17 @@ rollback_baseline() {
   if [ ! -f "$backup_dir/manifest.env" ]; then
     echo "ERROR: Backup manifest.env missing in $backup_dir!" >&2
     return 1
+  fi
+
+  # Stop active watchdog timer if running
+  if [ -f "$backup_dir/watchdog.pid" ]; then
+    local wpid
+    wpid=$(cat "$backup_dir/watchdog.pid" 2>/dev/null || true)
+    if [ -n "$wpid" ] && kill -0 "$wpid" 2>/dev/null; then
+      echo "       Stopping active watchdog timer (PID: $wpid)..."
+      kill -TERM "$wpid" 2>/dev/null || true
+    fi
+    rm -f "$backup_dir/watchdog.pid"
   fi
 
   # Load manifest so execution in a clean independent shell works without leftover env vars

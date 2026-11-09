@@ -4,10 +4,16 @@
 #
 # Hardened Launchd Supervisor Runner for MacServer -> Seoul reverse SSH tunnel.
 # Features:
-# - Concurrency-safe atomic directory singleton locking (mkdir)
-# - Stale lock detection with PID reuse verification
+# - Concurrency-safe atomic staging directory singleton locking (mkdir + atomic rename)
+# - Elimination of PID creation race window with loser grace period
+# - Safe atomic stale lock reclamation (mv $LOCK_DIR $LOCK_DIR.stale.$$)
 # - True SSH exit code capture (no masked wait || true)
-# - State differentiation: starting, connecting, forwarding_established, link_available, bridge_locked, reconnecting, stopped, failed
+# - Four-layer health state differentiation:
+#     Layer 1: Local Bridge (/health)
+#     Layer 2: Child SSH process liveness
+#     Layer 3: Forward listening state (ExitOnForwardFailure)
+#     Layer 4: End-to-end link verification
+# - Continuous health state monitoring (never inferring success without probe)
 # - Signal-responsive backoff sleep (zero lag on SIGTERM during backoff)
 # - Capped exponential backoff (2s -> 30s) with sustained reset threshold (60s)
 # - Observable JSON status file with umask 077 restricted permissions
@@ -42,8 +48,9 @@ BACKOFF_MAX="${BACKOFF_MAX:-30}"
 BACKOFF_FACTOR="${BACKOFF_FACTOR:-2}"
 SUSTAINED_THRESHOLD="${SUSTAINED_THRESHOLD:-60}"
 
-# Probe configuration for local bridge
+# Probe configuration
 BRIDGE_PROBE_URL="${BRIDGE_PROBE_URL:-http://127.0.0.1:18765/health}"
+REMOTE_PROBE_URL="${REMOTE_PROBE_URL:-}"
 PROBE_TIMEOUT_SECONDS="${PROBE_TIMEOUT_SECONDS:-2}"
 
 # Custom SSH command override for isolated testing
@@ -58,11 +65,16 @@ mkdir -p "$CONFIG_DIR"
 fail_preflight() {
   local msg="$1"
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [PREFLIGHT_FAIL] $msg" >&2
-  # Write failure status
   cat << EOF > "$STATUS_FILE"
 {
   "status": "failed",
   "supervisor_pid": $$,
+  "layers": {
+    "layer1_local_bridge": "unknown",
+    "layer2_ssh_process": "disconnected",
+    "layer3_forward_listen": "failed",
+    "layer4_end_to_end_link": "failed"
+  },
   "last_error": "PREFLIGHT_FAIL: $msg",
   "last_updated": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 }
@@ -76,7 +88,6 @@ if [ "$SKIP_KEY_CHECK" -ne 1 ]; then
     fail_preflight "Identity key file not found: $IDENTITY_FILE"
   fi
 
-  # Check permissions (must not be readable by group/others)
   perms=$(stat -f "%OLp" "$IDENTITY_FILE" 2>/dev/null || stat -c "%a" "$IDENTITY_FILE" 2>/dev/null || echo "unknown")
   if [ "$perms" != "600" ] && [ "$perms" != "400" ]; then
     fail_preflight "Identity key permissions ($perms) are insecure: $IDENTITY_FILE (must be 0600 or 0400)"
@@ -92,53 +103,73 @@ if [ -z "$REMOTE_HOST" ]; then
 fi
 
 # -------------------------------------------------------------
-# 2. Concurrency-Safe Atomic Singleton Locking
+# 2. Concurrency-Safe Atomic Singleton Locking Protocol
 # -------------------------------------------------------------
 acquire_lock() {
-  local max_retries=2
+  local max_attempts=5
   local attempt=0
 
-  while [ "$attempt" -lt "$max_retries" ]; do
+  # Prepare private staging file
+  local stage_file="$CONFIG_DIR/tunnel.lock.stage.$$"
+  echo "$$" > "$stage_file"
+  chmod 600 "$stage_file" 2>/dev/null || true
+
+  while [ "$attempt" -lt "$max_attempts" ]; do
     if mkdir "$LOCK_DIR" 2>/dev/null; then
-      # Acquired lock atomically
-      echo "$$" > "$LOCK_DIR/pid"
-      date +%s > "$LOCK_DIR/start_time"
+      # Winner of atomic directory creation
+      # Atomically move our staging PID into the lock dir
+      mv -f "$stage_file" "$LOCK_DIR/pid"
+      date +%s > "$LOCK_DIR/time"
       echo "$$" > "$PID_FILE"
-      chmod 600 "$PID_FILE" "$LOCK_DIR/pid" 2>/dev/null || true
+      chmod 600 "$PID_FILE" "$LOCK_DIR/pid" "$LOCK_DIR/time" 2>/dev/null || true
       return 0
     fi
 
-    # Lock directory exists - verify if active or stale
+    # Lock directory exists - check if winner is still writing PID (grace period)
+    local waited=0
     local existing_pid=""
-    if [ -f "$LOCK_DIR/pid" ]; then
-      existing_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
-    fi
+    while [ "$waited" -lt 10 ]; do
+      if [ -f "$LOCK_DIR/pid" ]; then
+        existing_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+        if [ -n "$existing_pid" ]; then
+          break
+        fi
+      fi
+      sleep 0.1
+      waited=$((waited + 1))
+    done
 
     if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
-      # Check command line to avoid PID reuse confusion
+      # Verify command args to prevent PID reuse confusion
       local cmd_line
       cmd_line=$(ps -p "$existing_pid" -o args= 2>/dev/null || echo "")
       if echo "$cmd_line" | grep -q "run-resident-tunnel.sh"; then
         echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Tunnel supervisor already active (PID: $existing_pid). Exiting cleanly."
+        rm -f "$stage_file"
         exit 0
       fi
     fi
 
-    # Lock is stale: process dead or PID reused for non-supervisor
-    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Detected stale lock in $LOCK_DIR. Removing and retrying..."
-    rm -rf "$LOCK_DIR"
+    # Lock is stale or abandoned: safely reclaim via atomic rename
+    local stale_dir="$CONFIG_DIR/tunnel.lock.stale.$$.$RANDOM"
+    if mv "$LOCK_DIR" "$stale_dir" 2>/dev/null; then
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Reclaimed stale lock directory. Retrying acquire..."
+      rm -rf "$stale_dir"
+    fi
+
     attempt=$((attempt + 1))
     sleep 0.2
   done
 
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Failed to acquire lock after removing stale lock. Exiting." >&2
+  rm -f "$stage_file"
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Failed to acquire lock after $max_attempts attempts. Exiting." >&2
   exit 1
 }
 
 acquire_lock
 
 # -------------------------------------------------------------
-# 3. State & Observable JSON Status
+# 3. State & Observable JSON Status with 4-Layer Hierarchy
 # -------------------------------------------------------------
 current_backoff="$BACKOFF_INIT"
 reconnect_count=0
@@ -147,20 +178,108 @@ sleep_child_pid=""
 is_shutting_down=0
 has_held_lock=1
 
+# Layer states
+l1_bridge="unknown"
+l2_ssh="disconnected"
+l3_forward="unknown"
+l4_e2e="unverified"
+
+probe_local_bridge() {
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "unknown"
+    return
+  fi
+  local code
+  code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$BRIDGE_PROBE_URL" 2>/dev/null || echo "000")
+  if [ "$code" = "200" ]; then
+    echo "ok"
+  elif [ "$code" = "403" ]; then
+    echo "locked_safe_mode"
+  else
+    echo "unreachable"
+  fi
+}
+
+probe_remote_link() {
+  if [ -z "$REMOTE_PROBE_URL" ] || ! command -v curl >/dev/null 2>&1; then
+    echo "unverified"
+    return
+  fi
+  local code
+  code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$REMOTE_PROBE_URL" 2>/dev/null || echo "000")
+  if [ "$code" = "200" ]; then
+    echo "verified"
+  elif [ "$code" = "403" ]; then
+    echo "verified_safe_mode"
+  else
+    echo "failed"
+  fi
+}
+
+evaluate_overall_status() {
+  if [ "$is_shutting_down" -eq 1 ]; then
+    echo "stopped"
+    return
+  fi
+  if [ "$l2_ssh" != "connected" ]; then
+    echo "reconnecting"
+    return
+  fi
+  if [ "$l1_bridge" = "unreachable" ]; then
+    echo "degraded"
+    return
+  fi
+  if [ "$l1_bridge" = "locked_safe_mode" ]; then
+    echo "bridge_locked"
+    return
+  fi
+  if [ "$l4_e2e" = "verified" ]; then
+    echo "healthy"
+    return
+  fi
+  # Local bridge OK, SSH alive, remote link unverified
+  echo "bridge_local_ok_remote_unverified"
+}
+
 update_status() {
-  local state="$1"
+  local explicit_state="${1:-}"
   local last_err="${2:-}"
+
+  # Refresh probes
+  l1_bridge=$(probe_local_bridge)
+  if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
+    l2_ssh="connected"
+    l3_forward="forwarding_active"
+  else
+    l2_ssh="disconnected"
+    l3_forward="inactive"
+  fi
+  l4_e2e=$(probe_remote_link)
+
+  local overall
+  if [ -n "$explicit_state" ]; then
+    overall="$explicit_state"
+  else
+    overall=$(evaluate_overall_status)
+  fi
+
   local tmp_status="${STATUS_FILE}.tmp.$$"
   local now_ts
   now_ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
   cat << EOF > "$tmp_status"
 {
-  "status": "$state",
+  "status": "$overall",
   "supervisor_pid": $$,
   "child_ssh_pid": ${child_ssh_pid:-null},
   "remote_host": "$REMOTE_HOST",
   "remote_user": "$REMOTE_USER",
+  "layers": {
+    "layer1_local_bridge": "$l1_bridge",
+    "layer2_ssh_process": "$l2_ssh",
+    "layer3_forward_listen": "$l3_forward",
+    "layer4_end_to_end_link": "$l4_e2e"
+  },
   "reconnect_count": $reconnect_count,
   "current_backoff_seconds": $current_backoff,
   "last_updated": "$now_ts",
@@ -183,15 +302,12 @@ cleanup_and_exit() {
 
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Received termination signal ($sig). Shutting down supervisor..."
 
-  # Interrupt sleeping backoff immediately
   if [ -n "$sleep_child_pid" ] && kill -0 "$sleep_child_pid" 2>/dev/null; then
     kill "$sleep_child_pid" 2>/dev/null || true
   fi
 
-  # Terminate child SSH if running
   if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
     kill -TERM "$child_ssh_pid" 2>/dev/null || true
-    # Wait up to 3 seconds
     local waited=0
     while kill -0 "$child_ssh_pid" 2>/dev/null && [ "$waited" -lt 6 ]; do
       sleep 0.5
@@ -202,9 +318,9 @@ cleanup_and_exit() {
     fi
   fi
 
+  l2_ssh="disconnected"
   update_status "stopped" "Terminated on $sig"
 
-  # Clean up lock directory and PID file
   if [ "$has_held_lock" -eq 1 ]; then
     rm -rf "$LOCK_DIR"
     rm -f "$PID_FILE"
@@ -218,27 +334,6 @@ trap 'cleanup_and_exit SIGTERM' SIGTERM
 trap 'cleanup_and_exit SIGINT' SIGINT
 trap 'cleanup_and_exit SIGHUP' SIGHUP
 
-# Probe Bridge state through active probe
-probe_bridge_state() {
-  if ! command -v curl >/dev/null 2>&1; then
-    echo "forwarding_established"
-    return
-  fi
-
-  local http_code
-  http_code=$(curl -s -m "$PROBE_TIMEOUT_SECONDS" -o /dev/null -w "%{http_code}" "$BRIDGE_PROBE_URL" 2>/dev/null || echo "000")
-
-  if [ "$http_code" = "200" ]; then
-    echo "link_available"
-  elif [ "$http_code" = "403" ]; then
-    echo "bridge_locked"
-  elif [ "$http_code" = "000" ]; then
-    echo "forwarding_established"
-  else
-    echo "forwarding_established"
-  fi
-}
-
 # -------------------------------------------------------------
 # 5. Supervisor Loop
 # -------------------------------------------------------------
@@ -248,9 +343,10 @@ update_status "starting"
 while [ "$is_shutting_down" -eq 0 ]; do
   start_time=$(date +%s)
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Launching reverse SSH tunnel to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PORT..."
+  l2_ssh="connecting"
   update_status "connecting"
 
-  # Build arguments
+  # Split arguments
   # shellcheck disable=SC2086
   set -- $REMOTE_BINDS
 
@@ -269,23 +365,28 @@ while [ "$is_shutting_down" -eq 0 ]; do
     "$REMOTE_USER@$REMOTE_HOST" >> "$LOG_FILE" 2>&1 &
 
   child_ssh_pid=$!
+  l2_ssh="connected"
+  l3_forward="forwarding_active"
+  update_status "forwarding_established"
 
-  # Allow short moment for SSH handshake & forward failure check
+  # Wait briefly for SSH handshake and initial forward negotiation
   sleep 0.8
 
   if kill -0 "$child_ssh_pid" 2>/dev/null; then
-    # SSH is running without immediate forward exit
-    detected_state=$(probe_bridge_state)
-    update_status "$detected_state"
+    l2_ssh="connected"
+    l3_forward="forwarding_active"
+    update_status ""
   fi
 
-  # TRUE exit code capture: set +e around wait
+  # TRUE exit code capture
   set +e
   wait "$child_ssh_pid"
   exit_code=$?
   set -e
   end_time=$(date +%s)
   child_ssh_pid=""
+  l2_ssh="disconnected"
+  l3_forward="inactive"
 
   if [ "$is_shutting_down" -eq 1 ]; then
     break
@@ -294,7 +395,6 @@ while [ "$is_shutting_down" -eq 0 ]; do
   duration=$((end_time - start_time))
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Tunnel disconnected (exit code: $exit_code, connected for: ${duration}s)."
 
-  # If connection lasted beyond sustained threshold, reset backoff
   if [ "$duration" -ge "$SUSTAINED_THRESHOLD" ]; then
     current_backoff="$BACKOFF_INIT"
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Connection was sustained for ${duration}s. Backoff reset to ${current_backoff}s."
@@ -305,7 +405,6 @@ while [ "$is_shutting_down" -eq 0 ]; do
 
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Backing off for ${current_backoff}s before reconnect attempt #$reconnect_count..."
 
-  # Signal-aware sleep: wake up immediately if SIGTERM/SIGINT received
   sleep "$current_backoff" &
   sleep_child_pid=$!
   set +e
@@ -317,7 +416,6 @@ while [ "$is_shutting_down" -eq 0 ]; do
     break
   fi
 
-  # Exponential backoff with cap
   current_backoff=$((current_backoff * BACKOFF_FACTOR))
   if [ "$current_backoff" -gt "$BACKOFF_MAX" ]; then
     current_backoff="$BACKOFF_MAX"

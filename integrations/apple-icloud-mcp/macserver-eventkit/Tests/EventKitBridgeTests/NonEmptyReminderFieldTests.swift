@@ -312,4 +312,39 @@ final class NonEmptyReminderFieldTests: XCTestCase {
         XCTAssertTrue(completedItem.isCompleted)
         XCTAssertNotNil(completedItem.completionDate)
     }
+
+    // MARK: - 9. Pure ReminderDateMapper DateComponents Tests
+    func testReminderDateMapperDirectComponentMapping() throws {
+        // Case 1: Nil components
+        let nilSnapshot = ReminderDateMapper.mapDueDate(components: nil)
+        XCTAssertNil(nilSnapshot.date)
+        XCTAssertFalse(nilSnapshot.isAllDay)
+        XCTAssertNil(nilSnapshot.timeZoneIdentifier)
+
+        // Case 2: All-Day user event (no hour/min)
+        let allDayComp = ReminderDateMapper.constructComponents(year: 2026, month: 11, day: 10)
+        let allDaySnapshot = ReminderDateMapper.mapDueDate(components: allDayComp)
+        XCTAssertTrue(allDaySnapshot.isAllDay)
+        XCTAssertNil(allDaySnapshot.timeZoneIdentifier)
+        XCTAssertNotNil(allDaySnapshot.date)
+
+        // Case 3: Timed user event with explicit TimeZone (Asia/Shanghai)
+        let tz = TimeZone(identifier: "Asia/Shanghai")!
+        let timedComp = ReminderDateMapper.constructComponents(
+            year: 2026, month: 11, day: 9, hour: 14, minute: 30, second: 0, timeZone: tz
+        )
+        let timedSnapshot = ReminderDateMapper.mapDueDate(components: timedComp)
+        XCTAssertFalse(timedSnapshot.isAllDay)
+        XCTAssertEqual(timedSnapshot.timeZoneIdentifier, "Asia/Shanghai")
+        XCTAssertNotNil(timedSnapshot.date)
+
+        // Case 4: Default/nil timezone timed event
+        let defaultTzComp = ReminderDateMapper.constructComponents(
+            year: 2026, month: 11, day: 9, hour: 9, minute: 0, second: 0, timeZone: nil
+        )
+        let defaultTzSnapshot = ReminderDateMapper.mapDueDate(components: defaultTzComp)
+        XCTAssertFalse(defaultTzSnapshot.isAllDay)
+        XCTAssertNil(defaultTzSnapshot.timeZoneIdentifier)
+        XCTAssertNotNil(defaultTzSnapshot.date)
+    }
 }
