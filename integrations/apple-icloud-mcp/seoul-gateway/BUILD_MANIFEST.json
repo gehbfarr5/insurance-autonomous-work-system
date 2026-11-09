@@ -1,12 +1,12 @@
 {
-  "manifest_version": "1.6.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery: Variable Scope Fix, Fail-Fast Startup Cleanup & Final Acceptance Verification",
-  "generated_at": "2026-11-09T06:55:00Z",
+  "manifest_version": "1.7.0",
+  "task": "AG-06 Blocker Fix: Intel Bridge Multi-Architecture Signing & Authorization Identity Delivery",
+  "generated_at": "2026-11-09T14:35:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
-    "upstream_baseline_commit": "de8aa004ac3a95d74eaed02a99cc24cca027b7da",
-    "traceability_notes": "Fixed bash variable scope syntax error (removed invalid top-level 'local' declarations on w_spawn_lstart and child_lstart), re-architected run-resident-tunnel.sh with early signal/EXIT traps and fail-fast startup cleanup to eliminate half-started lingering state, normalized quote handling across tunnel-ctl.sh and run-resident-tunnel.sh metadata parsers, and verified 100% PASS on end-to-end acceptance suite (test-delivery-final-acceptance.sh), 5 safety boundary negative tests (test-safety-boundaries.sh), 13 orchestrated recovery drills (test-orchestrated-recovery-drills.sh), and 9-stage isolated integration suite (run-isolated-integration.sh)."
+    "upstream_baseline_commit": "743c2007331036bcec48835a0446978532d7c154",
+    "traceability_notes": "Fixed Intel x86_64 slice code signing defect in Universal Bridge binary by implementing build-and-sign-universal.sh, embedding Info.plist with NSRemindersUsageDescription into Mach-O __TEXT,__info_plist, enforcing codesign --verify --strict --all-architectures gate, recording CDHashes and Designated Requirements, and validating multi-arch lifecycle on both x86_64 and arm64."
   },
   "artifacts": {
     "candidate_docker_image": {
@@ -32,11 +32,17 @@
       ],
       "target_device_compatibility": "Native execution on Intel x86_64 MacServer and Apple Silicon arm64",
       "minimum_deployment_target": "macOS 14.0 (minos 14.0, sdk 14.0)",
-      "signature": "adhoc (linker-signed embedded)",
-      "sha256": "6b4a0b826b904c9d844c890e3f39062775b0fecec5df439eb78217395bf657b6",
-      "offline_verification": "tests/test-universal-bridge-offline.sh (FakeEventKitStore verified 200 OK without EventKit access)",
+      "signature": "codesign -s - --identifier com.muse.macserver-eventkit --options runtime --force",
+      "signature_verification": "codesign --verify --strict --all-architectures (PASSED)",
+      "sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
+      "cdhash_x86_64": "a25782f93277e3d6f965a3fab1a72e8ea1569a34",
+      "cdhash_arm64": "f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b",
+      "embedded_info_plist": true,
+      "offline_verification": "Tests/test-universal-bridge-offline.sh (multi-arch lifecycle, Fake Store, write block, graceful stop & restart 100% OK)",
       "features": [
         "Universal fat binary executing natively on target MacServer (x86_64)",
+        "Strict code signing across all architectures with Hardened Runtime",
+        "Embedded Info.plist with NSRemindersUsageDescription and NSRemindersFullAccessUsageDescription",
         "Pure ReminderDateMapper components conversion (zero timezone drift)",
         "Strict all-day vs timed due date separation",
         "Safe mode 403 lock switch support",

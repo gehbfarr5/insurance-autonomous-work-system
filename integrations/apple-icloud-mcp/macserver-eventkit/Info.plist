@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.muse.macserver-eventkit</string>
+    <key>CFBundleName</key>
+    <string>EventKitBridgeServer</string>
+    <key>CFBundleDisplayName</key>
+    <string>MUSE EventKit Bridge Server</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>MUSE MacServer requires read-only access to Reminders to inspect allowed reminder lists.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>MUSE MacServer requires read-only access to Reminders to inspect allowed reminder lists.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>MUSE MacServer EventKit Bridge requires calendar access for source verification.</string>
+</dict>
+</plist>

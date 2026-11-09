@@ -16,7 +16,7 @@
 | 组件 | 生产当前基线版本 | 本次试运行候选版本 / 构建产物 | 来源与构建依据 |
 | :--- | :--- | :--- | :--- |
 | **Seoul Gateway 镜像** | `sha256:f3e697fe...` (无 MacServer 路由) | Local Image ID: `sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929`<br>(Registry RepoDigest: `null`，本地构建镜像，未推送到远端仓库) | AG-05 交付候选镜像（更新 ical.ts 与 service.ts，包含 is_all_day, time_zone, last_modified, url 映射，取代无新字段的旧镜像） |
-| **MacServer EventKit Bridge** | Git commit `a6f1a9c` (Safe Mode) | Release Binary SHA256: `6b4a0b826b904c9d844c890e3f39062775b0fecec5df439eb78217395bf657b6`<br>格式: **Mach-O Universal Binary (x86_64 + arm64)**，最低 macOS 14.0，已签名 | 原生适配目标 Intel x86_64 MacServer，纯 Swift `ReminderDateMapper`，时区/全天保真及编译级写隔离，91 个单元测试全通 |
+| **MacServer EventKit Bridge** | Git commit `a6f1a9c` (Safe Mode) | Release Binary SHA256: `f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074`<br>格式: **Mach-O Universal Binary (x86_64 + arm64)**，最低 macOS 14.0<br>签名特征: `com.muse.macserver-eventkit` (Hardened Runtime, 嵌入 `__info_plist`)<br>CDHash (x86_64): `a25782f93277e3d6f965a3fab1a72e8ea1569a34`<br>CDHash (arm64): `f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b`<br>多架构签名门禁: `codesign --verify --strict --all-architectures` (通过) | 原生适配目标 Intel x86_64 MacServer 与 Apple Silicon，包含 embedded `Info.plist` 与用途说明，纯 Swift `ReminderDateMapper`，时区/全天保真及编译级写隔离，91 个单元测试全通 |
 | **反向 SSH 隧道管理** | 无（临时反向隧道已关闭） | `run-resident-tunnel.sh` / `tunnel-ctl.sh` | PR #23 交付，具备原子单例锁 (15 进程并发锤击验证)、真实退出码捕获、指数退避、4 层可观测状态及本地会话硬超时保护 |
 | **MacServer LaunchAgent** | 无 | `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist` | 极简原生 launchd 用户域配置，直调 supervisor |
 | **Seoul SSH 限制配置** | 默认系统 sshd | `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` | 语法经 `sshd -t` 核验，严格绑定回环反向转发 (permitlisten 127.0.0.1:18765) |
@@ -59,9 +59,14 @@
 3. **应用 Seoul SSH 限制配置**:
    - 部署 `/etc/ssh/sshd_config.d/60-macserver-gateway.conf` 并经 `sshd -t` 校验通过。
    - 向 `~mac-operator/.ssh/authorized_keys` 追加受限公钥条目并执行 `systemctl reload sshd`。
-4. **部署 MacServer Universal Bridge 与 LaunchAgent**:
-   - 部署 Universal Release Binary（SHA256: `6b4a0b82...`）至 `/opt/muse-macserver/bin/EventKitBridgeServer`。
-   - 载入 `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist`。
+4. **部署 MacServer Universal Bridge、用户前台授权与 LaunchAgent**:
+   - 部署 Universal Release Binary（SHA256: `f78e24e5...`）至 `/Users/shared/bin/EventKitBridgeServer`。
+   - **TCC 权限就绪（最小前台用户操作）**：由于新构建产物拥有新 CDHash，首次部署时处于 `notDetermined` 状态。在活跃图形会话（`gui/501`）执行：
+     ```bash
+     /Users/shared/bin/EventKitBridgeServer --request-authorization
+     ```
+     macOS Sequoia 弹出原生系统权限弹窗，用户点击“允许完全访问”。核验 `--check-authorization` 返回退出码 0 (`authorized: true`)。
+   - 载入 `~/Library/LaunchAgents/com.muse.macserver-eventkit.plist` 与 `~/Library/LaunchAgents/com.muse.macserver-tunnel.plist`。
    - 执行 `/opt/muse-macserver/scripts/tunnel-ctl.sh health` 验证 4 层健康状态。
 5. **部署 Seoul 候选容器**:
    - 部署 `compose.production.yaml` 并重启 MCP 容器（经历 5-10 秒停机窗口），校验候选镜像与健康端点。

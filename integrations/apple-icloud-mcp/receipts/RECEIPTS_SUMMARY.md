@@ -114,7 +114,28 @@
 
 ---
 
-## 六、项目硬边界保持
+## 六、AG-06 验收窗口前置检查与安全闭环回执 (`AG06_ACCEPTANCE_WINDOW_RECEIPT.json`)
+
+经用户显式授权开启 30 分钟受限验收窗口，执行现场前置核验与缺陷闭环：
+1. **准备阶段生产操作准确核定（正式收回“零探测”表述）**：
+   - 部署 Universal Binary 候选（`6b4a0b82...`）；
+   - 设置 30 分钟看门狗期限（`DEADLINE_EPOCH=1794216687`）；
+   - 临时置业务开关为 `true`（持续 29 秒，09:01:46Z 至 09:02:15Z）；
+   - 发起主动探测请求：`GET http://127.0.0.1:18765/reminders/lists`。
+2. **两类不同事实的严格分别记录**：
+   - **业务调用返回权限拒绝**：探测返回 HTTP 403 Forbidden（`PERMISSION_DENIED`，"EventKit access permission was denied or revoked."）；
+   - **未读取到条目内容**：读取条目数 = 0，读取内容暴露数 = 0，写入调用 = 0。零真实数据泄露。
+3. **根因定位**：
+   - 经 `codesign --verify -vvv` 查明，此前 `lipo` 产物中 `x86_64` 切片未签名（`code object is not signed at all In architecture: x86_64`），且缺少 embedded `Info.plist`；macOS 15 Sequoia 对其拒绝授权。
+4. **即刻基线锁定与完全恢复**：
+   - 立即将 MacServer 业务开关重置为 `false`，LaunchAgent 恢复，重新断言返回 403；
+   - Seoul 容器保持 baseline 镜像 `sha256:f3e697fe...`，健康检查 200 OK；
+   - 隧道未建立，反向转发端口 18765 监听完全注销，零孤儿进程残留；
+   - 全量实体 UUID 脱敏归档（测试列表：`9D9A****03F3`，来源：`9BBB****`）。
+
+---
+
+## 七、项目硬边界保持
 
 - **PR 状态**：PR #20、PR #21、PR #22 与 PR #23 严格维持 **OPEN** 未合并。
 - **只读边界**：生产试运行已彻底关闭，禁止私自重启隧道或开启 Bridge。

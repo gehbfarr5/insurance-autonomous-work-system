@@ -29,6 +29,10 @@ enforcement and iCloud source verification.
 ```
 macserver-eventkit/
 ├── Package.swift
+├── Info.plist                              — Embedded TCC usage descriptions
+├── BUILD_METADATA.json                     — Multi-architecture digest & signature records
+├── scripts/
+│   └── build-and-sign-universal.sh         — Universal build & strict signing pipeline
 ├── Sources/
 │   ├── EventKitBridge/
 │   │   ├── Protocol/
@@ -53,35 +57,37 @@ macserver-eventkit/
 │   └── EventKitBridgeServerExec/
 │       └── main.swift                      — Executable entry point
 └── Tests/
+    ├── test-universal-bridge-offline.sh    — Strict multi-arch offline lifecycle validation
     └── EventKitBridgeTests/
         ├── AllowlistValidatorTests.swift   — 10 tests
         ├── SourceVerifierTests.swift       — 10 tests
         ├── MetadataOnlyTests.swift         — 8 tests (FIX-R4A-01 core)
         ├── WriteIsolationTests.swift       — 8 tests
         ├── ErrorHandlingTests.swift        — 10 tests
-        └── AuthTests.swift                 — 10 tests
+        ├── AuthTests.swift                 — 10 tests
+        ├── HttpIntegrationTests.swift      — 24 tests
+        └── NonEmptyReminderFieldTests.swift— 9 tests
 ```
 
 ---
 
-## From-Clean-Checkout Build Steps
+## Multi-Architecture Universal Build & Signing Pipeline
 
 ```bash
-# 1. Navigate to the package directory
+# 1. Navigate to package directory
 cd integrations/apple-icloud-mcp/macserver-eventkit
 
-# 2. Build the package
-swift build
+# 2. Execute hardened universal build and signing
+./scripts/build-and-sign-universal.sh
 
-# Expected output:
-# Build complete!
+# 3. Verify strict multi-architecture signature
+codesign --verify --strict --all-architectures -vvv .build/release/EventKitBridgeServer
 
-# 3. Run all tests
+# 4. Run comprehensive offline multi-architecture test (x86_64 & arm64)
+./Tests/test-universal-bridge-offline.sh
+
+# 5. Run full package test suite
 swift test
-
-# Expected output:
-# Test Suite 'All tests' passed.
-#      Executed 56 tests, with 0 failures (0 unexpected)
 ```
 
 ---
@@ -89,14 +95,16 @@ swift test
 ## Expected Test Output Summary
 
 ```
-AllowlistValidatorTests  — 10 passed, 0 failed
-AuthTests                — 10 passed, 0 failed
-ErrorHandlingTests       — 10 passed, 0 failed
-MetadataOnlyTests        — 8 passed,  0 failed
-SourceVerifierTests      — 10 passed, 0 failed
-WriteIsolationTests      — 8 passed,  0 failed
+AllowlistValidatorTests       — 10 passed, 0 failed
+AuthTests                     — 10 passed, 0 failed
+ErrorHandlingTests            — 10 passed, 0 failed
+HttpIntegrationTests          — 24 passed, 0 failed
+MetadataOnlyTests             — 8 passed,  0 failed
+NonEmptyReminderFieldTests    — 9 passed,  0 failed
+SourceVerifierTests           — 10 passed, 0 failed
+WriteIsolationTests           — 8 passed,  0 failed
 ─────────────────────────────────────────────
-TOTAL                    — 56 passed, 0 failed
+TOTAL                         — 91 passed, 0 failed
 ```
 
 ---

@@ -14,8 +14,9 @@
    - 业务切换停机窗口: 5-10 秒（MCP 容器重启期间暂时中断，不影响原生 CardDAV / Mail 服务）
    - 接触面影响: Contacts / Calendar / Reminders 在容器切换重启瞬间经历 5-10 秒不可达窗口
 2. **MacServer EventKit 桥接**:
-   - Release Binary SHA256: `6b4a0b826b904c9d844c890e3f39062775b0fecec5df439eb78217395bf657b6`
-   - 架构格式: **Mach-O Universal Binary (x86_64 + arm64)**，原生支持 Intel x86_64 MacServer
+   - Release Binary SHA256: `f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074`
+   - 架构格式: **Mach-O Universal Binary (x86_64 + arm64)**，最低 macOS 14.0，严格多架构签名通过 (`codesign --verify --strict --all-architectures`)
+   - 包含嵌入式 `Info.plist`（用途说明与 Hardened Runtime 已就绪）
    - 处于活跃状态，仅绑定本地受限配置指定的 iCloud 测试列表。
 3. **反向 SSH 隧道**:
    - 通过 MacServer `launchd` 常驻守护进程 (`com.muse.macserver-tunnel`) 连接至 Seoul `127.0.0.1:18765`。
