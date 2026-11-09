@@ -248,6 +248,16 @@ deploy_candidate() {
 
   # Step 1: Pre-flight assertions & Live Container Consistency Check
   echo "[1/6] Running pre-flight checks and live consistency inspection..."
+
+  # Check MacServer configuration completeness (Requirement: NOT_CONFIGURED must block deploy before any changes)
+  local macserver_ssh_target="${MACSERVER_SSH_TARGET:-}"
+  local macserver_tunnel_ctl="${MACSERVER_TUNNEL_CTL:-/opt/muse-macserver/scripts/tunnel-ctl.sh}"
+  if [ -z "$macserver_ssh_target" ] && [ ! -x "$macserver_tunnel_ctl" ]; then
+    echo "CRITICAL ERROR: MacServer is NOT_CONFIGURED (neither MACSERVER_SSH_TARGET nor executable MACSERVER_TUNNEL_CTL is present)!" >&2
+    echo "Production candidate deployment rejected to guarantee cross-device recovery availability." >&2
+    exit 1
+  fi
+
   if ! docker image inspect "$LOCKED_CANDIDATE_IMAGE" >/dev/null 2>&1; then
     echo "CRITICAL ERROR: Candidate image $LOCKED_CANDIDATE_IMAGE not found locally! Refusing on-site build." >&2
     exit 1
@@ -332,7 +342,7 @@ deploy_candidate() {
     exit 1
   }
 
-  # Backup pre-existing SSH configurations to manifest
+  # Backup pre-existing SSH configurations to manifest (dynamic authorized_keys path from manifest)
   local ssh_dropin_path="/etc/ssh/sshd_config.d/60-macserver-gateway.conf"
   local ssh_dropin_preexisted=0
   if [ -f "$ssh_dropin_path" ]; then
@@ -340,8 +350,21 @@ deploy_candidate() {
     mkdir -p "$backup_dir/sshd_config.d"
     cp -a "$ssh_dropin_path" "$backup_dir/sshd_config.d/"
   fi
-  if [ -f "/home/mac-operator/.ssh/authorized_keys" ]; then
-    cp -a /home/mac-operator/.ssh/authorized_keys "$backup_dir/authorized_keys" 2>/dev/null || true
+
+  local ssh_auth_keys_path="${SSH_AUTHORIZED_KEYS_PATH:-}"
+  if [ -z "$ssh_auth_keys_path" ]; then
+    if [ -n "${REMOTE_USER:-}" ] && [ -d "/home/${REMOTE_USER}/.ssh" ]; then
+      ssh_auth_keys_path="/home/${REMOTE_USER}/.ssh/authorized_keys"
+    elif [ -d "/home/mac-operator/.ssh" ]; then
+      ssh_auth_keys_path="/home/mac-operator/.ssh/authorized_keys"
+    else
+      ssh_auth_keys_path="$HOME/.ssh/authorized_keys"
+    fi
+  fi
+  local ssh_auth_keys_preexisted=0
+  if [ -f "$ssh_auth_keys_path" ]; then
+    ssh_auth_keys_preexisted=1
+    cp -a "$ssh_auth_keys_path" "$backup_dir/authorized_keys" 2>/dev/null || true
   fi
 
   # Record deterministic manifest for standalone recovery
@@ -365,6 +388,8 @@ BACKUP_ALLOW_CALENDAR_READ_1="$live_calendar_read"
 BACKUP_ALLOW_CALENDAR_WRITE_1="$live_calendar_write"
 BACKUP_SSH_DROPIN_PREEXISTED="$ssh_dropin_preexisted"
 BACKUP_SSH_DROPIN_CREATED="1"
+BACKUP_SSH_AUTH_KEYS_PATH="$ssh_auth_keys_path"
+BACKUP_SSH_AUTH_KEYS_PREEXISTED="$ssh_auth_keys_preexisted"
 EOF
 
   if [ ! -s "$backup_dir/manifest.env" ]; then

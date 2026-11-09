@@ -348,25 +348,23 @@ trigger_bridge_reload() {
     local bpid
     bpid=$(cat "$BRIDGE_PID_FILE" 2>/dev/null || true)
     if [ -n "$bpid" ] && kill -0 "$bpid" 2>/dev/null; then
-      echo "       Signaling Bridge PID $bpid (SIGHUP / SIGTERM)..."
-      kill -HUP "$bpid" 2>/dev/null || kill -TERM "$bpid" 2>/dev/null || true
-      reloaded=1
+      local proc_args
+      proc_args=$(ps -p "$bpid" -o args= 2>/dev/null || echo "")
+      if echo "$proc_args" | grep -E -q "EventKitBridgeServer|fake-bridge-runner"; then
+        echo "       Signaling verified Bridge PID $bpid (SIGHUP / SIGTERM)..."
+        kill -HUP "$bpid" 2>/dev/null || kill -TERM "$bpid" 2>/dev/null || true
+        reloaded=1
+      else
+        echo "       ERROR: Bridge PID file points to unverified process PID $bpid (args: $proc_args); refusing to signal to prevent collateral damage!" >&2
+        return 1
+      fi
     fi
   fi
 
-  # 3. If process running matching EventKitBridgeServer
+  # 3. Attribution failure check: NO indiscriminate pgrep batch killing
   if [ "$reloaded" -eq 0 ]; then
-    local proc_pids
-    proc_pids=$(pgrep -f "EventKitBridgeServer" 2>/dev/null || echo "")
-    if [ -n "$proc_pids" ]; then
-      for p in $proc_pids; do
-        if kill -0 "$p" 2>/dev/null; then
-          echo "       Found EventKitBridgeServer process PID $p; signaling SIGHUP..."
-          kill -HUP "$p" 2>/dev/null || true
-          reloaded=1
-        fi
-      done
-    fi
+    echo "       ERROR: Bridge process attribution unclear (no launchd service '$BRIDGE_PLIST_LABEL' or verified PID file); refusing indiscriminate process signaling." >&2
+    return 1
   fi
 
   # Brief grace period for reload or restart to take effect

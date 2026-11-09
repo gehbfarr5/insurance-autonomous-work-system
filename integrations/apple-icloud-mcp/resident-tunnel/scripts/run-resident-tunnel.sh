@@ -117,8 +117,23 @@ fi
 if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
   if [ "$now_epoch" -ge "$DEADLINE_EPOCH" ]; then
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [DEADLINE_EXPIRED] Absolute session deadline ($DEADLINE_EPOCH) has passed ($(( now_epoch - DEADLINE_EPOCH ))s ago)! Executing local business shutdown..." >&2
+    start_err=0
     if [ -x "$TUNNEL_CTL" ]; then
-      "$TUNNEL_CTL" orchestrated-stop || true
+      set +e
+      "$TUNNEL_CTL" orchestrated-stop
+      start_err=$?
+      set -e
+    else
+      start_err=127
+    fi
+    if [ "$start_err" -ne 0 ]; then
+      cat << EOF > "$CONFIG_DIR/local_recovery_status.env"
+RECOVERY_FAILED=1
+FAILED_STEP="orchestrated-stop-startup"
+STOP_EXIT_CODE=$start_err
+TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+EOF
+      chmod 600 "$CONFIG_DIR/local_recovery_status.env" 2>/dev/null || true
     fi
     fail_preflight "Absolute session deadline ($DEADLINE_EPOCH) expired. Startup refused and local business shut down."
   fi
@@ -214,24 +229,68 @@ acquire_lock
 # -------------------------------------------------------------
 session_timeout_pid=""
 if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
-  remaining_seconds=$(( DEADLINE_EPOCH - $(date +%s) ))
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] MacServer local hard session deadline active: epoch $DEADLINE_EPOCH (${remaining_seconds}s remaining)"
-  (
-    exec </dev/null
-    sleep_rem=$(( DEADLINE_EPOCH - $(date +%s) ))
-    if [ "$sleep_rem" -gt 0 ]; then
-      sleep "$sleep_rem"
-    fi
-    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [SESSION_TIMEOUT] MacServer local hard deadline ($DEADLINE_EPOCH) reached! Initiating autonomous business shutdown & permission lock..."
-    if [ -x "$TUNNEL_CTL" ]; then
-      "$TUNNEL_CTL" orchestrated-stop || true
-    fi
-    # Backstop kill to guarantee supervisor terminates even if stop had errors
-    kill -TERM "$$" 2>/dev/null || true
-  ) >> "$LOG_FILE" 2>&1 &
-  session_timeout_pid=$!
-  disown "$session_timeout_pid" 2>/dev/null || true
-  echo "$session_timeout_pid" > "$CONFIG_DIR/watchdog.pid"
+  # Check if an existing watchdog survived supervisor crash
+  existing_watchdog_pid=""
+  if [ -f "$CONFIG_DIR/watchdog.pid" ]; then
+    existing_watchdog_pid=$(cat "$CONFIG_DIR/watchdog.pid" 2>/dev/null || true)
+  fi
+
+  if [ -n "$existing_watchdog_pid" ] && kill -0 "$existing_watchdog_pid" 2>/dev/null; then
+    session_timeout_pid="$existing_watchdog_pid"
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Found surviving watchdog PID $session_timeout_pid active across supervisor restart."
+  else
+    remaining_seconds=$(( DEADLINE_EPOCH - $(date +%s) ))
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] MacServer local hard session deadline active: epoch $DEADLINE_EPOCH (${remaining_seconds}s remaining)"
+    (
+      exec </dev/null
+      sleep_rem=$(( DEADLINE_EPOCH - $(date +%s) ))
+      if [ "$sleep_rem" -gt 0 ]; then
+        sleep "$sleep_rem"
+      fi
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [SESSION_TIMEOUT] MacServer local hard deadline ($DEADLINE_EPOCH) reached! Initiating autonomous business shutdown & permission lock..."
+      local_stop_err=0
+      if [ -x "$TUNNEL_CTL" ]; then
+        set +e
+        "$TUNNEL_CTL" orchestrated-stop
+        local_stop_err=$?
+        set -e
+      else
+        local_stop_err=127
+      fi
+
+      if [ "$local_stop_err" -ne 0 ]; then
+        echo "CRITICAL ERROR: Autonomous orchestrated-stop failed (exit code $local_stop_err) on deadline expiry!" >&2
+        cat << EOF > "$CONFIG_DIR/local_recovery_status.env"
+RECOVERY_FAILED=1
+FAILED_STEP="orchestrated-stop"
+STOP_EXIT_CODE=$local_stop_err
+TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+EOF
+        chmod 600 "$CONFIG_DIR/local_recovery_status.env" 2>/dev/null || true
+        cat << EOF > "$STATUS_FILE"
+{
+  "status": "failed_stop_error",
+  "supervisor_pid": $$,
+  "layers": {
+    "layer1_local_bridge": "locked_safe_mode",
+    "layer2_ssh_process": "disconnected",
+    "layer3_forward_listen": "failed",
+    "layer4_end_to_end_link": "failed"
+  },
+  "last_error": "DEADLINE_STOP_FAILED: orchestrated-stop exited with code $local_stop_err",
+  "last_updated": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+        chmod 600 "$STATUS_FILE" 2>/dev/null || true
+      fi
+
+      # Backstop kill to guarantee supervisor terminates even if stop had errors
+      kill -TERM "$$" 2>/dev/null || true
+    ) >> "$LOG_FILE" 2>&1 &
+    session_timeout_pid=$!
+    disown "$session_timeout_pid" 2>/dev/null || true
+    echo "$session_timeout_pid" > "$CONFIG_DIR/watchdog.pid"
+  fi
 fi
 
 # -------------------------------------------------------------
@@ -389,7 +448,14 @@ cleanup_and_exit() {
   fi
 
   l2_ssh="disconnected"
-  update_status "stopped" "Terminated on $sig"
+  if [ -f "$CONFIG_DIR/local_recovery_status.env" ] && grep -q "RECOVERY_FAILED=1" "$CONFIG_DIR/local_recovery_status.env"; then
+    local failed_step failed_ec
+    failed_step=$(grep '^FAILED_STEP=' "$CONFIG_DIR/local_recovery_status.env" | cut -d'=' -f2- | tr -d '"' || echo "unknown")
+    failed_ec=$(grep '^STOP_EXIT_CODE=' "$CONFIG_DIR/local_recovery_status.env" | cut -d'=' -f2- || echo "1")
+    update_status "failed_stop_error" "Autonomous stop failed at step $failed_step (code $failed_ec)"
+  else
+    update_status "stopped" "Terminated on $sig"
+  fi
 
   if [ "$has_held_lock" -eq 1 ]; then
     rm -rf "$LOCK_DIR"

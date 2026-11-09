@@ -7,15 +7,18 @@ set -euo pipefail
 #
 # Execution Sequence:
 # 1. Close/verify MacServer business switch -> Assert 403 Safe Mode blocking.
-#    (If remote is unreachable, mark as UNKNOWN / PENDING_VERIFICATION;
-#     do NOT claim closed, rely on MacServer local hard watchdog, proceed with Seoul steps)
-# 2. Terminate verified task processes (NO indiscriminate fuser -k or port killing;
-#    strictly terminate verified task PIDs; zero collateral damage to unrelated processes).
+#    (If remote is unreachable, mark as UNKNOWN_PENDING_VERIFICATION;
+#     if NOT_CONFIGURED, mark as NOT_CONFIGURED and fail;
+#     rely on MacServer local hard watchdog for local business shutdown)
+# 2. Terminate verified task processes (Strict task attribution;
+#    zero collateral damage to unrelated processes).
 # 3. Restore Seoul MCP container, Compose, and config to baseline image sha256:f3e697fe...
+#    (Safety Barrier: If container stop fails, SKIP rsync and docker-compose up).
 # 4. Restore SSH configuration strictly based on backup manifest/list
-#    (never unconditionally delete pre-existing files; restore pre-existing files; reload sshd).
+#    (Dynamic authorized_keys path; cleanly delete if not pre-existed;
+#     restore if pre-existed; reload sshd).
 # 5. End-to-end baseline verification & failure aggregation:
-#    (If any step failed or remote status is UNKNOWN/PENDING_VERIFICATION,
+#    (Persist recovery_result.json; if any step failed or remote status != CLOSED_VERIFIED_403,
 #     output [RECOVERY_FAILED] and exit non-zero).
 # ==============================================================================
 
@@ -52,8 +55,10 @@ fi
 # shellcheck source=/dev/null
 source "$BACKUP_DIR/manifest.env"
 
-# Concurrency protection & idempotent execution
 ROLLBACK_LOCK="${BACKUP_DIR}/.rollback.lock"
+RESULT_FILE="${BACKUP_DIR}/recovery_result.json"
+
+# Concurrency protection & idempotent execution
 if ! mkdir "$ROLLBACK_LOCK" 2>/dev/null; then
   echo "[ROLLBACK_LOCK] Active rollback already in progress for $BACKUP_DIR. Waiting for concurrent completion..."
   wait_count=0
@@ -66,7 +71,27 @@ if ! mkdir "$ROLLBACK_LOCK" 2>/dev/null; then
     echo "[RECOVERY_FAILED] Rollback failed (lock acquisition timeout)." >&2
     exit 1
   fi
-  echo "[ROLLBACK_IDEMPOTENT] Prior rollback completed. Verifying baseline state..."
+
+  echo "[ROLLBACK_WAIT] Prior rollback completed. Inspecting recovery results ($RESULT_FILE)..."
+  if [ ! -f "$RESULT_FILE" ]; then
+    echo "CRITICAL ERROR: Result file $RESULT_FILE missing after concurrent rollback!" >&2
+    echo "[RECOVERY_FAILED] Incomplete concurrent recovery." >&2
+    exit 1
+  fi
+
+  rec_status=$(grep '"recovery_status"' "$RESULT_FILE" 2>/dev/null | head -n1 | cut -d'"' -f4 || echo "UNKNOWN")
+  remote_mac_status=$(grep '"mac_switch_status"' "$RESULT_FILE" 2>/dev/null | head -n1 | cut -d'"' -f4 || echo "UNKNOWN")
+
+  if [ "$rec_status" != "SUCCESS" ] || [ "$remote_mac_status" != "CLOSED_VERIFIED_403" ]; then
+    echo "CRITICAL ERROR: Concurrent recovery run reported failure (recovery_status: '$rec_status', MacServer status: '$remote_mac_status')!" >&2
+    echo "[RECOVERY_FAILED] Concurrent recovery did not achieve complete success." >&2
+    exit 1
+  fi
+
+  # Verify actual baseline state independently (never infer success without checking actual resources!)
+  echo "[ROLLBACK_IDEMPOTENT] Verifying actual baseline state..."
+
+  # 1. Container health probe
   check_health_url="${BACKUP_PROD_HEALTH_URL:-$SEOUL_HEALTH_URL}"
   check_ok=0
   for i in 1 2 3 4 5; do
@@ -76,17 +101,97 @@ if ! mkdir "$ROLLBACK_LOCK" 2>/dev/null; then
     fi
     sleep 0.5
   done
-  if [ "$check_ok" -eq 1 ]; then
-    echo "[ROLLBACK_IDEMPOTENT] Baseline healthy and verified. Rollback succeeded idempotently."
-    exit 0
-  else
-    echo "CRITICAL ERROR: Baseline not healthy after concurrent rollback!" >&2
-    echo "[RECOVERY_FAILED] Idempotent verification failed." >&2
+  if [ "$check_ok" -ne 1 ]; then
+    echo "CRITICAL ERROR: Health probe failed at $check_health_url after concurrent rollback!" >&2
+    echo "[RECOVERY_FAILED] Idempotent health check failed." >&2
     exit 1
   fi
+
+  # 2. Container image check
+  target_container="${BACKUP_PROD_CONTAINER:-insurance-carddav-mcp-carddav-1}"
+  target_baseline_image="${BACKUP_ACTUAL_IMAGE_ID:-$LOCKED_BASELINE_IMAGE}"
+  if command -v docker >/dev/null 2>&1; then
+    cur_img=$(docker inspect "$target_container" --format '{{.Image}}' 2>/dev/null || echo "")
+    if [ "$cur_img" != "$target_baseline_image" ]; then
+      echo "CRITICAL ERROR: Container active image ($cur_img) != baseline ($target_baseline_image)!" >&2
+      echo "[RECOVERY_FAILED] Idempotent image check failed." >&2
+      exit 1
+    fi
+  fi
+
+  # 3. Port listener check
+  if command -v lsof >/dev/null 2>&1; then
+    if lsof -i ":${SEATING_PORT}" >/dev/null 2>&1; then
+      echo "CRITICAL ERROR: Port $SEATING_PORT still has active listener!" >&2
+      echo "[RECOVERY_FAILED] Idempotent port check failed." >&2
+      exit 1
+    fi
+  elif command -v ss >/dev/null 2>&1; then
+    if ss -tulpn | grep -q ":${SEATING_PORT} "; then
+      echo "CRITICAL ERROR: Port $SEATING_PORT still has active listener!" >&2
+      echo "[RECOVERY_FAILED] Idempotent port check failed." >&2
+      exit 1
+    fi
+  fi
+
+  echo "[ROLLBACK_IDEMPOTENT] All required baseline states verified. Rollback succeeded idempotently."
+  exit 0
 fi
 
+declare -a recovery_errors=()
+mac_switch_status="UNKNOWN"
+
+step1_macserver="PENDING"
+step2_process_cleanup="PENDING"
+step3_container_restore="PENDING"
+step4_ssh_restore="PENDING"
+step5_verification="PENDING"
+
+write_recovery_result() {
+  local final_status="$1"
+  local tmp_res="${RESULT_FILE}.tmp.$$"
+  local errors_json="[]"
+  if [ ${#recovery_errors[@]} -gt 0 ]; then
+    if command -v jq >/dev/null 2>&1; then
+      errors_json=$(printf '%s\n' "${recovery_errors[@]}" | jq -R . | jq -s . 2>/dev/null || echo "[]")
+    else
+      local joined=""
+      for e in "${recovery_errors[@]}"; do
+        clean_e=$(echo "$e" | tr '"' "'")
+        if [ -z "$joined" ]; then
+          joined="\"$clean_e\""
+        else
+          joined="$joined, \"$clean_e\""
+        fi
+      done
+      errors_json="[$joined]"
+    fi
+  fi
+
+  cat << EOF > "$tmp_res"
+{
+  "recovery_status": "$final_status",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "backup_dir": "$BACKUP_DIR",
+  "mac_switch_status": "$mac_switch_status",
+  "step_results": {
+    "step1_macserver": "$step1_macserver",
+    "step2_process_cleanup": "$step2_process_cleanup",
+    "step3_container_restore": "$step3_container_restore",
+    "step4_ssh_restore": "$step4_ssh_restore",
+    "step5_verification": "$step5_verification"
+  },
+  "errors": $errors_json
+}
+EOF
+  chmod 600 "$tmp_res" 2>/dev/null || true
+  mv -f "$tmp_res" "$RESULT_FILE"
+}
+
 cleanup_lock() {
+  if [ ! -f "$RESULT_FILE" ]; then
+    write_recovery_result "FAILED"
+  fi
   rm -rf "$ROLLBACK_LOCK" 2>/dev/null || true
 }
 trap cleanup_lock EXIT INT TERM
@@ -101,21 +206,20 @@ if [ -f "$BACKUP_DIR/watchdog.pid" ]; then
   rm -f "$BACKUP_DIR/watchdog.pid"
 fi
 
-declare -a recovery_errors=()
-
 # ------------------------------------------------------------------------------
 # Step 1: MacServer Business Close & Tunnel Stop
 # ------------------------------------------------------------------------------
 echo "[1/5] Step 1: Requesting MacServer business close and tunnel stop..."
-mac_switch_status="UNKNOWN"
 
 if [ -n "$MACSERVER_SSH_TARGET" ]; then
   echo "       Attempting remote execution via SSH ($MACSERVER_SSH_TARGET)..."
   if ssh -o ConnectTimeout=4 -o BatchMode=yes "$MACSERVER_SSH_TARGET" "$MACSERVER_TUNNEL_CTL orchestrated-stop" 2>/dev/null; then
     mac_switch_status="CLOSED_VERIFIED_403"
+    step1_macserver="SUCCESS"
     echo "       [OK] MacServer business permissions closed (403 verified) and tunnel stopped via SSH."
   else
     mac_switch_status="UNKNOWN_PENDING_VERIFICATION"
+    step1_macserver="UNKNOWN_PENDING_VERIFICATION"
     echo "       WARNING: Remote MacServer unreachable or connection timed out over SSH." >&2
     echo "       [FAILSAFE] Relying on MacServer local autonomous hard watchdog for local business shutdown." >&2
     recovery_errors+=("Remote MacServer unreachable over SSH ($MACSERVER_SSH_TARGET); remote business shutdown unverified (status: UNKNOWN_PENDING_VERIFICATION)")
@@ -124,15 +228,19 @@ elif [ -x "$MACSERVER_TUNNEL_CTL" ]; then
   echo "       Executing local MacServer tunnel-ctl orchestrated-stop..."
   if "$MACSERVER_TUNNEL_CTL" orchestrated-stop; then
     mac_switch_status="CLOSED_VERIFIED_403"
+    step1_macserver="SUCCESS"
     echo "       [OK] Local MacServer business permissions closed (403 verified) and tunnel stopped."
   else
     mac_switch_status="FAILED"
+    step1_macserver="FAILED"
     echo "       ERROR: Local MacServer tunnel-ctl orchestrated-stop failed!" >&2
     recovery_errors+=("Local MacServer tunnel-ctl orchestrated-stop failed")
   fi
 else
   echo "       No MacServer SSH target or local control script configured. Marking status as NOT_CONFIGURED."
   mac_switch_status="NOT_CONFIGURED"
+  step1_macserver="NOT_CONFIGURED"
+  recovery_errors+=("MacServer is NOT_CONFIGURED; cannot verify remote business shutdown")
 fi
 
 # ------------------------------------------------------------------------------
@@ -141,7 +249,12 @@ fi
 # ------------------------------------------------------------------------------
 echo "[2/5] Step 2: Terminating verified task processes on host (zero collateral damage)..."
 
-# Helper: safely terminate verified process
+# Pre-flight check: inspection tools
+if ! command -v lsof >/dev/null 2>&1 && ! command -v ss >/dev/null 2>&1; then
+  echo "       CRITICAL ERROR: Neither lsof nor ss is available to inspect port listeners!" >&2
+  recovery_errors+=("Missing listener inspection tools (neither lsof nor ss available)")
+fi
+
 terminate_verified_pid() {
   local target_pid="$1"
   local pattern="$2"
@@ -171,15 +284,21 @@ if [ -f "$BACKUP_DIR/task_tunnel.pid" ]; then
   terminate_verified_pid "$t_pid" "run-resident-tunnel|ssh"
 fi
 
-# 2. Check listeners on seating port 18765 and only kill if verified SSH reverse tunnel
+# 2. Check listeners on seating port 18765
+# Attribution rule: Only terminate if process PID is verified to belong to task (e.g. recorded task_tunnel.pid).
+# If an unrelated process is listening on SEATING_PORT, DO NOT KILL IT (Zero collateral damage policy)!
 if command -v lsof >/dev/null 2>&1; then
   port_pids=$(lsof -ti ":${SEATING_PORT}" 2>/dev/null || echo "")
   for p in $port_pids; do
-    terminate_verified_pid "$p" "sshd.*mac-operator|ssh.*18765"
+    if [ -f "$BACKUP_DIR/task_tunnel.pid" ] && [ "$p" = "$(cat "$BACKUP_DIR/task_tunnel.pid" 2>/dev/null || echo "")" ]; then
+      terminate_verified_pid "$p" "run-resident-tunnel|ssh"
+    else
+      echo "       WARNING: Process PID $p is listening on port $SEATING_PORT but does NOT match task attribution. Refusing indiscriminate kill to prevent collateral damage!" >&2
+    fi
   done
 fi
 
-# Verify port 18765 status
+# Re-verify port 18765 status
 port_listener_present=0
 if command -v lsof >/dev/null 2>&1; then
   if lsof -i ":${SEATING_PORT}" >/dev/null 2>&1; then
@@ -194,12 +313,15 @@ fi
 if [ "$port_listener_present" -ne 0 ]; then
   echo "       ERROR: Port $SEATING_PORT still has an active listener!" >&2
   recovery_errors+=("Port $SEATING_PORT still has active listener after task termination")
+  step2_process_cleanup="FAILED"
 else
   echo "       [OK] Port $SEATING_PORT confirmed free (zero residual listeners)."
+  step2_process_cleanup="SUCCESS"
 fi
 
 # ------------------------------------------------------------------------------
 # Step 3: Restore Seoul MCP Container, Compose, and Configuration
+# (Safety Boundary: If container stop fails, SKIP rsync and docker compose up)
 # ------------------------------------------------------------------------------
 echo "[3/5] Step 3: Restoring Seoul MCP container and baseline configuration..."
 
@@ -221,43 +343,52 @@ elif docker stop "$target_container" >/dev/null 2>&1; then
   stop_ok=1
 fi
 
-# Verify container is actually stopped
+container_stopped=1
 if docker inspect "$target_container" >/dev/null 2>&1; then
   c_status=$(docker inspect "$target_container" --format '{{.State.Status}}' 2>/dev/null || echo "unknown")
   if [ "$c_status" = "running" ] || [ "$c_status" = "restarting" ]; then
     echo "       CRITICAL ERROR: Container $target_container is still running (status: $c_status)!" >&2
-    recovery_errors+=("Failed to stop candidate container $target_container (still $c_status)")
+    recovery_errors+=("Candidate container refused to stop (still $c_status)")
+    container_stopped=0
   fi
 elif [ "$stop_ok" -eq 0 ]; then
-  echo "       WARNING: Container stop command failed and inspect was unavailable." >&2
-  recovery_errors+=("Container stop command failed for $target_container")
+  echo "       CRITICAL ERROR: Container stop command failed and inspect was unavailable." >&2
+  recovery_errors+=("Candidate container stop command failed")
+  container_stopped=0
 fi
 
-# Restore files from backup
-echo "       Restoring configuration files from $BACKUP_DIR..."
-if ! rsync -a --exclude 'data/tokens.json.enc*' "$BACKUP_DIR/" "$target_dir/"; then
-  echo "       CRITICAL ERROR: rsync restore from $BACKUP_DIR to $target_dir failed!" >&2
-  recovery_errors+=("rsync configuration restore failed")
-fi
+if [ "$container_stopped" -ne 1 ]; then
+  echo "       [SAFETY_BARRIER] Candidate container not confirmed stopped. FORBIDDEN to overwrite configs (rsync) or restart baseline (docker compose up) to protect runtime state!" >&2
+  step3_container_restore="FAILED_STOP_REFUSED"
+else
+  # Restore files from backup
+  echo "       Restoring configuration files from $BACKUP_DIR..."
+  if ! rsync -a --exclude 'data/tokens.json.enc*' "$BACKUP_DIR/" "$target_dir/"; then
+    echo "       CRITICAL ERROR: rsync restore from $BACKUP_DIR to $target_dir failed!" >&2
+    recovery_errors+=("rsync configuration restore failed")
+  fi
 
-# Clean up deployed compose.yaml if original was different to prevent masking
-if [ "$orig_basename" != "compose.yaml" ] && [ -f "$target_dir/compose.yaml" ]; then
-  echo "       Removing deployed compose.yaml to unmask $orig_basename..."
-  rm -f "$target_dir/compose.yaml" || true
-fi
+  # Clean up deployed compose.yaml if original was different to prevent masking
+  if [ "$orig_basename" != "compose.yaml" ] && [ -f "$target_dir/compose.yaml" ]; then
+    echo "       Removing deployed compose.yaml to unmask $orig_basename..."
+    rm -f "$target_dir/compose.yaml" || true
+  fi
 
-# Retag baseline image
-echo "       Retagging baseline image ($target_baseline_image)..."
-if ! docker tag "$target_baseline_image" "${target_project}-carddav:latest" 2>/dev/null; then
-  echo "       CRITICAL ERROR: Failed to tag baseline image $target_baseline_image!" >&2
-  recovery_errors+=("docker tag baseline image failed")
-fi
+  # Retag baseline image
+  echo "       Retagging baseline image ($target_baseline_image)..."
+  if ! docker tag "$target_baseline_image" "${target_project}-carddav:latest" 2>/dev/null; then
+    echo "       CRITICAL ERROR: Failed to tag baseline image $target_baseline_image!" >&2
+    recovery_errors+=("docker tag baseline image failed")
+  fi
 
-# Restart baseline container
-echo "       Starting baseline container via Compose ($orig_basename)..."
-if ! (cd "$target_dir" && CARDDAV_IMAGE="$target_baseline_image" BIND_PORT="127.0.0.1:${target_port}" docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav >/dev/null 2>&1); then
-  echo "       CRITICAL ERROR: Docker compose up failed for baseline container!" >&2
-  recovery_errors+=("docker compose up failed for baseline container")
+  # Restart baseline container
+  echo "       Starting baseline container via Compose ($orig_basename)..."
+  if ! (cd "$target_dir" && CARDDAV_IMAGE="$target_baseline_image" BIND_PORT="127.0.0.1:${target_port}" docker compose -p "$target_project" -f "$target_compose_file" up -d --no-build carddav >/dev/null 2>&1); then
+    echo "       CRITICAL ERROR: Docker compose up failed for baseline container!" >&2
+    recovery_errors+=("docker compose up failed for baseline container")
+  fi
+
+  step3_container_restore="SUCCESS"
 fi
 
 # ------------------------------------------------------------------------------
@@ -265,6 +396,7 @@ fi
 # ------------------------------------------------------------------------------
 echo "[4/5] Step 4: Restoring SSH configurations strictly based on manifest..."
 
+ssh_step_ok=1
 ssh_dropin_path="/etc/ssh/sshd_config.d/60-macserver-gateway.conf"
 ssh_preexisted="${BACKUP_SSH_DROPIN_PREEXISTED:-0}"
 ssh_created="${BACKUP_SSH_DROPIN_CREATED:-0}"
@@ -280,14 +412,33 @@ elif [ "$ssh_preexisted" = "1" ]; then
     mkdir -p "/etc/ssh/sshd_config.d"
     cp -f "$BACKUP_DIR/sshd_config.d/60-macserver-gateway.conf" "$ssh_dropin_path"
     chmod 644 "$ssh_dropin_path"
+  else
+    echo "       CRITICAL ERROR: Pre-existing drop-in backup missing in $BACKUP_DIR!" >&2
+    recovery_errors+=("Pre-existing drop-in backup missing in $BACKUP_DIR")
+    ssh_step_ok=0
   fi
 fi
 
-# Restore authorized_keys if backed up
-if [ -f "$BACKUP_DIR/authorized_keys" ] && [ -d "/home/mac-operator/.ssh" ]; then
-  echo "       Restoring /home/mac-operator/.ssh/authorized_keys from backup..."
-  cp -f "$BACKUP_DIR/authorized_keys" /home/mac-operator/.ssh/authorized_keys
-  chmod 600 /home/mac-operator/.ssh/authorized_keys
+# Authorized keys restoration (dynamic path from manifest; accurate 3-state handling)
+ssh_auth_keys_path="${BACKUP_SSH_AUTH_KEYS_PATH:-/home/mac-operator/.ssh/authorized_keys}"
+ssh_auth_keys_preexisted="${BACKUP_SSH_AUTH_KEYS_PREEXISTED:-0}"
+
+if [ "$ssh_auth_keys_preexisted" = "0" ]; then
+  if [ -f "$ssh_auth_keys_path" ]; then
+    echo "       Removing newly created authorized_keys file $ssh_auth_keys_path (preexisted=0)..."
+    rm -f "$ssh_auth_keys_path" || true
+  fi
+elif [ "$ssh_auth_keys_preexisted" = "1" ]; then
+  if [ -f "$BACKUP_DIR/authorized_keys" ]; then
+    echo "       Restoring pre-existing authorized_keys from backup to $ssh_auth_keys_path..."
+    mkdir -p "$(dirname "$ssh_auth_keys_path")"
+    cp -f "$BACKUP_DIR/authorized_keys" "$ssh_auth_keys_path"
+    chmod 600 "$ssh_auth_keys_path"
+  else
+    echo "       CRITICAL ERROR: Pre-existing authorized_keys backup missing in $BACKUP_DIR!" >&2
+    recovery_errors+=("Missing backup authorized_keys file to restore $ssh_auth_keys_path")
+    ssh_step_ok=0
+  fi
 fi
 
 # Reload SSH service
@@ -299,6 +450,7 @@ if [ -n "${SSH_RELOAD_CMD:-}" ]; then
   else
     echo "       WARNING: SSH_RELOAD_CMD failed!" >&2
     recovery_errors+=("SSH_RELOAD_CMD failed")
+    ssh_step_ok=0
   fi
 elif command -v systemctl >/dev/null 2>&1; then
   if systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null; then
@@ -307,6 +459,7 @@ elif command -v systemctl >/dev/null 2>&1; then
   else
     echo "       WARNING: systemctl reload sshd failed!" >&2
     recovery_errors+=("systemctl reload sshd failed")
+    ssh_step_ok=0
   fi
 elif command -v service >/dev/null 2>&1; then
   if service ssh reload 2>/dev/null; then
@@ -315,10 +468,18 @@ elif command -v service >/dev/null 2>&1; then
   else
     echo "       WARNING: service ssh reload failed!" >&2
     recovery_errors+=("service ssh reload failed")
+    ssh_step_ok=0
   fi
 else
   echo "       WARNING: Neither systemctl nor service found to reload sshd." >&2
   recovery_errors+=("No service management tool found to reload sshd")
+  ssh_step_ok=0
+fi
+
+if [ "$ssh_step_ok" -eq 1 ]; then
+  step4_ssh_restore="SUCCESS"
+else
+  step4_ssh_restore="FAILED"
 fi
 
 # ------------------------------------------------------------------------------
@@ -345,6 +506,7 @@ if [ "$health_ok" -ne 1 ]; then
 fi
 
 # Running image check
+cur_active_image=""
 if command -v docker >/dev/null 2>&1; then
   cur_active_image=$(docker inspect "$target_container" --format '{{.Image}}' 2>/dev/null || echo "")
   if [ -z "$cur_active_image" ]; then
@@ -383,11 +545,18 @@ if command -v docker >/dev/null 2>&1; then
   fi
 fi
 
+if [ "$health_ok" -eq 1 ] && [ "$cur_active_image" = "$target_baseline_image" ]; then
+  step5_verification="SUCCESS"
+else
+  step5_verification="FAILED"
+fi
+
 # ------------------------------------------------------------------------------
-# Final Status Evaluation
+# Final Status Evaluation & Persistence
 # ------------------------------------------------------------------------------
 echo "========================================================================"
-if [ ${#recovery_errors[@]} -gt 0 ] || [ "$mac_switch_status" = "UNKNOWN_PENDING_VERIFICATION" ] || [ "$mac_switch_status" = "FAILED" ]; then
+if [ ${#recovery_errors[@]} -gt 0 ] || [ "$mac_switch_status" != "CLOSED_VERIFIED_403" ]; then
+  write_recovery_result "FAILED"
   echo " [RECOVERY_FAILED] Recovery completed with failures or incomplete remote status:" >&2
   echo "   MacServer Remote Status: $mac_switch_status" >&2
   echo "   Recorded Errors (${#recovery_errors[@]}):" >&2
@@ -397,6 +566,7 @@ if [ ${#recovery_errors[@]} -gt 0 ] || [ "$mac_switch_status" = "UNKNOWN_PENDING
   echo "========================================================================" >&2
   exit 1
 else
+  write_recovery_result "SUCCESS"
   echo " [RECOVERY-SUCCESS] Unified cross-device recovery completed successfully."
   echo "   MacServer Remote Status: $mac_switch_status"
   echo "   Seoul Container:         Restored to baseline ($target_baseline_image)"

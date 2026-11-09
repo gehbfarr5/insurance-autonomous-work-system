@@ -194,6 +194,13 @@ exit 0
 MOCKSYS
 chmod +x "$MOCK_BIN/systemctl"
 
+cat << 'MOCKCTL' > "$MOCK_BIN/tunnel-ctl.sh"
+#!/usr/bin/env bash
+exit 0
+MOCKCTL
+chmod +x "$MOCK_BIN/tunnel-ctl.sh"
+export MACSERVER_TUNNEL_CTL="$MOCK_BIN/tunnel-ctl.sh"
+
 export PATH="$MOCK_BIN:$PATH"
 export TEST_DOCKER_STATE_DIR="$STATE_DIR"
 

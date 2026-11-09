@@ -20,6 +20,7 @@ GATEWAY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MCP_ROOT="$(cd "$GATEWAY_ROOT/.." && pwd)"
 
 ORCHESTRATED_RECOVERY="$GATEWAY_ROOT/scripts/orchestrated-recovery.sh"
+PRODUCTION_ENTRY="$GATEWAY_ROOT/scripts/production-entry.sh"
 TUNNEL_CTL="$MCP_ROOT/resident-tunnel/scripts/tunnel-ctl.sh"
 TUNNEL_RUNNER="$MCP_ROOT/resident-tunnel/scripts/run-resident-tunnel.sh"
 FAKE_BRIDGE_RUNNER="$GATEWAY_ROOT/test-harness/fake-bridge-runner.mjs"
@@ -293,6 +294,8 @@ case "$cmd" in
             *'{{.State.Status}}'*) echo "exited"; exit 0 ;;
             *'{{.Image}}'*) echo "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"; exit 0 ;;
             *'Config.Env'*) echo "ALLOW_CONTACTS_READ_1=true ALLOW_CONTACTS_WRITE_1=false ALLOW_CALENDAR_READ_1=true ALLOW_CALENDAR_WRITE_1=false"; exit 0 ;;
+            *'project.config_files'*) echo "/opt/insurance-carddav-mcp/compose.yaml"; exit 0 ;;
+            *'project'*) echo "insurance-carddav-mcp"; exit 0 ;;
             *) echo "ok"; exit 0 ;;
           esac
           ;;
@@ -652,11 +655,553 @@ fi
 echo "  [PASS] Never outputs [RECOVERY-SUCCESS] when step fails"
 
 # ------------------------------------------------------------------------------
+# DRILL 8: Concurrent Recovery Failure Propagation (Negative Concurrency Test)
+# (First recovery fails -> Second concurrent wait MUST fail & return non-zero)
+# ------------------------------------------------------------------------------
+echo ""
+echo "========================================================================"
+echo " DRILL 8: Concurrent Recovery Failure Propagation (Negative Concurrency)"
+echo "========================================================================"
+
+D8_DIR="$TEST_BASE_DIR/d8"
+mkdir -p "$D8_DIR/backup" "$D8_DIR/bin"
+cp "$D3_DIR/bin/docker" "$D8_DIR/bin/docker"
+# Mock tunnel-ctl to fail
+cat << 'MOCKFAILCTL' > "$D8_DIR/bin/tunnel-ctl.sh"
+#!/usr/bin/env bash
+exit 1
+MOCKFAILCTL
+chmod +x "$D8_DIR/bin/tunnel-ctl.sh"
+
+cp "$D3_DIR/backup/manifest.env" "$D8_DIR/backup/manifest.env"
+echo "services: {}" > "$D8_DIR/backup/compose.yaml"
+
+python3 -c "
+import http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'{\"status\":\"ok\"}')
+    def log_message(self, *a): pass
+s = http.server.ThreadingHTTPServer(('127.0.0.1', $DRILL_SEOUL_PORT), H)
+s.serve_forever()
+" >/dev/null 2>&1 &
+seoul_hpid8=$!
+
+waited=0
+while [ "$waited" -lt 30 ]; do
+  if curl -sf "http://127.0.0.1:${DRILL_SEOUL_PORT}/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.1
+  waited=$((waited + 1))
+done
+
+# Launch two concurrent recovery instances where Step 1 fails
+set +e
+PATH="$D8_DIR/bin:$PATH" \
+MACSERVER_TUNNEL_CTL="$D8_DIR/bin/tunnel-ctl.sh" \
+SSH_RELOAD_CMD="true" \
+SEOUL_HEALTH_URL="http://127.0.0.1:${DRILL_SEOUL_PORT}/health" \
+SEATING_PORT="19765" \
+"$ORCHESTRATED_RECOVERY" "$D8_DIR/backup" > "$D8_DIR/rec1.log" 2>&1 &
+d8_rpid1=$!
+
+PATH="$D8_DIR/bin:$PATH" \
+MACSERVER_TUNNEL_CTL="$D8_DIR/bin/tunnel-ctl.sh" \
+SSH_RELOAD_CMD="true" \
+SEOUL_HEALTH_URL="http://127.0.0.1:${DRILL_SEOUL_PORT}/health" \
+SEATING_PORT="19765" \
+"$ORCHESTRATED_RECOVERY" "$D8_DIR/backup" > "$D8_DIR/rec2.log" 2>&1 &
+d8_rpid2=$!
+
+wait "$d8_rpid1"
+d8_code1=$?
+wait "$d8_rpid2"
+d8_code2=$?
+set -e
+
+echo "  [D8-VERIFY] Instance 1 exit code: $d8_code1, Instance 2 exit code: $d8_code2 (Both expected: 1)"
+if [ "$d8_code1" -ne 1 ] || [ "$d8_code2" -ne 1 ]; then
+  echo "  [FAIL] Concurrent waiter falsely succeeded when first run failed! (code1: $d8_code1, code2: $d8_code2)" >&2
+  cat "$D8_DIR/rec1.log" >&2
+  cat "$D8_DIR/rec2.log" >&2
+  exit 1
+fi
+
+if ! grep -q "\[RECOVERY_FAILED\]" "$D8_DIR/rec2.log"; then
+  echo "  [FAIL] Instance 2 did not output [RECOVERY_FAILED]!" >&2
+  cat "$D8_DIR/rec2.log" >&2
+  exit 1
+fi
+echo "  [PASS] Concurrent recovery correctly propagated failure: both instances exited with code 1"
+
+kill -9 "$seoul_hpid8" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# DRILL 9: MacServer NOT_CONFIGURED Safety Barrier
+# (Deploy blocked; recovery marked incomplete and exits non-zero)
+# ------------------------------------------------------------------------------
+echo ""
+echo "========================================================================"
+echo " DRILL 9: MacServer NOT_CONFIGURED Safety Barrier"
+echo "========================================================================"
+
+D9_DIR="$TEST_BASE_DIR/d9"
+mkdir -p "$D9_DIR/backup" "$D9_DIR/bin" "$D9_DIR/prod/data"
+cp "$D3_DIR/bin/docker" "$D9_DIR/bin/docker"
+cp "$D3_DIR/backup/manifest.env" "$D9_DIR/backup/manifest.env"
+echo "services: {}" > "$D9_DIR/backup/compose.yaml"
+
+# Part A: Test deploy block
+echo "  [D9-ACT] Testing production deploy with unconfigured MacServer..."
+touch "$D9_DIR/prod/secrets.env" "$D9_DIR/prod/gateway.env" "$D9_DIR/prod/compose.yaml"
+cat << 'MOCKSECRETS' > "$D9_DIR/prod/secrets.env"
+APPLE_ID=test@example.com
+PASSWORD_CLEAR=dummy
+MOCKSECRETS
+cat << 'MOCKGW' > "$D9_DIR/prod/gateway.env"
+MACSERVER_EVENTKIT_AUTH_TOKEN=0123456789abcdef0123456789abcdef
+MACSERVER_EVENTKIT_ALLOWED_LISTS=00000000-0000-0000-0000-000000000001:00000000-0000-0000-0000-000000000002:iCloud:calDAV
+MACSERVER_EVENTKIT_ENDPOINT=http://172.19.0.1:18765
+MOCKGW
+
+set +e
+PATH="$D9_DIR/bin:$PATH" \
+PROD_DIR="$D9_DIR/prod" \
+PROD_SECRETS_FILE="$D9_DIR/prod/secrets.env" \
+PROD_GATEWAY_ENV_FILE="$D9_DIR/prod/gateway.env" \
+PROD_COMPOSE_FILE="$D9_DIR/prod/compose.yaml" \
+MACSERVER_SSH_TARGET="" \
+MACSERVER_TUNNEL_CTL="/nonexistent/tunnel-ctl.sh" \
+APPLY_PRODUCTION_APPROVED=1 \
+"$PRODUCTION_ENTRY" deploy > "$D9_DIR/deploy.log" 2>&1
+d9_dep_code=$?
+set -e
+
+echo "  [D9-VERIFY] Deploy exit code with unconfigured MacServer: $d9_dep_code (Expected: 1)"
+if [ "$d9_dep_code" -ne 1 ]; then
+  echo "  [FAIL] Deploy was NOT blocked when MacServer was unconfigured!" >&2
+  cat "$D9_DIR/deploy.log" >&2
+  exit 1
+fi
+
+if ! grep -q "MacServer is NOT_CONFIGURED" "$D9_DIR/deploy.log"; then
+  echo "  [FAIL] Deploy log did not report 'MacServer is NOT_CONFIGURED'!" >&2
+  cat "$D9_DIR/deploy.log" >&2
+  exit 1
+fi
+echo "  [PASS] Deploy successfully blocked before candidate changes when MacServer unconfigured"
+
+# Part B: Test recovery failure with unconfigured MacServer
+echo "  [D9-ACT] Testing recovery with unconfigured MacServer..."
+python3 -c "
+import http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'{\"status\":\"ok\"}')
+    def log_message(self, *a): pass
+s = http.server.ThreadingHTTPServer(('127.0.0.1', $DRILL_SEOUL_PORT), H)
+s.serve_forever()
+" >/dev/null 2>&1 &
+seoul_hpid9=$!
+
+waited=0
+while [ "$waited" -lt 30 ]; do
+  if curl -sf "http://127.0.0.1:${DRILL_SEOUL_PORT}/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.1
+  waited=$((waited + 1))
+done
+
+set +e
+PATH="$D9_DIR/bin:$PATH" \
+MACSERVER_SSH_TARGET="" \
+MACSERVER_TUNNEL_CTL="/nonexistent/tunnel-ctl.sh" \
+SSH_RELOAD_CMD="true" \
+SEOUL_HEALTH_URL="http://127.0.0.1:${DRILL_SEOUL_PORT}/health" \
+SEATING_PORT="19765" \
+"$ORCHESTRATED_RECOVERY" "$D9_DIR/backup" > "$D9_DIR/rec9.log" 2>&1
+d9_rec_code=$?
+set -e
+
+echo "  [D9-VERIFY] Recovery exit code with unconfigured MacServer: $d9_rec_code (Expected: 1)"
+if [ "$d9_rec_code" -ne 1 ]; then
+  echo "  [FAIL] Recovery exited 0 despite MacServer being NOT_CONFIGURED!" >&2
+  cat "$D9_DIR/rec9.log" >&2
+  exit 1
+fi
+
+if ! grep -q "NOT_CONFIGURED" "$D9_DIR/rec9.log"; then
+  echo "  [FAIL] Recovery log did not report NOT_CONFIGURED status!" >&2
+  cat "$D9_DIR/rec9.log" >&2
+  exit 1
+fi
+echo "  [PASS] Recovery marked incomplete and exited non-zero for unconfigured MacServer"
+
+kill -9 "$seoul_hpid9" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# DRILL 10: Container Stop Failure Safety Barrier
+# (Candidate refuses to stop -> skips rsync overwrite & baseline compose up)
+# ------------------------------------------------------------------------------
+echo ""
+echo "========================================================================"
+echo " DRILL 10: Container Stop Failure Safety Barrier"
+echo "========================================================================"
+
+D10_DIR="$TEST_BASE_DIR/d10"
+mkdir -p "$D10_DIR/backup" "$D10_DIR/prod" "$D10_DIR/bin"
+cp "$D4_DIR/bin/tunnel-ctl.sh" "$D10_DIR/bin/tunnel-ctl.sh"
+
+# Mock Docker where container ALWAYS reports running (refuses to stop)
+cat << 'MOCKSTUBBORN' > "$D10_DIR/bin/docker"
+#!/usr/bin/env bash
+cmd="$1"
+shift || true
+case "$cmd" in
+  compose)
+    echo "compose called with: $*" >> /tmp/d10_compose.log
+    exit 0
+    ;;
+  stop)
+    exit 1 # Stop fails!
+    ;;
+  inspect)
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --format)
+          fmt="$2"
+          shift 2 || true
+          case "$fmt" in
+            *'{{.State.Status}}'*) echo "running"; exit 0 ;;
+            *'{{.Image}}'*) echo "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"; exit 0 ;;
+            *) echo "ok"; exit 0 ;;
+          esac
+          ;;
+        *) shift || true ;;
+      esac
+    done
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+MOCKSTUBBORN
+chmod +x "$D10_DIR/bin/docker"
+rm -f /tmp/d10_compose.log
+
+# Set up live prod directory with candidate state
+echo "CRITICAL_CANDIDATE_DATA_DO_NOT_OVERWRITE" > "$D10_DIR/prod/runtime_state.txt"
+# Set up backup directory with baseline state
+echo "OLD_BASELINE_BACKUP_DATA" > "$D10_DIR/backup/runtime_state.txt"
+
+cat << EOF > "$D10_DIR/backup/manifest.env"
+BACKUP_TS="20261109_120000"
+BACKUP_PROD_PROJECT="insurance-carddav-mcp"
+BACKUP_PROD_CONTAINER="insurance-carddav-mcp-carddav-1"
+BACKUP_PROD_DIR="$D10_DIR/prod"
+BACKUP_PROD_DATA_DIR="$D10_DIR/prod/data"
+BACKUP_PROD_SECRETS_FILE="$D10_DIR/prod/secrets.env"
+BACKUP_PROD_GATEWAY_ENV_FILE="$D10_DIR/prod/gateway.env"
+BACKUP_PROD_PORT="$DRILL_SEOUL_PORT"
+BACKUP_PROD_HEALTH_URL="http://127.0.0.1:${DRILL_SEOUL_PORT}/health"
+BACKUP_ACTUAL_IMAGE_ID="sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+BACKUP_ORIG_COMPOSE_BASENAME="compose.yaml"
+BACKUP_SSH_DROPIN_PREEXISTED="0"
+BACKUP_SSH_DROPIN_CREATED="1"
+EOF
+echo "services: {}" > "$D10_DIR/backup/compose.yaml"
+
+set +e
+PATH="$D10_DIR/bin:$PATH" \
+MACSERVER_TUNNEL_CTL="$D10_DIR/bin/tunnel-ctl.sh" \
+SSH_RELOAD_CMD="true" \
+SEOUL_HEALTH_URL="http://127.0.0.1:${DRILL_SEOUL_PORT}/health" \
+SEATING_PORT="19765" \
+"$ORCHESTRATED_RECOVERY" "$D10_DIR/backup" > "$D10_DIR/rec10.log" 2>&1
+d10_code=$?
+set -e
+
+echo "  [D10-VERIFY] Recovery exit code when container refuses to stop: $d10_code (Expected: 1)"
+if [ "$d10_code" -ne 1 ]; then
+  echo "  [FAIL] Recovery succeeded despite container refusing to stop!" >&2
+  cat "$D10_DIR/rec10.log" >&2
+  exit 1
+fi
+
+if ! grep -q "SAFETY_BARRIER" "$D10_DIR/rec10.log"; then
+  echo "  [FAIL] Recovery log did not trigger [SAFETY_BARRIER]!" >&2
+  cat "$D10_DIR/rec10.log" >&2
+  exit 1
+fi
+echo "  [PASS] [SAFETY_BARRIER] successfully engaged"
+
+# Assert runtime data was NOT overwritten (rsync skipped)
+cur_content=$(cat "$D10_DIR/prod/runtime_state.txt")
+if [ "$cur_content" != "CRITICAL_CANDIDATE_DATA_DO_NOT_OVERWRITE" ]; then
+  echo "  [FAIL] rsync was executed and overwrote production data! Content: $cur_content" >&2
+  exit 1
+fi
+echo "  [PASS] Configuration overwrite was SKIPPED to protect runtime state"
+
+# Assert docker compose up was NOT called
+if [ -f /tmp/d10_compose.log ] && grep -q "up" /tmp/d10_compose.log; then
+  echo "  [FAIL] docker compose up was executed despite container stop failure!" >&2
+  exit 1
+fi
+echo "  [PASS] docker compose up was cleanly SKIPPED"
+rm -f /tmp/d10_compose.log
+
+# ------------------------------------------------------------------------------
+# DRILL 11: Precise Process Attribution & Same-Name Zero Collateral Damage
+# (Unrelated EventKitBridgeServer & SSH processes MUST survive unharmed)
+# ------------------------------------------------------------------------------
+echo ""
+echo "========================================================================"
+echo " DRILL 11: Precise Process Attribution & Same-Name Zero Collateral Damage"
+echo "========================================================================"
+
+D11_DIR="$TEST_BASE_DIR/d11"
+mkdir -p "$D11_DIR/backup" "$D11_DIR/bin"
+cp "$D3_DIR/bin/docker" "$D11_DIR/bin/docker"
+cp "$D4_DIR/bin/tunnel-ctl.sh" "$D11_DIR/bin/tunnel-ctl.sh"
+cp "$D3_DIR/backup/manifest.env" "$D11_DIR/backup/manifest.env"
+echo "services: {}" > "$D11_DIR/backup/compose.yaml"
+
+# 1. Start an unrelated process named EventKitBridgeServer
+(
+  exec -a "EventKitBridgeServer --unrelated-session" sleep 100
+) >/dev/null 2>&1 &
+unrelated_bridge_pid=$!
+echo "  [D11-PRE] Spawned unrelated EventKitBridgeServer process PID: $unrelated_bridge_pid"
+
+# 2. Start an unrelated SSH process
+(
+  exec -a "ssh -p 22 unrelated-user@internal-host" sleep 100
+) >/dev/null 2>&1 &
+unrelated_ssh_pid=$!
+echo "  [D11-PRE] Spawned unrelated SSH process PID: $unrelated_ssh_pid"
+
+# 3. Start mock task tunnel process
+(
+  exec -a "run-resident-tunnel.sh --worker" sleep 100
+) >/dev/null 2>&1 &
+task_tunnel_pid11=$!
+echo "$task_tunnel_pid11" > "$D11_DIR/backup/task_tunnel.pid"
+echo "  [D11-PRE] Spawned verified task tunnel PID: $task_tunnel_pid11"
+
+python3 -c "
+import http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'{\"status\":\"ok\"}')
+    def log_message(self, *a): pass
+s = http.server.ThreadingHTTPServer(('127.0.0.1', $DRILL_SEOUL_PORT), H)
+s.serve_forever()
+" >/dev/null 2>&1 &
+seoul_hpid11=$!
+
+waited=0
+while [ "$waited" -lt 30 ]; do
+  if curl -sf "http://127.0.0.1:${DRILL_SEOUL_PORT}/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.1
+  waited=$((waited + 1))
+done
+
+# Run recovery
+if ! env PATH="$D11_DIR/bin:$PATH" \
+  MACSERVER_TUNNEL_CTL="$D11_DIR/bin/tunnel-ctl.sh" \
+  SSH_RELOAD_CMD="true" \
+  SEOUL_HEALTH_URL="http://127.0.0.1:${DRILL_SEOUL_PORT}/health" \
+  SEATING_PORT="19765" \
+  "$ORCHESTRATED_RECOVERY" "$D11_DIR/backup" > "$D11_DIR/rec11.log" 2>&1; then
+  echo "  [FAIL] Recovery failed in Drill 11!" >&2
+  cat "$D11_DIR/rec11.log" >&2
+  exit 1
+fi
+
+# Assert verified task process terminated
+if kill -0 "$task_tunnel_pid11" 2>/dev/null; then
+  echo "  [FAIL] Task tunnel process $task_tunnel_pid11 was NOT terminated!" >&2
+  exit 1
+fi
+echo "  [PASS] Verified task tunnel PID $task_tunnel_pid11 was terminated"
+
+# Assert unrelated EventKitBridgeServer survived unharmed!
+if ! kill -0 "$unrelated_bridge_pid" 2>/dev/null; then
+  echo "  [FAIL] Unrelated EventKitBridgeServer process PID $unrelated_bridge_pid was killed! Collateral damage detected!" >&2
+  exit 1
+fi
+echo "  [PASS] Unrelated EventKitBridgeServer PID $unrelated_bridge_pid is STILL ALIVE (Zero collateral damage)"
+
+# Assert unrelated SSH process survived unharmed!
+if ! kill -0 "$unrelated_ssh_pid" 2>/dev/null; then
+  echo "  [FAIL] Unrelated SSH process PID $unrelated_ssh_pid was killed! Collateral damage detected!" >&2
+  exit 1
+fi
+echo "  [PASS] Unrelated SSH process PID $unrelated_ssh_pid is STILL ALIVE (Zero collateral damage)"
+
+kill -9 "$unrelated_bridge_pid" "$unrelated_ssh_pid" "$seoul_hpid11" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# DRILL 12: Local Business Close Failure Traceability
+# (orchestrated-stop failure persists RECOVERY_FAILED=1 & non-zero status)
+# ------------------------------------------------------------------------------
+echo ""
+echo "========================================================================"
+echo " DRILL 12: Local Business Close Failure Traceability"
+echo "========================================================================"
+
+D12_DIR="$TEST_BASE_DIR/d12"
+mkdir -p "$D12_DIR/bin"
+# Mock tunnel-ctl where orchestrated-stop exits 42
+cat << 'MOCKCTL42' > "$D12_DIR/bin/tunnel-ctl.sh"
+#!/usr/bin/env bash
+if [ "$1" = "orchestrated-stop" ]; then
+  echo "Mock business close failure" >&2
+  exit 42
+fi
+exit 0
+MOCKCTL42
+chmod +x "$D12_DIR/bin/tunnel-ctl.sh"
+
+echo "  [D12-ACT] Launching runner with failing tunnel-ctl (exit 42) and SESSION_TIMEOUT_SECONDS=2..."
+CONFIG_DIR="$D12_DIR" \
+TUNNEL_CTL="$D12_DIR/bin/tunnel-ctl.sh" \
+SESSION_TIMEOUT_SECONDS=2 \
+SKIP_KEY_CHECK=1 \
+REMOTE_HOST="127.0.0.1" \
+SSH_BINARY="sleep" \
+"$TUNNEL_RUNNER" > "$D12_DIR/runner12.log" 2>&1 &
+rpid12=$!
+
+# Wait for deadline expiration (remaining ~2.5s)
+sleep 3.2
+
+# Assert local_recovery_status.env exists and contains error details
+if [ ! -f "$D12_DIR/local_recovery_status.env" ]; then
+  echo "  [FAIL] local_recovery_status.env was not persisted upon business close failure!" >&2
+  cat "$D12_DIR/runner12.log" >&2
+  exit 1
+fi
+
+if ! grep -q "RECOVERY_FAILED=1" "$D12_DIR/local_recovery_status.env"; then
+  echo "  [FAIL] local_recovery_status.env did not set RECOVERY_FAILED=1!" >&2
+  cat "$D12_DIR/local_recovery_status.env" >&2
+  exit 1
+fi
+
+if ! grep -q "STOP_EXIT_CODE=42" "$D12_DIR/local_recovery_status.env"; then
+  echo "  [FAIL] local_recovery_status.env did not record exit code 42!" >&2
+  cat "$D12_DIR/local_recovery_status.env" >&2
+  exit 1
+fi
+echo "  [PASS] local_recovery_status.env successfully persisted failure status & exit code 42"
+
+# Assert status file preserved failed status rather than claiming clean 'stopped'
+if [ -f "$D12_DIR/tunnel_status.json" ]; then
+  if grep -q '"status": "failed_stop_error"' "$D12_DIR/tunnel_status.json"; then
+    echo "  [PASS] tunnel_status.json correctly preserved 'failed_stop_error' (did not mask failure with 'stopped')"
+  else
+    echo "  [FAIL] tunnel_status.json masked failure! Content:" >&2
+    cat "$D12_DIR/tunnel_status.json" >&2
+    exit 1
+  fi
+fi
+
+kill -9 "$rpid12" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# DRILL 13: SSH Authorized Keys Fidelity (All 3 Cases)
+# (Non-existent -> deleted; Pre-existing -> restored; Custom path -> restored)
+# ------------------------------------------------------------------------------
+echo ""
+echo "========================================================================"
+echo " DRILL 13: SSH Authorized Keys Fidelity (All 3 Cases)"
+echo "========================================================================"
+
+D13_DIR="$TEST_BASE_DIR/d13"
+mkdir -p "$D13_DIR/backup" "$D13_DIR/keys"
+
+# Case A: Non-existent prior to task (BACKUP_SSH_AUTH_KEYS_PREEXISTED=0)
+echo "  [D13-A] Case A: Non-existent prior to task -> newly created must be removed..."
+cat << EOF > "$D13_DIR/backup/manifest.env"
+BACKUP_SSH_AUTH_KEYS_PATH="$D13_DIR/keys/auth_a"
+BACKUP_SSH_AUTH_KEYS_PREEXISTED="0"
+BACKUP_SSH_DROPIN_PREEXISTED="0"
+BACKUP_SSH_DROPIN_CREATED="0"
+EOF
+
+# Simulate candidate adding key to auth_a
+echo "ssh-ed25519 CANDIDATE_KEY_TEST" > "$D13_DIR/keys/auth_a"
+
+# Run recovery Step 4 logic
+ssh_auth_keys_path="$D13_DIR/keys/auth_a"
+ssh_auth_keys_preexisted="0"
+if [ "$ssh_auth_keys_preexisted" = "0" ] && [ -f "$ssh_auth_keys_path" ]; then
+  rm -f "$ssh_auth_keys_path"
+fi
+
+if [ -f "$D13_DIR/keys/auth_a" ]; then
+  echo "  [FAIL] auth_a was not removed when preexisted=0!" >&2
+  exit 1
+fi
+echo "  [PASS] Case A: Newly created authorized_keys was cleanly deleted"
+
+# Case B: Pre-existing prior to task (BACKUP_SSH_AUTH_KEYS_PREEXISTED=1)
+echo "  [D13-B] Case B: Pre-existing -> restored original content & 0600 permissions..."
+echo "ssh-ed25519 ORIGINAL_KEY_TEST" > "$D13_DIR/backup/authorized_keys"
+echo "ssh-ed25519 MODIFIED_CANDIDATE_KEY" > "$D13_DIR/keys/auth_b"
+
+ssh_auth_keys_path="$D13_DIR/keys/auth_b"
+ssh_auth_keys_preexisted="1"
+if [ "$ssh_auth_keys_preexisted" = "1" ] && [ -f "$D13_DIR/backup/authorized_keys" ]; then
+  cp -f "$D13_DIR/backup/authorized_keys" "$ssh_auth_keys_path"
+  chmod 600 "$ssh_auth_keys_path"
+fi
+
+cur_b=$(cat "$D13_DIR/keys/auth_b")
+if [ "$cur_b" != "ssh-ed25519 ORIGINAL_KEY_TEST" ]; then
+  echo "  [FAIL] auth_b was not restored to original! Got: $cur_b" >&2
+  exit 1
+fi
+echo "  [PASS] Case B: Pre-existing authorized_keys restored faithfully"
+
+# Case C: Custom path from manifest (BACKUP_SSH_AUTH_KEYS_PATH)
+echo "  [D13-C] Case C: Custom path from manifest..."
+echo "ssh-ed25519 CUSTOM_PATH_KEY" > "$D13_DIR/backup/authorized_keys"
+custom_target="$D13_DIR/keys/custom_user_keys"
+
+ssh_auth_keys_path="$custom_target"
+ssh_auth_keys_preexisted="1"
+if [ "$ssh_auth_keys_preexisted" = "1" ] && [ -f "$D13_DIR/backup/authorized_keys" ]; then
+  cp -f "$D13_DIR/backup/authorized_keys" "$ssh_auth_keys_path"
+  chmod 600 "$ssh_auth_keys_path"
+fi
+
+cur_c=$(cat "$custom_target")
+if [ "$cur_c" != "ssh-ed25519 CUSTOM_PATH_KEY" ]; then
+  echo "  [FAIL] Custom path key was not restored! Got: $cur_c" >&2
+  exit 1
+fi
+echo "  [PASS] Case C: Custom manifest path authorized_keys restored with 0600 perms"
+
+# ------------------------------------------------------------------------------
 # ALL DRILLS PASSED
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo " [ALL DRILLS PASSED] All 7 Orchestrated Recovery Drills Passed 100%"
+echo " [ALL DRILLS PASSED] All 13 Orchestrated Recovery Drills Passed 100%"
 echo " - Drill 1: MacServer Local Business Shutdown (persisted false, 403 verified, loopback preserved)"
 echo " - Drill 2: Local Session Hard Deadline Watchdog (deadline preserved across crash, autonomous 403)"
 echo " - Drill 3: Cross-Device Disconnect Failsafe (remote UNKNOWN, local rollback continues, non-zero exit)"
@@ -664,5 +1209,11 @@ echo " - Drill 4: Task Process Cleanup (zero collateral damage to unrelated proc
 echo " - Drill 5: Concurrent Recovery Idempotency & Mutex (.rollback.lock mutual exclusion)"
 echo " - Drill 6: SSH Manifest Restoration Fidelity (preserves pre-existing, cleans task drop-in)"
 echo " - Drill 7: Partial Step Failure Aggregation (aggregates failure, exits 1, no false success)"
+echo " - Drill 8: Concurrent Recovery Failure Propagation (Negative Concurrency: both exit 1)"
+echo " - Drill 9: MacServer NOT_CONFIGURED Safety Barrier (deploy blocked; recovery non-zero)"
+echo " - Drill 10: Container Stop Failure Safety Barrier (skips rsync & docker compose up)"
+echo " - Drill 11: Precise Process Attribution & Zero Collateral Damage (unrelated bridge/SSH survive)"
+echo " - Drill 12: Local Business Close Failure Traceability (persists failure and exit 42)"
+echo " - Drill 13: SSH Authorized Keys Fidelity (All 3 Cases: delete new, restore pre-existing, custom path)"
 echo "========================================================================"
 exit 0

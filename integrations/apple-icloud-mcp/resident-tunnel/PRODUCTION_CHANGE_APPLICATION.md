@@ -74,30 +74,33 @@
 /opt/insurance-carddav-mcp/scripts/orchestrated-recovery.sh "$BACKUP_DIR"
 ```
 
-编排脚本内联执行以下 5 项原子步骤与失败聚合：
+编排脚本内联执行以下 5 项原子步骤与严格失败聚合机制（只有全部必需状态实际核验通过才返回成功）：
 1. **联动关闭 MacServer 业务权限与停止隧道**:
    - 将受限配置 (`bridge.env`) 中的业务开关持久化为 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false`。
-   - 触发 Bridge 配置重载（通过 launchd kickstart 或 SIGHUP 信号）。
+   - 触发 Bridge 配置重载（仅通过 launchd kickstart 或严格核验的 PID 信号，彻底移除宽泛 `pgrep` 批量发信号）。
    - **严格业务端点断言**: 对受限业务端点 (`/reminders/lists`) 发起带 Token 请求断言 **HTTP 403 PERMISSION_DENIED**（明确废除以 `/health` 代替业务权限检查，Bridge `/health` 持续保持 200 OK）。
    - 停止反向 SSH 隧道与 LaunchAgent。Bridge 本地环回监听 (`127.0.0.1:18765`) 保留处于 403 安全隔离态，不误判为隧道残留。
    - **网络中断容错**: 若 MacServer 网络不可达或 SSH 超时，状态标记为 `UNKNOWN_PENDING_VERIFICATION`（绝不虚报远程已关闭），继续执行 Seoul 本地恢复，并依赖 MacServer 本地看门狗硬超时自主锁定。
-2. **清理任务进程（零误伤原则）**:
-   - 严格根据 PID 归属与进程参数特征终止任务相关进程，**严禁使用 `fuser -k` 或按端口全杀**，确保无关业务进程零误伤。
-   - 校验 Seoul 宿主反向转发监听端口 `18765` 残留监听数严格为 0。
-3. **恢复 Seoul MCP 容器与配置**:
-   - 停止候选容器，确认容器退出后再执行文件恢复。
-   - 通过 `rsync` 还原原配置文件（排除运行时 OAuth 令牌）。
+   - **未配置安全阻断**: 若 MacServer 处于 `NOT_CONFIGURED` 态，`production-entry.sh deploy` 提前直接阻断部署；恢复编排记为未完成并退出非零。
+2. **清理任务进程（精确归属与零误伤原则）**:
+   - 仅根据现场备份中记录的精确任务 PID（`task_tunnel.pid`）及明确命令特征终止任务进程，**严禁使用 `fuser -k` 或按端口全杀**；同名无关进程（如无关 Bridge 实例、其他 SSH 会话）在演练中证实 100% 存活，实现零误伤。
+   - 校验 Seoul 宿主反向转发监听端口 `18765` 残留监听数严格为 0；若缺少监听检测工具（如 `lsof` 和 `ss` 均不存在）则作为致命错误阻断并报告失败。
+3. **恢复 Seoul MCP 容器与配置（容器停止失败安全边界）**:
+   - 停止候选容器并核验容器终态；**安全边界保证**: 若候选容器未确认停止，**严禁执行配置覆盖 (`rsync`) 或基线拉起 (`docker compose up`)**，直接跳过以防破坏运行时状态，继续后续独立关停步骤并汇总为整体失败。
+   - 确认容器安全退出后，通过 `rsync` 还原原配置文件（排除运行时 OAuth 令牌）。
    - 将基线镜像 `sha256:f3e697fe...` 重新打标为 `:latest`。
    - 启动基线 Compose 服务并等待健康检查（经历 5-10 秒重启窗口）。
-4. **清理 Seoul SSH 配置（基于备份清单）**:
+4. **清理 Seoul SSH 配置（基于备份清单动态路径与三态保真）**:
    - 依据备份清单 `manifest.env` 精准判定：若 `60-macserver-gateway.conf` 为本任务新增则删除；若原先已存在则执行还原，**绝不无条件删除既有 SSH 配置**。
-   - 还原 `~mac-operator/.ssh/authorized_keys`，平滑重载 sshd（若重载失败计入故障）。
-5. **端到端闭环验证与失败聚合**:
+   - 从清单动态取得 authorized_keys 路径（支持自定义路径，不硬编码用户 home），并按原先不存在（恢复时清理）、原先已存在（恢复时还原 0600 内容）严格处理，平滑重载 sshd（若重载失败计入故障）。
+5. **端到端闭环验证、并发结果持久化与失败聚合**:
+   - **并发恢复结果持久化**: 主恢复进程将逐步骤结果与最终结果写入 `$BACKUP_DIR/recovery_result.json`；并发等待者必须核验同一轮恢复结果文件及必要实际物理状态（镜像、健康探针、端口监听），第一轮失败或远端 UNKNOWN 时第二轮不得仅凭 health 200 返回成功。
    - 校验 Seoul MCP 健康检查通过（200 OK）。
    - 校验运行中容器镜像严格等于基线 `sha256:f3e697fe...`。
    - 校验联系人、日历权限配置与基线原始记录逐项一致。
    - 校验反向转发端口 `18765` 监听完全消失。
-   - **失败聚合治理**: 任何步骤失败或远程状态为 `UNKNOWN_PENDING_VERIFICATION`，汇总所有错误，输出 `[RECOVERY_FAILED]` 并返回非零退出码；绝不报虚假成功。
+   - **本地期限失败可追溯性**: 若看门狗超时关闭业务失败，仍切断隧道，但持久化 `RECOVERY_FAILED=1`、失败步骤与退出码至 `local_recovery_status.env`，Supervisor 的 `stopped` 状态绝不掩盖失败为成功。
+   - **严格失败聚合治理**: 任何步骤失败、未完成或远程状态非 `CLOSED_VERIFIED_403`，汇总所有错误，输出 `[RECOVERY_FAILED]` 并返回非零退出码；绝不报虚假成功。
 
 ---
 

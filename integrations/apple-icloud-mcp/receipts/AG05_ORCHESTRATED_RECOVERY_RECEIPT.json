@@ -1,7 +1,7 @@
 {
-  "receipt_id": "AG05-ORCHESTRATED-RECOVERY-1794196421",
-  "task": "AG-05 MacServer Business Shutdown & Unified Orchestrated Recovery Verification",
-  "execution_timestamp": "2026-11-09T03:53:35Z",
+  "receipt_id": "AG05-ORCHESTRATED-RECOVERY-1794202275",
+  "task": "AG-05 Recovery State Machine Final Closed-Loop & Negative Verification",
+  "execution_timestamp": "2026-11-09T05:32:00Z",
   "git_branch": "feat/ag05-resident-readonly-candidate",
   "test_environment": {
     "host_os": "macOS",
@@ -9,7 +9,8 @@
     "scripts_executed": [
       "integrations/apple-icloud-mcp/resident-tunnel/scripts/tunnel-ctl.sh",
       "integrations/apple-icloud-mcp/resident-tunnel/scripts/run-resident-tunnel.sh",
-      "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh"
+      "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh",
+      "integrations/apple-icloud-mcp/seoul-gateway/scripts/production-entry.sh"
     ],
     "fixtures": {
       "list_id": "00000000-0000-0000-0000-000000000001",
@@ -36,7 +37,7 @@
     {
       "drill": "Drill 4: Task Process Cleanup with Zero Collateral Damage",
       "result": "PASS",
-      "details": "orchestrated-recovery.sh terminated PID-verified task tunnel process; unrelated background process (PID 88839) remained running and unaffected; verified port 19765 listener removed without indiscriminate killing."
+      "details": "orchestrated-recovery.sh terminated PID-verified task tunnel process; unrelated background process remained running and unaffected; verified port 19765 listener removed without indiscriminate killing."
     },
     {
       "drill": "Drill 5: Concurrent Recovery Idempotency & Mutual Exclusion",
@@ -52,7 +53,37 @@
       "drill": "Drill 7: Partial Step Failure Aggregation & Non-Zero Exit Guarantee",
       "result": "PASS",
       "details": "Injected health check failure in Step 5; orchestrated-recovery.sh executed best-effort steps, collected error in recovery_errors, output [RECOVERY_FAILED], never output [RECOVERY-SUCCESS], and exited with code 1."
+    },
+    {
+      "drill": "Drill 8: Concurrent Recovery Failure Propagation (Negative Concurrency)",
+      "result": "PASS",
+      "details": "Two concurrent recovery processes where first run failed; waiting second process verified recovery_result.json, detected failure, refused to return 0, output [RECOVERY_FAILED], and both exited with code 1."
+    },
+    {
+      "drill": "Drill 9: MacServer NOT_CONFIGURED Safety Barrier",
+      "result": "PASS",
+      "details": "When MacServer was unconfigured, production-entry.sh deploy blocked deployment immediately before any changes (exit 1); orchestrated-recovery.sh recorded status as NOT_CONFIGURED, logged critical error, output [RECOVERY_FAILED], and exited non-zero."
+    },
+    {
+      "drill": "Drill 10: Container Stop Failure Safety Barrier",
+      "result": "PASS",
+      "details": "Candidate container refused to stop; orchestrated-recovery.sh engaged [SAFETY_BARRIER], skipped rsync configuration overwrite to protect runtime data, skipped docker compose up baseline, and exited non-zero."
+    },
+    {
+      "drill": "Drill 11: Precise Process Attribution & Zero Collateral Damage",
+      "result": "PASS",
+      "details": "Unrelated processes with matching names ('EventKitBridgeServer --unrelated-session' and unrelated SSH session) ran alongside verified task tunnel process; orchestrated-recovery.sh cleanly terminated task process while unrelated processes remained alive and completely unharmed."
+    },
+    {
+      "drill": "Drill 12: Local Business Close Failure Traceability",
+      "result": "PASS",
+      "details": "Simulated orchestrated-stop failure (exit 42) on deadline watchdog expiry; run-resident-tunnel.sh persisted RECOVERY_FAILED=1 and STOP_EXIT_CODE=42 in local_recovery_status.env; preserved status as failed_stop_error rather than masking as clean 'stopped'."
+    },
+    {
+      "drill": "Drill 13: SSH Authorized Keys Fidelity (All 3 Cases)",
+      "result": "PASS",
+      "details": "Case A (preexisted=0): candidate added key cleanly removed; Case B (preexisted=1): pre-existing authorized_keys faithfully restored with 0600 permissions; Case C (custom path): restored to custom path specified in manifest with 0600 permissions."
     }
   ],
-  "overall_status": "ALL_7_ORCHESTRATED_RECOVERY_DRILLS_PASSED"
+  "overall_status": "ALL_13_ORCHESTRATED_RECOVERY_DRILLS_PASSED"
 }

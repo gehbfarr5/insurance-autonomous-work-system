@@ -1,12 +1,12 @@
 {
-  "manifest_version": "1.2.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery: Cross-Device Recovery & Local Business Shutdown",
-  "generated_at": "2026-11-09T03:58:00Z",
+  "manifest_version": "1.3.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery: Recovery State Machine Final Closed-Loop",
+  "generated_at": "2026-11-09T05:33:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
     "upstream_baseline_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
-    "traceability_notes": "Delivers MacServer local business switch closing (persisted false, bridge reload, 403 assertion), absolute deadline watchdog with crash persistence, unified cross-device recovery orchestration, manifest-based SSH restore, and zero-collateral-damage process cleanup verified by 7 isolated drills."
+    "traceability_notes": "Delivers complete closed-loop recovery state machine: concurrent recovery result persistence (recovery_result.json) & failure propagation, MacServer NOT_CONFIGURED deployment blocker & recovery failure, candidate container stop safety barrier (rsync/up skipped on stop failure), strict process attribution with zero collateral damage, local deadline shutdown failure persistence (failed_stop_error), and 3-case SSH authorized_keys fidelity verified by 13 isolated drills."
   },
   "artifacts": {
     "candidate_docker_image": {
@@ -57,7 +57,7 @@
     },
     "orchestrated_recovery_drills_suite": {
       "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-orchestrated-recovery-drills.sh",
-      "result": "ALL 7 RECOVERY DRILLS PASSED (100%)",
+      "result": "ALL 13 RECOVERY DRILLS PASSED (100%)",
       "scenarios_verified": [
         "MacServer local switch persisted false and 403 asserted on /reminders/lists",
         "Local session deadline watchdog persistence across crash and autonomous 403 shutdown",
@@ -65,7 +65,13 @@
         "Task PID cleanup with zero collateral damage to unrelated processes",
         "Concurrent recovery idempotency (.rollback.lock mutual exclusion)",
         "SSH manifest-based restoration fidelity (preserves pre-existing, cleans task drop-in)",
-        "Partial step failure aggregation and non-zero exit guarantee"
+        "Partial step failure aggregation and non-zero exit guarantee",
+        "Concurrent recovery failure propagation (Negative Concurrency: both exit 1)",
+        "MacServer NOT_CONFIGURED safety barrier (deploy blocked; recovery non-zero)",
+        "Container stop failure safety barrier (skips rsync & docker compose up)",
+        "Precise process attribution & zero collateral damage (unrelated bridge/SSH survive)",
+        "Local business close failure traceability (persists failure and exit 42)",
+        "SSH authorized_keys fidelity (All 3 Cases: delete new, restore pre-existing, custom path)"
       ]
     }
   },
