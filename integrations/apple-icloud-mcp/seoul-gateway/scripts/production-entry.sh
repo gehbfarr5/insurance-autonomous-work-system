@@ -435,13 +435,27 @@ EOF
   fi
   echo "       Backup created and verified: $backup_dir"
 
-  # Step 3: Launch Pre-Flight 30-Minute Hard Watchdog timer BEFORE candidate changes
-  local watchdog_timeout="${WATCHDOG_TIMEOUT_SECONDS:-1800}"
-  echo "[PRE-CHANGE] Starting independent recovery watchdog (${watchdog_timeout}s timeout) before applying changes..."
+  # Step 3: Launch Pre-Flight Hard Watchdog timer BEFORE candidate changes
+  local now_epoch
+  now_epoch=$(date +%s)
+  local watchdog_deadline_epoch="${DEADLINE_EPOCH:-}"
+  local watchdog_timeout="${WATCHDOG_TIMEOUT_SECONDS:-3600}"
+
+  if [ -n "$watchdog_deadline_epoch" ] && [ "$watchdog_deadline_epoch" -gt 0 ]; then
+    if [ "$now_epoch" -ge "$watchdog_deadline_epoch" ]; then
+      echo "CRITICAL ERROR: Specified DEADLINE_EPOCH ($watchdog_deadline_epoch) has already expired! Aborting deployment." >&2
+      exit 1
+    fi
+    watchdog_timeout=$(( watchdog_deadline_epoch - now_epoch ))
+  else
+    watchdog_deadline_epoch=$(( now_epoch + watchdog_timeout ))
+  fi
+
+  echo "[PRE-CHANGE] Starting independent recovery watchdog (${watchdog_timeout}s timeout) before applying changes (deadline epoch: $watchdog_deadline_epoch)..."
   (
     exec </dev/null
     sleep "$watchdog_timeout"
-    echo "[WATCHDOG] 30-minute trial window expired at $(date -u +"%Y-%m-%dT%H:%M:%SZ")! Auto-reverting to baseline..."
+    echo "[WATCHDOG] Trial window expired at $(date -u +"%Y-%m-%dT%H:%M:%SZ") (epoch $watchdog_deadline_epoch)! Auto-reverting to baseline..."
     if ! "$SCRIPT_DIR/orchestrated-recovery.sh" "$backup_dir"; then
       echo "[RECOVERY_FAILED] CRITICAL ALARM: Independent watchdog unified recovery FAILED!" >&2
       exit 1
@@ -452,6 +466,7 @@ EOF
   echo "$watchdog_pid" > "$backup_dir/watchdog.pid"
   date +%s > "$backup_dir/watchdog.start_time"
   echo "$watchdog_timeout" > "$backup_dir/watchdog.timeout"
+  echo "$watchdog_deadline_epoch" > "$backup_dir/watchdog.deadline_epoch"
   local watchdog_lstart
   watchdog_lstart=$(ps -p "$watchdog_pid" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || echo "")
   cat << EOF > "$backup_dir/watchdog_metadata.env"
@@ -460,7 +475,8 @@ WATCHDOG_UID=$UID
 WATCHDOG_USER="${USER:-$(id -un)}"
 WATCHDOG_BACKUP_DIR="$backup_dir"
 WATCHDOG_TIMEOUT=$watchdog_timeout
-WATCHDOG_START_TIME=$(date +%s)
+WATCHDOG_DEADLINE_EPOCH=$watchdog_deadline_epoch
+WATCHDOG_START_TIME=$now_epoch
 WATCHDOG_LSTART="$watchdog_lstart"
 EOF
   chmod 600 "$backup_dir/watchdog.pid" "$backup_dir/watchdog_metadata.env" 2>/dev/null || true

@@ -246,8 +246,18 @@ services:
       ALLOW_CALENDAR_WRITE_1: "true"
 EOF
 
+  # Mock authorized_keys for deterministic SSH path
+  touch "$s_dir/mock_authorized_keys"
+  chmod 600 "$s_dir/mock_authorized_keys"
+
   echo "$s_dir"
 }
+
+# Default global mock authorized_keys path to protect all test invocations
+MOCK_GLOBAL_AUTH_KEYS="$TEST_BASE_DIR/default_mock_authorized_keys"
+touch "$MOCK_GLOBAL_AUTH_KEYS"
+chmod 600 "$MOCK_GLOBAL_AUTH_KEYS"
+export SSH_AUTHORIZED_KEYS_PATH="$MOCK_GLOBAL_AUTH_KEYS"
 
 # ==============================================================================
 # DRILL 1: Pre-Change Watchdog Timeout Auto-Recovery
@@ -264,6 +274,7 @@ export PROD_PORT="$DRILL_PORT"
 export PROD_SECRETS_FILE="$D1_DIR/secrets.env"
 export PROD_GATEWAY_ENV_FILE="$D1_DIR/gateway.env"
 export PROD_COMPOSE_FILE="$D1_DIR/compose.yaml"
+export SSH_AUTHORIZED_KEYS_PATH="$D1_DIR/mock_authorized_keys"
 export WATCHDOG_TIMEOUT_SECONDS=3
 
 # Deploy with 3-second watchdog
@@ -319,6 +330,7 @@ export PROD_CONTAINER="ag05-drill2-carddav-1"
 export PROD_SECRETS_FILE="$D2_DIR/secrets.env"
 export PROD_GATEWAY_ENV_FILE="$D2_DIR/gateway.env"
 export PROD_COMPOSE_FILE="$D2_DIR/compose.yaml"
+export SSH_AUTHORIZED_KEYS_PATH="$D2_DIR/mock_authorized_keys"
 export INJECT_COMPOSE_FAIL=1 # Inject failure when starting candidate compose
 
 set +e
@@ -360,6 +372,7 @@ export PROD_CONTAINER="ag05-drill3-carddav-1"
 export PROD_SECRETS_FILE="$D3_DIR/secrets.env"
 export PROD_GATEWAY_ENV_FILE="$D3_DIR/gateway.env"
 export PROD_COMPOSE_FILE="$D3_DIR/compose.yaml"
+export SSH_AUTHORIZED_KEYS_PATH="$D3_DIR/mock_authorized_keys"
 export WATCHDOG_TIMEOUT_SECONDS=4
 
 # Launch deploy in a subshell, record subshell PID, then simulate terminal death immediately after deploy
@@ -476,6 +489,7 @@ export PROD_CONTAINER="ag05-drill5-carddav-1"
 export PROD_SECRETS_FILE="$D5_DIR/secrets.env"
 export PROD_GATEWAY_ENV_FILE="$D5_DIR/gateway.env"
 export PROD_COMPOSE_FILE="$D5_DIR/compose.yaml"
+export SSH_AUTHORIZED_KEYS_PATH="$D5_DIR/mock_authorized_keys"
 export WATCHDOG_TIMEOUT_SECONDS=1800
 
 # Deploy first
