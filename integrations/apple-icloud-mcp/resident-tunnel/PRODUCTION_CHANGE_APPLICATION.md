@@ -40,12 +40,15 @@
 
 ## 三、部署步骤与事前看门狗保护 (Deployment with Pre-Change Watchdog)
 
-1. **现场快照与原子备份**:
+1. **现场快照与原子备份 (失败即阻断与确定性路径)**:
+   - 授权文件路径必须来自明确配置或现场有效 sshd 配置核查（`sshd -T`）；无法确定时拒绝部署，坚决不猜测当前用户的 `~/.ssh/authorized_keys`。
+   - `authorized_keys` 备份命令移除 `|| true`；部署前严格通过 `cmp -s` 确认备份成功、内容及元数据完全一致。缺少必需备份时阻断一切后续生产变更。
    ```bash
    BACKUP_DIR="/root/backup/pre_ag05_$(date +%s)"
    mkdir -p "$BACKUP_DIR"
    cp -a /etc/ssh/sshd_config.d "$BACKUP_DIR/"
-   cp -a ~mac-operator/.ssh/authorized_keys "$BACKUP_DIR/"
+   cp -a "$SSH_AUTH_KEYS_PATH" "$BACKUP_DIR/authorized_keys"
+   cmp -s "$SSH_AUTH_KEYS_PATH" "$BACKUP_DIR/authorized_keys" || exit 1
    docker inspect insurance-carddav-mcp-carddav-1 > "$BACKUP_DIR/running_container.json"
    ```
 2. **启动事前独立恢复看门狗 (30 分钟硬约束，前置启动)**:
@@ -85,8 +88,9 @@
 2. **清理任务进程（精确归属与零误伤原则）**:
    - 仅根据现场备份中记录的精确任务 PID（`task_tunnel.pid`）及明确命令特征终止任务进程，**严禁使用 `fuser -k` 或按端口全杀**；同名无关进程（如无关 Bridge 实例、其他 SSH 会话）在演练中证实 100% 存活，实现零误伤。
    - 校验 Seoul 宿主反向转发监听端口 `18765` 残留监听数严格为 0；若缺少监听检测工具（如 `lsof` 和 `ss` 均不存在）则作为致命错误阻断并报告失败。
-3. **恢复 Seoul MCP 容器与配置（容器停止失败安全边界）**:
-   - 停止候选容器并核验容器终态；**安全边界保证**: 若候选容器未确认停止，**严禁执行配置覆盖 (`rsync`) 或基线拉起 (`docker compose up`)**，直接跳过以防破坏运行时状态，继续后续独立关停步骤并汇总为整体失败。
+3. **恢复 Seoul MCP 容器与配置（容器停止明确允许条件）**:
+   - 不再默认 `container_stopped=1`。只有明确确认容器已停止（`exited|stopped|dead|created`），或明确确认目标不存在时，才允许覆盖配置并恢复基线。
+   - **安全边界保证**: 若 inspect 失败、状态为空或 `unknown`，**严格阻止执行配置覆盖 (`rsync`) 或基线拉起 (`docker compose up`)**，直接跳过以防破坏运行时状态，继续后续独立关停步骤并汇总为整体失败。
    - 确认容器安全退出后，通过 `rsync` 还原原配置文件（排除运行时 OAuth 令牌）。
    - 将基线镜像 `sha256:f3e697fe...` 重新打标为 `:latest`。
    - 启动基线 Compose 服务并等待健康检查（经历 5-10 秒重启窗口）。

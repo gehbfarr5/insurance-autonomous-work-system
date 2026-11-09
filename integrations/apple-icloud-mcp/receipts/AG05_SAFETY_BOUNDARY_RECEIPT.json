@@ -1,0 +1,49 @@
+{
+  "receipt_id": "AG05-SAFETY-BOUNDARY-1794203496",
+  "task": "AG-05 Targeted Safety Boundaries Negative Verification",
+  "execution_timestamp": "2026-11-09T05:51:32Z",
+  "git_branch": "feat/ag05-resident-readonly-candidate",
+  "test_environment": {
+    "host_os": "macOS",
+    "test_suite": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-safety-boundaries.sh",
+    "scripts_tested": [
+      "integrations/apple-icloud-mcp/seoul-gateway/scripts/production-entry.sh",
+      "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh",
+      "integrations/apple-icloud-mcp/resident-tunnel/scripts/tunnel-ctl.sh",
+      "integrations/apple-icloud-mcp/resident-tunnel/scripts/run-resident-tunnel.sh"
+    ],
+    "fixtures": {
+      "list_id": "00000000-0000-0000-0000-000000000001",
+      "locked_candidate_image": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+      "locked_baseline_image": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+    }
+  },
+  "assertions": [
+    {
+      "test": "Test 1: authorized_keys backup failure blocks deployment before changes",
+      "result": "PASS",
+      "details": "Removed '|| true' on backup command; verified content with cmp -s; simulated backup disk failure; production-entry.sh deploy aborted with exit 1 before candidate compose file copy or watchdog spawn; zero mutation occurred."
+    },
+    {
+      "test": "Test 2: Indeterminate SSH authorized_keys path refuses deploy",
+      "result": "PASS",
+      "details": "Configured environment with unknown remote SSH user and unresolvable sshd authorizedkeysfile; verified production-entry.sh refused to fall back or guess current user's ~/.ssh/authorized_keys; aborted with exit 1 without touching any keys."
+    },
+    {
+      "test": "Test 3: Docker inspect fail / empty / unknown strictly blocks restore",
+      "result": "PASS",
+      "details": "Defaulted container_stopped=0; tested Subcase 3a (inspect command failure), Subcase 3b (empty inspection string), and Subcase 3c (status 'unknown'); all 3 subcases engaged [SAFETY_BARRIER], strictly skipped rsync configuration overwrite and docker compose up, and exited 1."
+    },
+    {
+      "test": "Test 4: PID file points to unrelated process: zero collateral damage",
+      "result": "PASS",
+      "details": "Created unrelated background process matching Bridge command name; pointed PID file to it with mismatched configuration; tunnel-ctl orchestrated-stop and close-business verified attribution, refused to signal PID, returned exit 1, and left the unrelated process running and unharmed."
+    },
+    {
+      "test": "Test 5: watchdog.pid points to unrelated process or different deadline: refuses reuse",
+      "result": "PASS",
+      "details": "Created dummy process and configured watchdog_metadata.env with mismatched DEADLINE_EPOCH; run-resident-tunnel.sh detected deadline mismatch, refused reuse, did not signal dummy process, and spawned a fresh verified watchdog."
+    }
+  ],
+  "overall_status": "ALL_5_SAFETY_BOUNDARY_TESTS_PASSED"
+}

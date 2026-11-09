@@ -348,23 +348,71 @@ deploy_candidate() {
   if [ -f "$ssh_dropin_path" ]; then
     ssh_dropin_preexisted=1
     mkdir -p "$backup_dir/sshd_config.d"
-    cp -a "$ssh_dropin_path" "$backup_dir/sshd_config.d/"
-  fi
-
-  local ssh_auth_keys_path="${SSH_AUTHORIZED_KEYS_PATH:-}"
-  if [ -z "$ssh_auth_keys_path" ]; then
-    if [ -n "${REMOTE_USER:-}" ] && [ -d "/home/${REMOTE_USER}/.ssh" ]; then
-      ssh_auth_keys_path="/home/${REMOTE_USER}/.ssh/authorized_keys"
-    elif [ -d "/home/mac-operator/.ssh" ]; then
-      ssh_auth_keys_path="/home/mac-operator/.ssh/authorized_keys"
-    else
-      ssh_auth_keys_path="$HOME/.ssh/authorized_keys"
+    cp -a "$ssh_dropin_path" "$backup_dir/sshd_config.d/" || {
+      echo "CRITICAL ERROR: Failed to backup pre-existing SSH drop-in from $ssh_dropin_path!" >&2
+      exit 1
+    }
+    if ! cmp -s "$ssh_dropin_path" "$backup_dir/sshd_config.d/$(basename "$ssh_dropin_path")"; then
+      echo "CRITICAL ERROR: Backup verification failed for SSH drop-in: content mismatch!" >&2
+      exit 1
     fi
   fi
+
+  # Determine target authorized_keys path: MUST come from explicit config or on-site valid sshd check
+  local ssh_auth_keys_path="${SSH_AUTHORIZED_KEYS_PATH:-}"
+  if [ -z "$ssh_auth_keys_path" ]; then
+    local target_ssh_user="${REMOTE_USER:-mac-operator}"
+    local sshd_ak=""
+    if command -v sshd >/dev/null 2>&1; then
+      sshd_ak=$(sshd -T -C "user=$target_ssh_user,host=localhost,addr=127.0.0.1" 2>/dev/null | grep -i '^authorizedkeysfile ' | head -n1 | awk '{print $2}' || true)
+    fi
+    if [ -n "$sshd_ak" ]; then
+      if [ "$sshd_ak" = ".ssh/authorized_keys" ] || [ "$sshd_ak" = "%h/.ssh/authorized_keys" ]; then
+        local user_home=""
+        user_home=$(getent passwd "$target_ssh_user" 2>/dev/null | cut -d: -f6 || grep -E "^${target_ssh_user}:" /etc/passwd 2>/dev/null | cut -d: -f6 || true)
+        if [ -n "$user_home" ] && [ -d "$user_home" ]; then
+          ssh_auth_keys_path="$user_home/.ssh/authorized_keys"
+        fi
+      elif [[ "$sshd_ak" = /* ]]; then
+        ssh_auth_keys_path="$sshd_ak"
+      fi
+    fi
+
+    # Fallback only to target_ssh_user's home directory (NEVER guess current user's ~/.ssh/authorized_keys!)
+    if [ -z "$ssh_auth_keys_path" ]; then
+      local user_home=""
+      user_home=$(getent passwd "$target_ssh_user" 2>/dev/null | cut -d: -f6 || grep -E "^${target_ssh_user}:" /etc/passwd 2>/dev/null | cut -d: -f6 || true)
+      if [ -n "$user_home" ] && [ -d "$user_home/.ssh" ]; then
+        ssh_auth_keys_path="$user_home/.ssh/authorized_keys"
+      elif [ -d "/home/$target_ssh_user/.ssh" ]; then
+        ssh_auth_keys_path="/home/$target_ssh_user/.ssh/authorized_keys"
+      fi
+    fi
+  fi
+
+  if [ -z "$ssh_auth_keys_path" ]; then
+    echo "CRITICAL ERROR: Unable to deterministically identify SSH authorized_keys path for target user '${REMOTE_USER:-mac-operator}'! Refusing to guess current user's ~/.ssh/authorized_keys. Deployment rejected to protect SSH access." >&2
+    exit 1
+  fi
+
   local ssh_auth_keys_preexisted=0
   if [ -f "$ssh_auth_keys_path" ]; then
     ssh_auth_keys_preexisted=1
-    cp -a "$ssh_auth_keys_path" "$backup_dir/authorized_keys" 2>/dev/null || true
+    echo "       Backing up pre-existing authorized_keys from $ssh_auth_keys_path..."
+    cp -a "$ssh_auth_keys_path" "$backup_dir/authorized_keys" || {
+      echo "CRITICAL ERROR: Failed to backup authorized_keys from $ssh_auth_keys_path to $backup_dir/authorized_keys!" >&2
+      exit 1
+    }
+    # Strict verification: file exists and matches source
+    if [ ! -f "$backup_dir/authorized_keys" ]; then
+      echo "CRITICAL ERROR: Backup verification failed: $backup_dir/authorized_keys does not exist!" >&2
+      exit 1
+    fi
+    if ! cmp -s "$ssh_auth_keys_path" "$backup_dir/authorized_keys"; then
+      echo "CRITICAL ERROR: Backup verification failed: $backup_dir/authorized_keys content differs from source!" >&2
+      exit 1
+    fi
+    echo "       [OK] Pre-existing authorized_keys backup verified ($ssh_auth_keys_path)."
   fi
 
   # Record deterministic manifest for standalone recovery
@@ -415,6 +463,15 @@ EOF
   echo "$watchdog_pid" > "$backup_dir/watchdog.pid"
   date +%s > "$backup_dir/watchdog.start_time"
   echo "$watchdog_timeout" > "$backup_dir/watchdog.timeout"
+  cat << EOF > "$backup_dir/watchdog_metadata.env"
+WATCHDOG_PID=$watchdog_pid
+WATCHDOG_UID=$UID
+WATCHDOG_USER="${USER:-$(id -un)}"
+WATCHDOG_BACKUP_DIR="$backup_dir"
+WATCHDOG_TIMEOUT=$watchdog_timeout
+WATCHDOG_START_TIME=$(date +%s)
+EOF
+  chmod 600 "$backup_dir/watchdog.pid" "$backup_dir/watchdog_metadata.env" 2>/dev/null || true
 
   if ! kill -0 "$watchdog_pid" 2>/dev/null; then
     echo "CRITICAL ERROR: Failed to start independent recovery watchdog! Aborting deployment before changes." >&2

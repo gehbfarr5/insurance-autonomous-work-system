@@ -199,11 +199,26 @@ trap cleanup_lock EXIT INT TERM
 # Stop active Seoul watchdog timer if running (do not kill self if watchdog triggered rollback)
 if [ -f "$BACKUP_DIR/watchdog.pid" ]; then
   wpid=$(cat "$BACKUP_DIR/watchdog.pid" 2>/dev/null || true)
+  wmeta="$BACKUP_DIR/watchdog_metadata.env"
   if [ -n "$wpid" ] && [ "$wpid" != "$$" ] && kill -0 "$wpid" 2>/dev/null; then
-    echo "       Stopping active watchdog timer (PID: $wpid)..."
-    kill -TERM "$wpid" 2>/dev/null || true
+    w_verified=0
+    if [ -f "$wmeta" ]; then
+      meta_wpid=$(grep '^WATCHDOG_PID=' "$wmeta" | cut -d'=' -f2- || true)
+      meta_bdir=$(grep '^WATCHDOG_BACKUP_DIR=' "$wmeta" | cut -d'=' -f2- || true)
+      meta_uid=$(grep '^WATCHDOG_UID=' "$wmeta" | cut -d'=' -f2- || true)
+      proc_uid=$(ps -p "$wpid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+      if [ "$meta_wpid" = "$wpid" ] && [ "$meta_bdir" = "$BACKUP_DIR" ] && [ "$meta_uid" = "$UID" ] && [ "$proc_uid" = "$UID" ]; then
+        w_verified=1
+      fi
+    fi
+    if [ "$w_verified" -eq 1 ]; then
+      echo "       Stopping verified active watchdog timer (PID: $wpid)..."
+      kill -TERM "$wpid" 2>/dev/null || true
+    else
+      echo "       WARNING: Watchdog PID $wpid attribution unverified (metadata mismatch or not owned by task); refusing to signal unverified process!" >&2
+    fi
   fi
-  rm -f "$BACKUP_DIR/watchdog.pid"
+  rm -f "$BACKUP_DIR/watchdog.pid" "$BACKUP_DIR/watchdog_metadata.env" 2>/dev/null || true
 fi
 
 # ------------------------------------------------------------------------------
@@ -259,6 +274,14 @@ terminate_verified_pid() {
   local target_pid="$1"
   local pattern="$2"
   if [ -n "$target_pid" ] && kill -0 "$target_pid" 2>/dev/null; then
+    # Verify launch identity (UID must match current UID)
+    local proc_uid
+    proc_uid=$(ps -p "$target_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+    if [ -n "$proc_uid" ] && [ "$proc_uid" != "$UID" ]; then
+      echo "       WARNING: PID $target_pid UID ($proc_uid) != current UID ($UID); refusing to signal unowned process!" >&2
+      return 1
+    fi
+
     local proc_args
     proc_args=$(ps -p "$target_pid" -o args= 2>/dev/null || echo "")
     if echo "$proc_args" | grep -E -q "$pattern"; then
@@ -278,10 +301,22 @@ terminate_verified_pid() {
   fi
 }
 
-# 1. Terminate task-specific tunnel runner if recorded
+# 1. Terminate task-specific tunnel runner if recorded and verified
 if [ -f "$BACKUP_DIR/task_tunnel.pid" ]; then
   t_pid=$(cat "$BACKUP_DIR/task_tunnel.pid" 2>/dev/null || true)
-  terminate_verified_pid "$t_pid" "run-resident-tunnel|ssh"
+  t_meta="$BACKUP_DIR/task_tunnel_metadata.env"
+  t_verified=1
+  if [ -f "$t_meta" ]; then
+    meta_tpid=$(grep '^TASK_PID=' "$t_meta" | cut -d'=' -f2- || true)
+    meta_tuid=$(grep '^TASK_UID=' "$t_meta" | cut -d'=' -f2- || true)
+    if [ "$meta_tpid" != "$t_pid" ] || [ "$meta_tuid" != "$UID" ]; then
+      echo "       WARNING: Task tunnel PID $t_pid does not match metadata ($meta_tpid, UID $meta_tuid); skipping!" >&2
+      t_verified=0
+    fi
+  fi
+  if [ "$t_verified" -eq 1 ]; then
+    terminate_verified_pid "$t_pid" "run-resident-tunnel|ssh"
+  fi
 fi
 
 # 2. Check listeners on seating port 18765
@@ -343,18 +378,36 @@ elif docker stop "$target_container" >/dev/null 2>&1; then
   stop_ok=1
 fi
 
-container_stopped=1
-if docker inspect "$target_container" >/dev/null 2>&1; then
-  c_status=$(docker inspect "$target_container" --format '{{.State.Status}}' 2>/dev/null || echo "unknown")
-  if [ "$c_status" = "running" ] || [ "$c_status" = "restarting" ]; then
-    echo "       CRITICAL ERROR: Container $target_container is still running (status: $c_status)!" >&2
-    recovery_errors+=("Candidate container refused to stop (still $c_status)")
-    container_stopped=0
+container_stopped=0 # Explicit allow condition: default to 0
+inspect_err_file=$(mktemp)
+set +e
+c_status=$(docker inspect "$target_container" --format '{{.State.Status}}' 2>"$inspect_err_file")
+inspect_ec=$?
+set -e
+inspect_err=$(cat "$inspect_err_file" 2>/dev/null || echo "")
+rm -f "$inspect_err_file"
+
+if [ "$inspect_ec" -eq 0 ]; then
+  # Inspect succeeded: inspect status string must match explicit stopped states
+  if [ -z "$c_status" ] || [ "$c_status" = "unknown" ]; then
+    echo "       CRITICAL ERROR: Container $target_container returned indeterminate status ('$c_status')! Refusing to assume stopped." >&2
+    recovery_errors+=("Container $target_container returned indeterminate status ('$c_status')")
+  elif [ "$c_status" = "exited" ] || [ "$c_status" = "stopped" ] || [ "$c_status" = "dead" ] || [ "$c_status" = "created" ]; then
+    echo "       [OK] Candidate container confirmed in stopped state: $c_status"
+    container_stopped=1
+  else
+    echo "       CRITICAL ERROR: Container $target_container is in unstopped status: $c_status!" >&2
+    recovery_errors+=("Candidate container not stopped (status: $c_status)")
   fi
-elif [ "$stop_ok" -eq 0 ]; then
-  echo "       CRITICAL ERROR: Container stop command failed and inspect was unavailable." >&2
-  recovery_errors+=("Candidate container stop command failed")
-  container_stopped=0
+else
+  # Inspect failed: check if it explicitly failed because target container does NOT exist
+  if echo "$inspect_err" | grep -E -iq "no such (container|object)|not found"; then
+    echo "       [OK] Candidate container does not exist on host (confirmed absent)."
+    container_stopped=1
+  else
+    echo "       CRITICAL ERROR: docker inspect failed unexpectedly (code $inspect_ec: $inspect_err)! Refusing to assume container stopped." >&2
+    recovery_errors+=("docker inspect failed unexpectedly for $target_container (code $inspect_ec)")
+  fi
 fi
 
 if [ "$container_stopped" -ne 1 ]; then

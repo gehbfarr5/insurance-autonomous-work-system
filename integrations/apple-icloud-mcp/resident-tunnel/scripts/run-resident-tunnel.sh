@@ -177,7 +177,15 @@ acquire_lock() {
       mv -f "$stage_file" "$LOCK_DIR/pid"
       date +%s > "$LOCK_DIR/time"
       echo "$$" > "$PID_FILE"
-      chmod 600 "$PID_FILE" "$LOCK_DIR/pid" "$LOCK_DIR/time" 2>/dev/null || true
+      cat << EOF > "$CONFIG_DIR/tunnel_supervisor.env"
+SUPERVISOR_PID=$$
+SUPERVISOR_UID=$UID
+SUPERVISOR_USER="${USER:-$(id -un)}"
+SUPERVISOR_CONFIG_DIR="$CONFIG_DIR"
+SUPERVISOR_SCRIPT="$(cd "$SCRIPT_DIR" && pwd)/$(basename "$0")"
+SUPERVISOR_START_TIME=$(date +%s)
+EOF
+      chmod 600 "$PID_FILE" "$LOCK_DIR/pid" "$LOCK_DIR/time" "$CONFIG_DIR/tunnel_supervisor.env" 2>/dev/null || true
       return 0
     fi
 
@@ -231,14 +239,38 @@ session_timeout_pid=""
 if [ -n "${DEADLINE_EPOCH:-}" ] && [ "${DEADLINE_EPOCH:-0}" -gt 0 ]; then
   # Check if an existing watchdog survived supervisor crash
   existing_watchdog_pid=""
+  watchdog_meta_file="$CONFIG_DIR/watchdog_metadata.env"
   if [ -f "$CONFIG_DIR/watchdog.pid" ]; then
     existing_watchdog_pid=$(cat "$CONFIG_DIR/watchdog.pid" 2>/dev/null || true)
   fi
 
+  watchdog_reusable=0
   if [ -n "$existing_watchdog_pid" ] && kill -0 "$existing_watchdog_pid" 2>/dev/null; then
-    session_timeout_pid="$existing_watchdog_pid"
-    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Found surviving watchdog PID $session_timeout_pid active across supervisor restart."
-  else
+    # Verify launch identity & metadata
+    if [ -f "$watchdog_meta_file" ]; then
+      w_pid=$(grep '^WATCHDOG_PID=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
+      w_uid=$(grep '^WATCHDOG_UID=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
+      w_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
+      w_epoch=$(grep '^WATCHDOG_DEADLINE_EPOCH=' "$watchdog_meta_file" | cut -d'=' -f2- || true)
+      proc_uid=$(ps -p "$existing_watchdog_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+
+      if [ "$w_pid" = "$existing_watchdog_pid" ] && \
+         [ "$w_uid" = "$UID" ] && \
+         [ "$proc_uid" = "$UID" ] && \
+         [ "$w_cfg" = "$CONFIG_DIR" ] && \
+         [ "$w_epoch" = "$DEADLINE_EPOCH" ]; then
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Verified surviving watchdog PID $existing_watchdog_pid matching same task ($CONFIG_DIR) and deadline ($DEADLINE_EPOCH)."
+        session_timeout_pid="$existing_watchdog_pid"
+        watchdog_reusable=1
+      else
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $existing_watchdog_pid attribution mismatch (task config or deadline differs: expected epoch $DEADLINE_EPOCH, got ${w_epoch:-none}); refusing to reuse!" >&2
+      fi
+    else
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Watchdog PID $existing_watchdog_pid lacks identity metadata; refusing unverified reuse!" >&2
+    fi
+  fi
+
+  if [ "$watchdog_reusable" -eq 0 ]; then
     remaining_seconds=$(( DEADLINE_EPOCH - $(date +%s) ))
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] MacServer local hard session deadline active: epoch $DEADLINE_EPOCH (${remaining_seconds}s remaining)"
     (
@@ -290,6 +322,15 @@ EOF
     session_timeout_pid=$!
     disown "$session_timeout_pid" 2>/dev/null || true
     echo "$session_timeout_pid" > "$CONFIG_DIR/watchdog.pid"
+    cat << EOF > "$watchdog_meta_file"
+WATCHDOG_PID=$session_timeout_pid
+WATCHDOG_UID=$UID
+WATCHDOG_USER="${USER:-$(id -un)}"
+WATCHDOG_DEADLINE_EPOCH=$DEADLINE_EPOCH
+WATCHDOG_CONFIG_DIR="$CONFIG_DIR"
+WATCHDOG_SUPERVISOR_PID=$$
+EOF
+    chmod 600 "$CONFIG_DIR/watchdog.pid" "$watchdog_meta_file" 2>/dev/null || true
   fi
 fi
 
@@ -428,7 +469,20 @@ cleanup_and_exit() {
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Received termination signal ($sig). Shutting down supervisor..."
 
   if [ -n "${session_timeout_pid:-}" ] && kill -0 "$session_timeout_pid" 2>/dev/null; then
-    kill "$session_timeout_pid" 2>/dev/null || true
+    local w_meta="$CONFIG_DIR/watchdog_metadata.env"
+    local w_kill_ok=1
+    if [ -f "$w_meta" ]; then
+      local m_pid m_uid m_cfg
+      m_pid=$(grep '^WATCHDOG_PID=' "$w_meta" | cut -d'=' -f2- || true)
+      m_uid=$(grep '^WATCHDOG_UID=' "$w_meta" | cut -d'=' -f2- || true)
+      m_cfg=$(grep '^WATCHDOG_CONFIG_DIR=' "$w_meta" | cut -d'=' -f2- || true)
+      if [ "$m_pid" != "$session_timeout_pid" ] || [ "$m_uid" != "$UID" ] || [ "$m_cfg" != "$CONFIG_DIR" ]; then
+        w_kill_ok=0
+      fi
+    fi
+    if [ "$w_kill_ok" -eq 1 ]; then
+      kill "$session_timeout_pid" 2>/dev/null || true
+    fi
   fi
 
   if [ -n "$sleep_child_pid" ] && kill -0 "$sleep_child_pid" 2>/dev/null; then
@@ -436,14 +490,21 @@ cleanup_and_exit() {
   fi
 
   if [ -n "$child_ssh_pid" ] && kill -0 "$child_ssh_pid" 2>/dev/null; then
-    kill -TERM "$child_ssh_pid" 2>/dev/null || true
-    local waited=0
-    while kill -0 "$child_ssh_pid" 2>/dev/null && [ "$waited" -lt 6 ]; do
-      sleep 0.5
-      waited=$((waited + 1))
-    done
-    if kill -0 "$child_ssh_pid" 2>/dev/null; then
-      kill -KILL "$child_ssh_pid" 2>/dev/null || true
+    local c_ppid c_uid
+    c_ppid=$(ps -p "$child_ssh_pid" -o ppid= 2>/dev/null | tr -d ' ' || echo "")
+    c_uid=$(ps -p "$child_ssh_pid" -o uid= 2>/dev/null | tr -d ' ' || echo "")
+    if [ "$c_ppid" = "$$" ] && [ "$c_uid" = "$UID" ]; then
+      kill -TERM "$child_ssh_pid" 2>/dev/null || true
+      local waited=0
+      while kill -0 "$child_ssh_pid" 2>/dev/null && [ "$waited" -lt 6 ]; do
+        sleep 0.5
+        waited=$((waited + 1))
+      done
+      if kill -0 "$child_ssh_pid" 2>/dev/null; then
+        kill -KILL "$child_ssh_pid" 2>/dev/null || true
+      fi
+    else
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WARNING: Child SSH PID $child_ssh_pid failed PPID/UID attribution check; refusing to kill!" >&2
     fi
   fi
 
@@ -501,6 +562,16 @@ while [ "$is_shutting_down" -eq 0 ]; do
     "$REMOTE_USER@$REMOTE_HOST" >> "$LOG_FILE" 2>&1 &
 
   child_ssh_pid=$!
+  cat << EOF > "$CONFIG_DIR/tunnel_child_ssh.env"
+CHILD_SSH_PID=$child_ssh_pid
+PARENT_SUPERVISOR_PID=$$
+CHILD_SSH_UID=$UID
+CHILD_SSH_CONFIG_DIR="$CONFIG_DIR"
+CHILD_SSH_REMOTE_HOST="$REMOTE_HOST"
+CHILD_SSH_REMOTE_USER="$REMOTE_USER"
+EOF
+  chmod 600 "$CONFIG_DIR/tunnel_child_ssh.env" 2>/dev/null || true
+
   l2_ssh="connected"
   l3_forward="forwarding_active"
   update_status "forwarding_established"
@@ -521,6 +592,7 @@ while [ "$is_shutting_down" -eq 0 ]; do
   set -e
   end_time=$(date +%s)
   child_ssh_pid=""
+  rm -f "$CONFIG_DIR/tunnel_child_ssh.env" 2>/dev/null || true
   l2_ssh="disconnected"
   l3_forward="inactive"
 

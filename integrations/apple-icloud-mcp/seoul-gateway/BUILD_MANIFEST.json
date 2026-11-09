@@ -1,12 +1,12 @@
 {
-  "manifest_version": "1.3.0",
-  "task": "AG-05 Resident Read-Only Candidate Delivery: Recovery State Machine Final Closed-Loop",
-  "generated_at": "2026-11-09T05:33:00Z",
+  "manifest_version": "1.4.0",
+  "task": "AG-05 Resident Read-Only Candidate Delivery: Safety Boundaries & Recovery State Machine",
+  "generated_at": "2026-11-09T05:52:00Z",
   "git": {
     "branch": "feat/ag05-resident-readonly-candidate",
     "pr": 23,
-    "upstream_baseline_commit": "92bd313154cfbc51fce7e8df5b3f73ea86a6f1c7",
-    "traceability_notes": "Delivers complete closed-loop recovery state machine: concurrent recovery result persistence (recovery_result.json) & failure propagation, MacServer NOT_CONFIGURED deployment blocker & recovery failure, candidate container stop safety barrier (rsync/up skipped on stop failure), strict process attribution with zero collateral damage, local deadline shutdown failure persistence (failed_stop_error), and 3-case SSH authorized_keys fidelity verified by 13 isolated drills."
+    "upstream_baseline_commit": "fe87b2102b57fceb8cd46b1faba072c7f6fd4290",
+    "traceability_notes": "Delivers strict safety boundaries: authorized_keys backup fail-fast (|| true removed, cmp -s verification), indeterminate SSH path deployment rejection (no ~/.ssh guessing), explicit container stop allow conditions (container_stopped=0 default, rsync/up skipped on non-terminal status), and rigorous process attribution (UID & metadata verification) preventing collateral damage, verified by 5 targeted negative tests and 13 recovery drills."
   },
   "artifacts": {
     "candidate_docker_image": {
@@ -72,6 +72,17 @@
         "Precise process attribution & zero collateral damage (unrelated bridge/SSH survive)",
         "Local business close failure traceability (persists failure and exit 42)",
         "SSH authorized_keys fidelity (All 3 Cases: delete new, restore pre-existing, custom path)"
+      ]
+    },
+    "safety_boundaries_negative_suite": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-safety-boundaries.sh",
+      "result": "ALL 5 SAFETY BOUNDARY TESTS PASSED (100%)",
+      "scenarios_verified": [
+        "authorized_keys backup failure blocks deployment before changes",
+        "Indeterminate SSH authorized_keys path refuses deploy (no guessing current ~/.ssh)",
+        "Docker inspect fail / empty / unknown strictly blocks restore & config overwrite",
+        "PID file points to unrelated process: zero collateral damage",
+        "watchdog.pid points to unrelated process or different deadline: refuses reuse"
       ]
     }
   },
