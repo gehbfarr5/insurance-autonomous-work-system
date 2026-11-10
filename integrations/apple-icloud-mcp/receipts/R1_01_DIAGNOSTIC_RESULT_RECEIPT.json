@@ -1,0 +1,194 @@
+{
+  "receipt_type": "R1_01_DIAGNOSTIC_RESULT_RECEIPT",
+  "task": "REM-R1-01",
+  "layer": "A_ENGINEERING_DIRECT_DIAGNOSTIC",
+  "executed_at_utc": "2026-11-10T14:39:38Z/2026-11-10T14:48:06Z",
+  "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
+  "authorization": "R1 real diagnostic authorized by the focal point at 2026-11-10, scope A1-A9, single 45-minute session, cumulative gate-open budget <= 600s",
+  "verdict": "BLOCKED_TARGET_LIST_ABSENT",
+  "verdict_assertion": "R1 cannot produce a read-fidelity result because the bound list is no longer among the calendars EventKit returns on MAC-1. The read path itself is not shown to be defective: the bridge is in production mode, the Reminders dataclass is authorized, and the list endpoint answered HTTP 200 with two lists. The target list 9D9A****03F3 was observed present on 2026-11-07T14:37Z (B2) and still resolvable on 2026-11-09T16:50Z (AG-07), and is absent on 2026-11-10T14:45Z. Real operations were stopped at that point, as the authorization requires when the target binding does not match.",
+  "decisive_measurement": {
+    "source": "window-20261110T144506Z-targetprobe/batch-1-targetprobe/capture.json",
+    "endpoint": "GET http://127.0.0.1:18765/reminders/lists",
+    "http_status": 200,
+    "visible_list_count": 2,
+    "target_visible": false,
+    "source_type": null,
+    "source_name": null,
+    "source_id_masked": null,
+    "client_classification": "ERROR_TARGET_LIST_IDENTITY",
+    "client_exit_code": 20,
+    "interpretation": "HTTP 200 proves the request was authorized and the Reminders dataclass is readable; the enumeration is therefore meaningful, not an empty or denied answer. Two calendars came back and neither carries the bound identifier."
+  },
+  "historical_comparators": [
+    {
+      "receipt": "receipts/B2_TCC_AND_METADATA_RECEIPT.json",
+      "at_utc": "2026-11-07T14:37:11Z",
+      "observed": "lists_discovered_count = 3, including 9D9A****03F3 (masked title M****试) bound as the dedicated test list, all three on iCloud/calDAV",
+      "meaning": "On the same host and the same endpoint, the list was present in EventKit's enumeration."
+    },
+    {
+      "receipt": "receipts/AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json",
+      "at_utc": "2026-11-09T16:50Z (window 15:50-16:50Z)",
+      "observed": "step 2 PASS: the bound test list was returned with matching identifier",
+      "meaning": "The identifier still resolved roughly 22 hours before this window."
+    },
+    {
+      "receipt": "this window",
+      "at_utc": "2026-11-10T14:45:13Z",
+      "observed": "visible_list_count = 2, target_visible = false",
+      "meaning": "The list left the account between 2026-11-09T16:50Z and 2026-11-10T14:45Z. The disappearance is recent, not a long-standing mismatch."
+    }
+  ],
+  "what_this_excludes": [
+    {
+      "claim": "Gateway, transport or serialization silently drops items",
+      "status": "EXCLUDED for this endpoint",
+      "basis": "The list endpoint returned both of the account's calendars unchanged; nothing upstream of EventKit removed an entry. Same conclusion as the offline code reading (offline receipt F3)."
+    },
+    {
+      "claim": "TCC permission was revoked, so reads fail silently",
+      "status": "EXCLUDED",
+      "basis": "A denied TCC state yields 403 PERMISSION_DENIED from the bridge; this window received 200 with a real enumeration. Health also reported store=production, mode=readonly."
+    },
+    {
+      "claim": "The bridge is pointing at a stale or mismatched configuration",
+      "status": "EXCLUDED",
+      "basis": "static_config: allowed_list_count=1, allowed_list_matches_target=true, binding_present_and_caldav_icloud=true, gate_source=launchd_env, gate_value=false while closed."
+    },
+    {
+      "claim": "The deployed artifact is not the frozen one",
+      "status": "EXCLUDED",
+      "basis": "The P0 preflight ran against /Users/shared/bin/EventKitBridgeServer with the frozen sha256 f78e24e5...3074; codesign satisfied the adhoc designated requirement; health reported store=production."
+    }
+  ],
+  "what_this_does_not_establish": [
+    "Why the historical reads returned HTTP 200 with an empty array while the list was still visible (B3 2026-11-07, AG-04 2026-11-08, AG-07 2026-11-10). H1 (genuinely empty), H2 (sync gap) and H5 (EventKit predicate defect) all remain open. H4 as an explanation of those historical reads is now excluded, because the list demonstrably existed and resolved at those times.",
+    "What the bridge would answer today for an item query on the bound identifier. The client refused at the identity check and never issued the item request, so no 404-versus-200 observation exists. Asserting 'it would 404' would be inference from ProductionEventKitStore.swift:148-150, not measurement.",
+    "When, how and by whom the list was removed, and whether it sits in Recently Deleted or is permanently deleted. Both are outside what a read-only enumeration can tell."
+  ],
+  "field_mapping": {
+    "status": "NOT_APPLICABLE",
+    "fields_compared": 0,
+    "reason": "Field-by-field fidelity requires at least one item read from the bound list. Zero items were read: the capture aborted at the identity precondition, so the item query was never sent. No field of title, notes, due date, priority, completion state or timezone was compared, and none of them may be reported as verified.",
+    "explicit_non_claim": "This receipt does not assert, imply or partially support a fidelity PASS. The R2 acceptance dimension 'non-empty field fidelity' remains UNVERIFIED, exactly as it stood after AG-07."
+  },
+  "window_evidence": {
+    "p0_preflight": {
+      "dir": "r1-evidence/20261110T143931Z/window-20261110T143938Z-p0",
+      "at_utc": "2026-11-10T14:39:38Z",
+      "health": "200, store=production, mode=readonly, status=ok",
+      "gate_probe": "403 PERMISSION_DENIED (expected while closed)",
+      "confirmation": "none; this run ended with 'DRY RUN: preflight passed, no gate operation was performed'"
+    },
+    "targetprobe_window": {
+      "dir": "r1-evidence/20261110T143931Z/window-20261110T144506Z-targetprobe",
+      "label": "targetprobe",
+      "expectation": "absence",
+      "passes_planned": 1,
+      "passes_completed": 1,
+      "capture_exit_codes": [
+        20
+      ],
+      "window_outcome": "COMPLETED",
+      "truncated": false,
+      "watchdog": {
+        "armed_before_any_change": true,
+        "pid": 33624,
+        "deadline_epoch": 1794324269,
+        "open_budget_seconds": 120,
+        "final_state": "DISARMED_BY_MAIN",
+        "final_reason": "none",
+        "process_alive_after": false
+      },
+      "gate_open": {
+        "source": "launchd_env",
+        "reload_method": "bootout_bootstrap",
+        "before_pid": 56044,
+        "after_pid": 33694,
+        "verification": "PASS",
+        "verification_basis": "http behaviour 200 after reload + process identity; never the file value",
+        "plist_backup": "0600 inside the restricted evidence dir"
+      },
+      "gate_close": {
+        "before_pid": 33694,
+        "after_pid": 33771,
+        "verification": "PASS",
+        "gate_http_status": 403,
+        "single_key_change_only": true
+      }
+    },
+    "budget_accounting": {
+      "gate_operations_in_session": 2,
+      "gate_open_interval_seconds": "<= 8 (open receipt 22:45:13, close receipt 22:45:17 local; the open took effect just before the 22:45:12 health probe)",
+      "cumulative_open_budget_used_seconds": "< 10 of the approved 600",
+      "session_length": "well inside the 45-minute limit; the session ended early because the target binding did not match"
+    }
+  },
+  "restore_and_zero_residue": {
+    "receipt": "receipts/R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json",
+    "summary": [
+      "The plist on disk is byte-identical to its pre-open state (sha256 prefix 9da02bf9b6d2); the only line that ever differed was line 28, false to true and back.",
+      "Gate closed and re-verified by behaviour with a still-valid token: GET /reminders/lists returned 403 PERMISSION_DENIED, so the refusal comes from the gate and not from the credential.",
+      "One process running, pid 33771, lstart Tue Nov 10 22:45:14 2026; the process environment contains no PRODUCTION_AUTHORIZED=true.",
+      "Watchdog exited on its own after a verified restore and was never disarmed by the deadline path.",
+      "Token and the four harness scripts deleted only afterwards; the harness directory is gone; no stray r1 process; the evidence directory is retained."
+    ],
+    "synthetic_items_created": 0,
+    "synthetic_items_deleted": 0
+  },
+  "authorization_compliance": {
+    "performed": [
+      "A1 artifact identity only: shasum -a 256 on /Users/shared/bin/EventKitBridgeServer equals the frozen f78e24e5...3074, codesign --verify reports 'valid on disk' and 'satisfies its Designated Requirement', one process with its lstart recorded",
+      "A2 read-only endpoints: /health and /reminders/lists only; the item endpoint was never called because the identity precondition failed first",
+      "A3 token: extracted once to a 0600 file, used only in the Authorization header, deleted after the watchdog was confirmed gone",
+      "A4 gate: one open and one close through the single entry point, each verified by behaviour and process identity",
+      "A6 evidence written only under the restricted evidence tree",
+      "A9 the four harness scripts were placed in the temporary harness directory and deleted at the end"
+    ],
+    "not_performed": [
+      "A1 --check-authorization: not executed; no output file exists for it. This does not weaken the TCC conclusion, because a 200 enumeration of real calendars is a stronger proof of full access than a status flag, and it is the behaviour the diagnosis actually depends on",
+      "A5/A7 synthetic item creation and visual counting: never reached, no item was created and none was read",
+      "A8 cloud corroboration: not needed",
+      "A11 GUI automation: not executed",
+      "A12 historical receipt rewrite: not executed",
+      "Binary rebuild or re-sign: not executed (the frozen artifact was used as-is)",
+      "Seoul, tunnel or network changes: not executed",
+      "Write capability expansion or full gateway rehearsal: not executed",
+      "R2: not opened"
+    ],
+    "paused_by_rule": "The authorization states that a mismatched target requires pausing real operations, preserving evidence and reporting. That rule was applied at the first pass: the window was not extended, no second pass was attempted, and no workaround (rebinding the configuration to a different list) was improvised."
+  },
+  "corrections_recorded_in_this_round": [
+    {
+      "item": "1. No binary replacement",
+      "text": "The frozen artifact f78e24e5...3074 was used for every read. No rebuilding, re-signing or substitution occurred. Only an authorized single-key configuration change plus the corresponding service reload was performed."
+    },
+    {
+      "item": "2. Emergency close is inside this approval",
+      "text": "Recorded as approved. It was not needed: the watchdog remained armed throughout and the window closed itself with a verified restore."
+    },
+    {
+      "item": "3. Token extraction defect in the application's section 3.3",
+      "text": "The value of EVENTKIT_BRIDGE_BEARER_TOKEN in bridge.env is wrapped in double quotes. The documented extraction produced 66 bytes including the quotes, which failed authentication (401 instead of 403) on the first preflight. The extraction must strip the surrounding quotes; the corrected value is 65 bytes including the trailing newline. This was a defect in the written procedure, not in the bridge, and it is recorded here rather than silently fixed."
+    }
+  ],
+  "next_options": [
+    {
+      "option": "1. Restore the list on the account (user action, no engineering)",
+      "detail": "In Reminders on MAC-1, check Recently Deleted for a list named MUSE 测试 and restore it. If it returns with the same identifier, the existing binding works unchanged and R1 can be re-run as approved with a new window. Reversibility: high. Verification: one read-only enumeration returns the third list again.",
+      "risk": "If the restore assigns a new identifier, the binding stops matching and option 2 applies."
+    },
+    {
+      "option": "2. Rebind to a list that exists (requires a new authorization)",
+      "detail": "Create the test list, then change the allowlist entry and the bound identifier. This is a configuration change beyond the single business-gate key covered by the current approval, so it needs a fresh approval item, not a silent edit.",
+      "risk": "A wrong identifier here is exactly the failure this round just measured, so the change must be verified by enumeration before any window opens."
+    },
+    {
+      "option": "3. Answer the original empty-read question independently (no rebinding)",
+      "detail": "The historical 200 plus empty array occurred while the list was demonstrably present, so it is still unexplained. A single read-only enumeration of item counts for every visible list would show whether EventKit returns items for those lists at all. If it returns items for the other lists, EventKit and the bridge are healthy and the old result points at the list itself; if it returns zero for every list, the fault is account-level sync (H2).",
+      "risk": "Low: one more bounded read-only window on an existing list, no writes, no rebinding."
+    }
+  ],
+  "attachment_evidence_note": "All identifiers in this receipt are masked using the existing convention. No token value, no unmasked UUID, no item content and no list title beyond the already-published masked forms appear here."
+}

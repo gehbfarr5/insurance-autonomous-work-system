@@ -1,0 +1,62 @@
+{
+  "receipt_type": "R1_P5_CLOSURE_AND_ZERO_RESIDUE",
+  "task": "REM-R1-01",
+  "executed_at_utc": "2026-11-10T14:48:06Z",
+  "sequence_note": "The token and the harness scripts were deleted only after (1) the watchdog had exited on its own, (2) the gate had been closed and verified by behaviour, and (3) the on-disk launchd value had been read back. The order is the point of this receipt.",
+  "watchdog": {
+    "state": "DISARMED_BY_MAIN",
+    "reason": "none",
+    "restore_exit_code": 0,
+    "process_alive": false,
+    "deadline_epoch": 1794324269,
+    "open_budget_seconds": 120,
+    "note": "Disarmed by the window itself after a verified restore, not by the deadline path. A deadline-triggered close would have recorded FIRED_*."
+  },
+  "restore": {
+    "gate_close_verification": "PASS",
+    "gate_close_observed_status": "403",
+    "pid_before": 56044,
+    "pid_after": 33771,
+    "process_restarted": true,
+    "process_count": 1,
+    "process_lstart": "Tue Nov 10 22:45:14 2026",
+    "plist_value_on_disk": "false",
+    "plist_sha256_12": "9da02bf9b6d2",
+    "process_env_contains_true": false,
+    "gate_open_since_present": false,
+    "stop_file_present": true
+  },
+  "read_only_closure_recheck": {
+    "endpoint": "http://127.0.0.1:18765",
+    "health_http_status": 200,
+    "health_store": "production",
+    "health_mode": "readonly",
+    "business_http_status_with_valid_token": 403,
+    "business_error_code": "PERMISSION_DENIED",
+    "interpretation": "A request carrying a still-valid bearer token is refused, so the denial comes from the production gate and not from the credential. This is the read-only proof that the gate is closed; it did not require re-opening anything."
+  },
+  "deletion": {
+    "harness_dir": "/Users/jin/r1-harness-20261110T143931Z",
+    "removed": [
+      "token (0600, 65 bytes)",
+      "r1_gate.sh",
+      "r1_window.sh",
+      "r1_watchdog.sh",
+      "r1_bridge_client.py"
+    ],
+    "dir_removed": true,
+    "evidence_dir_kept": "/Users/jin/r1-evidence/20261110T143931Z",
+    "evidence_dir_size": "84K"
+  },
+  "residue_scan": {
+    "token_files_found": 0,
+    "stray_r1_processes": 0,
+    "synthetic_items_created": 0,
+    "synthetic_items_to_delete": 0,
+    "note": "This window ran in absence mode and never wrote to EventKit, so there is no synthetic reminder to remove. Zero writes is the reason the residue scan can be short."
+  },
+  "limits": [
+    "Residue scanning covers files created by this task (token, harness scripts) and processes started by this task. It does not enumerate unrelated user files.",
+    "The evidence directory is deliberately retained and is not part of the zero-residue claim."
+  ]
+}

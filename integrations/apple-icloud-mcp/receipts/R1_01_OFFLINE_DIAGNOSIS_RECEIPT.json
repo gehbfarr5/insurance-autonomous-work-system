@@ -2,14 +2,16 @@
   "receipt_type": "R1_01_OFFLINE_DIAGNOSIS_RECEIPT",
   "task": "REM-R1-01",
   "executed_at": "2026-11-10T11:50:00Z",
-  "revision": 4,
-  "revision_note": "v4: fourth-round targeted remediation. The gate mutex could be taken twice (a lock directory existed before its owner record did, so a second process called it stale and renamed it away); the lock is now a symlink published atomically on top of a pre-written owner record, an ownerless lock is only waited for inside a grace window, reclaim restores a newer holder's lock instead of deleting it, and ownership is re-asserted before the write and before the reload. Evidence directories are proven writable before any production-facing step in all four scripts, so a failed operation can no longer change state and then be unable to leave a receipt. It also corrects a second factual error: the archived AG-06 receipt already shows --check-authorization running on the same frozen artifact, so its presence in the deployed binary is settled evidence, not UNKNOWN. No production action was taken.",
+  "revision": 5,
+  "revision_note": "v5: the approved real diagnostic was executed and stopped at its first pass. A fresh bridge process enumerated the account and returned two reminder calendars; the bound identifier was not among them, so the list has left the account and R1 cannot be decided against it. The read path itself is not implicated: HTTP 200 on the enumeration, production store, Reminders authorized. Real operations were paused at that point per the authorization's mismatch rule, the gate was closed and re-verified, and the token and harness scripts were deleted afterwards. What this revision adds: F19 (the absent target), F20 (the enumeration is account-wide, not allowlist-filtered), and a corrected H4 (excluded as the cause of the historical empty reads, confirmed as the present state). No fidelity claim is made anywhere.",
   "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
-  "scope": "offline_only",
-  "r1_status": "NOT_STARTED",
+  "scope": "offline_work_plus_r1_layer_a_execution",
+  "r1_status": "BLOCKED_TARGET_LIST_ABSENT",
   "stage_status": {
     "verdict": "BLOCKED",
-    "assertion": "R1 PASS requires at least one synthetic item known to exist in the bound list to be read correctly by MacServer EventKit. No such item is known to exist, and no offline evidence can establish that it does. Offline work is complete; R1 itself has not begun."
+    "assertion": "R1 was executed and stopped at its first pass: the bound list 9D9A****03F3 is no longer among the calendars EventKit returns on MAC-1 (visible_list_count=2, target_visible=false, HTTP 200). R1 PASS requires reading a known synthetic item from the bound list; with the binding gone there is nothing to read, and no field fidelity was measured. This is a binding failure, not a read-path failure.",
+    "detail_receipt": "receipts/R1_01_DIAGNOSTIC_RESULT_RECEIPT.json",
+    "closure_receipt": "receipts/R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json"
   },
   "environment": {
     "verified_at": "2026-11-10T05:08:00Z",
@@ -40,10 +42,13 @@
           "installed_sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
           "launchagent_label": "com.muse.macserver-eventkit",
           "gui_session": "gui/501 (Aqua)",
-          "tcc_state_at_2026_11_09T23_28Z": "authorized (full access to Reminders)"
+          "tcc_state_at_2026_11_09T23_28Z": "authorized (full access to Reminders)",
+          "observed_now": "single process pid 33771 (lstart Tue Nov 10 22:45:14 2026); health 200 store=production mode=readonly; business endpoint 403 with a valid token; exactly one allowlisted list; Reminders dataclass readable (enumeration returned 200)",
+          "tcc_state_now": "authorized (a 200 enumeration is only reachable with full access)"
         },
-        "verified_now": false,
-        "access_gap": "no non-sensitive record exists after the AG-07 deadline recovery (2026-11-10T00:50:18+08:00); current service state, TCC state and sync state are UNVERIFIED. No probe was issued to close this gap, per the no-probe rule."
+        "verified_now": true,
+        "access_gap": "Closed for the fields this task needed (artifact, signature, process identity, TCC-effective, listing behaviour). Still open: per-item content, iCloud-side account state, and why the list disappeared.",
+        "verified_at": "2026-11-10T14:48:06Z"
       },
       {
         "node": "seoul",
@@ -288,6 +293,25 @@
       ],
       "strength": "strong (offline, covered by test_r1_window.sh scenario 21)",
       "fix": "r1_gate.sh proves the --out directory exists and accepts a write before anything else and exits 6 with 'nothing was changed'; r1_window.sh proves --work-dir the same way before arming the watchdog (exit 17, missing parent refused rather than invented); r1_watchdog.sh refuses to arm when its state directory is unusable (FATAL, exit 4); the client exits 4 with EVIDENCE_DIR_UNUSABLE and writes receipts atomically. Token and scripts are deleted only after every restore has finished and the watchdog is confirmed gone, because the watchdog needs both to close the gate."
+    },
+    {
+      "id": "F19",
+      "fact": "On 2026-11-10T14:45:13Z a freshly started bridge process (pid 33694, started by the window's own open) enumerated the account and returned exactly two reminder calendars; the bound identifier 9D9A****03F3 was not among them (visible_list_count=2, target_visible=false, http_status=200). The same endpoint returned three lists including that identifier on 2026-11-07T14:37:11Z (B2) and the identifier still resolved on 2026-11-09T16:50Z (AG-07). The bound list therefore left the account between those observations and this window, and the binding is currently invalid.",
+      "evidence": [
+        "r1-evidence/20261110T143931Z/window-20261110T144506Z-targetprobe/batch-1-targetprobe/capture.json",
+        "receipts/B2_TCC_AND_METADATA_RECEIPT.json (lists_discovered_count: 3)",
+        "receipts/AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json (step 2 PASS)"
+      ],
+      "strength": "strong (direct measurement on a fresh process; the two earlier observations are archived receipts)"
+    },
+    {
+      "id": "F20",
+      "fact": "GET /reminders/lists is not filtered by the allowlist: the window's enumeration returned two calendars while the configuration carries exactly one allowlisted entry (static_config: allowed_list_count=1, allowed_list_matches_target=true). The count therefore describes the whole account, which is what makes 'two lists and neither is the target' a statement about the account rather than about the filter.",
+      "evidence": [
+        "window-20261110T144506Z-targetprobe/state/static_config.json",
+        "window-20261110T144506Z-targetprobe/batch-1-targetprobe/capture.json"
+      ],
+      "strength": "strong (count and allowlist size are both observed, not inferred)"
     }
   ],
   "limitations": [
@@ -333,7 +357,8 @@
         "F8",
         "no write path exists in any receipt"
       ],
-      "discriminator": "Observe the list in the native Reminders app on MAC-1 under the bound iCloud account, then read it through the bridge."
+      "discriminator": "Observe the list in the native Reminders app on MAC-1 under the bound iCloud account, then read it through the bridge.",
+      "note": "Still open, and now unreachable with this binding: the list no longer exists, so 'was it ever empty' can only be answered after a list is restored or rebound."
     },
     {
       "id": "H2",
@@ -342,7 +367,8 @@
       "supporting": [
         "B2 recorded com.apple.Dataclass.Reminders: True, which indicates the dataclass is enabled, not that this list is synced"
       ],
-      "discriminator": "Same observation as H1: an item visible in Reminders.app but absent from EventKit read separates H2 from H1."
+      "discriminator": "Same observation as H1: an item visible in Reminders.app but absent from EventKit read separates H2 from H1.",
+      "note": "Still open. A lead for the next round: the focal point's screenshot of the sidebar shows a warning marker beside one list, which in Reminders usually indicates a sync problem. That is a visual cue, not evidence, and it is not established by this task."
     },
     {
       "id": "H3",
@@ -359,11 +385,14 @@
     {
       "id": "H4",
       "statement": "The stored list identifier no longer corresponds to the user-visible list (deleted and recreated), and a cached EKCalendar object resolves the ghost.",
-      "status": "PARTIALLY_EXCLUDED",
+      "status": "SPLIT: excluded as the cause of the historical reads / confirmed as the present state",
       "supporting": [
-        "a stale identifier that cannot resolve would 404, and reads returned 200"
+        "F19: the identifier is now gone from the enumeration, so today a read cannot resolve it at all"
       ],
-      "discriminator": "Record calendarIdentifier and sourceIdentifier at read time and compare against the value persisted in bridge.env; a differing identifier in list metadata would confirm drift."
+      "discriminator": "Settled twice over: archived enumeration at read time excludes it as a historical cause, and the current window confirms it as the present state.",
+      "against": [
+        "F19: the list was present and resolving at every historical read (B2 2026-11-07, AG-07 2026-11-09), so a ghost identifier cannot explain those empty arrays"
+      ]
     },
     {
       "id": "H5",
@@ -372,7 +401,8 @@
       "supporting": [
         "F3 shows nothing upstream of EventKit can remove items"
       ],
-      "discriminator": "Only reachable after H1/H2/H3 controls pass: item visible in app, fresh store, still zero items."
+      "discriminator": "Only reachable after H1/H2/H3 controls pass: item visible in app, fresh store, still zero items.",
+      "note": "Still open but untestable on this binding: it would need a list that exists and contains at least one item."
     }
   ],
   "decisions": {
@@ -572,31 +602,31 @@
     }
   },
   "operations_log": {
-    "operations_log_note": "No production host was touched in this revision. Everything below is offline or local to the worktree.",
+    "operations_log_note": "This revision DID touch the production host, inside the approved window. It is recorded in full because the previous revision's 'no production action' note no longer applies.",
     "files_written": [
-      "git worktree /Users/jin/WorkBuddy/2026-11-10-13-08-22/r1-01-worktree (isolated branch)",
-      "two commits as listed above",
-      "this receipt and the authorization application under receipts/"
+      "worktree: receipts/R1_01_DIAGNOSTIC_RESULT_RECEIPT.json, receipts/R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json, this revision",
+      "MAC-1 evidence tree /Users/jin/r1-evidence/20261110T143931Z (retained, 0600)",
+      "MAC-1 temporary harness dir, created for this run and deleted at the end"
     ],
     "files_or_data_read": [
-      "receipts B3/AG04/AG06/AG07/RECEIPTS_SUMMARY",
-      "macserver-eventkit Sources + Tests + scripts + BUILD_METADATA",
-      "seoul-gateway src + tests list + fake-bridge + synthetic generator outputs"
+      "GET /health and GET /reminders/lists over loopback only",
+      "launchd plist value, process identity via ps, codesign output, frozen artifact sha256",
+      "archived receipts B2/B3/AG-04/AG-07 for the historical comparison"
     ],
-    "processes_started_or_stopped": "none on any production host. Local only: swift test binaries and a loopback FakeEventKitBridge on an ephemeral port.",
-    "deployments": "none",
-    "service_restarts": "none",
-    "gates_opened": "none",
-    "real_apple_data": "none accessed",
-    "tcc_prompts": "none triggered",
-    "credential_operations": "none; bridge.env never opened",
+    "processes_started_or_stopped": "bridge restarted twice by the gate (56044 -> 33694 open, 33694 -> 33771 close); one watchdog started and exited on its own; no other process touched",
+    "deployments": "none; the frozen artifact f78e24e5...3074 was used as-is",
+    "service_restarts": "2, both by the gate's single entry point",
+    "gates_opened": "1 (one window, one open, one close; cumulative open time under 10 seconds of the approved 600)",
+    "real_apple_data": "list metadata only (masked identifiers and digests). Zero reminder items read: the capture aborted at the identity check before issuing any item query.",
+    "tcc_prompts": "none",
+    "credential_operations": "the existing bearer token was extracted once to a 0600 file, used, and deleted after the watchdog was confirmed gone",
     "seoul_or_network_changes": "none",
-    "remote_writes": "branch push only (no merge, no PR opened)"
+    "remote_writes": "evidence tree and temporary harness on MAC-1 only; branch push, no merge, no PR"
   },
   "next_step": {
-    "action": "Await focal-point approval of receipts/R1_01_DIAGNOSTIC_AUTHORIZATION_APPLICATION.md (v3, 12 approval items A1-A12).",
-    "on_approval": "Execute layer A only, inside one 45-minute session with a shared absolute deadline: read-only identity checks, one synthetic item created by the user, two presence passes, the user deletes the item, one absence (cleanup) pass, automatic gate close and 403 re-verification, then a desensitized receipt.",
-    "not_before_r1": "No gateway acceptance run, no R2 proposal, no PR merge, no rebuild.",
-    "r1_r2_separation": "R1 is a MacServer-local engineering diagnosis and is decided by layer A observations alone. MUSE front-end acceptance is R2 and is signed independently; neither is a precondition or a substitute for the other."
+    "action": "Report BLOCKED_TARGET_LIST_ABSENT and hand the decision back to the focal point. Three options are laid out in receipts/R1_01_DIAGNOSTIC_RESULT_RECEIPT.json: restore the list on the account, rebind to a list that exists (needs a new approval item), or answer the original empty-read question with a read-only item count over the lists that do exist.",
+    "on_decision": "No real operation resumes until the focal point picks one. Option 3 is the cheapest and needs no rebinding; option 2 changes configuration beyond the single business-gate key and must not be improvised.",
+    "not_before_r1": "No R2 proposal before R1 reaches a verdict the focal point accepts; no PR merge; no rebuild.",
+    "r1_r2_separation": "Unchanged: R1 is a MacServer-local diagnosis, R2 is MUSE front-end acceptance, and neither substitutes for the other."
   }
 }
