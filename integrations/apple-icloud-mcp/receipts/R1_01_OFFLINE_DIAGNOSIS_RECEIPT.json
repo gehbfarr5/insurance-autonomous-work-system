@@ -1,7 +1,9 @@
 {
   "receipt_type": "R1_01_OFFLINE_DIAGNOSIS_RECEIPT",
   "task": "REM-R1-01",
-  "executed_at": "2026-11-10T05:20:00Z",
+  "executed_at": "2026-11-10T10:20:00Z",
+  "revision": 2,
+  "revision_note": "v2: review response. The authorization application was rewritten around seven findings (deadline conflict, launchd load semantics, failure propagation, evidence rules, UNKNOWN handling, access path and responsibility, scope separation). Scripts gained a bounded-window watchdog, a single gate entry point, a cleanup-verification mode, a plist backup, and hardened transport (no proxy, no redirects). No production action was taken.",
   "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
   "scope": "offline_only",
   "r1_status": "NOT_STARTED",
@@ -160,6 +162,42 @@
       "fact": "Bridge configuration, including the production gate, is supplied as LaunchAgent EnvironmentVariables and read once at process start. Any gate change therefore implies a process restart, which constructs a fresh EKEventStore on the first request. Every historical read ran on a freshly started process (B3 records service_restarted: true; AG-06 records a reload after the TCC grant).",
       "evidence": ["com.muse.macserver-eventkit.plist.template:5-35", "main.swift:104-120", "B3_TEST_LIST_READ_RECEIPT.json:29-33", "AG06_TCC_PREFLIGHT_AUTHORIZATION_RECEIPT.json:41-46"],
       "strength": "strong; this materially demotes the stale-cache hypothesis"
+    },
+    {
+      "id": "F13",
+      "fact": "BridgeConfig.load() merges the LaunchAgent environment into the config file and the environment wins (`if mergedEnv[k] == nil || empty`). Consequently: when the plist defines EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED, writing bridge.env has no effect at all; and a value read from disk is not the running process state, because launchd caches the job. A gate operation must therefore be proven by HTTP behaviour plus process identity, never by the file.",
+      "evidence": ["Sources/EventKitBridge/Support/BridgeConfig.swift (merge order)", "scripts/r1_gate.sh (source detection + behavioural verification)", "scripts/tests/test_r1_window.sh scenario 12 (plist authoritative source, bootout+bootstrap, 0600 backup)"],
+      "strength": "strong as a code fact; the reload semantics of the target launchd could not be measured on this host (see L1)"
+    },
+    {
+      "id": "F14",
+      "fact": "The originally proposed transport was unsafe for a token-bearing request: urllib follows 3xx redirects by default (re-sending the Authorization header to the new location) and honours proxy environment variables, so a redirect or an http_proxy could move the request off the authorized loopback endpoint. The client now builds its opener with an explicit empty ProxyHandler and a redirect handler that refuses every 3xx.",
+      "evidence": ["scripts/r1_bridge_client.py (_NO_PROXY, _RefuseRedirect)", "scripts/tests/test_r1_bridge_client.py scenarios 16-17"],
+      "strength": "strong; both behaviours are asserted offline"
+    }
+  ],
+
+  "limitations": [
+    {
+      "id": "L1",
+      "statement": "LaunchAgent reload semantics could not be measured on the execution host: `launchctl bootstrap gui/<uid> <plist>` returns `Bootstrap failed: 5: Input/output error` for any job in this environment.",
+      "mitigation": "r1_gate.sh detects the authoritative source (launchd_env / config_file / absent), uses bootout+bootstrap for the launchd path and kickstart -k otherwise, then verifies by HTTP status, process identity and a single-key process-environment observation. If both paths fail it exits 4 and writes a failure receipt. The target-host semantics is an execution item in the application (P0), not an assumption baked into the plan.",
+      "residual_risk": "On MAC-1, the plist path could still behave differently than the code implies; the window would then fail closed (no gate, exit 11/13) rather than proceed on a false assumption."
+    },
+    {
+      "id": "L2",
+      "statement": "The deployed binary f78e24e5 cannot be tied to a source commit from archived evidence (F7).",
+      "mitigation": "No rebuild in this round: an adhoc designated requirement is cdhash-based, so a rebuild would void the existing TCC grant. write_build_metadata.py now records source_provenance and will apply on the next authorized build."
+    },
+    {
+      "id": "L3",
+      "statement": "Tracked receipt AG-07 contains the bound list's full UUID and full title (F10), which violates the masking convention used elsewhere.",
+      "mitigation": "Left intact rather than silently rewritten. Redaction is a separate approval item (A12) in the application."
+    },
+    {
+      "id": "L4",
+      "statement": "The Seoul gateway suite cannot run in this worktree: `tests/protocol.test.ts` fails with ERR_MODULE_NOT_FOUND '@modelcontextprotocol/sdk' because the worktree has no untracked node_modules.",
+      "mitigation": "The gateway was not modified by this task; recorded as environmental, not as a code regression."
     }
   ],
 
@@ -270,6 +308,28 @@
         "files": [
           "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_window.sh"
         ]
+      },
+      {
+        "sha": "a7c1a5c",
+        "subject": "feat(diag): bounded window, single gate entry point, and deadline watchdog for R1",
+        "files": [
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_watchdog.sh",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_gate.sh",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_bridge_client.py",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_window.sh",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/tests/fake_bridge.py",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/tests/test_r1_bridge_client.py",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/tests/test_r1_window.sh"
+        ],
+        "closes_gaps": [
+          "deadline and restore: reuse of the validated detached-watchdog pattern, absolute deadline plus cumulative open budget, restore failure kept as a real state",
+          "launchd and process identity: gate source detection, bootout+bootstrap vs kickstart, 0600 plist backup, single-key process-environment observation, behaviour-based verification",
+          "failure propagation: every command's status checked, three separate verdicts, failed gate operations still produce a receipt",
+          "evidence: fresh batch directory per window/pass, no overwrite, summary written on every exit path",
+          "UNKNOWN: no automatic retry after an indeterminate create/delete; read-only re-check or escalate",
+          "transport: loopback only, no proxy, no redirect following",
+          "scope: cleanup verification as a first-class window mode, so presence and absence are decided by the same bounded machinery"
+        ]
       }
     ],
     "runtime_code_changed": false,
@@ -311,14 +371,25 @@
       "detail": "Single failure tests/protocol.test.ts -> ERR_MODULE_NOT_FOUND '@modelcontextprotocol/sdk'. Cause: the worktree has no untracked node_modules. Environmental, not a code regression; the gateway was not modified by this task."
     },
     "r1_window_guards": {
-      "command": "scripts/r1_window.sh against a synthetic plist/binary pair",
+      "command": "bash scripts/tests/test_r1_window.sh",
       "result": "PASS",
-      "detail": "Dry run changes nothing. Refuses on sha256 mismatch, missing plist, missing token, and refuses to open the gate for an unsigned binary - with the plist gate value verified still false after the refusal.",
-      "instantiates_real_store": false
+      "detail": "66/66 assertions across 14 scenarios: preflight refusal on sha mismatch (gate stays false), dry run changes nothing, happy path (capture COMPLETED / fidelity ASSERTED / restore VERIFIED with a 403 re-verification), field mismatch, empty-at-capture, capture transport failure, gate-load failure (summary written on the failed-open path, restore FAILED, exit 13), restore failure after a successful open (failure receipt written, exit 13), absolute deadline firing, cumulative open-budget firing, main process SIGKILLed mid-window (watchdog restores), plist as authoritative source (bootout+bootstrap, 0600 backup), cleanup verification mode (absence), and cleanup-not-effective.",
+      "harness": "launchctl / codesign / pgrep / ps replaced by stubs; bridge is the loopback fake_bridge.py",
+      "instantiates_real_store": false,
+      "triggers_tcc": false,
+      "registers_real_launchd_job": false
+    },
+    "r1_bridge_client_offline": {
+      "command": "python3 scripts/tests/test_r1_bridge_client.py",
+      "result": "PASS",
+      "detail": "53/53 assertions across 17 scenarios: empty list, non-empty fidelity, duplicate items, wrong date encoding, priority 0, completed item, empty itemID, fake store refused as evidence, two visible lists, cleanup not effective, populated evidence dir refused, loose token permissions refused, whole-directory token leak scan, unreachable bridge, non-loopback endpoint refused, 3xx refused instead of followed, proxy environment cannot divert the request.",
+      "instantiates_real_store": false,
+      "triggers_tcc": false
     }
   },
 
   "operations_log": {
+    "operations_log_note": "No production host was touched in this revision. Everything below is offline or local to the worktree.",
     "files_written": [
       "git worktree /Users/jin/WorkBuddy/2026-11-10-13-08-22/r1-01-worktree (isolated branch)",
       "two commits as listed above",
@@ -341,8 +412,9 @@
   },
 
   "next_step": {
-    "action": "Await focal-point approval of receipts/R1_01_DIAGNOSTIC_AUTHORIZATION_APPLICATION.md",
-    "on_approval": "Execute layer A only: create one synthetic item in the native Reminders app, capture three read passes through the existing signed bridge, discriminate H1/H2/H3, clean up, restore the gate, and report.",
-    "not_before_r1": "No gateway acceptance run, no R2 proposal, no PR merge."
+    "action": "Await focal-point approval of receipts/R1_01_DIAGNOSTIC_AUTHORIZATION_APPLICATION.md (v2, 12 approval items A1-A12).",
+    "on_approval": "Execute layer A only, inside one 45-minute session with a shared absolute deadline: read-only identity checks, one synthetic item created by the user, two presence passes, the user deletes the item, one absence (cleanup) pass, automatic gate close and 403 re-verification, then a desensitized receipt.",
+    "not_before_r1": "No gateway acceptance run, no R2 proposal, no PR merge, no rebuild.",
+    "r1_r2_separation": "R1 is a MacServer-local engineering diagnosis and is decided by layer A observations alone. MUSE front-end acceptance is R2 and is signed independently; neither is a precondition or a substitute for the other."
   }
 }
