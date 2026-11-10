@@ -86,8 +86,10 @@
       "was_it_on_the_wire": true,
       "did_it_enter_the_evidence": false,
       "what_the_client_persisted": "visible_list_count (an integer) plus target-scoped fields only: sourceType, sourceName and a masked sourceID of the target entry, or null when the target is absent. The lists array itself is never dumped, and no digest of it is kept.",
-      "what_the_client_discarded": "The other entries' titles and identifiers, in memory, before any write.",
-      "receipt_field_proving_it": "boundary.non_target_metadata_persisted = false (added in client 2.2.0; the 2.1.0 run recorded boundary.raw_content_persisted = false and the same discarding behaviour, just without the explicit field)"
+      "what_the_client_discarded": "The other entries' titles and identifiers, in memory, before any write. Discarding happens at the persistence layer only: the server did read them and did return them over the wire, and that is not changed by what the client chose to keep.",
+      "receipt_field_proving_it": "boundary.non_target_metadata_persisted = false (added in client 2.2.0; the 2.1.0 run recorded boundary.raw_content_persisted = false and the same discarding behaviour, just without the explicit field)",
+      "server_side_read": true,
+      "wording_correction": "An earlier draft of this receipt, and of the R1-02 application, implied that only the target's metadata was touched. That is true of the evidence files and false of the transport: GET /reminders/lists is account-wide on the server side. 'Only the target' now means 'only the target is persisted', and nothing stronger."
     },
     "deployment_evidence_boundary": {
       "statement": "F7 still holds: the deployed artifact f78e24e5...3074 cannot be tied to a source commit from archived evidence, so 'the source says X' is not by itself a statement about the running binary.",
@@ -105,9 +107,10 @@
   },
   "what_this_excludes": [
     {
-      "claim": "Gateway, transport or serialization silently drops items",
-      "status": "EXCLUDED for the enumeration endpoint",
-      "basis": "Two calendars came back unchanged and complete in shape. Nothing upstream of EventKit removed an entry. Same conclusion as the offline code reading (offline receipt F3)."
+      "claim": "The enumeration endpoint silently drops list entries",
+      "status": "EXCLUDED for the enumeration endpoint only",
+      "basis": "Two calendars came back with every field the type defines. Nothing upstream of EventKit removed a list entry. Same conclusion as the offline code reading (offline receipt F3).",
+      "does_not_extend_to": "The item path. No receipt anywhere records a non-empty item read, so 'the read chain is not at fault' is NOT established and must not be concluded from this window. Each historical read returned 0 items; this window never issued an item query at all."
     },
     {
       "claim": "TCC permission was revoked, so reads fail silently",
@@ -269,7 +272,8 @@
       "No new enumeration of other lists"
     ],
     "chain_rule": "If the observation shows that restoring, creating or rebinding is necessary, that is proposed separately with the concrete object, the risk and the rollback - never as an implied follow-up of a read.",
-    "not_before_r1": "No R2 proposal while R1 is unresolved; no PR merge; no rebuild."
+    "not_before_r1": "No R2 proposal while R1 is unresolved; no PR merge; no rebuild.",
+    "application_revision": "R1-02 has been revised to v2: the observation is limited to whether the target list is visible and which account it belongs to; no enumeration of account groups, no Recently Deleted, no item content; a same-named list is only a candidate and is not assumed to match the bound identifier; no assertion that a list is recoverable, deleted, or that a re-delete is irreversible; and any future real enumeration must first come with a target-scoped scheme or an explicit minimal-metadata authorization."
   },
   "attachment_evidence_note": "All identifiers in this receipt are masked using the existing convention. No token value, no unmasked UUID, no item content and no list title beyond the already-published masked forms appear here.",
   "submission": {
