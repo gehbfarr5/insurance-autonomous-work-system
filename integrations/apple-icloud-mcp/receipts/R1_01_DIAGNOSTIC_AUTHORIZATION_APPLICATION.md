@@ -397,6 +397,12 @@ scp integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_window.sh \
     macserver-ts:$HARNESS/
 ssh macserver-ts "cd $HARNESS && shasum -a 256 r1_window.sh r1_gate.sh r1_watchdog.sh r1_bridge_client.py && chmod 700 *.sh *.py"
 # 逐个比对 §3.2 的哈希；不一致即停止，报 BLOCKED
+
+# 令牌准备（A3；用户不参与输入）
+ssh macserver-ts "umask 077; awk -F= '/^EVENTKIT_BRIDGE_BEARER_TOKEN=/{sub(/^EVENTKIT_BRIDGE_BEARER_TOKEN=/,\"\"); print; exit}' \
+  ~/.config/muse-macserver/bridge.env > $HARNESS/token && chmod 600 $HARNESS/token && test -s $HARNESS/token" \
+  || { echo "TOKEN_UNAVAILABLE - BLOCKED"; }
+
 # 干跑：只读前置 + 计划打印，不产生任何变更
 ssh macserver-ts "$HARNESS/r1_window.sh --list-id $LIST_ID \
   --expect-title '$TOKEN_TITLE' --expect-notes '$TOKEN_NOTES' \
