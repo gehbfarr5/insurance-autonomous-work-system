@@ -1,0 +1,28 @@
+# Patch: 0003-safe-write-preserve-expected-etag-20261110.patch
+# Target: carddav-mcp-client/safe_write.py
+# Component: SafeWriteManager.submit()
+# Pre-edit SHA256: b1cdf6b2... (A3 baseline)
+# Post-edit SHA256: 49c02417...
+# Backup: safe_write.py.bak-ag08-etagfix-20261110
+
+--- a/carddav-mcp-client/safe_write.py
++++ b/carddav-mcp-client/safe_write.py
+@@ -1594,8 +1594,20 @@ class SafeWriteManager:
+         send_args = dict(args)
+-        # Pre-read etag is attached to the request
+-        if pre_state.get("etag"):
+-            send_args["expected_etag"] = pre_state["etag"]
++        # Preserve caller's expected_etag; enforce pre-send conflict detection
++        caller_etag = args.get("expected_etag")
++        server_etag = pre_state.get("etag")
++
++        if caller_etag is not None:
++            if server_etag is not None and caller_etag != server_etag:
++                # Concurrency mismatch: block locally, zero network send, no auto-resubmission
++                self._audit("submit_refused_stale_etag", tool=tool, caller_etag=caller_etag, server_etag=server_etag)
++                return CONFLICT, None
++            send_args["expected_etag"] = caller_etag
++        else:
++            # Caller omitted expected_etag: attach freshly read etag only if tool supports ETag
++            if tool in ETAG_TOOLS and server_etag:
++                send_args["expected_etag"] = server_etag
