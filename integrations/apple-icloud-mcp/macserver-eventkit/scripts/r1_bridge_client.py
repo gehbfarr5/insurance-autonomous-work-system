@@ -713,6 +713,26 @@ def apply_phase(label: str, phase: str) -> str:
     return label
 
 
+def parse_expect(raw: str) -> list[str]:
+    """`--expect` takes one classification, or several separated by commas.
+
+    A set is needed by the gate operation: after opening, "the gate is open" is
+    proved by any response that could only have been produced past the store
+    guard, and those are four different labels. Collapsing them into one
+    synthetic label would hide which one was actually observed.
+    """
+    items = [part.strip() for part in raw.split(",") if part.strip()]
+    if not items:
+        raise argparse.ArgumentTypeError("--expect requires at least one classification")
+    unknown = [item for item in items if item not in PROBE_CLASSES]
+    if unknown:
+        raise argparse.ArgumentTypeError(
+            "unknown classification(s): " + ", ".join(unknown)
+            + "; allowed: " + ", ".join(PROBE_CLASSES)
+        )
+    return items
+
+
 def cmd_probe(args: argparse.Namespace) -> int:
     """One ID, one item request per phase, zero enumerations.
 
@@ -851,9 +871,11 @@ def cmd_probe(args: argparse.Namespace) -> int:
     }
     receipt["boundary"] = boundary
 
-    matched = label == args.expect
+    matched = label in args.expect
+    receipt["matched_expected"] = matched
     emit(receipt, args.out)
-    print(f"probe: {label} (expected={args.expect}, http={receipt['target']['http_status']})")
+    print(f"probe: {label} (expected={'|'.join(args.expect)}, "
+          f"http={receipt['target']['http_status']})")
     return 0 if matched else 24
 
 
@@ -900,7 +922,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_probe.add_argument("--list-id", required=True)
     p_probe.add_argument("--phase", required=True, choices=["pre", "open", "post"])
     p_probe.add_argument("--canary-id", default="")
-    p_probe.add_argument("--expect", required=True, choices=list(PROBE_CLASSES))
+    p_probe.add_argument(
+        "--expect",
+        required=True,
+        type=parse_expect,
+        metavar="CLASS[,CLASS...]",
+        help="classification(s) to assert; comma-separate to accept a set",
+    )
     p_probe.add_argument("--out", required=True)
     p_probe.set_defaults(func=cmd_probe)
     return parser

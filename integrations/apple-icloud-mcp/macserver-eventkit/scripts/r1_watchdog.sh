@@ -29,12 +29,19 @@
 # Usage:
 #   r1_watchdog.sh --state-dir D --deadline-epoch E --open-budget S
 #                  --plist P --config-file F --token-file T --endpoint U
+#                  [--list-id ID] [--canary-id CID] [--require-no-enumeration]
 #                  [--poll 2] [--restore-attempts 3] [--restore-delay 2]
+#
+# --list-id switches the restore's verification to the single-ID probe, so a
+# restore fired while the window process is already dead still touches no
+# account-wide endpoint. --require-no-enumeration is forwarded to r1_gate.sh,
+# which refuses to run without --list-id instead of falling back.
 
 set -uo pipefail
 
 STATE_DIR=""; DEADLINE=""; BUDGET=""; PLIST=""; CONFIG_FILE=""; TOKEN_FILE=""
 ENDPOINT="http://127.0.0.1:18765"; POLL="${R1_POLL_SECONDS:-2}"
+LIST_ID=""; CANARY_ID=""; NO_ENUM=0
 MAX_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-3}"
 RETRY_DELAY="${R1_RESTORE_DELAY:-2}"
 PYTHON="${PYTHON_BIN:-python3}"
@@ -50,6 +57,9 @@ while [ $# -gt 0 ]; do
     --config-file) CONFIG_FILE="$2"; shift 2 ;;
     --token-file) TOKEN_FILE="$2"; shift 2 ;;
     --endpoint) ENDPOINT="$2"; shift 2 ;;
+    --list-id) LIST_ID="$2"; shift 2 ;;
+    --canary-id) CANARY_ID="$2"; shift 2 ;;
+    --require-no-enumeration) NO_ENUM=1; shift ;;
     --poll) POLL="$2"; shift 2 ;;
     --restore-attempts) MAX_ATTEMPTS="$2"; shift 2 ;;
     --restore-delay) RETRY_DELAY="$2"; shift 2 ;;
@@ -59,6 +69,11 @@ done
 
 [ -n "$STATE_DIR" ] && [ -n "$DEADLINE" ] && [ -n "$BUDGET" ] && [ -n "$PLIST" ] && [ -n "$TOKEN_FILE" ] \
   || { echo "usage: r1_watchdog.sh --state-dir --deadline-epoch --open-budget --plist --token-file" >&2; exit 2; }
+
+if [ "$NO_ENUM" -eq 1 ] && [ -z "$LIST_ID" ]; then
+  echo "usage: --require-no-enumeration needs --list-id (the legacy restore enumerates)" >&2
+  exit 2
+fi
 
 # The deadline protection is only real if its state can be recorded. A watchdog
 # that starts without a writable state directory would look armed and silently
@@ -130,14 +145,17 @@ restore() {
     # The mutex lives inside r1_gate.sh, so a restore can never overlap the
     # window's own close or an operator's emergency close. A busy lock is a
     # bounded failure, not a reason to write concurrently.
-    "$GATE" close \
-      --plist "$PLIST" \
-      --config-file "$CONFIG_FILE" \
-      --token-file "$TOKEN_FILE" \
-      --endpoint "$ENDPOINT" \
-      --purpose "watchdog:$reason" \
-      --lock-wait 15 \
-      --out "$receipt" >> "$LOG" 2>&1
+    #
+    # The restore is verified through the same single-ID probe the window uses,
+    # so the close path touches no account-wide endpoint even when the window
+    # itself is already dead.
+    CLOSE_ARGS=(--plist "$PLIST" --config-file "$CONFIG_FILE"
+                --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT"
+                --purpose "watchdog:$reason" --lock-wait 15 --out "$receipt")
+    [ -n "$LIST_ID" ] && CLOSE_ARGS+=(--list-id "$LIST_ID")
+    [ -n "$CANARY_ID" ] && CLOSE_ARGS+=(--canary-id "$CANARY_ID")
+    [ "$NO_ENUM" -eq 1 ] && CLOSE_ARGS+=(--require-no-enumeration)
+    "$GATE" close "${CLOSE_ARGS[@]}" >> "$LOG" 2>&1
     rc=$?
     if [ "$rc" -eq 0 ] && receipt_verified "$receipt"; then
       write_status FIRED_RESTORED "$reason" 0

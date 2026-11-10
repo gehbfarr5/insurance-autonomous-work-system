@@ -40,6 +40,7 @@ class Handler(BaseHTTPRequestHandler):
     token = ""
     config_file = ""
     plist = ""
+    request_log = ""
     items_seen = 0
     protocol_version = "HTTP/1.1"
 
@@ -89,6 +90,15 @@ class Handler(BaseHTTPRequestHandler):
         return DEFAULTS.get(name, "")
 
     def _json(self, status: int, payload) -> None:
+        # Every answer goes through here, so this is the one place that can log
+        # every request a run made. That log is what lets a test assert "the
+        # whole window never touched the account-wide enumeration endpoint".
+        if self.request_log:
+            try:
+                with open(self.request_log, "a", encoding="utf-8") as handle:
+                    handle.write(f"{status}\t{self.command}\t{self.path}\n")
+            except OSError:
+                pass
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -203,6 +213,13 @@ class Handler(BaseHTTPRequestHandler):
             list_id = path[len(prefix):-len(suffix)]
             items_path = os.path.join(self.field_dir, "items")
             table = json.load(open(items_path, encoding="utf-8")) if os.path.exists(items_path) else {}
+            if not isinstance(table, dict):
+                # A malformed control file must not kill the handler thread: an
+                # unanswered request looks like a transport failure on the client
+                # side and would be diagnosed as the bridge being unreachable.
+                self._json(500, {"success": "false", "error": "items control is not an object",
+                                 "code": "INTERNAL_ERROR"})
+                return
             self._json(200, table.get(list_id, []))
             return
 
@@ -215,6 +232,7 @@ def main() -> int:
     parser.add_argument("--token", required=True)
     parser.add_argument("--config-file", default="")
     parser.add_argument("--plist", default="")
+    parser.add_argument("--request-log", default="")
     parser.add_argument("--port", type=int, default=0)
     args = parser.parse_args()
 
@@ -222,6 +240,7 @@ def main() -> int:
     Handler.token = args.token
     Handler.config_file = args.config_file
     Handler.plist = args.plist
+    Handler.request_log = args.request_log
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     print(f"http://127.0.0.1:{server.server_address[1]}", flush=True)
     try:

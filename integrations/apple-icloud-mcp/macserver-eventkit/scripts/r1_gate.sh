@@ -25,8 +25,18 @@
 #
 # Usage:
 #   r1_gate.sh open|close --plist P --token-file T --out O
+#              [--list-id ID] [--canary-id CID] [--require-no-enumeration]
 #              [--config-file F] [--endpoint E] [--purpose TEXT]
 #              [--lock-wait SECONDS] [--dry-run]
+#
+# Verification mode
+# -----------------
+# With --list-id the gate is verified through one bound ID on the item endpoint
+# (r1_bridge_client.py probe). probe cannot construct /reminders/lists - the URL
+# builder asserts a five-segment item path - so this mode enumerates nothing.
+# Without --list-id the legacy enumeration check runs, kept only to replay R1.
+# --require-no-enumeration refuses to run without --list-id rather than falling
+# back silently.
 #
 # `--expect` is still accepted for backwards compatibility but is ignored: the
 # expected status is derived from the mode and verification always runs.
@@ -45,6 +55,7 @@ MODE="${1:-}"; shift || true
 
 PLIST=""; CONFIG_FILE=""; TOKEN_FILE=""; ENDPOINT="http://127.0.0.1:18765"; OUT=""
 DRY=0; PURPOSE="unspecified"; LOCK_WAIT=20
+LIST_ID=""; CANARY_ID=""; NO_ENUM=0
 LAUNCHCTL="${LAUNCHCTL_BIN:-launchctl}"
 PLUTIL="${PLUTIL_BIN:-plutil}"
 PYTHON="${PYTHON_BIN:-python3}"
@@ -60,6 +71,9 @@ while [ $# -gt 0 ]; do
     --out) OUT="$2"; shift 2 ;;
     --purpose) PURPOSE="$2"; shift 2 ;;
     --lock-wait) LOCK_WAIT="$2"; shift 2 ;;
+    --list-id) LIST_ID="$2"; shift 2 ;;
+    --canary-id) CANARY_ID="$2"; shift 2 ;;
+    --require-no-enumeration) NO_ENUM=1; shift ;;
     --dry-run) DRY=1; shift ;;
     --expect) shift 2 ;;   # deprecated: verification is unconditional
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -68,6 +82,20 @@ done
 
 [ -n "$PLIST" ] || { echo "PRECONDITION: --plist required" >&2; exit 2; }
 [ "$DRY" -eq 1 ] || [ -n "$OUT" ] || { echo "PRECONDITION: --out required" >&2; exit 2; }
+
+# Two verification modes. `probe` reads one bound ID through the item endpoint
+# and cannot construct the enumeration URL at all; the legacy mode asserts the
+# enumeration endpoint's status and is kept only so the R1 window can still be
+# replayed. Any window that must not enumerate passes --require-no-enumeration
+# and is refused here rather than silently falling back.
+if [ -n "$LIST_ID" ]; then
+  VERIFY_MODE="probe"
+elif [ "$NO_ENUM" -eq 1 ]; then
+  echo "PRECONDITION: --require-no-enumeration needs --list-id (the legacy verification enumerates)" >&2
+  exit 2
+else
+  VERIFY_MODE="legacy_enumeration"
+fi
 
 WANT="false"; [ "$MODE" = "open" ] && WANT="true"
 EXPECT_CODE=403; [ "$MODE" = "open" ] && EXPECT_CODE=200
@@ -95,7 +123,7 @@ else
   SOURCE="absent"; EFFECTIVE=""; RELOAD="none"
 fi
 
-echo "[r1_gate] mode=$MODE source=$SOURCE current=${EFFECTIVE:-unknown} reload=$RELOAD purpose=$PURPOSE"
+echo "[r1_gate] mode=$MODE source=$SOURCE current=${EFFECTIVE:-unknown} reload=$RELOAD verify=$VERIFY_MODE purpose=$PURPOSE"
 
 # Nothing defines the gate. Closing then only needs to prove the endpoint is
 # already closed; opening would have to invent state, which is not authorized.
@@ -545,9 +573,29 @@ HEALTH_JSON="$OUT.health.json"
 "$PYTHON" "$CLIENT" health --endpoint "$ENDPOINT" --out "$HEALTH_JSON" >/dev/null 2>&1 || VERIFY_RC=3
 
 GATE_JSON="$OUT.gate.json"
+PROBE_JSON="$OUT.probe.json"
 if [ "$VERIFY_RC" -eq 0 ]; then
-  "$PYTHON" "$CLIENT" gate --endpoint "$ENDPOINT" --token-file "$TOKEN_FILE" \
-    --expect "$EXPECT_CODE" --out "$GATE_JSON" >/dev/null 2>&1 || VERIFY_RC=3
+  if [ "$VERIFY_MODE" = "probe" ]; then
+    # close -> the bound ID must now be refused by the store guard.
+    # open  -> any outcome that is only reachable PAST the guard proves the
+    #          window is open. The observed label is kept in the receipt, so an
+    #          anomalous label stays visible instead of being averaged away.
+    if [ "$MODE" = "close" ]; then
+      PROBE_EXPECT="GATE_RESTORED_CLOSED"
+    else
+      PROBE_EXPECT="NOT_RESOLVABLE,RESOLVED_SOURCE_IDENTITY_CHANGED"
+      PROBE_EXPECT="$PROBE_EXPECT,RESOLVED_IDENTITY_MATCH_EMPTY,RESOLVED_WITH_ITEMS"
+      PROBE_EXPECT="$PROBE_EXPECT,ANOMALOUS_SOURCE_NOT_ALLOWED,BLOCKED_TIMEOUT"
+    fi
+    PROBE_ARGS=(--endpoint "$ENDPOINT" --token-file "$TOKEN_FILE"
+                --list-id "$LIST_ID" --phase "$([ "$MODE" = "close" ] && echo post || echo open)"
+                --expect "$PROBE_EXPECT" --out "$PROBE_JSON")
+    [ -n "$CANARY_ID" ] && PROBE_ARGS+=(--canary-id "$CANARY_ID")
+    "$PYTHON" "$CLIENT" probe "${PROBE_ARGS[@]}" >/dev/null 2>&1 || VERIFY_RC=3
+  else
+    "$PYTHON" "$CLIENT" gate --endpoint "$ENDPOINT" --token-file "$TOKEN_FILE" \
+      --expect "$EXPECT_CODE" --out "$GATE_JSON" >/dev/null 2>&1 || VERIFY_RC=3
+  fi
 fi
 
 ENV_OBS="not_applicable"
@@ -571,6 +619,7 @@ def load(p):
         return {}
 health = load(out + ".health.json")
 gate = load(out + ".gate.json")
+probe = load(out + ".probe.json")
 receipt = {
   "receipt_type": "R1_GATE_OPERATION",
   "mode": "$MODE",
@@ -584,23 +633,38 @@ receipt = {
   "process_env_observation": "$ENV_OBS",
   "health_store": health.get("store_field"),
   "health_classification": health.get("classification"),
-  "gate_http_status": gate.get("http_status"),
-  "gate_expected_status": gate.get("expected_status"),
-  "gate_classification": gate.get("classification"),
+  "verification_mode": "$VERIFY_MODE",
   "verification": "PASS" if ("$VERIFY_RC" == "0") else "FAIL",
   "verification_basis": "http behaviour after reload + process identity; never the file value",
   "plist_backup": "${BACKUP}" or None,
   "plist_backup_mode": "0600" if "${BACKUP}" else None,
   "config_backup": "${CFG_BACKUP}" or None,
   "config_backup_mode": "0600" if "${CFG_BACKUP}" else None,
-  "evidence_files": [out + ".health.json", out + ".gate.json"],
+  "evidence_files": [out + ".health.json",
+                     out + (".probe.json" if "$VERIFY_MODE" == "probe" else ".gate.json")],
 }
+if "$VERIFY_MODE" == "probe":
+  receipt.update({
+    "probe_phase": probe.get("phase"),
+    "probe_classification": probe.get("classification"),
+    "probe_http_status": (probe.get("target") or {}).get("http_status"),
+    "probe_error_code": (probe.get("target") or {}).get("error_code"),
+    "probe_item_count": (probe.get("target") or {}).get("item_count"),
+    "probe_enumeration_calls": (probe.get("boundary") or {}).get("list_enumerations_called"),
+  })
+else:
+  receipt.update({
+    "gate_http_status": gate.get("http_status"),
+    "gate_expected_status": gate.get("expected_status"),
+    "gate_classification": gate.get("classification"),
+  })
 with open(out, "w", encoding="utf-8") as fh:
     json.dump(receipt, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
-print("[r1_gate] verification: %s (health=%s gate=%s pid %s -> %s)" % (
-    receipt["verification"], receipt["health_store"], receipt["gate_http_status"],
-    receipt["before_pid"], receipt["after_pid"]))
+observed = receipt.get("probe_classification") or receipt.get("gate_classification")
+print("[r1_gate] verification: %s mode=%s observed=%s health=%s pid %s -> %s" % (
+    receipt["verification"], receipt["verification_mode"], observed,
+    receipt["health_store"], receipt["before_pid"], receipt["after_pid"]))
 sys.exit(0 if receipt["verification"] == "PASS" else 1)
 PYEOF
 RECEIPT_RC=$?
