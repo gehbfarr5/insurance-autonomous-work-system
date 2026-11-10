@@ -606,6 +606,7 @@ ssh macserver-ts "$HARNESS/r1_gate.sh close \
   --token-file $HARNESS/token --purpose 'emergency-close' \
   --out $EVID/emergency/close.json; echo \"exit=\$?\""
 # 退出码 0 表示"已按行为验证为 403"；非 0 表示没有恢复成功，需按 §9 保留现场并上报
+# 退出码 6 表示 --out 目录不可用（不存在/不可写）——此时脚本什么都没改；先建好 $EVID/emergency 再重试
 ```
 
 若 harness 已被删除（窗口已收尾），用仓库内同一脚本的副本执行同一命令；**不要**临时拼 `plutil` + `launchctl`（那会绕过互斥与验证，并且在 bootout 失败时静默继续）。
