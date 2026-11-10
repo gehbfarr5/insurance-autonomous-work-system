@@ -1,0 +1,348 @@
+{
+  "receipt_type": "R1_01_OFFLINE_DIAGNOSIS_RECEIPT",
+  "task": "REM-R1-01",
+  "executed_at": "2026-11-10T05:20:00Z",
+  "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
+  "scope": "offline_only",
+  "r1_status": "NOT_STARTED",
+  "stage_status": {
+    "verdict": "BLOCKED",
+    "assertion": "R1 PASS requires at least one synthetic item known to exist in the bound list to be read correctly by MacServer EventKit. No such item is known to exist, and no offline evidence can establish that it does. Offline work is complete; R1 itself has not begun."
+  },
+
+  "environment": {
+    "verified_at": "2026-11-10T05:08:00Z",
+    "nodes": [
+      {
+        "node": "workbuddy_execution_host",
+        "public_alias": "HOST-A",
+        "role": "WorkBuddy engineering agent execution host (this session)",
+        "evidence": {
+          "hostname_class": "Apple-M5-Pro",
+          "os": "macOS 27.0.1 (build 26A434)",
+          "arch": "arm64",
+          "local_user": "jin",
+          "timezone": "CST (GMT+8)",
+          "loopback_18765_listener": "NONE"
+        },
+        "verified_now": true,
+        "access_gap": "none for local files; no shell/API channel to MacServer, Seoul or MUSE"
+      },
+      {
+        "node": "macserver",
+        "public_alias": "MAC-1",
+        "role": "EventKit bridge host and the only node that can satisfy R1",
+        "evidence": {
+          "os_arch_from_receipts": "macOS 15.7.7 Sequoia, x86_64",
+          "network_id_masked": "100.100.***.91",
+          "installed_binary_path": "/Users/shared/bin/EventKitBridgeServer",
+          "installed_sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
+          "launchagent_label": "com.muse.macserver-eventkit",
+          "gui_session": "gui/501 (Aqua)",
+          "tcc_state_at_2026_11_09T23_28Z": "authorized (full access to Reminders)"
+        },
+        "verified_now": false,
+        "access_gap": "no non-sensitive record exists after the AG-07 deadline recovery (2026-11-10T00:50:18+08:00); current service state, TCC state and sync state are UNVERIFIED. No probe was issued to close this gap, per the no-probe rule."
+      },
+      {
+        "node": "seoul",
+        "public_alias": "GW-1",
+        "role": "MCP gateway host (not needed for R1 layer A)",
+        "evidence": {
+          "os_from_receipts": "Ubuntu 24.04",
+          "network_id_masked": "100.82.***.43",
+          "baseline_image": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+        },
+        "verified_now": false,
+        "access_gap": "no direct channel used in this task; state after 2026-11-10T00:50Z recovery is UNVERIFIED. A Seoul management tool family exists in the session tool registry but was deliberately not invoked."
+      },
+      {
+        "node": "muse",
+        "public_alias": "FRONTEND-1",
+        "role": "end user and independent acceptance authority",
+        "evidence": {
+          "client_scripts": "~/workspace/carddav-mcp-client/verify_muse_test_20261110.py (per AG-07)",
+          "production_source_path_from_ag08": "/home/hatch/workspace/carddav-mcp-client/safe_write.py"
+        },
+        "verified_now": false,
+        "access_gap": "host identity deliberately not assumed to be either HOST-A or MAC-1; no contact in this task"
+      }
+    ],
+    "host_identity_disclaimer": "HOST-A is not MAC-1. They differ in OS major version (27.0.1 vs 15.7.7), architecture (arm64 vs x86_64) and bridge listener state. HOST-A has no listener on 127.0.0.1:18765."
+  },
+
+  "repository_baseline": {
+    "reference_worktree": "/Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system",
+    "clean": true,
+    "head": "9000de0464b0e97a4b8205383011e9c95f2c274f",
+    "head_matches_focal_point_record": true,
+    "pull_requests": [
+      {"number": 19, "state": "OPEN", "draft": true, "head": "ca575e3cda70ade5c3c59733ae1d7989e3fcc307", "base": "main"},
+      {"number": 20, "state": "OPEN", "draft": false, "head": "4d23ed1884a06af2933e903106ca2dccabc32908", "base": "main"},
+      {"number": 21, "state": "OPEN", "draft": false, "head": "740c39309936e3076613551935f9b49fa907cbb5", "base": "reconcile/icloud-source-baseline"},
+      {"number": 22, "state": "OPEN", "draft": false, "head": "a6f1a9c686b1072b6ca6dac63211b63cd9d25e7b", "base": "feat/macserver-eventkit-readonly"},
+      {"number": 23, "state": "OPEN", "draft": false, "head": "9000de0464b0e97a4b8205383011e9c95f2c274f", "base": "feat/seoul-macserver-readonly-gateway"}
+    ],
+    "prs_merged": 0,
+    "focal_point_claim_reconfirmed": "PR #19-#23 OPEN, PR #23 head == local HEAD. Confirmed at 2026-11-10T05:09Z."
+  },
+
+  "confirmed_facts": [
+    {
+      "id": "F1",
+      "fact": "Every recorded read of the bound list returned 0 items, at every layer, on every date: B3 (2026-11-07T14:43Z), AG-04 trial (2026-11-08), AG-07 MUSE window (2026-11-10). No receipt anywhere records an observation of the list containing at least one item.",
+      "evidence": ["receipts/B3_TEST_LIST_READ_RECEIPT.json", "receipts/AG04_TRIAL_AND_RECOVERY_RECEIPT.json", "receipts/AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json"],
+      "strength": "strong (all archived receipts read in full)"
+    },
+    {
+      "id": "F2",
+      "fact": "No receipt records any evidence that the bound list ever contained an item at the iCloud level either. The only list-level observations are metadata (title, source, writable=false).",
+      "evidence": ["B2 section in RECEIPTS_SUMMARY.md", "AG-04 tool_calls_desensitized"],
+      "strength": "strong (absence of evidence across all receipts)"
+    },
+    {
+      "id": "F3",
+      "fact": "With the current bridge source, HTTP 200 plus an empty JSON array can only be produced by ProductionEventKitStore.fetchReminders receiving a non-nil empty array from EventKit. Every failure path returns a typed error with a distinct status (401/403/404/405/429/500/504); the gateway transport turns non-array or non-JSON bodies into UPSTREAM_ERROR. Therefore gateway mapping, transport parsing and bridge serialization cannot silently reduce a non-empty list to zero items.",
+      "evidence": ["ProductionEventKitStore.swift:178-205", "EventKitBridgeServer.swift:416-435", "seoul-gateway/src/transport.ts:97-122", "seoul-gateway/src/service.ts:164-283"],
+      "strength": "strong for the code as read; does not by itself prove which upstream condition produced the empty array"
+    },
+    {
+      "id": "F4",
+      "fact": "AG-07 called reminders_list with list_ids only, no completed/due_after/due_before parameters, so no client-side filter in the gateway could have removed items.",
+      "evidence": ["AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json:56-60", "service.ts:218-237"],
+      "strength": "strong"
+    },
+    {
+      "id": "F5",
+      "fact": "ProductionEventKitStore caches one EKEventStore instance for the process lifetime (cachedStore, created on first request) and never invalidates it nor observes EKEventStoreChanged.",
+      "evidence": ["ProductionEventKitStore.swift:50", "ProductionEventKitStore.swift:212-219"],
+      "strength": "strong as a code fact; runtime impact UNPROVEN"
+    },
+    {
+      "id": "F6",
+      "fact": "A nil callback from EKEventStore.fetchReminders is mapped to EventKitBridgeError.timeout (HTTP 504), so a failed query and a real timeout are indistinguishable in the response taxonomy.",
+      "evidence": ["ProductionEventKitStore.swift:200-202", "RequestHandler.swift:47"],
+      "strength": "strong as a code fact"
+    },
+    {
+      "id": "F7",
+      "fact": "BUILD_METADATA.json for the deployed binary records pipeline, timestamp, sha256 and per-arch cdhashes but no source commit, branch, or dirty flag. The deployed f78e24e5 cannot be tied to a commit from archived evidence.",
+      "evidence": ["macserver-eventkit/BUILD_METADATA.json"],
+      "strength": "strong"
+    },
+    {
+      "id": "F8",
+      "fact": "writable=false in the gateway's list output is hard-coded by the gateway, not read from EventKit. It carries no information about the iCloud-side list.",
+      "evidence": ["service.ts:130-135"],
+      "strength": "strong"
+    },
+    {
+      "id": "F9",
+      "fact": "All Swift tests use FakeEventKitStore. No test exercises the ProductionEventKitStore EventKit query path, because the store provider requires a real EKEventStore. 91/91 tests pass with no TCC prompt and no real store instantiation.",
+      "evidence": ["swift test --disable-sandbox, 2026-11-10T05:14Z, 91 tests 0 failures", "Tests/EventKitBridgeTests/HttpIntegrationTests.swift (provider constructed, never called)"],
+      "strength": "strong"
+    },
+    {
+      "id": "F10",
+      "fact": "Desensitization violation already present in tracked receipts: AG-07 records the bound list's full UUID and full title, while B3 and AG-04 mask the same identifier as 9D9A****03F3. The summary additionally names a production list.",
+      "evidence": ["AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json:51", "RECEIPTS_SUMMARY.md:233", "B3_TEST_LIST_READ_RECEIPT.json:8"],
+      "strength": "strong",
+      "action_taken": "Not rewritten. Historical evidence is left intact; redaction requires focal-point approval."
+    },
+    {
+      "id": "F11",
+      "fact": "The bound list identifier still resolves at read time: the 2026-11-10 read returned 200 with source verification PASS, which requires store.calendar(withIdentifier:) to return a calendar whose source matches the registered binding. A fully stale identifier would have produced 404 LIST_NOT_FOUND.",
+      "evidence": ["ProductionEventKitStore.swift:148-160", "AG07 receipt step 3 returned 200"],
+      "strength": "medium-strong; a cached EKCalendar object could still resolve a list deleted on the iCloud side, so identity drift is narrowed but not excluded"
+    },
+    {
+      "id": "F12",
+      "fact": "Bridge configuration, including the production gate, is supplied as LaunchAgent EnvironmentVariables and read once at process start. Any gate change therefore implies a process restart, which constructs a fresh EKEventStore on the first request. Every historical read ran on a freshly started process (B3 records service_restarted: true; AG-06 records a reload after the TCC grant).",
+      "evidence": ["com.muse.macserver-eventkit.plist.template:5-35", "main.swift:104-120", "B3_TEST_LIST_READ_RECEIPT.json:29-33", "AG06_TCC_PREFLIGHT_AUTHORIZATION_RECEIPT.json:41-46"],
+      "strength": "strong; this materially demotes the stale-cache hypothesis"
+    }
+  ],
+
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "The bound list is genuinely empty because no item was ever created in it. Every write path is disabled: bridge is read-only, gateway rejects create/update/remove client-side, and ALLOW_REMINDERS_WRITE_1 was false at the AG-04 baseline.",
+      "status": "OPEN - leading",
+      "supporting": ["F2", "F8", "no write path exists in any receipt"],
+      "discriminator": "Observe the list in the native Reminders app on MAC-1 under the bound iCloud account, then read it through the bridge."
+    },
+    {
+      "id": "H2",
+      "statement": "Items exist in iCloud but never reached the MacServer EventKit local database for this list (account or Reminders sync gap).",
+      "status": "OPEN",
+      "supporting": ["B2 recorded com.apple.Dataclass.Reminders: True, which indicates the dataclass is enabled, not that this list is synced"],
+      "discriminator": "Same observation as H1: an item visible in Reminders.app but absent from EventKit read separates H2 from H1."
+    },
+    {
+      "id": "H3",
+      "statement": "The long-lived cached EKEventStore does not observe data written after the process started, so a fresh query against it returns a stale empty result.",
+      "status": "LARGELY_EXCLUDED",
+      "supporting": ["F5 shows the cache exists and is never invalidated"],
+      "against": ["F12: the gate is process-start configuration, so every historical read already ran on a newly constructed store; a stale-store explanation would require the store to be stale at process start, which the code does not do"],
+      "discriminator": "Not needed as a separate step any more: the window's read necessarily runs on a fresh process. If a fresh process still returns empty while the native app shows the item, H3 is definitively refuted and H2/H4/H5 remain."
+    },
+    {
+      "id": "H4",
+      "statement": "The stored list identifier no longer corresponds to the user-visible list (deleted and recreated), and a cached EKCalendar object resolves the ghost.",
+      "status": "PARTIALLY_EXCLUDED",
+      "supporting": ["a stale identifier that cannot resolve would 404, and reads returned 200"],
+      "discriminator": "Record calendarIdentifier and sourceIdentifier at read time and compare against the value persisted in bridge.env; a differing identifier in list metadata would confirm drift."
+    },
+    {
+      "id": "H5",
+      "statement": "EventKit itself returns an empty result for a calendar that has items (predicate or account-scope defect).",
+      "status": "OPEN - lowest prior",
+      "supporting": ["F3 shows nothing upstream of EventKit can remove items"],
+      "discriminator": "Only reachable after H1/H2/H3 controls pass: item visible in app, fresh store, still zero items."
+    }
+  ],
+
+  "decisions": {
+    "reuse": [
+      "The currently signed bridge binary f78e24e5 and its three existing GET endpoints - no rebuild needed for R1 layer A",
+      "The gateway's in-memory FakeEventKitBridge as the offline test double for the diagnostic harness",
+      "Existing receipt naming and masking conventions"
+    ],
+    "adapt": [
+      "BUILD_METADATA.json writer: now records source provenance and can verify a binary on disk against archived metadata",
+      "New read-only capture harness that classifies empty vs non-empty vs error instead of returning one ambiguous count"
+    ],
+    "avoid": [
+      "Building or installing a new bridge binary for the R1 window: an adhoc-signed binary's designated requirement is cdhash-based, so any rebuild invalidates the existing TCC grant and forces another foreground authorization",
+      "Speculative cache refresh or TCC re-prompt as a 'fix' for an unproven cause",
+      "Opening the Seoul gateway path or the reverse tunnel for R1 layer A - the local loopback endpoint is sufficient",
+      "Reading bridge.env or any credential material"
+    ],
+    "alternatives_considered": [
+      {
+        "option": "A. Diagnose through the existing signed binary over loopback, with a synthetic item created once in the native app",
+        "pros": "zero new TCC, zero rebuild, zero Seoul change, reversible in minutes; satisfies R1's 'MacServer EventKit reads a known item' definition",
+        "cons": "requires the local gate to be opened for the window; requires one manual native creation"
+      },
+      {
+        "option": "B. Rebuild the bridge with diagnostic verbosity (per-item cache/age reporting) first",
+        "pros": "richer instrumentation in one pass",
+        "cons": "new cdhash voids the existing TCC grant; needs a second foreground authorization round; produces no R1 evidence if the list is simply empty; strictly more risk for the same first answer. Rejected for this round."
+      },
+      {
+        "option": "C. Defer to the full Seoul/MUSE gateway path",
+        "pros": "exercises the whole chain",
+        "cons": "adds two hosts and a tunnel to a question that is decidable on one host; violates the 'no full gateway rehearsal before R1' rule"
+      }
+    ],
+    "ecosystem_research": {
+      "github_solution_research_skill_installed": false,
+      "evidence_used": "local source reading plus the GitHub read-only CLI (gh) for PR state only",
+      "strength": "local code facts are strong; no external solution claims are made"
+    }
+  },
+
+  "changes": {
+    "branch": "feat/r1-01-readonly-diagnostic-harness",
+    "base_commit": "9000de0464b0e97a4b8205383011e9c95f2c274f",
+    "isolation": "dedicated git worktree; reference workspace untouched",
+    "depends_on_pr": "none at runtime; branched on top of PR #23 head for convenience, no PR #23 file modified",
+    "commits": [
+      {
+        "sha": "77b1f07",
+        "subject": "feat(diag): read-only R1 evidence capture with differential offline test",
+        "files": [
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_capture_readonly.py",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/tests/r1_capture_test.mjs"
+        ]
+      },
+      {
+        "sha": "556b2eb",
+        "subject": "fix(build): record source provenance in BUILD_METADATA.json",
+        "files": [
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/write_build_metadata.py",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/build-and-sign-universal.sh"
+        ]
+      },
+      {
+        "sha": "f09a8fb",
+        "subject": "feat(diag): self-closing bounded capture window for the R1 diagnostic",
+        "files": [
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_window.sh"
+        ]
+      }
+    ],
+    "runtime_code_changed": false,
+    "declared_unfixed": [
+      {
+        "id": "F5",
+        "reason": "Hypothesis, not evidence. A cache invalidation patch cannot be validated offline (the EventKit seam is not injectable) and would ship a behaviour change on a guess."
+      },
+      {
+        "id": "F6",
+        "reason": "Confirmed mislabel, but the fix changes the error taxonomy of a signed binary, which costs a rebuild plus a TCC re-grant. Deferred to the next authorized rebuild, bundled with an injectable seam so it can carry a real test."
+      }
+    ]
+  },
+
+  "tests": {
+    "r1_capture_offline_differential": {
+      "command": "node --experimental-strip-types scripts/tests/r1_capture_test.mjs",
+      "result": "PASS",
+      "detail": "25/25 assertions across 5 scenarios: empty list, non-empty with synthetic item, non-empty without it, gate closed (403), wrong token (401). Asserts no token and no unmasked UUID reach the receipt, and that an unrelated production title is never persisted.",
+      "instantiates_real_store": false,
+      "triggers_tcc": false
+    },
+    "build_provenance_self_test": {
+      "command": "python3 scripts/write_build_metadata.py --self-test",
+      "result": "PASS",
+      "detail": "7/7 assertions: keys present, real commit recorded, clean/dirty detection, verify PASS on match, verify FAIL on mutation.",
+      "instantiates_real_store": false
+    },
+    "swift_suite": {
+      "command": "swift test --disable-sandbox",
+      "result": "PASS",
+      "detail": "91 tests, 0 failures. Sandbox had to be disabled because SwiftPM's manifest build is blocked in this environment.",
+      "note": "Pre-existing suite, re-run only to prove the worktree is healthy; it does not cover the fault boundary."
+    },
+    "gateway_suite": {
+      "command": "npm test",
+      "result": "49/50",
+      "detail": "Single failure tests/protocol.test.ts -> ERR_MODULE_NOT_FOUND '@modelcontextprotocol/sdk'. Cause: the worktree has no untracked node_modules. Environmental, not a code regression; the gateway was not modified by this task."
+    },
+    "r1_window_guards": {
+      "command": "scripts/r1_window.sh against a synthetic plist/binary pair",
+      "result": "PASS",
+      "detail": "Dry run changes nothing. Refuses on sha256 mismatch, missing plist, missing token, and refuses to open the gate for an unsigned binary - with the plist gate value verified still false after the refusal.",
+      "instantiates_real_store": false
+    }
+  },
+
+  "operations_log": {
+    "files_written": [
+      "git worktree /Users/jin/WorkBuddy/2026-11-10-13-08-22/r1-01-worktree (isolated branch)",
+      "two commits as listed above",
+      "this receipt and the authorization application under receipts/"
+    ],
+    "files_or_data_read": [
+      "receipts B3/AG04/AG06/AG07/RECEIPTS_SUMMARY",
+      "macserver-eventkit Sources + Tests + scripts + BUILD_METADATA",
+      "seoul-gateway src + tests list + fake-bridge + synthetic generator outputs"
+    ],
+    "processes_started_or_stopped": "none on any production host. Local only: swift test binaries and a loopback FakeEventKitBridge on an ephemeral port.",
+    "deployments": "none",
+    "service_restarts": "none",
+    "gates_opened": "none",
+    "real_apple_data": "none accessed",
+    "tcc_prompts": "none triggered",
+    "credential_operations": "none; bridge.env never opened",
+    "seoul_or_network_changes": "none",
+    "remote_writes": "branch push only (no merge, no PR opened)"
+  },
+
+  "next_step": {
+    "action": "Await focal-point approval of receipts/R1_01_DIAGNOSTIC_AUTHORIZATION_APPLICATION.md",
+    "on_approval": "Execute layer A only: create one synthetic item in the native Reminders app, capture three read passes through the existing signed bridge, discriminate H1/H2/H3, clean up, restore the gate, and report.",
+    "not_before_r1": "No gateway acceptance run, no R2 proposal, no PR merge."
+  }
+}
