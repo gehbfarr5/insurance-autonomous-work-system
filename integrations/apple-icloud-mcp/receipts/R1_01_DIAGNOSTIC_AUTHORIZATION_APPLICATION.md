@@ -27,6 +27,21 @@
 
 ---
 
+## 0.1 本版（v3）相对 v2 的定向改动
+
+| # | 问题 | 本版处理 | 位置 |
+| :--- | :--- | :--- | :--- |
+| 1 | 关闸可以不经验证返回 0；看门狗据此写"已恢复" | 验证改为无条件，删除 `--expect` 开关；`FIRED_RESTORED` 需闸门回执 `verification=PASS` | §8、§9 |
+| 2 | `finish()` 先删开闸计时、失败也写 `stop` | 关成之前不删计时、不写 `stop`；有界 2 次重试；失败保留保护 | §8 |
+| 3 | 看门狗超时后仍强行并发关闸 | 三角色共用一把锁；有界等待后退出 7；按 `pid+lstart` 回收陈旧锁 | §8、§9 |
+| 4 | 同时写 plist 与 `bridge.env`；`load -w` 兜底；吞 bootout 错误 | 只写权威源；配置文件单键原子写 + 0600 备份；删除 `load -w`；bootout 错误按 `launchctl print` 核实 | §5.1 |
+| 5 | UNKNOWN 里残留"读 0 条后重试创建一次" | 删除；只读核对 + 升级，不重复写入 | §11 |
+| 6 | 误称 `--check-authorization` 不存在；403 直接归因 TCC | 更正为三层事实（源码/产物/运行）；403 记"原因未定"再区分 | §2.3、§2.3.1、§2.3.2 |
+| 7 | P5 用无令牌 curl 当 403 证据；紧急关闸自拼命令；称"权限上必须由人做"；R1/R2 混淆 | P5 改用受限客户端；紧急关闸复用同一入口；创建/删除改为明示选择；R1 不要求 MUSE 签署 | §15、§4.2、§1 |
+| 8 | 缺针对性隔离验证 | 新增 4 类场景（看门狗验证失败、恢复不解除保护、互斥、跨批次假成功），编排断言 66→87 | §12 |
+
+---
+
 ## 1. 分层边界：R1 与 R2 是两件事
 
 | 层 | 内容 | 归属 | 本申请 |
@@ -37,7 +52,7 @@
 | **D** | 原生 MCP 工具调用 | R2 | ❌ 不申请 |
 
 - R1 的通过标准由 **A 层**观测直接判定：同一列表、同一合成事项，被 MacServer 的 EventKit 正确读取。
-- R2（MUSE 前台验收）由 MUSE 侧**独立签署**，工程 Agent 不代签，也不把其签署作为 R1 本地读取的前置或附加条件。
+- **R1 的通过不要求 MUSE 签署。** R2（MUSE 前台验收）由 MUSE 侧独立签署，工程 Agent 不代签；R2 **必须在 R1 通过之后另行授权**，不得把 MUSE 签署当作 R1 本地读取的前置条件或替代条件。
 - 本申请**不**启动网关试运行、**不**建隧道、**不**改动 Seoul。
 
 ---
@@ -75,13 +90,34 @@ P0 采集并要求**同时**满足：路径一致、SHA256 一致、`codesign --
 
 | 观测 | 判定 |
 | :--- | :--- |
-| 开闸后 `/reminders/lists` → **200** | 闸门生效且 TCC 正常 |
-| 开闸后仍 **403**，且**同程序身份**已确认（路径+SHA256+cdhash+pid） | 判定 **TCC 被拒/授权失效** → 停窗，报 `BLOCKED (TCC)`，本窗口内不重开授权 |
-| 开闸后 **403**，但程序身份不符或闸门值为 false | 判定 **闸门未生效 / 身份漂移** → 按 §9 恢复，报 `INTERRUPTED` |
+| 开闸后 `/reminders/lists` → **200** | 闸门生效且 EventKit 权限可用 |
+| 开闸后仍 **403**，且**同程序身份**已确认（路径+SHA256+cdhash+pid） | 记为 **`403 原因未定（权限/闸门原因未定）`**，不直接归因 TCC；此时按 §2.3.2 的只读探针再区分，仍不能区分则停窗报 `BLOCKED (403 原因未定)` |
+| 开闸后 **403**，但程序身份不符或闸门值仍为 false | 判定 **闸门未生效 / 身份漂移** → 按 §9 恢复，报 `INTERRUPTED` |
 
 **会话正确性核验**：`stat -f %Su /dev/console` 必须为 `jin`，且 `launchctl print gui/501` 可读；否则判定"不在正确图形会话"，只做只读采集，不做任何需要会话的判定。
 
-**诚实说明**：v1 曾写"可执行 `EventKitBridgeServer --check-authorization` 作为 TCC 旁证"。经核对该参数在源码中**不存在**，本版删除该说法。TCC 状态以行为为主证据，以用户屏幕上的"隐私与安全性 → 提醒事项"显示为旁证；**不读取 `TCC.db`**（需完全磁盘访问，且会改变取证语义）。
+### 2.3.1 `--check-authorization` 的三层事实（更正 v2 的错误说法）
+
+v2 曾写"该参数在源码中不存在"，**这是错的**——我当时的检索目录写错，实际存在。更正如下，三层分开陈述，不得混用：
+
+| 层次 | 事实 | 状态 |
+| :--- | :--- | :--- |
+| **源码支持** | `Sources/EventKitBridgeServerExec/main.swift:27` 起实现 `--check-authorization`：输出 `{"authorization_status":…,"authorized":…}`，退出码 0=authorized / 2=notDetermined / 3=denied\|restricted\|writeOnly / 1=unsupported | **已核实**（本仓源码） |
+| **历史产物支持** | 已部署 `f78e24e5` 是否包含该参数**无法从归档证据判定**：`BUILD_METADATA.json` 没有 source commit（F7），该标志可能早于或晚于构建点 | **UNKNOWN**；由 P0 以只读方式执行一次该参数即可判定（不触发授权弹窗） |
+| **实际运行验证** | 该参数报告的是**执行它的那个进程上下文**的 TCC 状态。经 SSH 执行与 LaunchAgent 执行可能被归属到不同的 responsible process，结论不可直接互换 | **必须在 Aqua 会话内执行**并记录执行上下文；SSH 上下文的结果只能作为旁证 |
+
+因此：P0 会执行一次 `--check-authorization` 并记录其 JSON 与退出码，同时记录执行上下文（会话、父进程）；只有在 Aqua 会话内取得的结果才用于 TCC 判定。
+
+### 2.3.2 403 归因规则
+
+"闸门关闭"和"权限被拒"都返回 403 `PERMISSION_DENIED`，单看状态码无法区分。规则：
+
+1. 先确认闸门**按行为**已开（`gate_open.json` 的 `verification=PASS`，即 200）——若已 200，则不需要归因；
+2. 若开闸操作本身验证失败（仍 403），先查 `r1_gate.sh` 的回执：`gate_source_detected`、`verification`、`gate_http_status`；
+3. 只有在**闸门已按行为开启**且仍 403 时，才可能涉及权限；此时用 §2.3.1 的探针在 Aqua 会话内取值；
+4. 任一步不能给出确定结论 → 回执写 **`403 原因未定`**，不写"TCC 失效"。
+
+**不读取 `TCC.db`**（需完全磁盘访问，且会改变取证语义）。
 
 ### 2.4 源码版本：明确的证据边界
 
@@ -109,9 +145,9 @@ P0 采集并要求**同时**满足：路径一致、SHA256 一致、`codesign --
 
 | 文件 | 用途 | SHA256 |
 | :--- | :--- | :--- |
-| `r1_window.sh` | 自闭合窗口编排（411 行） | `5f707c2b5491943d7fc74dce4bca3c56fec813a4678d8010d2487e0a119dfa70` |
-| `r1_gate.sh` | 唯一开/关闸入口（280 行） | `9468d6accd3b2703bdec6db9a56bf45eae1020b3e8a4e93ee2820270feb9c8d8` |
-| `r1_watchdog.sh` | 独立期限看门狗（130 行） | `820db76c6bcc6badf57b074bf1e4fa4c29f4edd9dfeee74eb85d9291ca66e5e0` |
+| `r1_window.sh` | 自闭合窗口编排（448 行） | `4b2dfc48fd45235faab2c0fbeeacfc8ded6c00bf843bdcba6b6e889e9015b110` |
+| `r1_gate.sh` | 唯一开/关闸入口（402 行） | `9357186d896c53db7fa2a303596f7506231be61db9fb399cf71f805206fb96c3` |
+| `r1_watchdog.sh` | 独立期限看门狗（162 行） | `c541fd7a59b5f4aa8502e063db9b66d346eeeb29b4671dc0c74949f7ec776b74` |
 | `r1_bridge_client.py` | 只读客户端（562 行） | `b257dbdf873a59e6937d0f75c8a2ea92e437131c8f0f239372202fcf3c489155` |
 | `token` | 临时令牌文件，`0600`，**窗口结束即删** | 不记录（内容永不落回执） |
 
@@ -155,9 +191,9 @@ test -s "$HARNESS/token" || { echo "TOKEN_UNAVAILABLE"; exit 2; }
 | **创建 1 条合成事项** | **用户**（MacServer 屏幕上的提醒事项 App） | 唯一的数据写入，且是无 GUI 自动化时的最小权限路径 |
 | **删除该 1 条** | **用户** | 同上 |
 
-**这一项不是"让用户排障"**：创建/删除是**唯一的数据动作**，权限上必须由人做，且只需两次点击级操作。除这两步外，诊断、核验、取证、清理确认、恢复、回执全部由 WorkBuddy 完成。
+**这是本申请明确提出的一个选择，不是"权限上只能由人做"**：创建/删除提醒事项在技术上可以由 GUI 自动化完成（A11），但那样需要在目标机新增 Automation / 辅助功能授权，会在诊断窗口内引入一个新的 TCC 变量。因此本申请**推荐**由用户在屏幕上点两次；如果统筹更希望全程无人值守，可批准 A11，改由 WorkBuddy 驱动 `osascript`，两种方式都行，取决于取舍。
 
-若希望完全由 WorkBuddy 代劳创建/删除，需**单独批准 A11**（GUI 自动化 + 其 TCC 影响与回滚）。默认**不**启用，因为它会引入新的 TCC 变量。
+除创建/删除这一项外，诊断、核验、取证、清理确认、恢复、回执全部由 WorkBuddy 完成，用户不需要排障、不需要输入或粘贴任何令牌。
 
 ---
 
@@ -178,6 +214,24 @@ test -s "$HARNESS/token" || { echo "TOKEN_UNAVAILABLE"; exit 2; }
 **不**触碰：二进制、plist 其他键、`bridge.env` 其他键、Seoul、隧道、容器。
 
 > plist 的 `EnvironmentVariables` 可能含令牌，因此备份**不放在原目录**，而是放进 0700 证据目录并置 0600；回执记录备份路径与权限，不记录内容。
+
+**只改实际权威的那一个源（v3 变更）**
+
+`BridgeConfig.load()` 中环境变量优先，所以当 plist 定义了这个键时，改 `bridge.env` 是无效写入，只会让两个文件悄悄不一致。因此：
+
+| 情形 | 行为 |
+| :--- | :--- |
+| plist 定义了该键 | 只改 plist；**不**写 `bridge.env`（验收断言：`bridge.env` 前后字节一致） |
+| 只有 `bridge.env` 定义该键 | 只改 `bridge.env`；见下方"配置文件的写入契约" |
+| 两者都没有 | `open` 直接拒绝（exit 5），**不**凭空创建一个键；`close` 只做只读验证 |
+
+**配置文件的写入契约**（仅在 `bridge.env` 为权威源时生效）：
+
+- 路径：`~/.config/muse-macserver/bridge.env`（唯一，不含其他路径）
+- 范围：**仅** `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` 一行；脚本对该键做单行替换，键不存在则报错停止（不追加）
+- 备份：写前 `cp -p` 到 `<out>.config-backup`，`chmod 600`（该文件含令牌，不得 0644）
+- 原子性：同目录临时文件 + `os.replace`，并保持原文件 mode；读取方（含下一个进程）不会看到半写状态
+- 恢复：把备份 `cp -p` 回原位后按 §9 重新关闸并验证；备份路径写在回执的 `plist_backup` 字段（字段名沿用，值为实际被备份的文件）
 
 ### 5.2 进程
 
@@ -291,7 +345,14 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 
 看门狗独立性：不是窗口脚本的子 shell，主脚本崩溃、`SIGKILL`、读取阻塞、中途失败都不影响它按绝对期限关闸。关闸动作与人工关闸**是同一个脚本**（`r1_gate.sh close`），因此自动恢复与人工恢复的行为完全一致。
 
-**恢复失败**：`r1_gate.sh` 返回非 0 → 窗口写 `WINDOW_RESULT: RESTORE_FAILED`、退出码 **13**、`window_summary.json` 里 `restore_verified=FAILED`，**不**输出任何成功字样，保留现场。
+**恢复的语义（v3 收紧）**
+
+1. **验证不是可选项**：`r1_gate.sh` 不再有"跳过验证直接返回 0"的路径。open 与 close 都必须在重载后重新读 `/health` 与业务端点，只有观测到的行为与目标状态一致才返回 0。调用者不需要（也不能）用参数决定是否验证。
+2. **有界重试**：窗口自身最多 2 次 `close`，看门狗最多 3 次（每次换一个回执文件名，全部保留）。不做无限重试，不在失败后继续加码。
+3. **失败不解除保护**：窗口在 close 未通过验证时**不**删 `gate_open_since`、**不**写 `stop` 文件，看门狗保持武装，期限路径仍是最后一道关闸；窗口自身以退出码 **13** 结束并写 `RESTORE_FAILED`。
+4. **只在真正关成之后才收工**：确认 `verification=PASS` 后才停掉开闸计时并写 `stop`。
+5. **互斥**：窗口、看门狗、紧急关闸共用同一把锁（`r1_gate.sh` 内的 `$R1_LOCK_DIR/gate.lock`）。锁被占用时**有界等待**（默认 20s，重试操作 15s），超时即失败退出 **7** 并写 `failure_stage=lock` 回执；**绝不**在超时后强行并发写配置或重载。持有者进程已死或 pid 被复用时，锁按 `pid + lstart` 判定为陈旧并回收。
+6. **最坏情况**：若 2/3 次都失败，看门狗写 `FIRED_RESTORE_FAILED` 并以 6 退出，现场（含每次失败回执）保留，交由人工按 §15 的紧急关闸执行同一入口，而不是手工拼命令。
 
 ---
 
@@ -308,6 +369,13 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 | 受限目录 | harness/证据目录 0700；plist 备份 0600；token 0600 |
 | 失败留证据 | 闸门操作失败也写回执（`verification=FAIL` + `failure_stage` + `disk_written_before_failure`）；窗口任何退出路径都写 `window_summary.json` |
 | 截断不算成功 | 越过绝对期限或看门狗已触发 → 停止采集，退出 **16**，不回退为"成功" |
+| 验证不可跳过 | `open`/`close` 一律在重载后按行为验证；无"跳过验证返回 0"的分支，也没有控制它的参数 |
+| 恢复有界 | 窗口 2 次、看门狗 3 次；每次都落独立回执；失败即退出 13/6，不无限重试 |
+| 失败不解除保护 | close 未验证通过时不删 `gate_open_since`、不写 `stop`；看门狗继续武装到期限 |
+| 恢复互斥 | 三角色共用 `gate.lock`；有界等待后失败退出 **7**，不强行并发；陈旧锁按 `pid + lstart` 回收 |
+| 只改权威源 | 按 `BridgeConfig.load` 的优先级只写一处；plist 权威时 `bridge.env` 字节不变（有断言） |
+| 不吞主路径错误 | `bootout` 失败时先查 `launchctl print`：确实未加载才继续，否则按 reload 失败退出 4 并写回执；已删除 `load -w` 兜底 |
+| 一个坏批次否决整体 | 采集结论按"每个计划批次都产生观测且都符合期望"聚合；任一批次传输失败或出现重复事项，整体不得为成功 |
 
 ---
 
@@ -324,7 +392,9 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 
 ## 11. UNKNOWN 规则
 
-1. 创建结果不确定（用户无法确认是否保存）：**不重复创建**；先做一次只读读取——返回 0 条判"未保存"，由用户重试**一次**；≥1 条以实观测为准。
+**一条总规则：结果不确定时只做只读核对，不重复写入；无法确定就保留现场并升级统筹。**
+
+1. 创建结果不确定（用户无法确认是否保存）：**不重复创建**。只做只读读取并如实记录观测；无论读到 0 条还是 ≥1 条，**都不触发第二次创建**。读到 0 条时结论是"此刻读不到"，不是"没保存"，因此不能作为再写一次的理由；由统筹决定是否另行授权一次新的创建。
 2. 删除结果不确定：**不重复删除**；以清理核验批次为准；仍存在则停止并升级统筹，**不**做范围删除。
 3. 出现重复事项（同标题 ≥2 条）：**不自动删除**，保留现场，报告待指令（`exit 21`）。
 4. 任何"写入已发送、结果未知"：禁止自动重试、禁止切换后端、禁止扩大读取范围；只按批准范围只读核对，仍不能确定则保留现场升级。
@@ -337,7 +407,7 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 | 命令 | 结果 | 覆盖 |
 | :--- | :--- | :--- |
 | `python3 scripts/tests/test_r1_bridge_client.py` | **53/53 通过** | 空列表 / 非空保真 / 重复事项 / 错误日期 / priority 0 / isCompleted / 空 itemID / fake store / 多列表 / 清理未生效 / 证据目录占用 / 令牌权限 / 全目录令牌扫描 / 不可达 / 非回环拒绝 / **3xx 拒绝** / **代理改道拒绝** |
-| `bash scripts/tests/test_r1_window.sh` | **66/66 通过** | 前置拒绝 / 干跑零变更 / happy path / 字段不符 / 空列表 / 取证传输失败 / **加载失败** / **恢复失败** / **绝对期限触发** / **累计开闸预算触发** / **主进程 SIGKILL** / **plist 权威源 bootout+bootstrap** / **备份 0600** / **清理核验（absence）** |
+| `bash scripts/tests/test_r1_window.sh` | **87/87 通过** | 前置拒绝 / 干跑零变更 / happy path / 字段不符 / 空列表 / 取证传输失败 / **加载失败** / **恢复失败（且保护未解除）** / **绝对期限触发** / **累计开闸预算触发** / **主进程 SIGKILL** / **plist 权威源 bootout+bootstrap（且配置文件字节不变）** / **备份 0600** / **清理核验（absence）** / **看门狗验证失败不得报成功** / **互斥：占用时不强改、陈旧锁可回收** / **前一批通过、后一批出错不得整体成功** / **前一批通过、后一批重复不得整体成功** |
 | `python3 scripts/write_build_metadata.py --self-test` | **7/7 通过** | 溯源字段完整性、脏树标记、二进制变更检测 |
 | `swift test --disable-sandbox`（此前已跑，未改动 Swift 源码） | 91/91 通过 | 桥实现与协议 |
 
@@ -356,10 +426,10 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 
 ## 14. 请求批准的范围（逐条勾选，最小授权）
 
-- [ ] **A1 只读身份核验**：在 MacServer 执行 `shasum -a 256`、`codesign -dvvv --verify`、`pgrep`、`ps -o lstart`、`lsof -p`、`launchctl print gui/501/...`，输出写入证据目录。
+- [ ] **A1 只读身份核验**：在 MacServer 执行 `shasum -a 256`、`codesign -dvvv --verify`、`pgrep`、`ps -o lstart`、`lsof -p`、`launchctl print gui/501/...`，并在 Aqua 会话内执行一次 `EventKitBridgeServer --check-authorization`（只读、不触发授权弹窗），输出写入证据目录。该参数源码已确认存在，但**已部署产物是否包含它**要由这次执行来判定。
 - [ ] **A2 只读端点调用**：仅 `127.0.0.1:18765` 的 `/health`、`/reminders/lists`、`/reminders/lists/{LIST-ALPHA}/items`，仅 GET，仅单个列表。
 - [ ] **A3 令牌使用**：按 §3.3 从 `bridge.env` 单键提取到 0600 临时文件，窗口结束删除。
-- [ ] **A4 闸门开合**：临时将 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` 置 `true`，按 §8 的时限与预算重载服务，结束必须恢复 `false` 并复验 403。
+- [ ] **A4 闸门开合**：临时将 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` 置 `true`，按 §8 的时限与预算重载服务；开合**只能**经 `r1_gate.sh` 这一入口（共用互斥锁、按行为验证、失败留证），结束必须恢复 `false` 并复验 403；紧急关闸同样走该入口。
 - [ ] **A5 合成事项**：由用户创建 1 条（§6），事后再精准删除该 1 条。
 - [ ] **A6 本地取证写入**：`/Users/jin/r1-harness-<ts>/`、`/Users/jin/r1-evidence/<ts>/`、`~/.config/muse-r1/identity.private.json`（0600）。
 - [ ] **A7 目视核对**：用户在该列表内目视计数并口述，WorkBuddy 记录（C1 通道）。
@@ -444,26 +514,42 @@ ssh macserver-ts "$HARNESS/r1_window.sh --confirm \
 
 **P5 独立复核 + 清理 harness**
 
-```bash
-ssh macserver-ts "plutil -extract EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED raw \
-  ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist; \
-  curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18765/reminders/lists; \
-  curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18765/health; \
-  pgrep -fl EventKitBridgeServer"
-# 期望：false / 403 / 200 / 恰好 1 个进程
-ssh macserver-ts "rm -rf $HARNESS"   # 删除脚本与 token；保留 $EVID
-```
-
-**紧急关闸（已授权，无需再申请）**——任何人可随时执行：
+复核必须带有效认证。无令牌的 `curl` 打 `/reminders/lists` 得到的是 **401**（认证失败），不是 403（闸门关闭），拿它当"已关闸"的证据是错的。所以复核走受限客户端：
 
 ```bash
-ssh macserver-ts "launchctl bootout gui/501/com.muse.macserver-eventkit 2>/dev/null; \
-  plutil -replace EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED -string false \
-    ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist 2>/dev/null || true; \
-  launchctl bootstrap gui/501 ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist; \
-  sleep 3; curl -s -o /dev/null -w 'lists=%{http_code}\n' http://127.0.0.1:18765/reminders/lists"
-# 期望 lists=403。若配置源是 bridge.env 则改该文件的同一键；两种来源都用 r1_gate.sh close 更稳妥。
+# 1) 受限客户端复核（带令牌；期望 verification=PASS 且 gate_http_status=403）
+#    不覆盖 R1_LOCK_DIR：必须与窗口/看门狗用同一把锁，否则复核可能与残留看门狗并发
+ssh macserver-ts "$HARNESS/r1_gate.sh close \
+  --plist ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist \
+  --config-file ~/.config/muse-macserver/bridge.env \
+  --token-file $HARNESS/token --purpose 'p5-independent-recheck' \
+  --out $EVID/p5/gate_recheck.json" && \
+ssh macserver-ts "python3 -c \"import json;d=json.load(open('$EVID/p5/gate_recheck.json'));print(d['verification'], d['gate_http_status'], d['gate_source_detected'])\""
+
+# 2) 进程与磁盘值（只作为补充，不作为运行状态判据）
+ssh macserver-ts "pgrep -fl EventKitBridgeServer; \
+  plutil -extract EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED raw \
+    ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist 2>/dev/null || echo 'key: not in plist'"
+
+# 3) 清理 harness（删除脚本与令牌；保留证据目录）
+ssh macserver-ts "rm -rf $HARNESS"
 ```
+
+注：P5 的 `r1_gate.sh close` 会再取一次互斥锁并再验证一次，因此它同时证明了"自动关闸的结果可以被独立复核"，而不是由开闸方自证。
+
+**紧急关闸（已授权，无需再申请）**——复用与自动恢复**完全相同**的唯一入口，不另写一条会吞错的临时命令：
+
+```bash
+# 任何人在任何时刻，一条命令，走同一个互斥锁与同一套验证
+ssh macserver-ts "$HARNESS/r1_gate.sh close \
+  --plist ~/Library/LaunchAgents/com.muse.macserver-eventkit.plist \
+  --config-file ~/.config/muse-macserver/bridge.env \
+  --token-file $HARNESS/token --purpose 'emergency-close' \
+  --out $EVID/emergency/close.json; echo \"exit=\$?\""
+# 退出码 0 表示"已按行为验证为 403"；非 0 表示没有恢复成功，需按 §9 保留现场并上报
+```
+
+若 harness 已被删除（窗口已收尾），用仓库内同一脚本的副本执行同一命令；**不要**临时拼 `plutil` + `launchctl`（那会绕过互斥与验证，并且在 bootout 失败时静默继续）。
 
 ---
 
@@ -486,12 +572,12 @@ ssh macserver-ts "launchctl bootout gui/501/com.muse.macserver-eventkit 2>/dev/n
 
 | 文件 | 作用 |
 | :--- | :--- |
-| `macserver-eventkit/scripts/r1_window.sh` | 自闭合窗口：前置门禁 → 武装看门狗 → 开闸 → 采集 → 关闸 → 三独立判定；支持 `--expect absence` |
-| `macserver-eventkit/scripts/r1_gate.sh` | 唯一开/关闸入口：来源检测、0600 备份、双路径重载、行为验证、失败也写回执 |
-| `macserver-eventkit/scripts/r1_watchdog.sh` | 独立期限看门狗：绝对截止 + 累计开闸预算 + 归属元数据 |
+| `macserver-eventkit/scripts/r1_window.sh` | 自闭合窗口：前置门禁 → 武装看门狗 → 开闸 → 采集 → 关闸 → 三独立判定；采集结论按全部计划批次聚合；关闸有界重试、失败不解除保护；支持 `--expect absence` |
+| `macserver-eventkit/scripts/r1_gate.sh` | 唯一开/关闸入口：互斥锁（可回收陈旧锁）+ 来源检测 + 0600 备份 + 双路径重载（不吞 bootout 错误）+ **强制**行为验证；失败也写回执 |
+| `macserver-eventkit/scripts/r1_watchdog.sh` | 独立期限看门狗：绝对截止 + 累计开闸预算；只有闸门自证 `verification=PASS` 才写 `FIRED_RESTORED`，否则有界重试后 `FIRED_RESTORE_FAILED` 并以 6 退出 |
 | `macserver-eventkit/scripts/r1_bridge_client.py` | 只读客户端：固定回环、空代理、拒绝 3xx、令牌仅从 0600 文件、批次不可覆盖 |
 | `macserver-eventkit/scripts/write_build_metadata.py` | 构建溯源写入与校验（补 source commit 缺口） |
-| `macserver-eventkit/scripts/tests/fake_bridge.py` | 回环假桥：按真实优先级（plist > config > control）读闸门，支持 302/延迟/500 |
+| `macserver-eventkit/scripts/tests/fake_bridge.py` | 回环假桥：按真实优先级（plist > config > control）读闸门，支持 302/延迟/500/逐次响应序列（`items_seq`） |
 | `macserver-eventkit/scripts/tests/test_r1_bridge_client.py` | 53 项断言 |
-| `macserver-eventkit/scripts/tests/test_r1_window.sh` | 66 项断言（含加载失败、恢复失败、期限、预算、SIGKILL、launchd 分支、清理核验） |
+| `macserver-eventkit/scripts/tests/test_r1_window.sh` | 87 项断言（含加载失败、恢复失败且保护未解除、期限、预算、SIGKILL、launchd 分支、清理核验、看门狗验证失败、互斥与陈旧锁、跨批次假成功） |
 | `receipts/R1_01_OFFLINE_DIAGNOSIS_RECEIPT.json` | 离线定位回执（事实/假设/排除项） |

@@ -1,9 +1,9 @@
 {
   "receipt_type": "R1_01_OFFLINE_DIAGNOSIS_RECEIPT",
   "task": "REM-R1-01",
-  "executed_at": "2026-11-10T10:20:00Z",
-  "revision": 2,
-  "revision_note": "v2: review response. The authorization application was rewritten around seven findings (deadline conflict, launchd load semantics, failure propagation, evidence rules, UNKNOWN handling, access path and responsibility, scope separation). Scripts gained a bounded-window watchdog, a single gate entry point, a cleanup-verification mode, a plist backup, and hardened transport (no proxy, no redirects). No production action was taken.",
+  "executed_at": "2026-11-10T10:45:00Z",
+  "revision": 3,
+  "revision_note": "v3: targeted remediation. Restore is verifiable and unconditional, the window no longer disarms its own protection, all restorers share one mutex with stale-lock reclamation, only the authoritative gate source is ever written, and a good batch can no longer outvote a failed one. It also corrects a factual error introduced in v2: --check-authorization does exist in the source. No production action was taken.",
   "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
   "scope": "offline_only",
   "r1_status": "NOT_STARTED",
@@ -11,7 +11,6 @@
     "verdict": "BLOCKED",
     "assertion": "R1 PASS requires at least one synthetic item known to exist in the bound list to be read correctly by MacServer EventKit. No such item is known to exist, and no offline evidence can establish that it does. Offline work is complete; R1 itself has not begun."
   },
-
   "environment": {
     "verified_at": "2026-11-10T05:08:00Z",
     "nodes": [
@@ -72,111 +71,202 @@
     ],
     "host_identity_disclaimer": "HOST-A is not MAC-1. They differ in OS major version (27.0.1 vs 15.7.7), architecture (arm64 vs x86_64) and bridge listener state. HOST-A has no listener on 127.0.0.1:18765."
   },
-
   "repository_baseline": {
     "reference_worktree": "/Users/jin/.gemini/antigravity/scratch/ag01-workspace/insurance-autonomous-work-system",
     "clean": true,
     "head": "9000de0464b0e97a4b8205383011e9c95f2c274f",
     "head_matches_focal_point_record": true,
     "pull_requests": [
-      {"number": 19, "state": "OPEN", "draft": true, "head": "ca575e3cda70ade5c3c59733ae1d7989e3fcc307", "base": "main"},
-      {"number": 20, "state": "OPEN", "draft": false, "head": "4d23ed1884a06af2933e903106ca2dccabc32908", "base": "main"},
-      {"number": 21, "state": "OPEN", "draft": false, "head": "740c39309936e3076613551935f9b49fa907cbb5", "base": "reconcile/icloud-source-baseline"},
-      {"number": 22, "state": "OPEN", "draft": false, "head": "a6f1a9c686b1072b6ca6dac63211b63cd9d25e7b", "base": "feat/macserver-eventkit-readonly"},
-      {"number": 23, "state": "OPEN", "draft": false, "head": "9000de0464b0e97a4b8205383011e9c95f2c274f", "base": "feat/seoul-macserver-readonly-gateway"}
+      {
+        "number": 19,
+        "state": "OPEN",
+        "draft": true,
+        "head": "ca575e3cda70ade5c3c59733ae1d7989e3fcc307",
+        "base": "main"
+      },
+      {
+        "number": 20,
+        "state": "OPEN",
+        "draft": false,
+        "head": "4d23ed1884a06af2933e903106ca2dccabc32908",
+        "base": "main"
+      },
+      {
+        "number": 21,
+        "state": "OPEN",
+        "draft": false,
+        "head": "740c39309936e3076613551935f9b49fa907cbb5",
+        "base": "reconcile/icloud-source-baseline"
+      },
+      {
+        "number": 22,
+        "state": "OPEN",
+        "draft": false,
+        "head": "a6f1a9c686b1072b6ca6dac63211b63cd9d25e7b",
+        "base": "feat/macserver-eventkit-readonly"
+      },
+      {
+        "number": 23,
+        "state": "OPEN",
+        "draft": false,
+        "head": "9000de0464b0e97a4b8205383011e9c95f2c274f",
+        "base": "feat/seoul-macserver-readonly-gateway"
+      }
     ],
     "prs_merged": 0,
     "focal_point_claim_reconfirmed": "PR #19-#23 OPEN, PR #23 head == local HEAD. Confirmed at 2026-11-10T05:09Z."
   },
-
   "confirmed_facts": [
     {
       "id": "F1",
       "fact": "Every recorded read of the bound list returned 0 items, at every layer, on every date: B3 (2026-11-07T14:43Z), AG-04 trial (2026-11-08), AG-07 MUSE window (2026-11-10). No receipt anywhere records an observation of the list containing at least one item.",
-      "evidence": ["receipts/B3_TEST_LIST_READ_RECEIPT.json", "receipts/AG04_TRIAL_AND_RECOVERY_RECEIPT.json", "receipts/AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json"],
+      "evidence": [
+        "receipts/B3_TEST_LIST_READ_RECEIPT.json",
+        "receipts/AG04_TRIAL_AND_RECOVERY_RECEIPT.json",
+        "receipts/AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json"
+      ],
       "strength": "strong (all archived receipts read in full)"
     },
     {
       "id": "F2",
       "fact": "No receipt records any evidence that the bound list ever contained an item at the iCloud level either. The only list-level observations are metadata (title, source, writable=false).",
-      "evidence": ["B2 section in RECEIPTS_SUMMARY.md", "AG-04 tool_calls_desensitized"],
+      "evidence": [
+        "B2 section in RECEIPTS_SUMMARY.md",
+        "AG-04 tool_calls_desensitized"
+      ],
       "strength": "strong (absence of evidence across all receipts)"
     },
     {
       "id": "F3",
       "fact": "With the current bridge source, HTTP 200 plus an empty JSON array can only be produced by ProductionEventKitStore.fetchReminders receiving a non-nil empty array from EventKit. Every failure path returns a typed error with a distinct status (401/403/404/405/429/500/504); the gateway transport turns non-array or non-JSON bodies into UPSTREAM_ERROR. Therefore gateway mapping, transport parsing and bridge serialization cannot silently reduce a non-empty list to zero items.",
-      "evidence": ["ProductionEventKitStore.swift:178-205", "EventKitBridgeServer.swift:416-435", "seoul-gateway/src/transport.ts:97-122", "seoul-gateway/src/service.ts:164-283"],
+      "evidence": [
+        "ProductionEventKitStore.swift:178-205",
+        "EventKitBridgeServer.swift:416-435",
+        "seoul-gateway/src/transport.ts:97-122",
+        "seoul-gateway/src/service.ts:164-283"
+      ],
       "strength": "strong for the code as read; does not by itself prove which upstream condition produced the empty array"
     },
     {
       "id": "F4",
       "fact": "AG-07 called reminders_list with list_ids only, no completed/due_after/due_before parameters, so no client-side filter in the gateway could have removed items.",
-      "evidence": ["AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json:56-60", "service.ts:218-237"],
+      "evidence": [
+        "AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json:56-60",
+        "service.ts:218-237"
+      ],
       "strength": "strong"
     },
     {
       "id": "F5",
       "fact": "ProductionEventKitStore caches one EKEventStore instance for the process lifetime (cachedStore, created on first request) and never invalidates it nor observes EKEventStoreChanged.",
-      "evidence": ["ProductionEventKitStore.swift:50", "ProductionEventKitStore.swift:212-219"],
+      "evidence": [
+        "ProductionEventKitStore.swift:50",
+        "ProductionEventKitStore.swift:212-219"
+      ],
       "strength": "strong as a code fact; runtime impact UNPROVEN"
     },
     {
       "id": "F6",
       "fact": "A nil callback from EKEventStore.fetchReminders is mapped to EventKitBridgeError.timeout (HTTP 504), so a failed query and a real timeout are indistinguishable in the response taxonomy.",
-      "evidence": ["ProductionEventKitStore.swift:200-202", "RequestHandler.swift:47"],
+      "evidence": [
+        "ProductionEventKitStore.swift:200-202",
+        "RequestHandler.swift:47"
+      ],
       "strength": "strong as a code fact"
     },
     {
       "id": "F7",
       "fact": "BUILD_METADATA.json for the deployed binary records pipeline, timestamp, sha256 and per-arch cdhashes but no source commit, branch, or dirty flag. The deployed f78e24e5 cannot be tied to a commit from archived evidence.",
-      "evidence": ["macserver-eventkit/BUILD_METADATA.json"],
+      "evidence": [
+        "macserver-eventkit/BUILD_METADATA.json"
+      ],
       "strength": "strong"
     },
     {
       "id": "F8",
       "fact": "writable=false in the gateway's list output is hard-coded by the gateway, not read from EventKit. It carries no information about the iCloud-side list.",
-      "evidence": ["service.ts:130-135"],
+      "evidence": [
+        "service.ts:130-135"
+      ],
       "strength": "strong"
     },
     {
       "id": "F9",
       "fact": "All Swift tests use FakeEventKitStore. No test exercises the ProductionEventKitStore EventKit query path, because the store provider requires a real EKEventStore. 91/91 tests pass with no TCC prompt and no real store instantiation.",
-      "evidence": ["swift test --disable-sandbox, 2026-11-10T05:14Z, 91 tests 0 failures", "Tests/EventKitBridgeTests/HttpIntegrationTests.swift (provider constructed, never called)"],
+      "evidence": [
+        "swift test --disable-sandbox, 2026-11-10T05:14Z, 91 tests 0 failures",
+        "Tests/EventKitBridgeTests/HttpIntegrationTests.swift (provider constructed, never called)"
+      ],
       "strength": "strong"
     },
     {
       "id": "F10",
       "fact": "Desensitization violation already present in tracked receipts: AG-07 records the bound list's full UUID and full title, while B3 and AG-04 mask the same identifier as 9D9A****03F3. The summary additionally names a production list.",
-      "evidence": ["AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json:51", "RECEIPTS_SUMMARY.md:233", "B3_TEST_LIST_READ_RECEIPT.json:8"],
+      "evidence": [
+        "AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json:51",
+        "RECEIPTS_SUMMARY.md:233",
+        "B3_TEST_LIST_READ_RECEIPT.json:8"
+      ],
       "strength": "strong",
       "action_taken": "Not rewritten. Historical evidence is left intact; redaction requires focal-point approval."
     },
     {
       "id": "F11",
       "fact": "The bound list identifier still resolves at read time: the 2026-11-10 read returned 200 with source verification PASS, which requires store.calendar(withIdentifier:) to return a calendar whose source matches the registered binding. A fully stale identifier would have produced 404 LIST_NOT_FOUND.",
-      "evidence": ["ProductionEventKitStore.swift:148-160", "AG07 receipt step 3 returned 200"],
+      "evidence": [
+        "ProductionEventKitStore.swift:148-160",
+        "AG07 receipt step 3 returned 200"
+      ],
       "strength": "medium-strong; a cached EKCalendar object could still resolve a list deleted on the iCloud side, so identity drift is narrowed but not excluded"
     },
     {
       "id": "F12",
       "fact": "Bridge configuration, including the production gate, is supplied as LaunchAgent EnvironmentVariables and read once at process start. Any gate change therefore implies a process restart, which constructs a fresh EKEventStore on the first request. Every historical read ran on a freshly started process (B3 records service_restarted: true; AG-06 records a reload after the TCC grant).",
-      "evidence": ["com.muse.macserver-eventkit.plist.template:5-35", "main.swift:104-120", "B3_TEST_LIST_READ_RECEIPT.json:29-33", "AG06_TCC_PREFLIGHT_AUTHORIZATION_RECEIPT.json:41-46"],
+      "evidence": [
+        "com.muse.macserver-eventkit.plist.template:5-35",
+        "main.swift:104-120",
+        "B3_TEST_LIST_READ_RECEIPT.json:29-33",
+        "AG06_TCC_PREFLIGHT_AUTHORIZATION_RECEIPT.json:41-46"
+      ],
       "strength": "strong; this materially demotes the stale-cache hypothesis"
     },
     {
       "id": "F13",
       "fact": "BridgeConfig.load() merges the LaunchAgent environment into the config file and the environment wins (`if mergedEnv[k] == nil || empty`). Consequently: when the plist defines EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED, writing bridge.env has no effect at all; and a value read from disk is not the running process state, because launchd caches the job. A gate operation must therefore be proven by HTTP behaviour plus process identity, never by the file.",
-      "evidence": ["Sources/EventKitBridge/Support/BridgeConfig.swift (merge order)", "scripts/r1_gate.sh (source detection + behavioural verification)", "scripts/tests/test_r1_window.sh scenario 12 (plist authoritative source, bootout+bootstrap, 0600 backup)"],
+      "evidence": [
+        "Sources/EventKitBridge/Support/BridgeConfig.swift (merge order)",
+        "scripts/r1_gate.sh (source detection + behavioural verification)",
+        "scripts/tests/test_r1_window.sh scenario 12 (plist authoritative source, bootout+bootstrap, 0600 backup)"
+      ],
       "strength": "strong as a code fact; the reload semantics of the target launchd could not be measured on this host (see L1)"
     },
     {
       "id": "F14",
       "fact": "The originally proposed transport was unsafe for a token-bearing request: urllib follows 3xx redirects by default (re-sending the Authorization header to the new location) and honours proxy environment variables, so a redirect or an http_proxy could move the request off the authorized loopback endpoint. The client now builds its opener with an explicit empty ProxyHandler and a redirect handler that refuses every 3xx.",
-      "evidence": ["scripts/r1_bridge_client.py (_NO_PROXY, _RefuseRedirect)", "scripts/tests/test_r1_bridge_client.py scenarios 16-17"],
+      "evidence": [
+        "scripts/r1_bridge_client.py (_NO_PROXY, _RefuseRedirect)",
+        "scripts/tests/test_r1_bridge_client.py scenarios 16-17"
+      ],
       "strength": "strong; both behaviours are asserted offline"
+    },
+    {
+      "id": "F15",
+      "fact": "Sources/EventKitBridgeServerExec/main.swift implements --check-authorization (line 27 onward): it prints {\"authorization_status\":...,\"authorized\":...} and exits 0 when authorized, 2 when notDetermined, 3 when denied/restricted/writeOnly, 1 when EventKit is unsupported. The v2 receipt wrongly retracted this flag; the retraction came from grepping a path that does not exist from the scripts directory, not from the source.",
+      "evidence": [
+        "Sources/EventKitBridgeServerExec/main.swift:27-64"
+      ],
+      "strength": "strong for the source; whether the deployed f78e24e5 contains the flag is UNKNOWN because the artifact cannot be tied to a commit (F7). It can be settled by running the flag once, which is read-only and does not request authorization."
+    },
+    {
+      "id": "F16",
+      "fact": "An unauthenticated GET to /reminders/lists returns 401 AUTHENTICATION_FAILED, not 403 PERMISSION_DENIED, because the auth check precedes the gate check. The v2 runbook's P5 recheck used a bare curl without a token and would have printed 401 while calling it a gate-closed proof. Any check of the closed state must carry the token and must distinguish 401 from 403.",
+      "evidence": [
+        "RequestHandler.swift (auth precedes gate)",
+        "scripts/tests/fake_bridge.py answers 401 before evaluating the gate"
+      ],
+      "strength": "strong"
     }
   ],
-
   "limitations": [
     {
       "id": "L1",
@@ -198,48 +288,70 @@
       "id": "L4",
       "statement": "The Seoul gateway suite cannot run in this worktree: `tests/protocol.test.ts` fails with ERR_MODULE_NOT_FOUND '@modelcontextprotocol/sdk' because the worktree has no untracked node_modules.",
       "mitigation": "The gateway was not modified by this task; recorded as environmental, not as a code regression."
+    },
+    {
+      "id": "L5",
+      "statement": "The TCC status reported by --check-authorization belongs to the context that runs it. Over SSH the responsible process differs from the LaunchAgent, so an SSH reading is not interchangeable with the daemon's authorization state.",
+      "mitigation": "The probe is executed inside the Aqua session and its context (session, parent process) is recorded alongside the JSON and exit code. SSH-context readings are kept only as corroboration."
+    },
+    {
+      "id": "L6",
+      "statement": "The gate mutex is a bounded wait, not a queue: a restore that cannot take the lock within 15-20s fails instead of waiting indefinitely.",
+      "mitigation": "This is deliberate - a forced concurrent write is worse than a reported failure. The failure is recorded (failure_stage=lock) and the watchdog's remaining attempts plus the human emergency path share the same lock, so a stuck holder is visible rather than silently overridden."
     }
   ],
-
   "hypotheses": [
     {
       "id": "H1",
       "statement": "The bound list is genuinely empty because no item was ever created in it. Every write path is disabled: bridge is read-only, gateway rejects create/update/remove client-side, and ALLOW_REMINDERS_WRITE_1 was false at the AG-04 baseline.",
       "status": "OPEN - leading",
-      "supporting": ["F2", "F8", "no write path exists in any receipt"],
+      "supporting": [
+        "F2",
+        "F8",
+        "no write path exists in any receipt"
+      ],
       "discriminator": "Observe the list in the native Reminders app on MAC-1 under the bound iCloud account, then read it through the bridge."
     },
     {
       "id": "H2",
       "statement": "Items exist in iCloud but never reached the MacServer EventKit local database for this list (account or Reminders sync gap).",
       "status": "OPEN",
-      "supporting": ["B2 recorded com.apple.Dataclass.Reminders: True, which indicates the dataclass is enabled, not that this list is synced"],
+      "supporting": [
+        "B2 recorded com.apple.Dataclass.Reminders: True, which indicates the dataclass is enabled, not that this list is synced"
+      ],
       "discriminator": "Same observation as H1: an item visible in Reminders.app but absent from EventKit read separates H2 from H1."
     },
     {
       "id": "H3",
       "statement": "The long-lived cached EKEventStore does not observe data written after the process started, so a fresh query against it returns a stale empty result.",
       "status": "LARGELY_EXCLUDED",
-      "supporting": ["F5 shows the cache exists and is never invalidated"],
-      "against": ["F12: the gate is process-start configuration, so every historical read already ran on a newly constructed store; a stale-store explanation would require the store to be stale at process start, which the code does not do"],
+      "supporting": [
+        "F5 shows the cache exists and is never invalidated"
+      ],
+      "against": [
+        "F12: the gate is process-start configuration, so every historical read already ran on a newly constructed store; a stale-store explanation would require the store to be stale at process start, which the code does not do"
+      ],
       "discriminator": "Not needed as a separate step any more: the window's read necessarily runs on a fresh process. If a fresh process still returns empty while the native app shows the item, H3 is definitively refuted and H2/H4/H5 remain."
     },
     {
       "id": "H4",
       "statement": "The stored list identifier no longer corresponds to the user-visible list (deleted and recreated), and a cached EKCalendar object resolves the ghost.",
       "status": "PARTIALLY_EXCLUDED",
-      "supporting": ["a stale identifier that cannot resolve would 404, and reads returned 200"],
+      "supporting": [
+        "a stale identifier that cannot resolve would 404, and reads returned 200"
+      ],
       "discriminator": "Record calendarIdentifier and sourceIdentifier at read time and compare against the value persisted in bridge.env; a differing identifier in list metadata would confirm drift."
     },
     {
       "id": "H5",
       "statement": "EventKit itself returns an empty result for a calendar that has items (predicate or account-scope defect).",
       "status": "OPEN - lowest prior",
-      "supporting": ["F3 shows nothing upstream of EventKit can remove items"],
+      "supporting": [
+        "F3 shows nothing upstream of EventKit can remove items"
+      ],
       "discriminator": "Only reachable after H1/H2/H3 controls pass: item visible in app, fresh store, still zero items."
     }
   ],
-
   "decisions": {
     "reuse": [
       "The currently signed bridge binary f78e24e5 and its three existing GET endpoints - no rebuild needed for R1 layer A",
@@ -279,7 +391,6 @@
       "strength": "local code facts are strong; no external solution claims are made"
     }
   },
-
   "changes": {
     "branch": "feat/r1-01-readonly-diagnostic-harness",
     "base_commit": "9000de0464b0e97a4b8205383011e9c95f2c274f",
@@ -330,6 +441,24 @@
           "transport: loopback only, no proxy, no redirect following",
           "scope: cleanup verification as a first-class window mode, so presence and absence are decided by the same bounded machinery"
         ]
+      },
+      {
+        "sha": "3efe6a7",
+        "subject": "fix(diag): make restore verifiable, single-source, serialized and honest about partial batches",
+        "files": [
+          "scripts/r1_gate.sh",
+          "scripts/r1_watchdog.sh",
+          "scripts/r1_window.sh",
+          "scripts/tests/fake_bridge.py",
+          "scripts/tests/test_r1_window.sh"
+        ],
+        "closes_gaps": [
+          "close no longer returns 0 without verification; FIRED_RESTORED requires the gate's own PASS receipt",
+          "finish() keeps gate_open_since and the watchdog armed until the close is verified; bounded 2 attempts",
+          "one mutex shared by window, watchdog and emergency close; bounded wait then exit 7; stale lock reclaimed by pid+lstart",
+          "only the authoritative gate source is written; config write is single-key atomic with a 0600 backup; no legacy load -w; bootout errors are checked",
+          "capture verdicts aggregate over all planned passes, so one failed or duplicate batch blocks an overall success"
+        ]
       }
     ],
     "runtime_code_changed": false,
@@ -344,7 +473,6 @@
       }
     ]
   },
-
   "tests": {
     "r1_capture_offline_differential": {
       "command": "node --experimental-strip-types scripts/tests/r1_capture_test.mjs",
@@ -373,7 +501,7 @@
     "r1_window_guards": {
       "command": "bash scripts/tests/test_r1_window.sh",
       "result": "PASS",
-      "detail": "66/66 assertions across 14 scenarios: preflight refusal on sha mismatch (gate stays false), dry run changes nothing, happy path (capture COMPLETED / fidelity ASSERTED / restore VERIFIED with a 403 re-verification), field mismatch, empty-at-capture, capture transport failure, gate-load failure (summary written on the failed-open path, restore FAILED, exit 13), restore failure after a successful open (failure receipt written, exit 13), absolute deadline firing, cumulative open-budget firing, main process SIGKILLed mid-window (watchdog restores), plist as authoritative source (bootout+bootstrap, 0600 backup), cleanup verification mode (absence), and cleanup-not-effective.",
+      "detail": "87/87 assertions across 18 scenarios. Added in v3: watchdog verification failure (a close that reloads but cannot verify is FIRED_RESTORE_FAILED and exits 6, never FIRED_RESTORED), restore failure leaves the protection armed (no stop file, gate_open_since kept, watchdog still alive), a held mutex is never overridden (exit 7, config byte-identical) and a dead holder's lock is reclaimed, the non-authoritative config file is byte-identical after a plist-sourced open, and a batch that succeeds followed by a batch that errors or returns duplicates cannot produce an overall success.",
       "harness": "launchctl / codesign / pgrep / ps replaced by stubs; bridge is the loopback fake_bridge.py",
       "instantiates_real_store": false,
       "triggers_tcc": false,
@@ -387,7 +515,6 @@
       "triggers_tcc": false
     }
   },
-
   "operations_log": {
     "operations_log_note": "No production host was touched in this revision. Everything below is offline or local to the worktree.",
     "files_written": [
@@ -410,7 +537,6 @@
     "seoul_or_network_changes": "none",
     "remote_writes": "branch push only (no merge, no PR opened)"
   },
-
   "next_step": {
     "action": "Await focal-point approval of receipts/R1_01_DIAGNOSTIC_AUTHORIZATION_APPLICATION.md (v2, 12 approval items A1-A12).",
     "on_approval": "Execute layer A only, inside one 45-minute session with a shared absolute deadline: read-only identity checks, one synthetic item created by the user, two presence passes, the user deletes the item, one absence (cleanup) pass, automatic gate close and 403 re-verification, then a desensitized receipt.",
