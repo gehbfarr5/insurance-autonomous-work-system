@@ -29,24 +29,26 @@
 # Usage:
 #   r1_watchdog.sh --state-dir D --deadline-epoch E --open-budget S
 #                  --plist P --config-file F --token-file T --endpoint U
-#                  [--list-id ID] [--canary-id CID] [--require-no-enumeration]
+#                  [--list-id ID] [--require-no-enumeration]
 #                  [--poll 2] [--restore-attempts 3] [--restore-delay 2]
 #
 # --list-id switches the restore's verification to the single-ID probe, so a
 # restore fired while the window process is already dead still touches no
-# account-wide endpoint. --require-no-enumeration is forwarded to r1_gate.sh,
-# which refuses to run without --list-id instead of falling back.
+# account-wide endpoint. The close then runs through r1_probe_close.sh, which
+# requires that id and appends --require-no-enumeration itself; there is no
+# argument here that could drop either.
 
 set -uo pipefail
 
 STATE_DIR=""; DEADLINE=""; BUDGET=""; PLIST=""; CONFIG_FILE=""; TOKEN_FILE=""
 ENDPOINT="http://127.0.0.1:18765"; POLL="${R1_POLL_SECONDS:-2}"
-LIST_ID=""; CANARY_ID=""; NO_ENUM=0
+LIST_ID=""; NO_ENUM=0
 MAX_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-3}"
 RETRY_DELAY="${R1_RESTORE_DELAY:-2}"
 PYTHON="${PYTHON_BIN:-python3}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$HERE/r1_gate.sh"
+CLOSE="$HERE/r1_probe_close.sh"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -58,7 +60,6 @@ while [ $# -gt 0 ]; do
     --token-file) TOKEN_FILE="$2"; shift 2 ;;
     --endpoint) ENDPOINT="$2"; shift 2 ;;
     --list-id) LIST_ID="$2"; shift 2 ;;
-    --canary-id) CANARY_ID="$2"; shift 2 ;;
     --require-no-enumeration) NO_ENUM=1; shift ;;
     --poll) POLL="$2"; shift 2 ;;
     --restore-attempts) MAX_ATTEMPTS="$2"; shift 2 ;;
@@ -73,6 +74,16 @@ done
 if [ "$NO_ENUM" -eq 1 ] && [ -z "$LIST_ID" ]; then
   echo "usage: --require-no-enumeration needs --list-id (the legacy restore enumerates)" >&2
   exit 2
+fi
+
+# With a target ID the restore goes through r1_probe_close.sh rather than
+# r1_gate.sh: that wrapper cannot be called without a list id and appends
+# --require-no-enumeration itself, so the emergency path cannot lose the two
+# flags between here and the gate. Without a list id this is an R1 replay and
+# keeps the enumeration-based close it was written against.
+if [ -n "$LIST_ID" ] && [ ! -f "$CLOSE" ]; then
+  echo "[watchdog] FATAL: $CLOSE is missing; refusing to arm without a close path" >&2
+  exit 4
 fi
 
 # The deadline protection is only real if its state can be recorded. A watchdog
@@ -148,14 +159,18 @@ restore() {
     #
     # The restore is verified through the same single-ID probe the window uses,
     # so the close path touches no account-wide endpoint even when the window
-    # itself is already dead.
-    CLOSE_ARGS=(--plist "$PLIST" --config-file "$CONFIG_FILE"
-                --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT"
-                --purpose "watchdog:$reason" --lock-wait 15 --out "$receipt")
-    [ -n "$LIST_ID" ] && CLOSE_ARGS+=(--list-id "$LIST_ID")
-    [ -n "$CANARY_ID" ] && CLOSE_ARGS+=(--canary-id "$CANARY_ID")
-    [ "$NO_ENUM" -eq 1 ] && CLOSE_ARGS+=(--require-no-enumeration)
-    "$GATE" close "${CLOSE_ARGS[@]}" >> "$LOG" 2>&1
+    # itself is already dead. It is also a close and nothing else: retrying here
+    # never re-sends the open-phase probe.
+    if [ -n "$LIST_ID" ]; then
+      "$CLOSE" --plist "$PLIST" --config-file "$CONFIG_FILE" \
+        --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
+        --list-id "$LIST_ID" --purpose "watchdog:$reason" \
+        --lock-wait 15 --out "$receipt" >> "$LOG" 2>&1
+    else
+      "$GATE" close --plist "$PLIST" --config-file "$CONFIG_FILE" \
+        --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
+        --purpose "watchdog:$reason" --lock-wait 15 --out "$receipt" >> "$LOG" 2>&1
+    fi
     rc=$?
     if [ "$rc" -eq 0 ] && receipt_verified "$receipt"; then
       write_status FIRED_RESTORED "$reason" 0

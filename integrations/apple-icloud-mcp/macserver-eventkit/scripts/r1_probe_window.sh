@@ -13,17 +13,33 @@
 #     behaviour. This window passes --list-id, which switches that verification
 #     to the item endpoint, so the open, the close and the watchdog's restore all
 #     avoid /reminders/lists.
+#   * every close - normal, failed-open, and the one an operator types by hand -
+#     goes through r1_probe_close.sh, which refuses to run without a target ID
+#     and appends --require-no-enumeration itself.
 #   * r1_watchdog.sh enforces the absolute deadline and the cumulative open
 #     budget, and refuses to report a restore it could not verify.
 #
 # Request budget (nothing else is ever sent):
-#   pre : 1 /health + 1 canary item + 1 target item
-#   open: 1 target item   (the gate operation's own verification)
-#   post: 1 target item   (the close operation's own verification)
+#   normal path
+#     pre : 1 /health + 1 canary item + 1 target item
+#     open: 1 target item   (the gate operation's own verification)
+#     post: 1 target item   (the close operation's own verification)
+#   restore budget (bounded, only on the failure paths)
+#     <= R1_RESTORE_ATTEMPTS further close probes, one item request each
+#   A restore never sends an open-phase probe: it closes, it does not re-ask the
+#   question the window was built to ask.
 #
 # The canary runs once, in the pre phase. That is where the allowlist claim is
 # established; repeating it at open and close would add two requests without
 # adding information, because neither gate operation touches the allowlist.
+#
+# Ordering rules that are load-bearing (see 7.3.1 of the application):
+#   * the open-budget stamp is written BEFORE the gate changes, never after the
+#     open request returns - otherwise a blocked open is free of charge;
+#   * a restore that cannot be verified does NOT disarm the watchdog, write its
+#     stop file, or drop the budget stamp: the only thing left protecting the
+#     gate is the deadline it is still holding;
+#   * an interrupted window is never reported as a completed one.
 #
 # Usage
 #   r1_probe_window.sh --list-id ID --token-file F --plist P
@@ -46,6 +62,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLIENT="$HERE/r1_bridge_client.py"
 GATE="$HERE/r1_gate.sh"
+CLOSE="$HERE/r1_probe_close.sh"
 WATCHDOG="$HERE/r1_watchdog.sh"
 
 PYTHON="${PYTHON_BIN:-python3}"
@@ -58,6 +75,7 @@ LIST_ID=""; TOKEN_FILE=""; PLIST=""; CONFIG_FILE=""; WORK_ROOT=""
 CANARY_ID=""; ENDPOINT="http://127.0.0.1:18765"
 WINDOW_SECONDS=300; OPEN_BUDGET=120; LABEL="r103"; CONFIRM=0
 RESTORE_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-2}"
+RESTORE_DELAY="${R1_RESTORE_DELAY:-2}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -78,6 +96,13 @@ done
 
 die() { echo "PRECONDITION_FAIL[$1]: $2" >&2; exit "${3:-10}"; }
 
+# Installed before anything can take time, because the window must be able to
+# say "I was interrupted" no matter where the signal lands. Bash defers a trap
+# until the foreground command returns, so the flag is read at the checkpoints
+# below rather than acted on inside the handler.
+INTERRUPTED=0
+trap 'INTERRUPTED=1; echo "[window] signal received; the window will be reported as truncated" >&2' INT TERM
+
 [ -n "$LIST_ID" ] || die args "--list-id required" 2
 [ -n "$TOKEN_FILE" ] || die args "--token-file required" 2
 [ -n "$PLIST" ] || die args "--plist required" 2
@@ -91,7 +116,7 @@ esac
 # ---------------------------------------------------------------- preflight
 echo "== R1-03 probe window preflight =="
 command -v "$PYTHON" >/dev/null 2>&1 || die tools "python3 not available"
-for f in "$CLIENT" "$GATE" "$WATCHDOG"; do [ -f "$f" ] || die tools "missing $f"; done
+for f in "$CLIENT" "$GATE" "$CLOSE" "$WATCHDOG"; do [ -f "$f" ] || die tools "missing $f"; done
 [ -f "$PLIST" ] || die plist "not found: $PLIST"
 [ -n "$CONFIG_FILE" ] && [ ! -f "$CONFIG_FILE" ] && die config "not found: $CONFIG_FILE"
 [ -f "$TOKEN_FILE" ] || die token "not found: $TOKEN_FILE"
@@ -228,6 +253,7 @@ grep -q "^WATCHDOG_DEADLINE_EPOCH=$DEADLINE$" "$STATE/watchdog_meta.env" 2>/dev/
 echo "  watchdog    : pid=$ACTUAL_WPID deadline=$DEADLINE (absolute) budget=${OPEN_BUDGET}s verified alive"
 
 OPEN_OK=0; RESTORE_OK=0; TRUNCATED=0; OPEN_CLASS=""; RESTORE_CLASS=""
+RESTORE_USED=0; INTERRUPTED=0; OPEN_STAMP=""
 PID_BEFORE="$(pgrep -x EventKitBridgeServer 2>/dev/null | head -1 || true)"
 
 disarm_watchdog() {
@@ -245,6 +271,8 @@ write_summary() {
   R1_OUTCOME="$outcome" R1_OPEN_CLASS="$OPEN_CLASS" R1_RESTORE_CLASS="$RESTORE_CLASS" \
   R1_OPENED="$OPEN_OK" R1_RESTORED="$RESTORE_OK" R1_TRUNC="${TRUNCATED}" \
   R1_DEADLINE="$DEADLINE" R1_BUDGET="$OPEN_BUDGET" R1_PID_BEFORE="$PID_BEFORE" \
+  R1_RESTORE_USED="$RESTORE_USED" R1_INTERRUPTED="$INTERRUPTED" R1_STAMP="$OPEN_STAMP" \
+  R1_RESTORE_MAX="$RESTORE_ATTEMPTS" \
   "$PYTHON" - "$RUN_DIR" <<'PYEOF'
 import json, os, sys
 run_dir = sys.argv[1]
@@ -263,12 +291,18 @@ summary = {
     "window_dir": run_dir,
     "window_outcome": env["R1_OUTCOME"],
     "truncated": env["R1_TRUNC"] == "1",
+    "interrupted": env["R1_INTERRUPTED"] == "1",
     "absolute_deadline_epoch": int(env["R1_DEADLINE"]),
     "open_budget_seconds": int(env["R1_BUDGET"]),
+    # The stamp is written before the gate changes, so it is the lower bound of
+    # the time the gate may have been open - never the moment the open returned.
+    "gate_open_since_epoch": int(env["R1_STAMP"]) if env["R1_STAMP"] else None,
     "gate_opened": env["R1_OPENED"] == "1",
     "open_probe_classification": env["R1_OPEN_CLASS"] or None,
     "restore_verified": env["R1_RESTORED"] == "1",
     "restore_probe_classification": env["R1_RESTORE_CLASS"] or None,
+    "restore_attempts_used": int(env["R1_RESTORE_USED"]),
+    "restore_attempts_allowed": int(env["R1_RESTORE_MAX"]),
     "watchdog_state": wd.get("WATCHDOG_STATE"),
     "watchdog_reason": wd.get("WATCHDOG_REASON"),
     "follow_up": {"triggered": False,
@@ -284,52 +318,78 @@ print("[window] outcome=%s opened=%s open_class=%s restored=%s restore_class=%s 
 PYEOF
 }
 
-on_signal() {
-  TRUNCATED=1
-  echo "[window] signal received; restoring" >&2
-}
+# A signal must not be turned into a clean finish. The handler installed at the
+# top only records the flag; the flow below still restores, but the outcome
+# stays "truncated" and the exit code stays 16 even when the restore verified.
 
+# One close = one item request. The retries are bounded, they run through
+# r1_probe_close.sh (which cannot drop --list-id or --require-no-enumeration),
+# and they never send an open-phase probe: a restore closes, it does not re-ask
+# the question.
+#
+# The stamp is NOT created here. If it is absent, the gate was never touched by
+# this window, and inventing a stamp now would restart the open budget at the
+# very moment it is most needed.
 restore() {
-  local purpose="$1"
-  [ -f "$STATE/gate_open_since" ] || date +%s > "$STATE/gate_open_since"
+  local purpose="$1" attempt=1 rc=0 out=""
   echo "== close ($purpose) =="
-  "$GATE" close --plist "$PLIST" --config-file "$CONFIG_FILE" \
-    --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
-    --list-id "$LIST_ID" --require-no-enumeration --purpose "window:$purpose" \
-    --lock-wait 15 --out "$RUN_DIR/gate_close_$purpose.json" >> "$RUN_DIR/gate_close_$purpose.log" 2>&1
-  local rc=$?
-  RESTORE_CLASS="$("$PYTHON" -c 'import json,sys
+  while [ "$attempt" -le "$RESTORE_ATTEMPTS" ]; do
+    out="$RUN_DIR/gate_close_${purpose}_attempt${attempt}.json"
+    "$CLOSE" --plist "$PLIST" --config-file "$CONFIG_FILE" \
+      --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
+      --list-id "$LIST_ID" --purpose "window:$purpose" \
+      --lock-wait 15 --out "$out" >> "$RUN_DIR/gate_close_$purpose.log" 2>&1
+    rc=$?
+    RESTORE_USED="$attempt"
+    RESTORE_CLASS="$("$PYTHON" -c 'import json,sys
 try:
     print(json.load(open(sys.argv[1], encoding="utf-8")).get("probe_classification") or "")
 except Exception:
-    print("")' "$RUN_DIR/gate_close_$purpose.json" 2>/dev/null)"
-  if [ "$rc" -eq 0 ] && [ "$RESTORE_CLASS" = "GATE_RESTORED_CLOSED" ]; then
-    RESTORE_OK=1
-    return 0
-  fi
+    print("")' "$out" 2>/dev/null)"
+    if [ "$rc" -eq 0 ] && [ "$RESTORE_CLASS" = "GATE_RESTORED_CLOSED" ]; then
+      RESTORE_OK=1
+      return 0
+    fi
+    echo "  attempt $attempt/$RESTORE_ATTEMPTS not verified (rc=$rc, class=${RESTORE_CLASS:-none})" >&2
+    attempt=$((attempt + 1))
+    if [ "$attempt" -le "$RESTORE_ATTEMPTS" ]; then sleep "$RESTORE_DELAY"; fi
+  done
   return 1
 }
 
-trap 'on_signal' INT TERM
-
 # ---------------------------------------------------------------- open + probe
+# A signal that arrived while the watchdog was being armed means nothing was
+# changed yet: stop here, leave the gate alone, and report a truncated window.
+if [ "$INTERRUPTED" -eq 1 ]; then
+  disarm_watchdog || true
+  write_summary TRUNCATED
+  exit 16
+fi
+
 echo "== open =="
+# The open budget starts here, before the first change, not when the open
+# request returns. Deriving it afterwards would price a blocked reload at zero
+# and hand back exactly the time the block consumed.
+OPEN_STAMP="$(date +%s)"
+printf '%s\n' "$OPEN_STAMP" > "$STATE/gate_open_since"
+echo "  budget      : starts at $OPEN_STAMP (written before the gate changed)"
 if ! "$GATE" open --plist "$PLIST" --config-file "$CONFIG_FILE" \
       --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
       --list-id "$LIST_ID" --require-no-enumeration --purpose "window:open" \
       --lock-wait 20 --out "$RUN_DIR/gate_open.json" >> "$RUN_DIR/gate_open.log" 2>&1; then
   echo "[window] gate open failed or did not verify; see $RUN_DIR/gate_open.log" >&2
+  # No disarm here on failure: if the close cannot be verified the watchdog is
+  # the only thing still holding a deadline over this gate.
   restore open_failed || { write_summary GATE_OPEN_FAILED_RESTORE_FAILED; exit 13; }
   disarm_watchdog || true
   write_summary GATE_OPEN_FAILED
   exit 11
 fi
 OPEN_OK=1
-date +%s > "$STATE/gate_open_since"
 OPEN_CLASS="$("$PYTHON" -c 'import json,sys
 print(json.load(open(sys.argv[1], encoding="utf-8")).get("probe_classification") or "")' \
   "$RUN_DIR/gate_open.json" 2>/dev/null)"
-echo "  open probe  : ${OPEN_CLASS:-<none>}"
+echo "  open probe  : ${OPEN_CLASS:-<none>} (open returned $(date +%s), stamp $OPEN_STAMP)"
 if [ -z "$OPEN_CLASS" ]; then
   restore no_classification || { write_summary NO_CLASSIFICATION_RESTORE_FAILED; exit 13; }
   disarm_watchdog || true
@@ -340,24 +400,31 @@ fi
 # No further read. A non-empty result is counted, never inspected.
 echo "== close =="
 if ! restore normal; then
-  disarm_watchdog || true
+  # Deliberately no disarm_watchdog, no stop file, no removal of the stamp.
+  # Writing stop here would delete the deadline protection at the exact moment
+  # it is the only thing left; the watchdog must stay armed and keep its own
+  # absolute deadline over a gate whose state is now unknown.
   write_summary RESTORE_FAILED
-  echo "[window] CRITICAL: restore NOT verified; state kept in $RUN_DIR" >&2
+  echo "[window] CRITICAL: restore NOT verified; the watchdog stays armed and state is kept in $RUN_DIR" >&2
   exit 13
 fi
 
-TRUNCATED=0
 if ! disarm_watchdog; then
   echo "[window] watchdog did not disarm in time; state kept in $RUN_DIR" >&2
   write_summary WATCHDOG_DISARM_TIMEOUT
   exit 13
 fi
-# If the watchdog fired before we disarmed, the window was truncated even though
-# the restore still verified: a truncated window is never reported as success.
+# If the watchdog fired before we disarmed, or a signal arrived at any point,
+# the window was truncated even though the restore verified. TRUNCATED is never
+# reset: a truncated window is never reported as a completed one.
 WD_STATE="$(awk -F= '/^WATCHDOG_STATE=/{print $2}' "$STATE/watchdog_status.env" 2>/dev/null)"
 case "$WD_STATE" in
   FIRED_*) TRUNCATED=1 ;;
 esac
+# An interrupt anywhere in the window makes it a truncated window, even when
+# everything after it succeeded. This is the line the previous version was
+# missing: it reset TRUNCATED to 0 here and then reported a clean completion.
+[ "$INTERRUPTED" -eq 1 ] && TRUNCATED=1
 
 write_summary "$([ "$TRUNCATED" -eq 1 ] && echo TRUNCATED || echo COMPLETED)"
 [ "$TRUNCATED" -eq 1 ] && exit 16
