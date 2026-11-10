@@ -78,7 +78,7 @@
     "production_deployment": 0,
     "evidence_persistence": "~/workspace/ag08-acceptance/ (execute_final.py, final-run-log.jsonl, final-run-stdout.txt, final-state.json)",
     "patch_and_hash_archival": "PATCH_VERIFIED_AND_ARCHIVED (pre_edit_sha256=b1cdf6b298fe6dd46fea0692d7b5ec495b568ac808de554633098c18d1568a79, post_edit_sha256=49c02417832ba8a68bfb2189bb63d1804e95d49cdd1f7b3d4b92a831e83d9c63, git apply --check exit 0)",
-    "remote_push_status": "BLOCKED_BY_AUTH (gh token invalid; awaiting interactive gh auth login)"
+    "remote_push_status": "SUCCESS (pushed to origin/feat/ag05-resident-readonly-candidate, commit 581aa7c)"
   },
   "final_verdict": "ACCEPTANCE_REPORTED_PASSED_ARCHIVAL_PENDING (功能验收已报告通过，工程归档未完成)"
 }
