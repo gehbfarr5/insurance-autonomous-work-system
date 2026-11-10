@@ -38,7 +38,7 @@
 | 5 | UNKNOWN 里残留"读 0 条后重试创建一次" | 删除；只读核对 + 升级，不重复写入 | §11 |
 | 6 | 误称 `--check-authorization` 不存在；403 直接归因 TCC | 更正为三层事实（源码/产物/运行）；403 记"原因未定"再区分 | §2.3、§2.3.1、§2.3.2 |
 | 7 | P5 用无令牌 curl 当 403 证据；紧急关闸自拼命令；称"权限上必须由人做"；R1/R2 混淆 | P5 改用受限客户端；紧急关闸复用同一入口；创建/删除改为明示选择；R1 不要求 MUSE 签署 | §15、§4.2、§1 |
-| 8 | 缺针对性隔离验证 | 新增 4 类场景（看门狗验证失败、恢复不解除保护、互斥、跨批次假成功），编排断言 66→87 | §12 |
+| 8 | 缺针对性隔离验证 | 新增 4 类场景（看门狗验证失败、恢复不解除保护、互斥、跨批次假成功），编排断言 66→91 | §12 |
 
 ---
 
@@ -146,7 +146,7 @@ v2 曾写"该参数在源码中不存在"，**这是错的**——我当时的�
 | 文件 | 用途 | SHA256 |
 | :--- | :--- | :--- |
 | `r1_window.sh` | 自闭合窗口编排（448 行） | `4b2dfc48fd45235faab2c0fbeeacfc8ded6c00bf843bdcba6b6e889e9015b110` |
-| `r1_gate.sh` | 唯一开/关闸入口（402 行） | `9357186d896c53db7fa2a303596f7506231be61db9fb399cf71f805206fb96c3` |
+| `r1_gate.sh` | 唯一开/关闸入口（402 行） | `bac1039c26049c1ebb062447f2457c7c0447b346b2106eb5f5644e49967150aa` |
 | `r1_watchdog.sh` | 独立期限看门狗（162 行） | `c541fd7a59b5f4aa8502e063db9b66d346eeeb29b4671dc0c74949f7ec776b74` |
 | `r1_bridge_client.py` | 只读客户端（562 行） | `b257dbdf873a59e6937d0f75c8a2ea92e437131c8f0f239372202fcf3c489155` |
 | `token` | 临时令牌文件，`0600`，**窗口结束即删** | 不记录（内容永不落回执） |
@@ -231,7 +231,7 @@ test -s "$HARNESS/token" || { echo "TOKEN_UNAVAILABLE"; exit 2; }
 - 范围：**仅** `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` 一行；脚本对该键做单行替换，键不存在则报错停止（不追加）
 - 备份：写前 `cp -p` 到 `<out>.config-backup`，`chmod 600`（该文件含令牌，不得 0644）
 - 原子性：同目录临时文件 + `os.replace`，并保持原文件 mode；读取方（含下一个进程）不会看到半写状态
-- 恢复：把备份 `cp -p` 回原位后按 §9 重新关闸并验证；备份路径写在回执的 `plist_backup` 字段（字段名沿用，值为实际被备份的文件）
+- 恢复：把备份 `cp -p` 回原位后按 §9 重新关闸并验证；备份路径写在回执的 `config_backup` 字段（权限记为 `config_backup_mode=0600`）；plist 情形对应 `plist_backup`
 
 ### 5.2 进程
 
@@ -407,7 +407,7 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 | 命令 | 结果 | 覆盖 |
 | :--- | :--- | :--- |
 | `python3 scripts/tests/test_r1_bridge_client.py` | **53/53 通过** | 空列表 / 非空保真 / 重复事项 / 错误日期 / priority 0 / isCompleted / 空 itemID / fake store / 多列表 / 清理未生效 / 证据目录占用 / 令牌权限 / 全目录令牌扫描 / 不可达 / 非回环拒绝 / **3xx 拒绝** / **代理改道拒绝** |
-| `bash scripts/tests/test_r1_window.sh` | **87/87 通过** | 前置拒绝 / 干跑零变更 / happy path / 字段不符 / 空列表 / 取证传输失败 / **加载失败** / **恢复失败（且保护未解除）** / **绝对期限触发** / **累计开闸预算触发** / **主进程 SIGKILL** / **plist 权威源 bootout+bootstrap（且配置文件字节不变）** / **备份 0600** / **清理核验（absence）** / **看门狗验证失败不得报成功** / **互斥：占用时不强改、陈旧锁可回收** / **前一批通过、后一批出错不得整体成功** / **前一批通过、后一批重复不得整体成功** |
+| `bash scripts/tests/test_r1_window.sh` | **91/91 通过** | 前置拒绝 / 干跑零变更 / happy path / 字段不符 / 空列表 / 取证传输失败 / **加载失败** / **恢复失败（且保护未解除）** / **绝对期限触发** / **累计开闸预算触发** / **主进程 SIGKILL** / **plist 权威源 bootout+bootstrap（且配置文件字节不变）** / **备份 0600** / **清理核验（absence）** / **看门狗验证失败不得报成功** / **互斥：占用时不强改、陈旧锁可回收** / **前一批通过、后一批出错不得整体成功** / **前一批通过、后一批重复不得整体成功** |
 | `python3 scripts/write_build_metadata.py --self-test` | **7/7 通过** | 溯源字段完整性、脏树标记、二进制变更检测 |
 | `swift test --disable-sandbox`（此前已跑，未改动 Swift 源码） | 91/91 通过 | 桥实现与协议 |
 
@@ -579,5 +579,5 @@ ssh macserver-ts "$HARNESS/r1_gate.sh close \
 | `macserver-eventkit/scripts/write_build_metadata.py` | 构建溯源写入与校验（补 source commit 缺口） |
 | `macserver-eventkit/scripts/tests/fake_bridge.py` | 回环假桥：按真实优先级（plist > config > control）读闸门，支持 302/延迟/500/逐次响应序列（`items_seq`） |
 | `macserver-eventkit/scripts/tests/test_r1_bridge_client.py` | 53 项断言 |
-| `macserver-eventkit/scripts/tests/test_r1_window.sh` | 87 项断言（含加载失败、恢复失败且保护未解除、期限、预算、SIGKILL、launchd 分支、清理核验、看门狗验证失败、互斥与陈旧锁、跨批次假成功） |
+| `macserver-eventkit/scripts/tests/test_r1_window.sh` | 91 项断言（含加载失败、恢复失败且保护未解除、期限、预算、SIGKILL、launchd 分支、清理核验、看门狗验证失败、互斥与陈旧锁、跨批次假成功） |
 | `receipts/R1_01_OFFLINE_DIAGNOSIS_RECEIPT.json` | 离线定位回执（事实/假设/排除项） |

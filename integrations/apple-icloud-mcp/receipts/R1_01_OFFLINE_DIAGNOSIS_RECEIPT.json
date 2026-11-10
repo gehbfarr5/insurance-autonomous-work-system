@@ -501,7 +501,7 @@
     "r1_window_guards": {
       "command": "bash scripts/tests/test_r1_window.sh",
       "result": "PASS",
-      "detail": "87/87 assertions across 18 scenarios. Added in v3: watchdog verification failure (a close that reloads but cannot verify is FIRED_RESTORE_FAILED and exits 6, never FIRED_RESTORED), restore failure leaves the protection armed (no stop file, gate_open_since kept, watchdog still alive), a held mutex is never overridden (exit 7, config byte-identical) and a dead holder's lock is reclaimed, the non-authoritative config file is byte-identical after a plist-sourced open, and a batch that succeeds followed by a batch that errors or returns duplicates cannot produce an overall success.",
+      "detail": "91/91 assertions across 18 scenarios. Added in v3: watchdog verification failure (a close that reloads but cannot verify is FIRED_RESTORE_FAILED and exits 6, never FIRED_RESTORED), restore failure leaves the protection armed (no stop file, gate_open_since kept, watchdog still alive), a held mutex is never overridden (exit 7, config byte-identical) and a dead holder's lock is reclaimed, the non-authoritative config file is byte-identical after a plist-sourced open, and a batch that succeeds followed by a batch that errors or returns duplicates cannot produce an overall success. Also asserts that the config-file source is backed up as 0600 and that its path reaches the receipt (config_backup), and that no half-written temp file remains after the atomic replace.",
       "harness": "launchctl / codesign / pgrep / ps replaced by stubs; bridge is the loopback fake_bridge.py",
       "instantiates_real_store": false,
       "triggers_tcc": false,

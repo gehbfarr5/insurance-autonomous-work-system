@@ -190,6 +190,7 @@ fi
 # Both files may contain the bearer token, so neither backup may be readable by
 # others and neither sits next to the original.
 BACKUP=""
+CFG_BACKUP=""
 backup_source() {
   local src="$1" suffix="$2"
   BACKUP="$OUT.$suffix"
@@ -203,6 +204,7 @@ emit_failure_receipt() {
   R1_WANT="$WANT" R1_STAGE="$stage" R1_RC="$rc" \
   R1_BEFORE="${BEFORE_PID:-}" R1_AFTER="${AFTER_PID:-}" R1_CFG="$CONFIG_FILE" \
   R1_PLIST="$PLIST" R1_BACKUP="${BACKUP:-}" R1_PURPOSE="$PURPOSE" \
+  R1_CFG_BACKUP="${CFG_BACKUP:-}" \
   "$PYTHON" - <<'PYEOF'
 import json, os
 env = os.environ
@@ -229,6 +231,8 @@ receipt = {
   "authoritative_source": env["R1_SOURCE"],
   "plist_backup": env.get("R1_BACKUP") or None,
   "plist_backup_mode": "0600" if env.get("R1_BACKUP") else None,
+  "config_backup": env.get("R1_CFG_BACKUP") or None,
+  "config_backup_mode": "0600" if env.get("R1_CFG_BACKUP") else None,
   "note": "A failed gate operation leaves the disk value and the running process "
           "possibly divergent; only the HTTP behaviour of the endpoint proves the "
           "real state, and this operation never reached that proof.",
@@ -250,11 +254,13 @@ if [ "$SOURCE" = "launchd_env" ]; then
   fi
   echo "[r1_gate] plist backed up to a 0600 file inside the restricted evidence dir"
 elif [ "$SOURCE" = "config_file" ]; then
+  CFG_BACKUP=""
   if ! cp -p "$CONFIG_FILE" "$OUT.config-backup" 2>/dev/null || ! chmod 600 "$OUT.config-backup" 2>/dev/null; then
     echo "[r1_gate] FAILED: could not create a 0600 backup of the config file; refusing to edit it" >&2
     emit_failure_receipt backup 3
     exit 3
   fi
+  CFG_BACKUP="$OUT.config-backup"
   echo "[r1_gate] config file backed up to a 0600 file; only the gate key will change"
 fi
 
@@ -385,6 +391,8 @@ receipt = {
   "verification_basis": "http behaviour after reload + process identity; never the file value",
   "plist_backup": "${BACKUP}" or None,
   "plist_backup_mode": "0600" if "${BACKUP}" else None,
+  "config_backup": "${CFG_BACKUP}" or None,
+  "config_backup_mode": "0600" if "${CFG_BACKUP}" else None,
   "evidence_files": [out + ".health.json", out + ".gate.json"],
 }
 with open(out, "w", encoding="utf-8") as fh:

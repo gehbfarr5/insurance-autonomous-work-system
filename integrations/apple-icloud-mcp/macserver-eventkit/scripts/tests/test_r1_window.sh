@@ -224,6 +224,13 @@ PY
 eq "gate restored to false" "$(gate_value)" "false"
 [ -f "$RUN_DIR/state/gate_close.json" ] && check "close receipt written" 1 || check "close receipt written" 0
 grep -q '"verification": "PASS"' "$RUN_DIR/state/gate_close.json" && check "close verified 403" 1 || check "close verified 403" 0
+[ -f "$RUN_DIR/state/gate_open.json.config-backup" ] && check "config source backed up before the edit" 1 \
+  || check "config source backed up before the edit" 0
+eq "config backup is 0600" "$(stat -f %Lp "$RUN_DIR/state/gate_open.json.config-backup" 2>/dev/null)" "600"
+grep -q '"config_backup_mode": "0600"' "$RUN_DIR/state/gate_open.json" 2>/dev/null \
+  && check "receipt records the config backup" 1 || check "receipt records the config backup" 0
+ls "$FX/conf"/.r1-gate-* >/dev/null 2>&1 \
+  && check "no half-written temp file is left behind" 0 || check "no half-written temp file is left behind" 1
 [ -f "$RUN_DIR/batch-1-t/capture.json" ] && check "batch evidence kept" 1 || check "batch evidence kept" 0
 stop_bridge
 
