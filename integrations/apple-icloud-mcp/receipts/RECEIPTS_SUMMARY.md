@@ -229,7 +229,7 @@
 | 验收模块 | 判定结论 | 判定依据 |
 | :--- | :--- | :--- |
 | **日历模块 (Calendar)** | **ACCEPTED_PENDING_WRAPPER_DELIVERY (暂缓 DELIVERED)** | MUSE 原生前台 9 步闭环全数通过，时区与 RFC 5545 排他全天保真，独立复查零残留；暂缓最终交付，当前唯一优先主线为修复日常写入入口 ETag 自动替换缺陷 |
-| **门控写入包装层 (Gated Wrapper)** | **REPAIRED_OFFLINE_VERIFIED (真实源码修复完成并通过离线全回归)** | 真实资产 `/home/hatch/workspace/carddav-mcp-client/safe_write.py` 第 1597–1613 行完成三分支修复（改前 `b1cdf6b2…`，改后 `49c02417…`），保留既有 `(status, payload)` 二元组契约与 `submit_refused_stale_etag` 审计；HMAC、deny 过滤、INTENT claim 零变动；三例专项单测（等值/旧值 0 发送/未传）及既有 10 套回归全部通过；零生产部署、零真实 Apple 写入 |
+| **门控写入包装层 (Gated Wrapper)** | **REPAIRED_OFFLINE_VERIFIED (真实源码修复完成并经离线专项验证)** | 真实资产 `/home/hatch/workspace/carddav-mcp-client/safe_write.py` 第 1597–1613 行完成三分支修复（改前 `b1cdf6b2…`，改后 `49c02417…`），保留既有 `(status, payload)` 二元组契约与 `submit_refused_stale_etag` 审计；HMAC、deny 过滤、INTENT claim 零变动；三例专项单测（等值/旧值 0 发送/未传）及既有 10 套回归通过；两项既有基线失败（P-03a 竞态断言过期、a3closure 缺 staging 目录）单列说明，不计入全量全通；零生产部署、零服务重启、零真实 Apple 写入；改动授权标记为“待核实” |
 | **提醒事项 (Reminders)** | **PAUSED (暂停)** | TCC 前置授权已完成；非空数据读取待后续阶段在受控窗口内推进 |
 | **通讯录与群组 (Contacts/Groups)** | **DELIVERED (已交付)** | 33 项 MCP 工具完备，CardDAV 原生分组与多 Agent 并发防护正常运行 |
 | **生产基线与基础设施** | **PASS** | 生产镜像稳定健康，无临时进程残留，PR 维持未合并状态 |

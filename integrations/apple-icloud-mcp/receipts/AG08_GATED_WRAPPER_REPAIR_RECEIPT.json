@@ -7,10 +7,19 @@
     "environment": "/home/hatch/workspace/carddav-mcp-client/",
     "file_path": "/home/hatch/workspace/carddav-mcp-client/safe_write.py",
     "backup_path": "/home/hatch/workspace/carddav-mcp-client/safe_write.py.bak-ag08-etagfix-20261110",
-    "pre_edit_sha256": "b1cdf6b2...",
-    "post_edit_sha256": "49c02417...",
+    "pre_edit_sha256": "b1cdf6b2... (待 MUSE 补充完整 64 位 SHA)",
+    "post_edit_sha256": "49c02417... (待 MUSE 补充完整 64 位 SHA)",
     "target_function": "SafeWriteManager.submit()",
     "modified_lines": "1597-1613"
+  },
+  "runtime_execution_state": {
+    "on_disk_source_status": "MODIFIED_ON_DISK (/home/hatch/workspace/carddav-mcp-client/safe_write.py)",
+    "resident_process_model": "SUBPROCESS_PER_OP (execute_ag08.py 以独立子进程单次调用 isolated_test_v2.py，每次调用从磁盘加载最新源码)",
+    "resident_daemon_status": "待 MUSE 现场 ps aux 只读核验确认无常驻进程挂载旧模块",
+    "container_deployment_status": "ZERO container deployments performed",
+    "service_restart_status": "ZERO service restarts performed",
+    "real_apple_writes": "ZERO real Apple data writes sent in this round",
+    "authorization_audit": "待核实 (现场改动基于工程定位指令完成，尚未记录独立用户授权，不补写授权事实)"
   },
   "fix_specification": {
     "defect": "SafeWriteManager.submit() previously used pre_state['etag'] to unconditionally overwrite caller's expected_etag, masking CAS conflicts and bypassing server 412 precondition checks.",
@@ -42,13 +51,14 @@
       "partial": "8/8 PASS",
       "a3safetyfix": "21/21 PASS"
     },
-    "unrelated_baseline_failures": {
-      "p03a_race_condition": "test_b2c_a3live2 (9/10): expects stale race condition (total==2), but IntentStore.claim() reloads in lock (total==1). Confirmed identical on pre-edit baseline file.",
-      "a3closure": "Missing /tmp/b2c-hardening-staging directory. Confirmed identical on pre-edit baseline file."
+    "isolated_baseline_failures": {
+      "p03a_race_condition": "test_b2c_a3live2 (9/10): expects stale race condition (total==2), but IntentStore.claim() reloads in lock (total==1). Confirmed identical on pre-edit baseline file. NOT counted as pass.",
+      "a3closure": "Missing /tmp/b2c-hardening-staging directory. Confirmed identical on pre-edit baseline file. NOT counted as pass."
     }
   },
-  "safety_status": {
-    "production_changes": "ZERO production containers restarted or modified; ZERO real Apple writes sent.",
-    "deployment_readiness": "Patch verified offline; pending user authorization for any subsequent deployment or live verification."
+  "git_and_remote_status": {
+    "local_branch": "feat/ag05-resident-readonly-candidate",
+    "associated_pr": "#23",
+    "remote_push_status": "BLOCKED_BY_AUTH (gh/git push 需要交互式刷新认证；本地成果完好保留，不宣称已完成远端归档)"
   }
 }
