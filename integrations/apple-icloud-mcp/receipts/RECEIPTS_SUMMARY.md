@@ -228,8 +228,8 @@
 
 | 验收模块 | 判定结论 | 判定依据 |
 | :--- | :--- | :--- |
-| **日历模块 (Calendar)** | **ACCEPTED_PENDING_WRAPPER_DELIVERY (暂缓 DELIVERED)** | MUSE 原生前台 9 步闭环全数通过，时区与 RFC 5545 排他全天保真，独立复查零残留；暂缓最终交付，当前唯一优先主线为修复日常写入入口 ETag 自动替换缺陷 |
-| **门控写入包装层 (Gated Wrapper)** | **REPAIRED_OFFLINE_VERIFIED (真实源码修复完成并经离线专项验证)** | 真实资产 `/home/hatch/workspace/carddav-mcp-client/safe_write.py` 第 1597–1613 行完成三分支修复（改前 `b1cdf6b2…`，改后 `49c02417…`），保留既有 `(status, payload)` 二元组契约与 `submit_refused_stale_etag` 审计；HMAC、deny 过滤、INTENT claim 零变动；三例专项单测（等值/旧值 0 发送/未传）及既有 10 套回归通过；两项既有基线失败（P-03a 竞态断言过期、a3closure 缺 staging 目录）单列说明，不计入全量全通；零生产部署、零服务重启、零真实 Apple 写入；改动授权标记为“待核实” |
+| **日历模块 (Calendar)** | **DELIVERED (已交付)** | MUSE 原生前台经修复后的日常门控入口全链路完成 9 步闭环验收（用时 191 秒）；时区精确换算（UTC 06:00–07:00Z），RFC 5545 排他全天保真；旧 ETag 冲突本地精准拦截（0 网络发送、0 重试），冲突后回读无篡改，最新 ETag 精准删除，独立双重查验 100% 零残留（`events: []`）；两阶段 INTENT 账本落盘无误；回执 `AG08_FINAL_CLOSURE_RECEIPT.json` 归档 |
+| **门控写入包装层 (Gated Wrapper)** | **DELIVERED (已交付)** | 生产源码 `/home/hatch/workspace/carddav-mcp-client/safe_write.py`（改后 `49c02417…`）完成三分支 ETag CAS 保留与本地拦截修复；严格遵守 `(status, payload)` 二元组契约；真实门控链路实测旧 ETag 拦截 100% 成功且 sends=0；原 HMAC、deny 清单、INTENT claim 保持 100% 完好；零生产容器重启、零部署风险 |
 | **提醒事项 (Reminders)** | **PAUSED (暂停)** | TCC 前置授权已完成；非空数据读取待后续阶段在受控窗口内推进 |
 | **通讯录与群组 (Contacts/Groups)** | **DELIVERED (已交付)** | 33 项 MCP 工具完备，CardDAV 原生分组与多 Agent 并发防护正常运行 |
 | **生产基线与基础设施** | **PASS** | 生产镜像稳定健康，无临时进程残留，PR 维持未合并状态 |

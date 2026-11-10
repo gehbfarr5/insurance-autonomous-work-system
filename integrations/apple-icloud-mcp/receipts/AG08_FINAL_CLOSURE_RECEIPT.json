@@ -1,0 +1,82 @@
+{
+  "receipt_type": "AG08_FINAL_CLOSURE_RECEIPT",
+  "task": "AG-08",
+  "component": "apple-icloud-mcp (calendar & gated-wrapper)",
+  "execution_date": "2026-11-10",
+  "window_parameters": {
+    "approved_duration_seconds": 3600,
+    "cleanup_threshold_minutes": 45,
+    "actual_start_time": "2026-11-10T10:42:16+08:00",
+    "actual_completion_time": "2026-11-10T10:45:27+08:00",
+    "total_duration_seconds": 191,
+    "window_compliance": "PASS (191s, completed in under 3.2m, well within 45m cleanup threshold and 60m authorization limit)"
+  },
+  "runtime_execution_chain": {
+    "executor": "/home/hatch/workspace/ag08-acceptance/execute_final.py",
+    "entry": "/home/hatch/workspace/carddav-mcp-client/isolated_test_v2.py",
+    "gated_wrapper": "/home/hatch/workspace/carddav-mcp-client/safe_write.py (SafeWriteManager)",
+    "isolation_adapter": "/home/hatch/workspace/carddav-mcp-client/isolated_adapter.py (IsolatedAdapter)",
+    "deny_file": "/home/hatch/workspace/ag08-acceptance/deny_ag08.json",
+    "transport": "ProductionTransport -> OAuthSessionManager.call_write -> _mcp_call"
+  },
+  "step_verification_matrix": {
+    "step1_and_2_precheck": {
+      "status": "PASS",
+      "calendar": "MUSE 测试",
+      "writable": true,
+      "id_match": "verbatim",
+      "deny_list_verified": "3 production calendars (日历, 工作, 私人) fully covered in deny_ag08.json",
+      "window_clean": "2026-11-18 window returned 0 events matching [MUSE-TEST-CAL-FINAL]"
+    },
+    "step3_and_4_gated_create_and_readback": {
+      "status": "PASS",
+      "mechanism": "repaired gated wrapper (SafeWriteManager.submit)",
+      "sends": 1,
+      "intent_ledger_order": "Verified on disk: intent line (line 93) recorded strictly BEFORE send_started line (line 94)",
+      "timezone_conversion": "14:00-15:00+08 correctly converted to 06:00-07:00Z in readback",
+      "etag_v1": "\"mwa37kqm\" (real and non-empty)"
+    },
+    "step5_gated_cas_update": {
+      "status": "PASS",
+      "mechanism": "repaired gated wrapper with explicit expected_etag=etag_v1",
+      "sends": 1,
+      "description_patched": "[已正常更新-门控验证通过]",
+      "etag_v2": "\"mwa37kqn\""
+    },
+    "step6_gated_stale_etag_local_interception": {
+      "status": "PASS",
+      "mechanism": "repaired gated wrapper with stale expected_etag=etag_v1",
+      "response": {
+        "status": "CONFLICT",
+        "sends": 0
+      },
+      "local_interception": "Blocked locally by SafeWriteManager.submit() before reaching _send(); zero network writes sent; zero retries",
+      "audit_verification": "writes-disabled probe replayed against server state; confirmed CONFLICT, 0 sends, and submit_refused_stale_etag audit emitted"
+    },
+    "step7_post_conflict_readback_integrity": {
+      "status": "PASS",
+      "integrity_confirmed": "Description remains '[已正常更新-门控验证通过]', ETag remains etag_v2 ('\"mwa37kqn\"'), zero overwrite or corruption"
+    },
+    "step8_gated_precision_delete": {
+      "status": "PASS",
+      "mechanism": "repaired gated wrapper with confirmed event_id and latest etag_v2",
+      "sends": 1,
+      "status": "APPLIED"
+    },
+    "step9_final_zero_residue_double_check": {
+      "status": "PASS",
+      "executor_query": "0 items matching prefix",
+      "independent_secondary_read": "Target window returned events: [] (100% clean, zero residue)"
+    }
+  },
+  "safety_and_governance_audit": {
+    "gated_wrapper_coverage": "100% of write and conflict operations routed through repaired SafeWriteManager without bypassing",
+    "unknown_occurrences": 0,
+    "retry_count": 0,
+    "reminders_module_state": "PAUSED (completely untouched)",
+    "production_container_restart": 0,
+    "production_deployment": 0,
+    "evidence_persistence": "~/workspace/ag08-acceptance/ (execute_final.py, final-run-log.jsonl, final-run-stdout.txt, final-state.json)"
+  },
+  "final_verdict": "FULL_PASS_DELIVERED"
+}
