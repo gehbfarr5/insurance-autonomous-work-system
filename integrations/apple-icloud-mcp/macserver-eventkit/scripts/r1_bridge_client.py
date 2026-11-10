@@ -5,11 +5,17 @@ Subcommands
 -----------
   health    GET /health and assert the answering process is a real production
             store (a Fake store must never be usable as R1 evidence).
-  gate      GET /reminders/lists and assert the business endpoint returns the
-            expected status (403 = closed or denied, 200 = open).
+  gate      R1 ONLY, deprecated for R1-03. GET /reminders/lists and assert the
+            business endpoint returns the expected status. This is the only
+            subcommand that touches the account-wide enumeration endpoint, and
+            R1-03 must not use it: enumeration mixes a closed gate with a
+            denied TCC permission into one 403.
   capture   Read exactly one bound list and evaluate a two-part verdict:
             fidelity (a synthetic item exists and its fields match) and
             cleanup (the list is empty again after removal).
+  probe     R1-03. One bound ID, one item request per phase, and nothing else.
+            Never calls /reminders/lists - the URL builder cannot produce that
+            path at all, so this is structural rather than a default.
 
 Boundaries enforced by construction
 -----------------------------------
@@ -19,6 +25,8 @@ Boundaries enforced by construction
     therefore treats the visible count as context, never as a precondition.
     Receipts keep the count and the target's own fields; the other lists'
     titles and identifiers are not written anywhere.
+  * `probe` never builds the enumeration URL. `item_url()` is the only URL
+    builder it uses, and it asserts the 5-segment item shape or raises.
   * The bearer token is read from a 0600 file and never appears in argv, in
     the environment, in logs, or in any receipt. A value that still carries
     its surrounding quotes is refused at the sink rather than sent and
@@ -35,10 +43,13 @@ Exit codes
   3  transport / IO problem, result unknown
   4  evidence directory unusable - nothing was attempted against the bridge
   5  batch directory already exists (evidence protection)
-  20 fidelity mismatch (item found, field assertions failed)
+  20 fidelity mismatch (item found, field assertions failed); for health/probe,
+     the answering store is not a production store
   21 duplicate synthetic items (more than one match)
   22 expected-empty check failed (cleanup did not take effect)
   23 expected-present check failed (no synthetic item visible)
+  24 probe: observed classification differs from --expect
+  25 probe: canary control contradicted itself (allowlist not effective)
 """
 
 from __future__ import annotations
@@ -51,10 +62,11 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
-SCRIPT_VERSION = "2.2.0"
+SCRIPT_VERSION = "2.3.0"
 
 UUID_RE = re.compile(
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
@@ -577,6 +589,275 @@ def _fidelity_assertions(item: dict[str, Any], args: argparse.Namespace, add) ->
 
 
 # --------------------------------------------------------------------------- #
+# probe (R1-03): one bound ID, no account-wide enumeration
+# --------------------------------------------------------------------------- #
+ITEM_PATH_TEMPLATE = "/reminders/lists/{list_id}/items"
+
+#: Fixed vocabulary. A free-text classification is how a 403 turns into a
+#: narrative, so the set is closed and `--expect` may only name a member.
+PROBE_CLASSES = (
+    "RESOLVED_IDENTITY_MATCH_EMPTY",
+    "RESOLVED_WITH_ITEMS",
+    "NOT_RESOLVABLE",
+    "RESOLVED_SOURCE_IDENTITY_CHANGED",
+    "ANOMALOUS_SOURCE_NOT_ALLOWED",
+    "BLOCKED_PERMISSION_OR_GATE",
+    "BLOCKED_NOT_ON_ALLOWLIST",
+    "BLOCKED_AUTH",
+    "BLOCKED_RATE_LIMIT",
+    "BLOCKED_BUSY",
+    "BLOCKED_TIMEOUT",
+    "ERROR_ROUTE",
+    "ERROR_INTERNAL",
+    "ERROR_UNRECOGNISED_403",
+    "ERROR_UNEXPECTED_BODY",
+    "ERROR_BRIDGE_UNREACHABLE",
+    "ERROR_NOT_PRODUCTION_STORE",
+    "GATE_CLOSED_AS_EXPECTED",
+    "GATE_ALREADY_OPEN",
+    "GATE_RESTORED_CLOSED",
+    "GATE_STILL_OPEN",
+    "ANOMALOUS_CANARY",
+)
+
+#: 403 is five different outcomes on this endpoint. The code decides which.
+_CODES_403 = {
+    "SOURCE_MISMATCH": "RESOLVED_SOURCE_IDENTITY_CHANGED",
+    "SOURCE_NOT_ALLOWED": "ANOMALOUS_SOURCE_NOT_ALLOWED",
+    "PERMISSION_DENIED": "BLOCKED_PERMISSION_OR_GATE",
+    "LIST_NOT_ALLOWED": "BLOCKED_NOT_ON_ALLOWLIST",
+    "UNAUTHORIZED_SCOPE": "BLOCKED_AUTH",
+}
+
+#: Responses that can only be produced after the request passed the gate.
+#: A 504 comes from the callback watchdog inside the store, which sits behind
+#: the two production guards, so it too proves the window was open.
+_PAST_THE_GATE = frozenset({
+    "NOT_RESOLVABLE",
+    "RESOLVED_SOURCE_IDENTITY_CHANGED",
+    "ANOMALOUS_SOURCE_NOT_ALLOWED",
+    "RESOLVED_IDENTITY_MATCH_EMPTY",
+    "RESOLVED_WITH_ITEMS",
+    "BLOCKED_TIMEOUT",
+})
+
+#: What each resolvability outcome does and does not license.
+_INFERENCE = {
+    "NOT_RESOLVABLE": (False, None),
+    "RESOLVED_SOURCE_IDENTITY_CHANGED": (True, False),
+    "RESOLVED_IDENTITY_MATCH_EMPTY": (True, True),
+    "RESOLVED_WITH_ITEMS": (True, True),
+}
+
+
+def item_url(endpoint: str, list_id: str) -> str:
+    """The only URL builder `probe` may use.
+
+    A structural assertion rather than a default: the enumeration path has five
+    segments too, so the check names each one. If a future edit ever makes this
+    function able to produce /reminders/lists, it raises instead of sending.
+    """
+    path = ITEM_PATH_TEMPLATE.format(list_id=urllib.parse.quote(list_id, safe="-._~"))
+    url = endpoint.rstrip("/") + path
+    segments = urllib.parse.urlsplit(url).path.split("/")
+    if (
+        len(segments) != 5
+        or segments[0] != ""
+        or segments[1] != "reminders"
+        or segments[2] != "lists"
+        or not segments[3]
+        or segments[4] != "items"
+    ):
+        raise AssertionError(f"probe may only request the item endpoint, built {path!r}")
+    return url
+
+
+def classify(status: int, body: Any) -> tuple[str, str | None, int | None]:
+    """Map one response onto exactly one label from PROBE_CLASSES."""
+    code = body.get("code") if isinstance(body, dict) else None
+    if status == 0:
+        return "ERROR_BRIDGE_UNREACHABLE", None, None
+    if status == 200:
+        if not isinstance(body, list):
+            return "ERROR_UNEXPECTED_BODY", None, None
+        return ("RESOLVED_WITH_ITEMS" if body else "RESOLVED_IDENTITY_MATCH_EMPTY"), None, len(body)
+    if status == 404:
+        # Two meanings share the status: the list did not resolve, or the route
+        # did not parse. Only the former says anything about the identifier.
+        if code == "LIST_NOT_FOUND":
+            return "NOT_RESOLVABLE", code, None
+        return "ERROR_ROUTE", code, None
+    if status == 403:
+        return _CODES_403.get(code or "", "ERROR_UNRECOGNISED_403"), code, None
+    if status == 401:
+        return "BLOCKED_AUTH", code, None
+    if status == 429:
+        return "BLOCKED_RATE_LIMIT", code, None
+    if status == 503:
+        return "BLOCKED_BUSY", code, None
+    if status == 504:
+        return "BLOCKED_TIMEOUT", code, None
+    if status == 500:
+        return "ERROR_INTERNAL", code, None
+    return f"ERROR_UNEXPECTED_HTTP_{status}", code, None
+
+
+def apply_phase(label: str, phase: str) -> str:
+    """Re-read one identical response according to which phase produced it."""
+    if phase == "open":
+        return label
+    if label == "BLOCKED_PERMISSION_OR_GATE":
+        return "GATE_CLOSED_AS_EXPECTED" if phase == "pre" else "GATE_RESTORED_CLOSED"
+    if label in _PAST_THE_GATE:
+        return "GATE_ALREADY_OPEN" if phase == "pre" else "GATE_STILL_OPEN"
+    return label
+
+
+def cmd_probe(args: argparse.Namespace) -> int:
+    """One ID, one item request per phase, zero enumerations.
+
+    The closed-gate check is the same request as the open-gate one. That is the
+    point: with the gate shut the request is stopped by the store guard and
+    answers 403 PERMISSION_DENIED, while a token failure answers 401 and a
+    config that points elsewhere answers 403 LIST_NOT_ALLOWED. Three refusals,
+    three codes, no enumeration needed to tell them apart.
+    """
+    token = read_token(args.token_file)
+    receipt: dict[str, Any] = {
+        "receipt_type": "R1_03_PROBE_SINGLE_ID",
+        "task": "REM-R1-01",
+        "step": "R1-03",
+        "client_version": SCRIPT_VERSION,
+        "phase": args.phase,
+        "observed_at_utc": utc_stamp(),
+        "endpoint": args.endpoint,
+        "target": {"list_id_masked": args.list_id},
+        "canary": None,
+        "health": {},
+        "requests": [],
+        "inference": {
+            "id_resolvable": None,
+            "source_identity_matches_binding": None,
+            "deleted_asserted": False,
+            "account_change_asserted": False,
+            "notes": [],
+        },
+        "follow_up": {
+            "triggered": False,
+            "reason": "a probe result never starts a read, a write or a fidelity check",
+        },
+        "expected": args.expect,
+        "classification": "NOT_PROBED",
+    }
+
+    def record(list_id: str, role: str) -> tuple[str, str | None, int | None, str]:
+        url = item_url(args.endpoint, list_id)
+        status, body, raw = http_get(url, token, args.timeout)
+        label, code, count = classify(status, body)
+        receipt["requests"].append({
+            "role": role,
+            "path_template": ITEM_PATH_TEMPLATE,
+            "http_status": status,
+            "error_code": code,
+            "item_count": count,
+            "body_digest": digest(raw),
+        })
+        return label, code, count, raw
+
+    # 1. /health: is the answering process the production assembly at all?
+    status, body, raw = http_get(f"{args.endpoint}/health", None, args.timeout)
+    store = body.get("store") if isinstance(body, dict) else None
+    receipt["health"] = {
+        "http_status": status,
+        "store_field": store,
+        "mode_field": body.get("mode") if isinstance(body, dict) else None,
+        "generation": body.get("generation") if isinstance(body, dict) else None,
+        "body_digest": digest(raw),
+        "note": "store='production' means PRODUCTION mode, not an open gate",
+    }
+    if status != 200:
+        receipt["classification"] = "ERROR_BRIDGE_UNREACHABLE"
+        emit(receipt, args.out)
+        print(f"probe: ERROR_BRIDGE_UNREACHABLE (http={status})")
+        return 3
+    if store != "production":
+        receipt["classification"] = "ERROR_NOT_PRODUCTION_STORE"
+        emit(receipt, args.out)
+        print(f"probe: ERROR_NOT_PRODUCTION_STORE (store={store!r})")
+        return 20
+
+    # 2. canary: an ID that cannot be on the allowlist must be refused by the
+    #    allowlist, not by the gate. Anything else means the control failed.
+    if args.canary_id:
+        label, code, _count, _raw = record(args.canary_id, "canary")
+        receipt["canary"] = {
+            "list_id_masked": mask_uuid(args.canary_id),
+            "http_status": receipt["requests"][-1]["http_status"],
+            "error_code": code,
+            "classification": label,
+        }
+        if label not in ("BLOCKED_NOT_ON_ALLOWLIST", "BLOCKED_AUTH"):
+            receipt["classification"] = "ANOMALOUS_CANARY"
+            receipt["inference"]["notes"].append(
+                "the canary was not stopped by the allowlist; allowlist enforcement "
+                "is not established, so the target result cannot be interpreted"
+            )
+            emit(receipt, args.out)
+            print(f"probe: ANOMALOUS_CANARY (code={code})")
+            return 25
+
+    # 3. the target: the only request that can reach EventKit
+    label, code, count, _raw = record(args.list_id, "target")
+    label = apply_phase(label, args.phase)
+    receipt["classification"] = label
+    receipt["target"].update({
+        "http_status": receipt["requests"][-1]["http_status"],
+        "error_code": code,
+        "item_count": count,
+        "items_persisted": False,
+    })
+
+    resolvable, identity_ok = _INFERENCE.get(label, (None, None))
+    receipt["inference"]["id_resolvable"] = resolvable
+    receipt["inference"]["source_identity_matches_binding"] = identity_ok
+    if label == "RESOLVED_SOURCE_IDENTITY_CHANGED":
+        receipt["inference"]["notes"].append(
+            "the identifier resolved; the source tuple no longer matches the registered "
+            "binding. Which of the three fields moved is not observable here."
+        )
+    if label == "NOT_RESOLVABLE":
+        receipt["inference"]["notes"].append(
+            "the identifier did not resolve in this store. This does not establish "
+            "deletion, absence from the account, or irreversibility."
+        )
+    if label == "BLOCKED_PERMISSION_OR_GATE":
+        receipt["inference"]["notes"].append(
+            "a closed gate and a denied TCC permission answer identically; settle it "
+            "out of band (process environment) before drawing any conclusion"
+        )
+
+    boundary = {
+        "http_methods": ["GET"],
+        "item_endpoint_calls": len(receipt["requests"]),
+        "list_enumerations_called": sum(
+            1 for entry in receipt["requests"] if entry["path_template"] != ITEM_PATH_TEMPLATE
+        ),
+        "enumeration_path_available_to_client": False,
+        "lists_other_than_target_touched": 0,
+        "item_content_persisted": False,
+        "non_target_metadata_persisted": False,
+        "writes_attempted": 0,
+        "token_persisted": False,
+    }
+    receipt["boundary"] = boundary
+
+    matched = label == args.expect
+    emit(receipt, args.out)
+    print(f"probe: {label} (expected={args.expect}, http={receipt['target']['http_status']})")
+    return 0 if matched else 24
+
+
+# --------------------------------------------------------------------------- #
 # main
 # --------------------------------------------------------------------------- #
 def build_parser() -> argparse.ArgumentParser:
@@ -610,6 +891,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_cap.add_argument("--batch-dir", required=True)
     p_cap.add_argument("--label", default="unspecified")
     p_cap.set_defaults(func=cmd_capture)
+
+    p_probe = sub.add_parser(
+        "probe", help="R1-03: resolve one bound ID; never enumerates"
+    )
+    common(p_probe)
+    p_probe.add_argument("--token-file", required=True)
+    p_probe.add_argument("--list-id", required=True)
+    p_probe.add_argument("--phase", required=True, choices=["pre", "open", "post"])
+    p_probe.add_argument("--canary-id", default="")
+    p_probe.add_argument("--expect", required=True, choices=list(PROBE_CLASSES))
+    p_probe.add_argument("--out", required=True)
+    p_probe.set_defaults(func=cmd_probe)
     return parser
 
 
@@ -618,7 +911,7 @@ def main() -> int:
     if not LOOPBACK_RE.match(args.endpoint.rstrip("/") + "/"):
         print("REFUSED: endpoint must be loopback (127.0.0.1/localhost/[::1])", file=sys.stderr)
         return 2
-    if args.command in ("gate", "capture"):
+    if args.command in ("gate", "capture", "probe"):
         if not os.path.isfile(args.token_file):
             print("REFUSED: token file not found", file=sys.stderr)
             return 2

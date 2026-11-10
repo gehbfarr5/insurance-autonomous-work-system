@@ -12,6 +12,13 @@ Control files inside --field-dir:
   items           object: {listID: [items]}
   fail_items      if present, items endpoint returns 500
   items_delay     seconds to sleep before answering the items endpoint
+  allowed_ids     JSON array of allowlisted IDs. Absent = allow every ID.
+                  Present-but-not-listed answers 403 LIST_NOT_ALLOWED,
+                  and it does so BEFORE the gate check, mirroring the real
+                  order (auth at :418, allowlist at :419, store guard at :136).
+  item_status     JSON object: {listID or "*": {"status": int, "code": str}}.
+                  Lets a test pin 404 LIST_NOT_FOUND, 403 SOURCE_MISMATCH,
+                  403 SOURCE_NOT_ALLOWED etc. without touching the normal path.
 
 This process never touches EventKit, TCC, or any Apple account.
 """
@@ -141,9 +148,36 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get("Authorization") != f"Bearer {self.token}":
                 self._json(401, {"success": "false", "error": "auth", "code": "AUTHENTICATION_FAILED"})
                 return
+            # Exact-match allowlist, ahead of the gate - the real server runs
+            # allowlistValidator at :419 and the store guard at :136, so a
+            # closed gate must not mask a config that points elsewhere.
+            allowed_path = os.path.join(self.field_dir, "allowed_ids")
+            if os.path.exists(allowed_path):
+                with open(allowed_path, encoding="utf-8") as handle:
+                    allowed = json.load(handle)
+                list_id_probe = path[len(prefix):-len(suffix)]
+                if list_id_probe not in allowed:
+                    self._json(403, {"success": "false",
+                                     "error": "The specified list is not on the allowlist.",
+                                     "code": "LIST_NOT_ALLOWED"})
+                    return
             if self._gate() != "true":
                 self._json(403, {"success": "false", "error": "gate closed", "code": "PERMISSION_DENIED"})
                 return
+            status_path = os.path.join(self.field_dir, "item_status")
+            if os.path.exists(status_path):
+                with open(status_path, encoding="utf-8") as handle:
+                    table = json.load(handle)
+                requested = path[len(prefix):-len(suffix)]
+                entry = table.get(requested) or table.get("*")
+                if entry:
+                    self._json(
+                        int(entry.get("status", 500)),
+                        {"success": "false",
+                         "error": entry.get("error", "injected"),
+                         "code": entry.get("code", "INTERNAL_ERROR")},
+                    )
+                    return
             if os.path.exists(os.path.join(self.field_dir, "fail_items")):
                 self._json(500, {"success": "false", "error": "boom", "code": "INTERNAL_ERROR"})
                 return
