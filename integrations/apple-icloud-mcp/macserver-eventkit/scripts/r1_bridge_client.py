@@ -13,9 +13,16 @@ Subcommands
 
 Boundaries enforced by construction
 -----------------------------------
-  * GET only; one list; loopback refused otherwise.
+  * GET only; one bound list; loopback refused otherwise.
+  * GET /reminders/lists is account-wide: the bridge does not filter it by the
+    allowlist (only GET /reminders/lists/{listID}/items does). The client
+    therefore treats the visible count as context, never as a precondition.
+    Receipts keep the count and the target's own fields; the other lists'
+    titles and identifiers are not written anywhere.
   * The bearer token is read from a 0600 file and never appears in argv, in
-    the environment, in logs, or in any receipt.
+    the environment, in logs, or in any receipt. A value that still carries
+    its surrounding quotes is refused at the sink rather than sent and
+    answered with an opaque 401.
   * Receipts carry counts, booleans, digests, dates and masked identifiers.
     Raw titles, raw notes and raw object identifiers are never written.
   * Each run writes into a fresh batch directory and refuses to overwrite an
@@ -47,7 +54,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-SCRIPT_VERSION = "2.1.0"
+SCRIPT_VERSION = "2.2.0"
 
 UUID_RE = re.compile(
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
@@ -78,15 +85,33 @@ def utc_iso_from_epoch(seconds: float) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(seconds))
 
 
+class TokenFileError(ValueError):
+    """The token file is unusable, and the reason is the file rather than auth.
+
+    Drawing this distinction matters: a quoted token produces 401
+    AUTHENTICATION_FAILED from the bridge, which is indistinguishable from a
+    revoked credential at the HTTP layer. Failing here names the real cause.
+    """
+
+
 def read_token(path: str) -> str:
     """Token from a 0600 file. Never echoed, never passed via argv or env."""
     with open(path, "r", encoding="utf-8") as handle:
         token = handle.read().strip()
     if len(token) < 16:
-        raise ValueError("token file content is implausibly short")
+        raise TokenFileError("token file content is implausibly short")
+    if token[:1] in ("'", '"') or token[-1:] in ("'", '"'):
+        # bridge.env quotes the value; an extraction that forgets to strip the
+        # quotes yields a longer string that authenticates as garbage.
+        raise TokenFileError(
+            "token file value is still wrapped in quotes; strip them during "
+            "extraction (see scripts/r1_token_extract.sh)"
+        )
+    if any(ch in token for ch in (" ", "\t", "\n", "\r")):
+        raise TokenFileError("token file contains embedded whitespace")
     mode = os.stat(path).st_mode & 0o777
     if mode & 0o077:
-        raise ValueError(f"token file permissions are {oct(mode)}, expected 0600")
+        raise TokenFileError(f"token file permissions are {oct(mode)}, expected 0600")
     return token
 
 
@@ -295,6 +320,8 @@ def cmd_capture(args: argparse.Namespace) -> int:
         "boundary": {
             "http_methods": ["GET"],
             "lists_queried": 1,
+            "enumeration_scope": "account_wide",
+            "non_target_metadata_persisted": False,
             "writes_attempted": 0,
             "token_persisted": False,
             "raw_content_persisted": False,
@@ -368,18 +395,25 @@ def cmd_capture(args: argparse.Namespace) -> int:
         print(f"capture: ERROR_LIST_METADATA_HTTP_{status}")
         return 3
     add("preconditions", "list_metadata_http_200", True)
-    add("preconditions", "single_visible_list", len(lists) == 1, f"visible={len(lists)}")
-    add("preconditions", "target_list_visible", target is not None)
+    # The endpoint enumerates the whole account and is not allowlist-filtered
+    # (EventKitBridgeServer: .listReminders -> fetchListsMetadata, no
+    # allowlistValidator call). Requiring exactly one visible list therefore
+    # made this precondition unsatisfiable on any account with more than one
+    # list - which is why v2.1.0 could never capture on this host. The
+    # account-wide count is recorded as context in list_metadata, and only the
+    # target's presence gates the capture.
+    add("preconditions", "target_list_visible", target is not None,
+        f"visible_list_count={len(lists)}")
     add(
         "preconditions",
         "source_binding_caldav_icloud",
         (target or {}).get("sourceType") == "calDAV" and (target or {}).get("sourceName") == "iCloud",
         f"{ (target or {}).get('sourceType') }/{ (target or {}).get('sourceName') }",
     )
-    if target is None or len(lists) != 1:
+    if target is None:
         receipt["classification"] = "ERROR_TARGET_LIST_IDENTITY"
         emit(receipt, os.path.join(args.batch_dir, "capture.json"))
-        print("capture: ERROR_TARGET_LIST_IDENTITY")
+        print("capture: ERROR_TARGET_LIST_IDENTITY (target not in enumeration)")
         return 20
 
     # 3. items

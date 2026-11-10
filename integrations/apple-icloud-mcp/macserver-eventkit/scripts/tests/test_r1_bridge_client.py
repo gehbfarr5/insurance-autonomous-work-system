@@ -3,9 +3,9 @@
 
 Covers the failure modes the R1 application must survive:
   empty list / present item / duplicate / wrong date / wrong priority /
-  completed item / missing itemId / fake store / two visible lists /
-  cleanup not effective / evidence directory already populated /
-  token file with loose permissions / masking.
+  completed item / missing itemId / fake store / account-wide enumeration with
+  the target present and with it absent / cleanup not effective / evidence
+  directory already populated / token file with loose permissions / masking.
 
 No EventKit, no TCC, no Apple account, no network beyond loopback.
 """
@@ -253,8 +253,13 @@ def main() -> int:
         with open(os.path.join(protected, "capture.json"), encoding="utf-8") as handle:
             check("original evidence untouched", "first_non_empty_evidence" in handle.read())
 
-        # ---- 11. list identity: two visible lists
-        print("\n[11] capture: more than one visible list")
+        # ---- 11. account-wide enumeration
+        print("\n[11] capture: enumeration is account-wide, not allowlist-filtered")
+        # GET /reminders/lists returns every reminder calendar in the account
+        # (EventKitBridgeServer .listReminders -> fetchListsMetadata, no
+        # allowlistValidator call); only the item endpoint is allowlisted.
+        # v2.1.0 required exactly one visible list, which made the precondition
+        # unsatisfiable on any real account and could never produce a capture.
         write_control(fields, "lists", [
             {"listID": LIST_ID, "title": LIST_TITLE, "sourceID": "7B0B0000-0000-4000-8000-000000000001",
              "sourceType": "calDAV", "sourceName": "iCloud", "color": "", "isImmutable": True},
@@ -262,11 +267,43 @@ def main() -> int:
              "sourceID": "7B0B0000-0000-4000-8000-000000000001", "sourceType": "calDAV",
              "sourceName": "iCloud", "color": "", "isImmutable": True},
         ])
-        rc, data, _ = run_client("capture", *capture_common, "--expect", "presence",
-                                 "--batch-dir", os.path.join(work, "batch-11"))
-        check("two visible lists -> exit 20", rc == 20, f"rc={rc}")
+        write_control(fields, "items", {LIST_ID: [item()]})
+        rc, data, out = run_client("capture", *capture_common, "--expect", "presence",
+                                   "--batch-dir", os.path.join(work, "batch-11a"))
+        check("target present among two lists -> exit 0", rc == 0, f"rc={rc} {out}")
+        pre = {a["name"]: a["result"] for a in (data or {}).get("assertions", {}).get("preconditions", [])}
+        check("target_list_visible PASS", pre.get("target_list_visible") == "PASS", str(pre))
+        check("no single_visible_list precondition remains",
+              "single_visible_list" not in pre, str(sorted(pre)))
+        check("visible_list_count recorded as 2",
+              (data or {}).get("list_metadata", {}).get("visible_list_count") == 2,
+              str((data or {}).get("list_metadata", {}).get("visible_list_count")))
+        check("enumeration_scope recorded as account_wide",
+              (data or {}).get("boundary", {}).get("enumeration_scope") == "account_wide")
+        blob = json.dumps(data, ensure_ascii=False)
+        check("other list title never persisted", "OTHER" not in blob)
+        check("other list identifier never persisted", "AAAAAAAA-BBBB" not in blob)
+        check("non_target_metadata_persisted false",
+              (data or {}).get("boundary", {}).get("non_target_metadata_persisted") is False)
+
+        # The signal that matters is the target's absence, not the account size.
+        write_control(fields, "lists", [
+            {"listID": "AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE", "title": "OTHER",
+             "sourceID": "7B0B0000-0000-4000-8000-000000000001", "sourceType": "calDAV",
+             "sourceName": "iCloud", "color": "", "isImmutable": True},
+            {"listID": "BBBBBBBB-CCCC-4DDD-8EEE-FFFFFFFFFFFF", "title": "OTHER2",
+             "sourceID": "7B0B0000-0000-4000-8000-000000000001", "sourceType": "calDAV",
+             "sourceName": "iCloud", "color": "", "isImmutable": True},
+        ])
+        rc, data, out = run_client("capture", *capture_common, "--expect", "presence",
+                                   "--batch-dir", os.path.join(work, "batch-11b"))
+        check("target absent among two lists -> exit 20", rc == 20, f"rc={rc}")
         check("classification ERROR_TARGET_LIST_IDENTITY",
               data and data.get("classification") == "ERROR_TARGET_LIST_IDENTITY")
+        pre = {a["name"]: a["result"] for a in (data or {}).get("assertions", {}).get("preconditions", [])}
+        check("target_list_visible FAIL is the reason", pre.get("target_list_visible") == "FAIL", str(pre))
+        check("no item query issued when the target is absent",
+              (data or {}).get("items") == {}, str((data or {}).get("items")))
 
         # ---- 12. token file permissions
         print("\n[12] token file must be 0600")
