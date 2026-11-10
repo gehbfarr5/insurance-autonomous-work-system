@@ -7,11 +7,8 @@
   "executed_at_utc": "2026-11-10T14:39:38Z/2026-11-10T14:48:06Z",
   "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
   "authorization": "R1 real diagnostic authorized by the focal point at 2026-11-10, scope A1-A9, single 45-minute session, cumulative gate-open budget <= 600s. That window is closed and is not extended by this revision.",
-
   "verdict": "BLOCKED_TARGET_NOT_VISIBLE",
-
   "verdict_assertion": "The bound list 9D9A****03F3 is not present in the reminder-calendar enumeration that the bridge returned on 2026-11-10T14:45:13Z: HTTP 200, two entries, neither of them the target. That is the whole of the finding. This receipt does not assert that the list was deleted, that it left the account, or that the account changed - only that it is not visible to EventKit on MAC-1 right now. A second, independent cause also blocked the same window: the harness required exactly one visible list, which this account can never satisfy (see why_two_lists).",
-
   "decisive_measurement": {
     "source": "window-20261110T144506Z-targetprobe/batch-1-targetprobe/capture.json",
     "endpoint": "GET http://127.0.0.1:18765/reminders/lists",
@@ -26,7 +23,6 @@
     "client_exit_code": 20,
     "interpretation": "HTTP 200 proves the request was authorized and the Reminders dataclass is readable, so the enumeration is meaningful rather than an empty or denied answer. Two calendars came back and neither carries the bound identifier. Whether that is because the list no longer exists, was never synced to this Mac, lives under a different account now, or is merely not enumerated is not decided by this measurement."
   },
-
   "historical_comparators": [
     {
       "receipt": "receipts/B2_TCC_AND_METADATA_RECEIPT.json",
@@ -50,11 +46,9 @@
       "what_it_does_not_support": "The interval between the last observation and this one is unattributed. Nothing here distinguishes deletion from a sync or account-side change."
     }
   ],
-
   "why_two_lists": {
     "question": "The application promised that GET /reminders/lists returns only the single bound list. It returned two. Which is wrong, the promise or the observation?",
     "answer": "The promise. The endpoint is account-wide by construction, and the observation is the correct behaviour of the deployed binary.",
-
     "source_evidence": [
       {
         "file": "Sources/EventKitBridge/Bridge/EventKitBridgeServer.swift",
@@ -77,9 +71,7 @@
         "lines": "38-61"
       }
     ],
-
     "behavioural_evidence": "The allowlist in the running configuration has exactly one entry (static_config: allowed_list_count=1, allowed_list_matches_target=true) while the enumeration returned two calendars. Two entries with a one-entry allowlist is only possible if this endpoint does not filter by allowlist. B2 saw three entries under the same one-entry allowlist, which points the same way.",
-
     "fields_actually_returned": [
       "listID (full, unmasked, for every list in the account)",
       "title (full, unmasked, for every list in the account)",
@@ -90,7 +82,6 @@
       "isImmutable",
       "NOT returned: reminder counts, item titles, item notes, dates, completed flags"
     ],
-
     "non_target_metadata": {
       "was_it_on_the_wire": true,
       "did_it_enter_the_evidence": false,
@@ -98,13 +89,11 @@
       "what_the_client_discarded": "The other entries' titles and identifiers, in memory, before any write.",
       "receipt_field_proving_it": "boundary.non_target_metadata_persisted = false (added in client 2.2.0; the 2.1.0 run recorded boundary.raw_content_persisted = false and the same discarding behaviour, just without the explicit field)"
     },
-
     "deployment_evidence_boundary": {
       "statement": "F7 still holds: the deployed artifact f78e24e5...3074 cannot be tied to a source commit from archived evidence, so 'the source says X' is not by itself a statement about the running binary.",
       "what_closes_it_here": "Two behavioural pairs that only agree if the deployed branch matches the source on this point: one allowlist entry with two enumerated lists now, and one allowlist entry with three enumerated lists on 2026-11-07. A build that filtered this endpoint by allowlist would have returned one entry in both cases.",
       "what_stays_open": "Agreement on this branch says nothing about branches not exercised: masking, ordering, error mapping and the item path are outside what this observation constrains. The claim is narrow on purpose."
     },
-
     "harness_consequence": {
       "defect": "Client 2.1.0 asserted single_visible_list (len(lists) == 1) as a precondition and exited 20 whenever it failed, in the same branch as a missing target.",
       "effect": "On this account the capture could not have proceeded even if the target had been present - two other lists alone were enough to exit 20.",
@@ -112,10 +101,8 @@
       "fix": "Client 2.2.0 drops the single-list assertion, records the account-wide count as context, and gates only on the target's presence. The exit code and classification are unchanged, so the old evidence stays readable.",
       "offline_verification": "test_r1_bridge_client.py scenario 11 now covers both halves: target present among two lists proceeds and still persists no other list's title or identifier; target absent among two lists is the only thing that exits 20."
     },
-
     "correction_to_the_application": "Section 6 of the application stated that the endpoint is allowlist-bound and returns only the bound list. That was wrong and has been struck through and corrected in place (section 6, item 1) rather than quietly deleted."
   },
-
   "what_this_excludes": [
     {
       "claim": "Gateway, transport or serialization silently drops items",
@@ -138,7 +125,6 @@
       "basis": "The P0 preflight ran against /Users/shared/bin/EventKitBridgeServer, sha256 equals the frozen f78e24e5...3074, codesign reports valid on disk and satisfies its Designated Requirement, health reported store=production."
     }
   ],
-
   "unexcluded": [
     "The list was deleted (by any device, any person) and is gone.",
     "The list was deleted and now sits in Recently Deleted, which EventKit does not enumerate as a reminder calendar.",
@@ -148,14 +134,12 @@
     "The list is visible to the app but not enumerated by EventKit for this process, for a reason this read did not capture.",
     "Why the historical reads returned 200 with an empty array while the target was still enumerated (B3 2026-11-07, AG-04 2026-11-08, AG-07 2026-11-10). H1 (genuinely empty), H2 (sync gap) and H5 (EventKit predicate defect) all remain open. H4 as an explanation of those reads is excluded, because the list was enumerated and resolvable at those times."
   ],
-
   "field_mapping": {
     "status": "NOT_APPLICABLE",
     "fields_compared": 0,
     "reason": "Field-by-field fidelity requires at least one item read from the bound list. Zero items were read: the capture aborted at the identity precondition, so the item query was never sent. No field of title, notes, due date, priority, completion state or timezone was compared, and none of them may be reported as verified.",
     "explicit_non_claim": "This receipt does not assert, imply or partially support a fidelity PASS. The R2 acceptance dimension 'non-empty field fidelity' remains UNVERIFIED, exactly as it stood after AG-07."
   },
-
   "window_evidence": {
     "p0_preflight": {
       "dir": "r1-evidence/20261110T143931Z/window-20261110T143938Z-p0",
@@ -170,7 +154,9 @@
       "expectation": "absence",
       "passes_planned": 1,
       "passes_completed": 1,
-      "capture_exit_codes": [20],
+      "capture_exit_codes": [
+        20
+      ],
       "window_outcome": "COMPLETED",
       "truncated": false,
       "client_version_used": "2.1.0",
@@ -208,7 +194,6 @@
       "session_length": "well inside the 45-minute limit; the session ended early because the target was not visible"
     }
   },
-
   "restore_and_zero_residue": {
     "receipt": "receipts/R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json",
     "summary": [
@@ -221,7 +206,6 @@
     "synthetic_items_created": 0,
     "synthetic_items_deleted": 0
   },
-
   "authorization_compliance": {
     "performed": [
       "A1 artifact identity only: shasum -a 256 on /Users/shared/bin/EventKitBridgeServer equals the frozen f78e24e5...3074, codesign --verify reports 'valid on disk' and 'satisfies its Designated Requirement', one process with its lstart recorded",
@@ -245,7 +229,6 @@
     "paused_by_rule": "The authorization states that a mismatched target requires pausing real operations, preserving evidence and reporting. That rule was applied at the first pass: the window was not extended, no second pass was attempted, and no workaround (rebinding the configuration to a different list) was improvised.",
     "this_revision_adds_no_real_reads": "v2 is a documentation and offline-code revision. The MAC-1 window is over and was not reopened; no enumeration, no item read, no gate operation, no token use occurred while producing it."
   },
-
   "corrections_recorded": [
     {
       "item": "1. No binary replacement",
@@ -276,7 +259,6 @@
       "text": "An earlier draft proposed reading item counts for every visible list to test H2. That expands the data scope (it reads lists outside the binding and their counts) for a question the binding change would answer anyway. Removed from this receipt and not carried into the next application."
     }
   ],
-
   "next_step": {
     "action": "A minimal native-app observation, submitted as a separate application: confirm whether the dedicated list exists in Reminders on MAC-1 and which account it belongs to.",
     "application": "receipts/R1_02_NATIVE_LIST_PRESENCE_APPLICATION.md",
@@ -289,6 +271,13 @@
     "chain_rule": "If the observation shows that restoring, creating or rebinding is necessary, that is proposed separately with the concrete object, the risk and the rollback - never as an implied follow-up of a read.",
     "not_before_r1": "No R2 proposal while R1 is unresolved; no PR merge; no rebuild."
   },
-
-  "attachment_evidence_note": "All identifiers in this receipt are masked using the existing convention. No token value, no unmasked UUID, no item content and no list title beyond the already-published masked forms appear here."
+  "attachment_evidence_note": "All identifiers in this receipt are masked using the existing convention. No token value, no unmasked UUID, no item content and no list title beyond the already-published masked forms appear here.",
+  "submission": {
+    "branch": "feat/r1-01-readonly-diagnostic-harness",
+    "pull_request": 24,
+    "draft": true,
+    "merged": false,
+    "url": "https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/24",
+    "note": "Draft and stacked on PR #23. Not merged, and deliberately not mergeable while the target is not visible."
+  }
 }

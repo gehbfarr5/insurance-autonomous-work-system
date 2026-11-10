@@ -119,7 +119,16 @@
       }
     ],
     "prs_merged": 0,
-    "focal_point_claim_reconfirmed": "PR #19-#23 OPEN, PR #23 head == local HEAD. Confirmed at 2026-11-10T05:09Z."
+    "focal_point_claim_reconfirmed": "PR #19-#23 OPEN, PR #23 head == local HEAD. Confirmed at 2026-11-10T05:09Z.",
+    "pr_for_this_branch": {
+      "number": 24,
+      "state": "OPEN",
+      "draft": true,
+      "base": "feat/ag05-resident-readonly-candidate",
+      "merged": false,
+      "note": "Stacked on PR #23. Draft on purpose: this branch must not be merged while R1 is blocked. PRs #19-#23 were not modified.",
+      "url": "https://github.com/gehbfarr5/insurance-autonomous-work-system/pull/24"
+    }
   },
   "confirmed_facts": [
     {
