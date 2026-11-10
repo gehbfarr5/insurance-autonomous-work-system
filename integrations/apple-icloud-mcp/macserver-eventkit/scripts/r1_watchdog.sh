@@ -7,26 +7,36 @@
 # safe reuse/kill decisions, and a failure state file that is never reported as
 # success.
 #
-# It is started BEFORE any gate change, and it is not a child of the window
-# script's shell: it is launched with setsid so that a crash, a SIGKILL of the
-# window process, or a blocked read cannot take the deadline protection with it.
+# It is started BEFORE any gate change and is not a child of the window
+# script's shell (macOS has no setsid, so nohup + disown is used), so a crash, a
+# SIGKILL of the window process, or a blocked read cannot take the deadline
+# protection with it.
 #
 # Two independent limits are enforced:
 #   * whole-window absolute deadline  (--deadline-epoch)
 #   * cumulative gate-open budget     (--open-budget, measured from the
 #                                      gate_open_since stamp written on open)
 #
+# A restore is not "call close and hope": r1_gate.sh always re-verifies the
+# endpoint after reloading, and FIRED_RESTORED is written only when the gate
+# operation returned 0 AND the receipt says verification PASS. A failed or
+# unverifiable restore is recorded as FIRED_RESTORE_FAILED and exits 6; it is
+# retried a bounded number of times and is never reported as success.
+#
 # Exit codes: 0 window disarmed normally, 2 usage, 6 restore FAILED (state kept).
 #
 # Usage:
 #   r1_watchdog.sh --state-dir D --deadline-epoch E --open-budget S
 #                  --plist P --config-file F --token-file T --endpoint U
-#                  [--poll 2]
+#                  [--poll 2] [--restore-attempts 3] [--restore-delay 2]
 
 set -uo pipefail
 
 STATE_DIR=""; DEADLINE=""; BUDGET=""; PLIST=""; CONFIG_FILE=""; TOKEN_FILE=""
 ENDPOINT="http://127.0.0.1:18765"; POLL="${R1_POLL_SECONDS:-2}"
+MAX_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-3}"
+RETRY_DELAY="${R1_RESTORE_DELAY:-2}"
+PYTHON="${PYTHON_BIN:-python3}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$HERE/r1_gate.sh"
 
@@ -40,6 +50,8 @@ while [ $# -gt 0 ]; do
     --token-file) TOKEN_FILE="$2"; shift 2 ;;
     --endpoint) ENDPOINT="$2"; shift 2 ;;
     --poll) POLL="$2"; shift 2 ;;
+    --restore-attempts) MAX_ATTEMPTS="$2"; shift 2 ;;
+    --restore-delay) RETRY_DELAY="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -78,33 +90,53 @@ chmod 600 "$STATE_DIR/watchdog.pid" 2>/dev/null || true
 write_status RUNNING none 0
 echo "[watchdog $$] armed until $DEADLINE, open budget ${BUDGET}s" >> "$LOG"
 
+# A restore only counts when the gate operation itself verified the endpoint.
+# Exit 0 from r1_gate.sh already implies that, but the receipt is read as well so
+# a future change to the gate cannot silently downgrade this guarantee.
+receipt_verified() {
+  [ -f "$1" ] || return 1
+  "$PYTHON" - "$1" <<'PYEOF' >/dev/null 2>&1
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        data = json.load(fh)
+except Exception:
+    sys.exit(1)
+sys.exit(0 if data.get("verification") == "PASS" else 1)
+PYEOF
+}
+
 restore() {
-  local reason="$1"
+  local reason="$1" attempt=1 rc=0 receipt=""
   echo "[watchdog $$] FIRING reason=$reason at $(date +%s)" >> "$LOG"
-  local lock="$STATE_DIR/restore.lock"
-  local waited=0
-  while ! mkdir "$lock" 2>/dev/null; do
-    # Another restorer owns the lock. Wait briefly, then proceed anyway: a
-    # duplicated close is harmless, a missed close is not.
-    sleep 0.2; waited=$((waited + 1))
-    [ "$waited" -gt 25 ] && break
+  while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+    receipt="$STATE_DIR/gate_close_${reason}_attempt${attempt}.json"
+    # The mutex lives inside r1_gate.sh, so a restore can never overlap the
+    # window's own close or an operator's emergency close. A busy lock is a
+    # bounded failure, not a reason to write concurrently.
+    "$GATE" close \
+      --plist "$PLIST" \
+      --config-file "$CONFIG_FILE" \
+      --token-file "$TOKEN_FILE" \
+      --endpoint "$ENDPOINT" \
+      --purpose "watchdog:$reason" \
+      --lock-wait 15 \
+      --out "$receipt" >> "$LOG" 2>&1
+    rc=$?
+    if [ "$rc" -eq 0 ] && receipt_verified "$receipt"; then
+      write_status FIRED_RESTORED "$reason" 0
+      echo "[watchdog $$] restore VERIFIED (reason=$reason, attempt=$attempt)" >> "$LOG"
+      return 0
+    fi
+    echo "[watchdog $$] attempt $attempt failed rc=$rc (reason=$reason); see $receipt" >> "$LOG"
+    attempt=$((attempt + 1))
+    [ "$attempt" -le "$MAX_ATTEMPTS" ] && sleep "$RETRY_DELAY"
   done
-  "$GATE" close \
-    --plist "$PLIST" \
-    --config-file "$CONFIG_FILE" \
-    --token-file "$TOKEN_FILE" \
-    --endpoint "$ENDPOINT" \
-    --out "$STATE_DIR/gate_close_${reason}.json" >> "$LOG" 2>&1
-  local rc=$?
-  [ -d "$lock" ] && rmdir "$lock" 2>/dev/null
-  if [ "$rc" -eq 0 ]; then
-    write_status FIRED_RESTORED "$reason" 0
-    echo "[watchdog $$] restore OK (reason=$reason)" >> "$LOG"
-  else
-    write_status FIRED_RESTORE_FAILED "$reason" "$rc"
-    echo "[watchdog $$] CRITICAL restore FAILED rc=$rc (reason=$reason)" >> "$LOG"
-  fi
-  return "$rc"
+  # Never report success, never keep hammering: the last receipt carries the
+  # real state and the operator has to step in.
+  write_status FIRED_RESTORE_FAILED "$reason" "$rc"
+  echo "[watchdog $$] CRITICAL restore NOT verified after $MAX_ATTEMPTS attempts (rc=$rc, reason=$reason)" >> "$LOG"
+  return 1
 }
 
 while :; do
@@ -115,15 +147,15 @@ while :; do
     exit 0
   fi
   if [ "$now" -ge "$DEADLINE" ]; then
-    restore deadline
-    exit $(( $? == 0 ? 0 : 6 ))
+    restore deadline || exit 6
+    exit 0
   fi
   if [ -f "$STATE_DIR/gate_open_since" ]; then
     opened="$(cat "$STATE_DIR/gate_open_since" 2>/dev/null || echo 0)"
     case "$opened" in ''|*[!0-9]*) opened=0 ;; esac
     if [ "$opened" -gt 0 ] && [ $(( now - opened )) -gt "$BUDGET" ]; then
-      restore open_budget
-      exit $(( $? == 0 ? 0 : 6 ))
+      restore open_budget || exit 6
+      exit 0
     fi
   fi
   sleep "$POLL"

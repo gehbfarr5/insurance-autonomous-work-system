@@ -33,6 +33,7 @@ class Handler(BaseHTTPRequestHandler):
     token = ""
     config_file = ""
     plist = ""
+    items_seen = 0
     protocol_version = "HTTP/1.1"
 
     def log_message(self, fmt: str, *args) -> None:  # silence default stderr logging
@@ -149,6 +150,22 @@ class Handler(BaseHTTPRequestHandler):
             delay = self._control("items_delay")
             if delay:
                 time.sleep(float(delay))
+            # items_seq: one entry per items request, in order, clamped to the
+            # last entry. An entry of "ERROR" answers 500. This exists so a test
+            # can make batch 1 succeed and batch 2 fail deterministically,
+            # instead of relying on timing.
+            seq_path = os.path.join(self.field_dir, "items_seq")
+            if os.path.exists(seq_path):
+                with open(seq_path, encoding="utf-8") as handle:
+                    seq = json.load(handle)
+                index = min(Handler.items_seen, len(seq) - 1)
+                Handler.items_seen += 1
+                entry = seq[index]
+                if entry == "ERROR":
+                    self._json(500, {"success": "false", "error": "seq error", "code": "INTERNAL_ERROR"})
+                    return
+                self._json(200, entry)
+                return
             list_id = path[len(prefix):-len(suffix)]
             items_path = os.path.join(self.field_dir, "items")
             table = json.load(open(items_path, encoding="utf-8")) if os.path.exists(items_path) else {}

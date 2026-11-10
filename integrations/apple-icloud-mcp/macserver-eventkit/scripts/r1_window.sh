@@ -50,6 +50,7 @@ LIST_ID=""; TITLE=""; NOTES=""; DUE_UTC=""; TOKEN_FILE=""
 PLIST=""; CONFIG_FILE=""; ENDPOINT="http://127.0.0.1:18765"
 WORK_ROOT=""; PASSES=2; INTERVAL=60; WINDOW_SECONDS=1800; OPEN_BUDGET=180
 LABEL="r1"; CONFIRM=0; EXPECT="presence"
+RESTORE_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-2}"
 BIN="${BIN:-/Users/shared/bin/EventKitBridgeServer}"
 FROZEN_SHA256="${FROZEN_SHA256:-f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074}"
 
@@ -235,6 +236,7 @@ echo "  watchdog    : pid=$ACTUAL_WPID deadline=$DEADLINE budget=${OPEN_BUDGET}s
 CAPTURE_OK=0; FIDELITY_OK=0; RESTORE_OK=0; CAPTURE_RC_SUMMARY=""
 CLEANUP_OK=0; ASSERT_OK=0
 TRUNCATED=0; PASSES_DONE=0
+PASS_RAN=0; PASS_CLEAN=0
 
 # The summary is written on EVERY exit path, including an open failure and an
 # interrupt. Exiting with a bare code and no summary was an evidence gap: the
@@ -252,7 +254,7 @@ write_summary() {
   fi
   RESTORE_VERDICT="FAILED"; [ "$RESTORE_OK" -eq 1 ] && RESTORE_VERDICT="VERIFIED"
   R1_TRUNCATED="$TRUNCATED" R1_PASSES_DONE="$PASSES_DONE" R1_PASSES_PLANNED="$PASSES" \
-  R1_EXPECT="$EXPECT" \
+  R1_EXPECT="$EXPECT" R1_PASS_RAN="$PASS_RAN" R1_PASS_CLEAN="$PASS_CLEAN" \
   "$PYTHON" - "$RUN_DIR" "$CAPTURE_VERDICT" "$FIDELITY_VERDICT" "$RESTORE_VERDICT" \
     "$CAPTURE_RC_SUMMARY" "$PID_BEFORE" "$PID_AFTER" "$DEADLINE" "${1:-}" <<'PYEOF'
 import json, os, sys
@@ -279,6 +281,8 @@ summary = {
     "window_truncated": os.environ.get("R1_TRUNCATED") == "1",
     "passes_planned": int(os.environ.get("R1_PASSES_PLANNED") or 0),
     "passes_completed": int(os.environ.get("R1_PASSES_DONE") or 0),
+    "passes_with_observation": int(os.environ.get("R1_PASS_RAN") or 0),
+    "passes_clean": int(os.environ.get("R1_PASS_CLEAN") or 0),
     "pid_before": pid_before,
     "pid_after": pid_after,
     "process_restarted": bool(pid_before and pid_after and pid_before != pid_after),
@@ -300,22 +304,38 @@ open_gate() {
   chmod 600 "$STATE/gate_open_since" 2>/dev/null || true
   "$GATE" open --plist "$PLIST" --config-file "$CONFIG_FILE" \
     --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
-    --out "$STATE/gate_open.json" --expect
+    --out "$STATE/gate_open.json" --purpose "window:$LABEL:open"
 }
 
-close_gate() {
-  "$GATE" close --plist "$PLIST" --config-file "$CONFIG_FILE" \
-    --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
-    --out "$STATE/gate_close.json" --expect
-}
-
+# Restore is bounded, verified, and never disarms the protection it depends on.
+# The old version removed gate_open_since first and wrote the stop file whether
+# or not the close had been verified, which both stopped the open-budget clock
+# while the gate could still be open and told the watchdog its job was done.
 finish() {
-  # The watchdog stays armed while the restore runs, so a crash in the middle of
-  # the restore is still covered by the deadline path.
-  rm -f "$STATE/gate_open_since"
-  if close_gate >>"$RUN_DIR/window.log" 2>&1; then RESTORE_OK=1; else RESTORE_OK=0; fi
-  : > "$STATE/stop"
-  sleep 1
+  local attempt=1 rc=0 out="$STATE/gate_close.json"
+  RESTORE_OK=0
+  while [ "$attempt" -le "$RESTORE_ATTEMPTS" ]; do
+    [ "$attempt" -gt 1 ] && out="$STATE/gate_close_retry$((attempt - 1)).json"
+    "$GATE" close --plist "$PLIST" --config-file "$CONFIG_FILE" \
+      --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
+      --out "$out" --purpose "window:$LABEL:close" --lock-wait 15 \
+      >>"$RUN_DIR/window.log" 2>&1
+    rc=$?
+    if [ "$rc" -eq 0 ]; then RESTORE_OK=1; break; fi
+    echo "[window] close attempt $attempt not verified (rc=$rc); see $out" >&2
+    attempt=$((attempt + 1))
+  done
+
+  if [ "$RESTORE_OK" -eq 1 ]; then
+    # Only now is it safe to stop the budget clock and disarm the watchdog.
+    rm -f "$STATE/gate_open_since"
+    : > "$STATE/stop"
+    sleep 1
+  else
+    # Keep everything armed: the deadline path is the last line of defence and
+    # must still be able to close the gate after this process gives up.
+    echo "[window] RESTORE NOT VERIFIED after $RESTORE_ATTEMPTS attempts; watchdog left armed, gate_open_since kept, no stop file written" >&2
+  fi
 }
 
 on_signal() {
@@ -358,12 +378,12 @@ for pass in $(seq 1 "$PASSES"); do
   CAPTURE_RC_SUMMARY="$CAPTURE_RC_SUMMARY $rc"
   PASSES_DONE="$pass"
   case "$rc" in
-    # 0 = the expected state was observed; 20/21/23 = the read completed but a
-    # field/uniqueness/presence assertion failed; 22 = the read completed and the
-    # list was not empty when absence was expected.
-    0)        CAPTURE_OK=1; if [ "$EXPECT" = "presence" ]; then FIDELITY_OK=1; else CLEANUP_OK=1; fi ;;
-    20|21|23) CAPTURE_OK=1 ;;
-    22)       CAPTURE_OK=1 ;;
+    # 0 = the expected state was observed. 20/21/22/23 = the read completed but a
+    # field, uniqueness, presence or cleanup assertion failed. Anything else is a
+    # transport or shape failure: that pass produced no evidence at all.
+    0)           PASS_RAN=$((PASS_RAN + 1)); PASS_CLEAN=$((PASS_CLEAN + 1)) ;;
+    20|21|22|23) PASS_RAN=$((PASS_RAN + 1)) ;;
+    *)           : ;;
   esac
   echo "  pass $pass   : exit $rc"
   if [ "$pass" -lt "$PASSES" ]; then sleep "$INTERVAL"; fi
@@ -378,6 +398,23 @@ case "$WD_STATE_NOW" in
 esac
 if [ "$(date +%s)" -ge "$DEADLINE" ] && [ "$PASSES_DONE" -lt "$PASSES" ]; then
   TRUNCATED=1
+fi
+
+# Aggregate across passes. A window is only "capture completed" when every
+# planned pass actually produced an observation, and only "asserted" when every
+# pass observed the expected state. The previous version let one good pass
+# outvote a later transport error or a duplicate, which is exactly how a batch
+# that failed could still be reported as overall success.
+if [ "$TRUNCATED" -eq 0 ] && [ "$PASS_RAN" -eq "$PASSES" ] && [ "$PASSES_DONE" -eq "$PASSES" ]; then
+  CAPTURE_OK=1
+  if [ "$PASS_CLEAN" -eq "$PASSES" ]; then
+    if [ "$EXPECT" = "presence" ]; then FIDELITY_OK=1; else CLEANUP_OK=1; fi
+  fi
+fi
+if [ "$PASS_RAN" -lt "$PASSES" ] || [ "$PASSES_DONE" -lt "$PASSES" ]; then
+  echo "  aggregation : only $PASS_RAN/$PASSES passes produced an observation; not a completed capture" >&2
+elif [ "$PASS_CLEAN" -lt "$PASSES" ]; then
+  echo "  aggregation : $PASS_CLEAN/$PASSES passes observed the expected state; one failing pass blocks the verdict" >&2
 fi
 
 echo "== closing gate =="

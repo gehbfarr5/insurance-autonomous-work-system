@@ -16,6 +16,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS="$(dirname "$HERE")"
 WINDOW="$SCRIPTS/r1_window.sh"
 WATCHDOG="$SCRIPTS/r1_watchdog.sh"
+GATE="$SCRIPTS/r1_gate.sh"
 FAKE="$HERE/fake_bridge.py"
 
 TOKEN="offline-test-token-0123456789abcdef"
@@ -126,6 +127,7 @@ PY
   printf 'production' > "$FX/fields/store"
 
   export STUB_DIR="$FX"
+  export R1_LOCK_DIR="$FX/lock"        # isolate the gate mutex per scenario
   export PATH="$FX/bin:$PATH"
 }
 
@@ -302,6 +304,13 @@ sys.exit(0 if all(ok for _, ok in checks) else 1)
 PY
 [ $? -eq 0 ] && TOTAL=$((TOTAL + 4)) || { TOTAL=$((TOTAL + 4)); FAILS=$((FAILS + 1)); }
 grep -q "WINDOW_RESULT: RESTORE_FAILED" "$FX/window.out" && check "no success line is printed" 1 || check "no success line is printed" 0
+[ ! -f "$RUN_DIR/state/stop" ] && check "protection is NOT disarmed after a failed restore" 1 \
+  || check "protection is NOT disarmed after a failed restore" 0
+[ -f "$RUN_DIR/state/gate_open_since" ] && check "open-budget clock keeps running while the gate may still be open" 1 \
+  || check "open-budget clock keeps running while the gate may still be open" 0
+[ -n "$(cat "$RUN_DIR/state/watchdog.pid" 2>/dev/null)" ] && kill -0 "$(cat "$RUN_DIR/state/watchdog.pid")" 2>/dev/null \
+  && check "watchdog is still armed after the window gave up" 1 || check "watchdog is still armed after the window gave up" 0
+touch "$RUN_DIR/state/stop"   # disarm the leftover watchdog before moving on
 stop_bridge
 
 echo "[9] absolute deadline fires while the window is busy"
@@ -379,8 +388,11 @@ PY
 start_bridge
 write_items "$GOOD_ITEM"
 : > "$FX/launchctl.log"
+CFG_SHA_BEFORE="$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')"
 RC="$(run_window --confirm --passes 1 --window-seconds 120 --open-budget 60)"
 eq "exit code 0" "$RC" "0"
+eq "non-authoritative config file is byte-identical afterwards" \
+  "$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_SHA_BEFORE"
 eq "plist holds false again" \
   "$(plutil -extract EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED raw "$FX/conf/agent.plist" 2>/dev/null)" "false"
 grep -q "gate_source=launchd_env" "$FX/window.out" && check "detects the plist as the authoritative source" 1 \
@@ -437,6 +449,113 @@ write_items "$GOOD_ITEM"
 RC="$(run_window --confirm --passes 1 --window-seconds 120 --open-budget 60 --expect absence)"
 eq "exit code 12 when cleanup did not take effect" "$RC" "12"
 eq "gate restored to false" "$(gate_value)" "false"
+stop_bridge
+
+echo "[15] watchdog: a close that reloads but fails verification is NOT a restore"
+new_fixture; start_bridge
+write_items "$GOOD_ITEM"
+STATE_DIR="$FX/wd"; mkdir -p "$STATE_DIR"
+date +%s > "$STATE_DIR/gate_open_since"
+printf 'fake' > "$FX/fields/store"      # health no longer reports a production store
+"$WATCHDOG" --state-dir "$STATE_DIR" \
+  --deadline-epoch "$(( $(date +%s) + 1 ))" --open-budget 300 \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --poll 1 --restore-attempts 1 \
+  > "$FX/wd.out" 2>&1
+WD_RC=$?
+eq "watchdog exits 6 when the restore cannot be verified" "$WD_RC" "6"
+grep -q "WATCHDOG_STATE=FIRED_RESTORE_FAILED" "$STATE_DIR/watchdog_status.env" 2>/dev/null \
+  && check "state is FIRED_RESTORE_FAILED, never FIRED_RESTORED" 1 \
+  || check "state is FIRED_RESTORE_FAILED, never FIRED_RESTORED" 0
+grep -q "WATCHDOG_STATE=FIRED_RESTORED" "$STATE_DIR/watchdog_status.env" 2>/dev/null \
+  && check "success is not claimed anywhere" 0 || check "success is not claimed anywhere" 1
+grep -q '"verification": "FAIL"' "$STATE_DIR/gate_close_deadline_attempt1.json" 2>/dev/null \
+  && check "the failed close receipt is kept as evidence" 1 \
+  || check "the failed close receipt is kept as evidence" 0
+stop_bridge
+
+echo "[16] gate mutex: a held lock is never overridden, a dead holder is reclaimed"
+new_fixture; start_bridge
+write_items "$GOOD_ITEM"
+mkdir -p "$FX/lock/gate.lock"
+sleep 60 & HOLDER=$!
+{
+  echo "LOCK_PID=$HOLDER"
+  echo "LOCK_LSTART=$(ps -p "$HOLDER" -o lstart= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  echo "LOCK_PURPOSE=test-holder"
+} > "$FX/lock/gate.lock/owner.env"
+CFG_SHA_BEFORE="$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')"
+R1_LOCK_DIR="$FX/lock" "$GATE" close --plist "$FX/conf/agent.plist" \
+  --config-file "$FX/conf/bridge.env" --token-file "$FX/token" \
+  --endpoint "$URL" --out "$FX/busy.json" --lock-wait 2 --purpose test > "$FX/busy.out" 2>&1
+BUSY_RC=$?
+eq "busy lock -> exit 7, no forcing" "$BUSY_RC" "7"
+eq "the config file was not touched while the lock was held" \
+  "$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_SHA_BEFORE"
+python3 - "$FX/busy.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+print(("  [PASS] " if d.get("failure_stage") == "lock" else "  [FAIL] ") + "busy-lock receipt records the stage")
+sys.exit(0 if d.get("failure_stage") == "lock" else 1)
+PY
+[ $? -eq 0 ] && TOTAL=$((TOTAL + 1)) || { TOTAL=$((TOTAL + 1)); FAILS=$((FAILS + 1)); }
+kill "$HOLDER" 2>/dev/null; wait "$HOLDER" 2>/dev/null
+R1_LOCK_DIR="$FX/lock" "$GATE" close --plist "$FX/conf/agent.plist" \
+  --config-file "$FX/conf/bridge.env" --token-file "$FX/token" \
+  --endpoint "$URL" --out "$FX/reclaimed.json" --lock-wait 6 --purpose test > "$FX/reclaimed.out" 2>&1
+eq "a dead holder's lock is reclaimed and the close verifies" "$?" "0"
+[ -f "$FX/lock/gate.lock/owner.env" ] && check "the lock is released after the operation" 0 \
+  || check "the lock is released after the operation" 1
+stop_bridge
+
+echo "[17] batch 1 succeeds, batch 2 errors -> not an overall success"
+new_fixture; start_bridge
+python3 - "$FX/fields" "$GOOD_ITEM" <<'PY'
+import json, sys
+fields, good = sys.argv[1], json.loads(sys.argv[2])
+json.dump([good, "ERROR"], open(fields + "/items_seq", "w", encoding="utf-8"))
+PY
+RC="$(run_window --confirm --passes 2 --interval 1 --window-seconds 120 --open-budget 60)"
+eq "exit code 15 (capture incomplete)" "$RC" "15"
+RUN_DIR="$(ls -d "$FX"/work/window-* 2>/dev/null | head -1)"
+python3 - "$RUN_DIR/window_summary.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+checks = [
+    ("capture is not claimed as completed", d["verdicts"]["capture_completed"] == "FAIL"),
+    ("fidelity is not claimed", d["verdicts"]["fidelity_asserted"] == "FAIL"),
+    ("only one pass produced an observation", d["passes_with_observation"] == 1),
+]
+for name, ok in checks:
+    print(("  [PASS] " if ok else "  [FAIL] ") + name)
+sys.exit(0 if all(ok for _, ok in checks) else 1)
+PY
+[ $? -eq 0 ] && TOTAL=$((TOTAL + 3)) || { TOTAL=$((TOTAL + 3)); FAILS=$((FAILS + 1)); }
+stop_bridge
+
+echo "[18] batch 1 succeeds, batch 2 finds duplicates -> not an overall success"
+new_fixture; start_bridge
+python3 - "$FX/fields" "$GOOD_ITEM" <<'PY'
+import json, sys
+fields, good = sys.argv[1], json.loads(sys.argv[2])
+json.dump([good, good + good], open(fields + "/items_seq", "w", encoding="utf-8"))
+PY
+RC="$(run_window --confirm --passes 2 --interval 1 --window-seconds 120 --open-budget 60)"
+eq "exit code 12 (a later batch failed an assertion)" "$RC" "12"
+RUN_DIR="$(ls -d "$FX"/work/window-* 2>/dev/null | head -1)"
+python3 - "$RUN_DIR/window_summary.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+checks = [
+    ("both passes produced an observation", d["passes_with_observation"] == 2),
+    ("only one pass was clean", d["passes_clean"] == 1),
+    ("fidelity is not claimed", d["verdicts"]["fidelity_asserted"] == "FAIL"),
+]
+for name, ok in checks:
+    print(("  [PASS] " if ok else "  [FAIL] ") + name)
+sys.exit(0 if all(ok for _, ok in checks) else 1)
+PY
+[ $? -eq 0 ] && TOTAL=$((TOTAL + 3)) || { TOTAL=$((TOTAL + 3)); FAILS=$((FAILS + 1)); }
 stop_bridge
 
 echo
