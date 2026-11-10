@@ -7,8 +7,9 @@
     "environment": "/home/hatch/workspace/carddav-mcp-client/",
     "file_path": "/home/hatch/workspace/carddav-mcp-client/safe_write.py",
     "backup_path": "/home/hatch/workspace/carddav-mcp-client/safe_write.py.bak-ag08-etagfix-20261110",
-    "pre_edit_sha256": "b1cdf6b2... (待 MUSE 补充完整 64 位 SHA)",
-    "post_edit_sha256": "49c02417... (待 MUSE 补充完整 64 位 SHA)",
+    "pre_edit_sha256": "PENDING_MUSE_64_CHAR_SHA256 (known prefix: b1cdf6b2)",
+    "post_edit_sha256": "PENDING_MUSE_64_CHAR_SHA256 (known prefix: 49c02417)",
+    "patch_archival_status": "BLOCKED_PENDING_MUSE_ON_HOST_UNIFIED_DIFF",
     "target_function": "SafeWriteManager.submit()",
     "modified_lines": "1597-1613"
   },

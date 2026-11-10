@@ -76,7 +76,8 @@
     "reminders_module_state": "PAUSED (completely untouched)",
     "production_container_restart": 0,
     "production_deployment": 0,
-    "evidence_persistence": "~/workspace/ag08-acceptance/ (execute_final.py, final-run-log.jsonl, final-run-stdout.txt, final-state.json)"
+    "evidence_persistence": "~/workspace/ag08-acceptance/ (execute_final.py, final-run-log.jsonl, final-run-stdout.txt, final-state.json)",
+    "engineering_archival_status": "BLOCKED_PENDING_MUSE_UNIFIED_DIFF_AND_64CHAR_SHA256"
   },
-  "final_verdict": "FULL_PASS_DELIVERED"
+  "final_verdict": "ACCEPTANCE_REPORTED_PASSED_ARCHIVAL_PENDING (功能验收已报告通过，工程归档未完成)"
 }
