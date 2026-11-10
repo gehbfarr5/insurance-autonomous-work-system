@@ -107,11 +107,42 @@ ACTUAL_SHA="$("$SHASUM_BIN" -a 256 "$BIN" 2>/dev/null | awk '{print $1}')"
   || die binary "codesign verification failed; refusing to open the gate for an unverified binary"
 echo "  binary      : $ACTUAL_SHA (frozen match), signature VALID"
 
+# The evidence tree is created and *proven writable* before anything
+# production-facing happens. Three failure modes are covered on purpose:
+# a --work-dir whose parent does not exist (a typo must not be papered over by
+# `mkdir -p`, which would scatter evidence into a path nobody looks at), a
+# --work-dir that exists but rejects writes (ACLs, read-only mounts and quota
+# all make `test -w` lie), and a run directory that already exists (evidence
+# must never be merged into an older window). Every failure exits before the
+# watchdog is armed and before the gate is touched.
+probe_writable() {  # $1 = dir, $2 = what to call it in the message
+  local probe="$1/.r1-write-probe.$$"
+  if ! : > "$probe" 2>/dev/null; then
+    die evidence "$2 is not writable: $1" 17
+  fi
+  rm -f "$probe" 2>/dev/null || true
+}
+
+if [ ! -e "$WORK_ROOT" ]; then
+  WORK_PARENT="$(dirname "$WORK_ROOT")"
+  [ -d "$WORK_PARENT" ] || die evidence "parent of --work-dir does not exist: $WORK_PARENT (refusing to invent a tree)" 17
+  mkdir "$WORK_ROOT" 2>/dev/null || die evidence "cannot create --work-dir: $WORK_ROOT" 17
+  chmod 700 "$WORK_ROOT" 2>/dev/null || die evidence "cannot restrict --work-dir to 0700: $WORK_ROOT" 17
+elif [ ! -d "$WORK_ROOT" ]; then
+  die evidence "--work-dir is not a directory: $WORK_ROOT" 17
+fi
+probe_writable "$WORK_ROOT" "--work-dir"
+
 RUN_DIR="$WORK_ROOT/window-$(date -u +%Y%m%dT%H%M%SZ)-$LABEL"
-[ -e "$RUN_DIR" ] && die evidence "run directory already exists: $RUN_DIR"
-mkdir -p "$RUN_DIR" && chmod 700 "$RUN_DIR"
-STATE="$RUN_DIR/state"; mkdir -p "$STATE" && chmod 700 "$STATE"
-echo "  run dir     : $RUN_DIR"
+[ -e "$RUN_DIR" ] && die evidence "run directory already exists: $RUN_DIR" 17
+mkdir "$RUN_DIR" 2>/dev/null || die evidence "cannot create the run directory: $RUN_DIR" 17
+chmod 700 "$RUN_DIR" 2>/dev/null || die evidence "cannot restrict the run directory to 0700: $RUN_DIR" 17
+probe_writable "$RUN_DIR" "run directory"
+STATE="$RUN_DIR/state"
+mkdir "$STATE" 2>/dev/null || die evidence "cannot create the state directory: $STATE" 17
+chmod 700 "$STATE" 2>/dev/null || die evidence "cannot restrict the state directory to 0700: $STATE" 17
+probe_writable "$STATE" "state directory"
+echo "  run dir     : $RUN_DIR (0700, write-verified)"
 
 HEALTH="$STATE/health_before.json"
 "$PYTHON" "$CLIENT" health --endpoint "$ENDPOINT" --out "$HEALTH" >/dev/null 2>&1 \
@@ -206,7 +237,8 @@ echo "  process     : pid=$PID_BEFORE lstart='$LSTART_BEFORE'"
 echo "== plan =="
 echo "  passes=$PASSES interval=${INTERVAL}s window=${WINDOW_SECONDS}s open_budget=${OPEN_BUDGET}s expect=$EXPECT"
 if [ "$CONFIRM" -ne 1 ]; then
-  echo "DRY RUN: preflight passed, nothing was changed. Re-run with --confirm inside the approved window."
+  echo "DRY RUN: preflight passed, no gate operation was performed; preflight evidence kept in $RUN_DIR"
+  echo "         re-run with --confirm inside the approved window"
   exit 0
 fi
 

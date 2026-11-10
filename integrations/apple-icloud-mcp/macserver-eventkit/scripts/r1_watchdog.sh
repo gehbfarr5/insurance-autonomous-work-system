@@ -23,7 +23,8 @@
 # unverifiable restore is recorded as FIRED_RESTORE_FAILED and exits 6; it is
 # retried a bounded number of times and is never reported as success.
 #
-# Exit codes: 0 window disarmed normally, 2 usage, 6 restore FAILED (state kept).
+# Exit codes: 0 window disarmed normally, 2 usage, 4 state directory unusable
+#             (nothing was armed), 6 restore FAILED (state kept).
 #
 # Usage:
 #   r1_watchdog.sh --state-dir D --deadline-epoch E --open-budget S
@@ -59,7 +60,22 @@ done
 [ -n "$STATE_DIR" ] && [ -n "$DEADLINE" ] && [ -n "$BUDGET" ] && [ -n "$PLIST" ] && [ -n "$TOKEN_FILE" ] \
   || { echo "usage: r1_watchdog.sh --state-dir --deadline-epoch --open-budget --plist --token-file" >&2; exit 2; }
 
-mkdir -p "$STATE_DIR" && chmod 700 "$STATE_DIR"
+# The deadline protection is only real if its state can be recorded. A watchdog
+# that starts without a writable state directory would look armed and silently
+# fail to fire, so it refuses to run instead (the caller aborts the window).
+if ! mkdir -p "$STATE_DIR" 2>/dev/null; then
+  echo "[watchdog] FATAL: cannot create the state directory: $STATE_DIR" >&2
+  exit 4
+fi
+if ! chmod 700 "$STATE_DIR" 2>/dev/null; then
+  echo "[watchdog] FATAL: cannot restrict the state directory to 0700: $STATE_DIR" >&2
+  exit 4
+fi
+if ! : > "$STATE_DIR/.r1-write-probe.$$" 2>/dev/null; then
+  echo "[watchdog] FATAL: state directory is not writable: $STATE_DIR" >&2
+  exit 4
+fi
+rm -f "$STATE_DIR/.r1-write-probe.$$" 2>/dev/null || true
 STATUS="$STATE_DIR/watchdog_status.env"
 LOG="$STATE_DIR/watchdog.log"
 

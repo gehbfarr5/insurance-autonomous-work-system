@@ -565,6 +565,160 @@ PY
 [ $? -eq 0 ] && TOTAL=$((TOTAL + 3)) || { TOTAL=$((TOTAL + 3)); FAILS=$((FAILS + 1)); }
 stop_bridge
 
+echo "[19] a lock without a published owner is not called stale, and an old one is reclaimed"
+new_fixture; start_bridge
+write_items "$GOOD_ITEM"
+mkdir -p "$FX/lock/gate.lock"      # lock name exists, owner record never written
+: > "$FX/launchctl.log"
+CFG_SHA_BEFORE="$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')"
+R1_LOCK_DIR="$FX/lock" R1_LOCK_INIT_GRACE_SECONDS=60 "$GATE" close \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --out "$FX/unpublished.json" \
+  --lock-wait 3 --purpose unpublished-owner > "$FX/unpublished.out" 2>&1
+UNPUB_RC=$?
+eq "an owner-less lock inside the grace period is not reclaimed" "$UNPUB_RC" "7"
+eq "the config file was not touched" \
+  "$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_SHA_BEFORE"
+[ -s "$FX/launchctl.log" ] && check "no reload happened" 0 || check "no reload happened" 1
+python3 - "$FX/unpublished.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+checks = [
+    ("the receipt says the lock was the failure stage", d.get("failure_stage") == "lock"),
+    ("the receipt records that nothing reached the disk",
+     d.get("disk_written_before_failure") is False),
+]
+for name, ok in checks:
+    print(("  [PASS] " if ok else "  [FAIL] ") + name)
+sys.exit(0 if all(ok for _, ok in checks) else 1)
+PY
+[ $? -eq 0 ] && TOTAL=$((TOTAL + 2)) || { TOTAL=$((TOTAL + 2)); FAILS=$((FAILS + 1)); }
+touch -t 202001010000 "$FX/lock/gate.lock"   # same lock, now older than the grace
+R1_LOCK_DIR="$FX/lock" R1_LOCK_INIT_GRACE_SECONDS=60 "$GATE" close \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --out "$FX/oldunpub.json" \
+  --lock-wait 5 --purpose unpublished-owner-old > "$FX/oldunpub.out" 2>&1
+eq "an owner-less lock older than the grace is reclaimed" "$?" "0"
+grep -q "reclaimed a stale lock" "$FX/oldunpub.out" \
+  && check "the reclaim is recorded, not silent" 1 || check "the reclaim is recorded, not silent" 0
+[ -e "$FX/lock/gate.lock" ] && check "the reclaimed lock is gone" 0 || check "the reclaimed lock is gone" 1
+stop_bridge
+
+echo "[20] deterministic concurrency: the lock name is published atomically"
+new_fixture; start_bridge
+write_items "$GOOD_ITEM"
+: > "$FX/launchctl.log"
+MARK="$FX/paused-once"
+# First writer: paused after its owner record exists and before the name is
+# published. That is the exact interval the previous implementation could be
+# mistaken in. It resumes while the second writer is inside its critical section.
+R1_LOCK_DIR="$FX/lock" R1_TEST_LOCK_PAUSE_BEFORE_PUBLISH=4 \
+R1_TEST_LOCK_PAUSE_MARKER="$MARK" \
+  "$GATE" open --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --out "$FX/op1.json" \
+  --lock-wait 3 --purpose op1-paused > "$FX/op1.out" 2>&1 &
+OP1=$!
+for _ in $(seq 1 50); do [ -f "$MARK" ] && break; sleep 0.1; done
+[ -f "$MARK" ] && check "the first writer reached the pause point" 1 \
+  || check "the first writer reached the pause point" 0
+[ -e "$FX/lock/gate.lock" ] && check "no lock name exists while the owner is unpublished" 0 \
+  || check "no lock name exists while the owner is unpublished" 1
+eq "the owner record is already on disk before publication" \
+  "$(ls "$FX/lock/owners" 2>/dev/null | wc -l | tr -d ' ')" "1"
+# Second writer: holds the mutex for the whole time the first one resumes.
+R1_SETTLE_SECONDS=12 R1_LOCK_DIR="$FX/lock" "$GATE" open \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --out "$FX/op2.json" \
+  --lock-wait 10 --purpose op2-holder > "$FX/op2.out" 2>&1 &
+OP2=$!
+wait "$OP2"; OP2_RC=$?
+wait "$OP1"; OP1_RC=$?
+eq "the holder verified its own operation" "$OP2_RC" "0"
+eq "the writer that resumed into a held lock failed instead of proceeding" "$OP1_RC" "7"
+eq "exactly one reload happened in total" "$(grep -c kickstart "$FX/launchctl.log")" "1"
+python3 - "$FX/op1.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+checks = [
+    ("the loser's receipt is a lock failure", d.get("failure_stage") == "lock"),
+    ("the loser wrote nothing to the disk", d.get("disk_written_before_failure") is False),
+]
+for name, ok in checks:
+    print(("  [PASS] " if ok else "  [FAIL] ") + name)
+sys.exit(0 if all(ok for _, ok in checks) else 1)
+PY
+[ $? -eq 0 ] && TOTAL=$((TOTAL + 2)) || { TOTAL=$((TOTAL + 2)); FAILS=$((FAILS + 1)); }
+[ -e "$FX/lock/gate.lock" ] && check "no lock artifact is left after both writers" 0 \
+  || check "no lock artifact is left after both writers" 1
+R1_LOCK_DIR="$FX/lock" "$GATE" close --plist "$FX/conf/agent.plist" \
+  --config-file "$FX/conf/bridge.env" --token-file "$FX/token" --endpoint "$URL" \
+  --out "$FX/op3.json" --lock-wait 5 --purpose op3-after > "$FX/op3.out" 2>&1
+eq "the mutex is usable again afterwards" "$?" "0"
+stop_bridge
+
+echo "[21] an unusable evidence directory fails loudly before anything is touched"
+new_fixture; start_bridge
+write_items "$GOOD_ITEM"
+CFG_SHA_BEFORE="$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')"
+: > "$FX/launchctl.log"
+BIN="$BIN" FROZEN_SHA256="$SHA" "$WINDOW" \
+  --list-id "$LIST_ID" --expect-title "$TITLE" --expect-notes "$NOTES" \
+  --expect-due-utc "$DUE_UTC" --token-file "$FX/token" \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --endpoint "$URL" --work-dir "$FX/missing-parent/work" --label t21 --confirm \
+  --passes 1 --window-seconds 120 --open-budget 60 > "$FX/o21a" 2>&1
+eq "window refuses a --work-dir whose parent does not exist" "$?" "17"
+grep -q "parent of --work-dir does not exist" "$FX/o21a" \
+  && check "the refusal names the missing parent" 1 || check "the refusal names the missing parent" 0
+[ -e "$FX/missing-parent" ] && check "no tree was invented from a typo" 0 || check "no tree was invented from a typo" 1
+
+mkdir -p "$FX/ro"; chmod 500 "$FX/ro"
+BIN="$BIN" FROZEN_SHA256="$SHA" "$WINDOW" \
+  --list-id "$LIST_ID" --expect-title "$TITLE" --expect-notes "$NOTES" \
+  --expect-due-utc "$DUE_UTC" --token-file "$FX/token" \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --endpoint "$URL" --work-dir "$FX/ro" --label t21 --confirm \
+  --passes 1 --window-seconds 120 --open-budget 60 > "$FX/o21b" 2>&1
+eq "window refuses a --work-dir that is not writable" "$?" "17"
+grep -q "not writable" "$FX/o21b" && check "the refusal names the unwritable directory" 1 \
+  || check "the refusal names the unwritable directory" 0
+eq "the gate source was never touched" \
+  "$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_SHA_BEFORE"
+[ -s "$FX/launchctl.log" ] && check "no service was reloaded" 0 || check "no service was reloaded" 1
+
+R1_LOCK_DIR="$FX/lock" "$GATE" close --plist "$FX/conf/agent.plist" \
+  --config-file "$FX/conf/bridge.env" --token-file "$FX/token" --endpoint "$URL" \
+  --out "$FX/no-such-dir/close.json" --lock-wait 2 --purpose t21 > "$FX/o21c" 2>&1
+eq "gate refuses an --out under a directory that does not exist" "$?" "6"
+grep -q "evidence directory does not exist" "$FX/o21c" \
+  && check "the gate refusal is explicit" 1 || check "the gate refusal is explicit" 0
+R1_LOCK_DIR="$FX/lock" "$GATE" close --plist "$FX/conf/agent.plist" \
+  --config-file "$FX/conf/bridge.env" --token-file "$FX/token" --endpoint "$URL" \
+  --out "$FX/ro/close.json" --lock-wait 2 --purpose t21 > "$FX/o21d" 2>&1
+eq "gate refuses an --out in a directory it cannot write" "$?" "6"
+eq "neither refusal wrote the gate source" \
+  "$(shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_SHA_BEFORE"
+
+python3 "$SCRIPTS/r1_bridge_client.py" health --endpoint "$URL" \
+  --out "$FX/no-such-dir/health.json" > "$FX/o21e" 2>&1
+eq "client exits 4 on an unusable evidence directory" "$?" "4"
+grep -q "EVIDENCE_DIR_UNUSABLE" "$FX/o21e" \
+  && check "the client failure is distinguishable from a transport failure" 1 \
+  || check "the client failure is distinguishable from a transport failure" 0
+python3 "$SCRIPTS/r1_bridge_client.py" health --endpoint "$URL" \
+  --out "$FX/ro/health.json" > "$FX/o21f" 2>&1
+eq "client exits 4 on an unwritable evidence directory" "$?" "4"
+
+chmod 500 "$FX/ro"
+"$WATCHDOG" --state-dir "$FX/ro/wd" --deadline-epoch "$(( $(date +%s) + 30 ))" \
+  --open-budget 60 --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --poll 1 > "$FX/o21g" 2>&1
+eq "watchdog refuses to arm without a usable state directory" "$?" "4"
+grep -q "FATAL" "$FX/o21g" && check "the watchdog says FATAL, not silent success" 1 \
+  || check "the watchdog says FATAL, not silent success" 0
+chmod 700 "$FX/ro"
+stop_bridge
+
 echo
 echo "$((TOTAL - FAILS))/$TOTAL assertions passed"
 if [ "$FAILS" -ne 0 ]; then

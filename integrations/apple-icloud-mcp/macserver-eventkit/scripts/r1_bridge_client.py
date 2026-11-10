@@ -26,6 +26,7 @@ Exit codes
   0  expected outcome observed and all asserted fields matched
   2  precondition failure (bad arguments, token file, endpoint)
   3  transport / IO problem, result unknown
+  4  evidence directory unusable - nothing was attempted against the bridge
   5  batch directory already exists (evidence protection)
   20 fidelity mismatch (item found, field assertions failed)
   21 duplicate synthetic items (more than one match)
@@ -46,7 +47,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-SCRIPT_VERSION = "2.0.0"
+SCRIPT_VERSION = "2.1.0"
 
 UUID_RE = re.compile(
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
@@ -134,19 +135,64 @@ def _maybe_json(raw: str) -> Any:
         return None
 
 
+class EvidenceDirError(RuntimeError):
+    """The evidence path cannot be written; nothing this run produces is usable."""
+
+
+def ensure_dir_writable(path: str, what: str = "evidence directory") -> None:
+    """Prove a directory exists and accepts a write, by writing to it."""
+    if not os.path.isdir(path):
+        raise EvidenceDirError(f"{what} does not exist: {path}")
+    probe = os.path.join(path, f".r1-write-probe.{os.getpid()}")
+    try:
+        with open(probe, "w", encoding="utf-8") as handle:
+            handle.write("probe")
+    except OSError as exc:
+        raise EvidenceDirError(
+            f"{what} is not writable: {path} ({type(exc).__name__})"
+        ) from exc
+    finally:
+        try:
+            os.unlink(probe)
+        except OSError:
+            pass
+
+
+def ensure_out_dir(path: str) -> None:
+    """Prove that the *parent* of an output path is a writable directory.
+
+    The previous version opened the receipt path directly, so a missing parent
+    surfaced as `FAILED: FileNotFoundError` with the same exit code as a
+    transport error - an operator could not tell "the evidence directory is
+    wrong" from "the bridge did not answer". Creating the directory is
+    deliberately not done here: the caller that owns the run directory decides
+    its mode and its uniqueness, and silently inventing a tree from a typo is
+    how evidence ends up somewhere nobody looks.
+    """
+    ensure_dir_writable(os.path.dirname(os.path.abspath(path)) or ".")
+
+
 def emit(receipt: dict[str, Any], path: str) -> None:
+    ensure_out_dir(path)
     payload = mask_uuid(json.dumps(receipt, indent=2, ensure_ascii=False) + "\n")
-    with open(path, "w", encoding="utf-8") as handle:
-        handle.write(payload)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+        os.replace(tmp, path)  # a reader never sees a half-written receipt
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
 
 
 def fresh_dir(path: str) -> None:
     """Create a batch directory that must not already contain evidence."""
+    ensure_dir_writable(os.path.dirname(os.path.abspath(path)) or ".", "batch parent directory")
     if os.path.exists(path):
         if os.listdir(path):
             raise FileExistsError(path)
     else:
-        os.makedirs(path, mode=0o700)
+        os.mkdir(path, mode=0o700)
     os.chmod(path, 0o700)
 
 
@@ -550,6 +596,9 @@ def main() -> int:
             return 2
     try:
         return args.func(args)
+    except EvidenceDirError as exc:
+        print(f"EVIDENCE_DIR_UNUSABLE: {exc}", file=sys.stderr)
+        return 4
     except FileExistsError as exc:
         print(f"REFUSED: batch directory already contains evidence: {exc}", file=sys.stderr)
         return 5
