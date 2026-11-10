@@ -2,14 +2,14 @@
   "receipt_type": "R1_01_OFFLINE_DIAGNOSIS_RECEIPT",
   "task": "REM-R1-01",
   "executed_at": "2026-11-10T11:50:00Z",
-  "revision": 5,
-  "revision_note": "v5: the approved real diagnostic was executed and stopped at its first pass. A fresh bridge process enumerated the account and returned two reminder calendars; the bound identifier was not among them, so the list has left the account and R1 cannot be decided against it. The read path itself is not implicated: HTTP 200 on the enumeration, production store, Reminders authorized. Real operations were paused at that point per the authorization's mismatch rule, the gate was closed and re-verified, and the token and harness scripts were deleted afterwards. What this revision adds: F19 (the absent target), F20 (the enumeration is account-wide, not allowlist-filtered), and a corrected H4 (excluded as the cause of the historical empty reads, confirmed as the present state). No fidelity claim is made anywhere.",
+  "revision": 6,
+  "revision_note": "v6: the verdict is restated as BLOCKED_TARGET_NOT_VISIBLE. The previous revision said the list 'left the account', which is a causal claim the measurement does not support: all that was measured is that the current enumeration does not contain the target. Account change, sync lag, identity drift and a list sitting in Recently Deleted are all left open and listed explicitly. F20 is upgraded from a behavioural inference to a source-confirmed fact (/reminders/lists is account-wide; only the item endpoint is allowlisted), and F21 records the harness defect that made the same window fail independently of the target. The suggestion to count items in other lists is removed from next_step because it widened the data scope. No new real read was performed.",
   "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
   "scope": "offline_work_plus_r1_layer_a_execution",
-  "r1_status": "BLOCKED_TARGET_LIST_ABSENT",
+  "r1_status": "BLOCKED_TARGET_NOT_VISIBLE",
   "stage_status": {
     "verdict": "BLOCKED",
-    "assertion": "R1 was executed and stopped at its first pass: the bound list 9D9A****03F3 is no longer among the calendars EventKit returns on MAC-1 (visible_list_count=2, target_visible=false, HTTP 200). R1 PASS requires reading a known synthetic item from the bound list; with the binding gone there is nothing to read, and no field fidelity was measured. This is a binding failure, not a read-path failure.",
+    "assertion": "R1 reached one measurement and stopped there: the current EventKit enumeration on MAC-1 is HTTP 200 with two reminder calendars and does not contain the bound identifier 9D9A****03F3. That supports 'not visible now' and nothing stronger - not deletion, not an account change, not a sync verdict. R1 PASS would require reading a known synthetic item from the bound list, so no field fidelity was measured and none may be claimed. The same window was also blocked by an independent harness defect: the client required exactly one visible list, which this account cannot satisfy.",
     "detail_receipt": "receipts/R1_01_DIAGNOSTIC_RESULT_RECEIPT.json",
     "closure_receipt": "receipts/R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json"
   },
@@ -296,22 +296,34 @@
     },
     {
       "id": "F19",
-      "fact": "On 2026-11-10T14:45:13Z a freshly started bridge process (pid 33694, started by the window's own open) enumerated the account and returned exactly two reminder calendars; the bound identifier 9D9A****03F3 was not among them (visible_list_count=2, target_visible=false, http_status=200). The same endpoint returned three lists including that identifier on 2026-11-07T14:37:11Z (B2) and the identifier still resolved on 2026-11-09T16:50Z (AG-07). The bound list therefore left the account between those observations and this window, and the binding is currently invalid.",
+      "fact": "On 2026-11-10T14:45:13Z a freshly started bridge process (pid 33694, started by the window's own open) enumerated the account and returned exactly two reminder calendars; the bound identifier 9D9A****03F3 was not among them (visible_list_count=2, target_visible=false, http_status=200). The same endpoint returned three lists including that identifier on 2026-11-07T14:37:11Z (B2), and the identifier still resolved on 2026-11-09T16:50Z (AG-07). The target is therefore not visible to EventKit on MAC-1 now. What is NOT established: that the list was deleted, that it left the account, that the account changed, or when any of that might have happened. Each of those remains open and is enumerated in the result receipt's 'unexcluded' list.",
       "evidence": [
         "r1-evidence/20261110T143931Z/window-20261110T144506Z-targetprobe/batch-1-targetprobe/capture.json",
         "receipts/B2_TCC_AND_METADATA_RECEIPT.json (lists_discovered_count: 3)",
         "receipts/AG07_MUSE_FRONTEND_ACCEPTANCE_RECEIPT.json (step 2 PASS)"
       ],
-      "strength": "strong (direct measurement on a fresh process; the two earlier observations are archived receipts)"
+      "strength": "strong for the present enumeration; deliberately silent on the cause"
     },
     {
       "id": "F20",
-      "fact": "GET /reminders/lists is not filtered by the allowlist: the window's enumeration returned two calendars while the configuration carries exactly one allowlisted entry (static_config: allowed_list_count=1, allowed_list_matches_target=true). The count therefore describes the whole account, which is what makes 'two lists and neither is the target' a statement about the account rather than about the filter.",
+      "fact": "GET /reminders/lists is account-wide and is NOT filtered by the allowlist. Source: EventKitBridgeServer.swift .listReminders (lines 397-414) calls store.fetchListsMetadata() and encodes the result with no allowlistValidator call; the allowlist runs only on .getReminders(listID:) (line 419). Behaviour agrees: the window's enumeration returned two calendars while the configuration carries exactly one allowlisted entry (static_config: allowed_list_count=1, allowed_list_matches_target=true), and B2 returned three under the same one-entry allowlist. The application's section 6 asserted the opposite and has been corrected in place.",
       "evidence": [
+        "Sources/EventKitBridge/Bridge/EventKitBridgeServer.swift:397-425",
+        "Sources/EventKitBridge/Protocol/RemindersList.swift:38-61",
         "window-20261110T144506Z-targetprobe/state/static_config.json",
         "window-20261110T144506Z-targetprobe/batch-1-targetprobe/capture.json"
       ],
-      "strength": "strong (count and allowlist size are both observed, not inferred)"
+      "strength": "strong (source and behaviour agree; deployment caveat handled in the result receipt's deployment_evidence_boundary)"
+    },
+    {
+      "id": "F21",
+      "fact": "Client 2.1.0 encoded the same false promise as a hard precondition: it asserted single_visible_list (len(lists) == 1) and exited 20 in the same branch as a missing target. On an account with two other lists the capture could therefore never proceed, even with the target present. The window's exit 20 is over-determined - target absent AND an unsatisfiable precondition - so 'the window stopped because the target is missing' is incomplete, even though target_visible=false is measured independently.",
+      "evidence": [
+        "scripts/r1_bridge_client.py (2.1.0: single_visible_list assertion + len(lists) != 1 branch)",
+        "scripts/tests/test_r1_bridge_client.py scenario 11 (old expectation: two visible lists -> exit 20)"
+      ],
+      "strength": "strong (the branch is four lines of Python and the account has more than one list)",
+      "fix": "2.2.0 drops the assertion, keeps the account-wide count as context, and gates only on the target's presence; scenario 11 now asserts both halves - proceeds when the target is among two lists and still persists no other list's metadata, exits 20 only when the target is absent."
     }
   ],
   "limitations": [
@@ -530,6 +542,21 @@
           "P5: the first restore is proven by a read-only authenticated read; a remedial close is recorded separately and cleanup waits until the watchdog is confirmed gone",
           "--check-authorization: the artifact fact is corrected using archived AG-06 evidence instead of being left UNKNOWN"
         ]
+      },
+      {
+        "sha": "a115f82",
+        "subject": "fix(diag): drop the single-list precondition and make token extraction refuse ambiguity",
+        "files": [
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_bridge_client.py (2.2.0)",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_token_extract.sh (new)",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/tests/test_r1_bridge_client.py",
+          "integrations/apple-icloud-mcp/macserver-eventkit/scripts/tests/test_r1_token_extract.sh (new)"
+        ],
+        "closes_gaps": [
+          "F21: the client no longer requires exactly one visible list, so the capture is gated on the target's presence alone",
+          "F20 consequence: the account-wide count is recorded as context with boundary.non_target_metadata_persisted, and no other list's title or identifier is written",
+          "token quoting: normalisation moved into one entry point with hard refusals, and the client names a quoted value instead of letting it become a 401"
+        ]
       }
     ],
     "runtime_code_changed": false,
@@ -542,7 +569,8 @@
         "id": "F6",
         "reason": "Confirmed mislabel, but the fix changes the error taxonomy of a signed binary, which costs a rebuild plus a TCC re-grant. Deferred to the next authorized rebuild, bundled with an injectable seam so it can carry a real test."
       }
-    ]
+    ],
+    "documentation_revision": "A second commit carries the restated verdict, the why_two_lists review, the corrected section 6 of the application and the new R1-02 application. It contains no code change."
   },
   "tests": {
     "r1_capture_offline_differential": {
@@ -576,14 +604,16 @@
       "harness": "launchctl / codesign / pgrep / ps replaced by stubs; bridge is the loopback fake_bridge.py",
       "instantiates_real_store": false,
       "triggers_tcc": false,
-      "registers_real_launchd_job": false
+      "registers_real_launchd_job": false,
+      "rerun_note": "Re-run in this revision after the client change: 125/125, rc=0, 4m44s. Two foreground attempts were terminated by the execution environment at ~120s (exit 137, no output); the background run completed. The fixture uses one visible list, which is unchanged behaviour."
     },
     "r1_bridge_client_offline": {
       "command": "python3 scripts/tests/test_r1_bridge_client.py",
       "result": "PASS",
-      "detail": "53/53 assertions across 17 scenarios: empty list, non-empty fidelity, duplicate items, wrong date encoding, priority 0, completed item, empty itemID, fake store refused as evidence, two visible lists, cleanup not effective, populated evidence dir refused, loose token permissions refused, whole-directory token leak scan, unreachable bridge, non-loopback endpoint refused, 3xx refused instead of followed, proxy environment cannot divert the request.",
+      "detail": "63/63 assertions across 17 scenarios (2.1.0 had 53; 2.2.0 adds 10): empty list, non-empty fidelity, duplicate items, wrong date encoding, priority 0, completed item, empty itemID, fake store refused as evidence, account-wide enumeration with the target present among two lists (proceeds, and no other list's title or identifier is persisted) and with the target absent among two lists (the only case that exits 20), cleanup not effective, populated evidence dir refused, loose token permissions refused, whole-directory token leak scan, unreachable bridge, non-loopback endpoint refused, 3xx refused instead of followed, proxy environment cannot divert the request.",
       "instantiates_real_store": false,
-      "triggers_tcc": false
+      "triggers_tcc": false,
+      "version": "2.2.0"
     },
     "gate_mutex_atomicity": {
       "command": "bash scripts/tests/test_r1_window.sh  (scenarios 19-20)",
@@ -599,6 +629,14 @@
       "detail": "Window exits 17 for a --work-dir whose parent does not exist (no tree is invented) and for one that is not writable; gate exits 6 for a missing and for an unwritable --out directory; the client exits 4 with EVIDENCE_DIR_UNUSABLE; the watchdog exits 4 with FATAL. Every case also asserts that the production config is byte-identical and the launchctl log stayed empty.",
       "instantiates_real_store": false,
       "triggers_tcc": false
+    },
+    "r1_token_extract_quoting": {
+      "command": "bash scripts/tests/test_r1_token_extract.sh",
+      "result": "PASS",
+      "detail": "24/24 assertions across 4 groups. The defect that produced the first P0 failure: a double-quoted value in bridge.env was extracted with its quotes (66 bytes) and answered 401 instead of 403. Covered: double-quoted value is stripped (file content and byte count asserted), single-quoted, unquoted, surrounding whitespace, CRLF, short value refused, empty refused, missing key refused, duplicate key with differing values refused rather than guessed, nested quoting refused, existing destination not overwritten, missing destination directory refused, glob in key refused, the secret is never printed, and the client raises TokenFileError (exit 2, message names the quotes) instead of sending a quoted token and receiving an opaque 401.",
+      "instantiates_real_store": false,
+      "triggers_tcc": false,
+      "uses_real_credential": false
     }
   },
   "operations_log": {
@@ -606,7 +644,8 @@
     "files_written": [
       "worktree: receipts/R1_01_DIAGNOSTIC_RESULT_RECEIPT.json, receipts/R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json, this revision",
       "MAC-1 evidence tree /Users/jin/r1-evidence/20261110T143931Z (retained, 0600)",
-      "MAC-1 temporary harness dir, created for this run and deleted at the end"
+      "MAC-1 temporary harness dir, created for this run and deleted at the end",
+      "receipts/R1_02_NATIVE_LIST_PRESENCE_APPLICATION.md (new minimal application; no execution)"
     ],
     "files_or_data_read": [
       "GET /health and GET /reminders/lists over loopback only",
@@ -617,16 +656,17 @@
     "deployments": "none; the frozen artifact f78e24e5...3074 was used as-is",
     "service_restarts": "2, both by the gate's single entry point",
     "gates_opened": "1 (one window, one open, one close; cumulative open time under 10 seconds of the approved 600)",
-    "real_apple_data": "list metadata only (masked identifiers and digests). Zero reminder items read: the capture aborted at the identity check before issuing any item query.",
+    "real_apple_data": "list metadata only (masked identifiers and digests) during the 2026-11-10 window. Zero reminder items read. This revision performed no MAC-1 access at all: it is documentation plus offline tests.",
     "tcc_prompts": "none",
     "credential_operations": "the existing bearer token was extracted once to a 0600 file, used, and deleted after the watchdog was confirmed gone",
     "seoul_or_network_changes": "none",
     "remote_writes": "evidence tree and temporary harness on MAC-1 only; branch push, no merge, no PR"
   },
   "next_step": {
-    "action": "Report BLOCKED_TARGET_LIST_ABSENT and hand the decision back to the focal point. Three options are laid out in receipts/R1_01_DIAGNOSTIC_RESULT_RECEIPT.json: restore the list on the account, rebind to a list that exists (needs a new approval item), or answer the original empty-read question with a read-only item count over the lists that do exist.",
-    "on_decision": "No real operation resumes until the focal point picks one. Option 3 is the cheapest and needs no rebinding; option 2 changes configuration beyond the single business-gate key and must not be improvised.",
-    "not_before_r1": "No R2 proposal before R1 reaches a verdict the focal point accepts; no PR merge; no rebuild.",
+    "action": "A separate minimal application: a native-app observation on MAC-1 to confirm whether the dedicated list exists and which account it belongs to (receipts/R1_02_NATIVE_LIST_PRESENCE_APPLICATION.md). No restore, no create, no rebind, no gate, no token, no bridge call, no item content.",
+    "on_decision": "If that observation shows a restore, a creation or a rebinding is needed, it is proposed on its own with the concrete object, the risk and the rollback. It is never presented as an implied next step of a read.",
+    "removed_on_review": "The earlier 'count items in every visible list' proposal is withdrawn: it reads lists outside the binding and their counts, which widens the data scope without resolving anything the binding question does not.",
+    "not_before_r1": "No R2 proposal while R1 is unresolved; no PR merge; no rebuild.",
     "r1_r2_separation": "Unchanged: R1 is a MacServer-local diagnosis, R2 is MUSE front-end acceptance, and neither substitutes for the other."
   }
 }

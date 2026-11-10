@@ -10,7 +10,7 @@
 
 ## 0.0 执行结果（2026-11-10T14:39Z–14:48Z，已按批准执行）
 
-批准生效后按 §15 执行，在 **P1 第一批就停下**，结论为 `BLOCKED_TARGET_LIST_ABSENT`。详细回执：`R1_01_DIAGNOSTIC_RESULT_RECEIPT.json`、`R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json`。
+批准生效后按 §15 执行，在 **P1 第一批就停下**，结论为 `BLOCKED_TARGET_NOT_VISIBLE`。详细回执：`R1_01_DIAGNOSTIC_RESULT_RECEIPT.json`、`R1_01_P5_CLOSURE_AND_ZERO_RESIDUE.json`。
 
 | 项目 | 实测结果 |
 | :--- | :--- |
@@ -19,17 +19,17 @@
 | 闸门来源 | `launchd_env`（plist 为 `false`）；开闸后 200、关闸后 403，均按行为验证 |
 | 账户可见列表 | **2 条**（`visible_list_count=2`），**目标 `9D9A****03F3` 不在其中**（`target_visible=false`） |
 | 客户端判定 | `ERROR_TARGET_LIST_IDENTITY`，退出 20，**未发出任何事项查询**（0 条事项被读取） |
-| 历史对照 | B2（11-07T14:37Z）同端点返回 **3 条**且含该标识；AG-07（11-09T16:50Z）该标识仍可解析 → 列表在**最近约 22 小时内**从账户中消失 |
+| 历史对照 | B2（11-07T14:37Z）同端点返回 **3 条**且含该标识；AG-07（11-09T16:50Z）该标识仍可解析。**只能说明"当时被枚举、此刻未被枚举"，不能说明何时、因何消失** |
 | 恢复 | 关闸 PASS、plist 与开闸前**逐字节相同**（`9da02bf9b6d2`）、单进程 pid 33771、令牌仍在也被 403 拒绝 |
 | 零残留 | 令牌与 4 个脚本在确认看门狗退出后删除，harness 目录已移除，无残留进程；证据目录保留 |
 | 开闸预算 | 实测开闸约 8 秒（批准上限 600 秒），会话 9 分钟（上限 45 分钟） |
 | 字段对照 | **不适用**：0 条事项被读，未比对任何字段，**不得**据此声称保真度通过 |
 
-**为什么停下**：批准文本要求"目标、产物或绑定不符时暂停相关真实操作，保留证据并报告"。目标绑定已不符，因此未做第二批、未延长窗口、未擅自把配置改绑到别的列表。
+**为什么停下**：批准文本要求"目标、产物或绑定不符时暂停相关真实操作，保留证据并报告"。目标未被枚举到，因此未做第二批、未延长窗口、未擅自把配置改绑到别的列表。**同时如实记录第二个独立原因**：当时的客户端 2.1.0 把"只能看到 1 条列表"写成硬前置（§6 已更正该错误承诺），在这个账户上即使目标存在也会以 20 退出——所以这次 20 是**双重原因**，不能单归因于目标不可见。
 
 **未做的事**：A11 GUI 自动化、A12 历史回执改写、二进制重建/重签、Seoul 或隧道变更、写功能扩展与完整网关试运行、R2 —— 全部未执行。
 
-**留给决策点的三个选项**（详见结果回执 `next_options`）：① 在账户侧恢复该列表（用户操作，不改工程配置）；② 改绑到一个确实存在的列表（**超出**本次"业务闸门单键"授权，需新批准项）；③ 用一次只读枚举对**现有**列表做事项计数，独立回答"历史上为什么 `200 + []`"（无需改绑）。
+**下一步**：`R1_02_NATIVE_LIST_PRESENCE_APPLICATION.md`（原生 App 目视核对列表是否存在及账户归属；零命令、零开闸、零读取）。恢复 / 新建 / 改绑都不在本轮，也不在下一轮；确需时按该申请 §6 的具体对象、风险与回退单独提出。（先前"用只读枚举给其它列表做事项计数"的建议**已撤回**：它越过绑定去读别的列表及其计数，扩大数据范围却解决不了绑定问题。）
 
 ---
 
@@ -184,7 +184,8 @@ v2 曾写"该参数在源码中不存在"，**这是错的**——我当时的�
 | `r1_window.sh` | 自闭合窗口编排（480 行） | `b728467aabbccb603007aca49b1acdb0afffd8483836ce061548b28b3dfdac55` |
 | `r1_gate.sh` | 唯一开/关闸入口（610 行） | `7e3d006310202613b21cb5675ccf1f14af8df7d8b59b2d96e317782585568da1` |
 | `r1_watchdog.sh` | 独立期限看门狗（178 行） | `eb1336480e3b83d89df12921a669e165c0e76cbf994893f7c9f20f748b309d43` |
-| `r1_bridge_client.py` | 只读客户端（611 行） | `a95ae5704d612f7d49d74e5d27f6e5834b82e137cb44f5aecf72f8bb08478cc6` |
+| `r1_bridge_client.py` | 只读客户端 v2.2.0（645 行） | `ead96a5de51bd12938542cdf6de48c86dcb27a1699483fcb8c3c361222c65e57` |
+| `r1_token_extract.sh` | 单键令牌提取，含引号断言（137 行） | `bec944107a19394754f1aef561a4e397f3e798260cb1bd59990f3466bc96e4a0` |
 | `token` | 临时令牌文件，`0600`，**所有恢复结束且看门狗退出确认后**才删 | 不记录（内容永不落回执） |
 
 - **不**安装到 PATH、**不**新增 LaunchAgent、**不**改 launchd 配置、**不**新增常驻进程、**不**新增二进制、**不** pip 安装。
@@ -196,17 +197,17 @@ v2 曾写"该参数在源码中不存在"，**这是错的**——我当时的�
 用户**不需要**手工输入或粘贴令牌。批准 A3 后，WorkBuddy 在 MacServer 上以单键提取方式生成临时文件：
 
 ```bash
-umask 077
-awk -F= '/^EVENTKIT_BRIDGE_BEARER_TOKEN=/{sub(/^EVENTKIT_BRIDGE_BEARER_TOKEN=/,""); print; exit}' \
-  "$HOME/.config/muse-macserver/bridge.env" \
-  | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//' > "$HARNESS/token"
-chmod 600 "$HARNESS/token"
-test -s "$HARNESS/token" || { echo "TOKEN_UNAVAILABLE"; exit 2; }
+"$HARNESS/r1_token_extract.sh" \
+  --env-file "$HOME/.config/muse-macserver/bridge.env" \
+  --key EVENTKIT_BRIDGE_BEARER_TOKEN \
+  --out "$HARNESS/token"
 ```
 
-约束：只提取**这一个键**；不打印、不进 argv、不进环境变量、不进日志或回执；窗口结束随 harness 目录删除。若该文件不存在 → `BLOCKED`，**不**尝试其他凭据来源、**不**回退到用户手工输入。
+约束：只提取**这一个键**；不打印、不进 argv、不进环境变量、不进日志或回执；窗口结束随 harness 目录删除。若该文件不存在 → `BLOCKED`，**不**尝试其他凭据来源、**不**回退到用户手工输入。脚本只输出 `shape=`、字节数与摘要前缀，**永远不输出值本身**。
 
-> **执行期发现的写法缺陷（已更正，如实记录）**：`bridge.env` 中该键的值**自带双引号**。按 v3 原来的写法直接 `awk` 提取，得到的是 66 字节的带引号值，服务端认证失败 → 端点返回 **401 而不是 403**，P0 干跑因此报 `PRECONDITION_FAIL[gate]`。加 `sed` 去引号后为 65 字节（含结尾换行），干跑通过。这是**申请文档的写法缺陷**，不是 Bridge 的缺陷；401 与 403 的区别见 F16（认证先于闸门判定，因此 401 不能当成"闸门已关"的证据）。
+> **执行期发现的写法缺陷（已修，且改为单一入口）**：`bridge.env` 中该键的值**自带双引号**。按 v3 原来的写法直接 `awk` 提取，得到 66 字节的带引号值，服务端认证失败 → 端点返回 **401 而不是 403**，P0 干跑因此报 `PRECONDITION_FAIL[gate]`。这是**申请文档的写法缺陷**，不是 Bridge 的缺陷；401 与 403 的区别见 F16。
+>
+> 修法不是"记住要加 sed"，而是把它变成一个带断言的入口 `scripts/r1_token_extract.sh`：去一层引号、去 CRLF 的 CR、去首尾空白；键缺失/值为空/同键出现不同值/嵌套引号/目标已存在 → 一律**硬失败**（退出 2 或 3），不猜。同时客户端 `read_token()` 在发送前拒绝仍带引号的值并**指名引号问题**（`TokenFileError`，退出 2），避免再次变成一个看不出原因的 401。针对性离线验证：`scripts/tests/test_r1_token_extract.sh`，24 项断言全通过（含"引号值→正确剥离""重复键不同值→拒绝""secret 从不被打印"）。
 
 ---
 
@@ -309,16 +310,20 @@ test -s "$HARNESS/token" || { echo "TOKEN_UNAVAILABLE"; exit 2; }
 
 ---
 
-## 6. 唯一列表与唯一合成事项
+## 6. 绑定列表（枚举为账户级）与唯一合成事项
 
 公开别名 **LIST-ALPHA**（`9D9A****03F3`）。完整标识只进受限本地记录 `~/.config/muse-r1/identity.private.json`（0600），不进申请、回执或提交。
 
-身份对应（只涉及一个列表）：
+身份对应（只涉及一个**读取对象**，但枚举本身是账户级的）：
 
-1. `GET /reminders/lists` 受 `EVENTKIT_BRIDGE_ALLOWED_LIST_IDS` 白名单约束，只返回已绑定的那一个列表；
+1. ~~`GET /reminders/lists` 受 `EVENTKIT_BRIDGE_ALLOWED_LIST_IDS` 白名单约束，只返回已绑定的那一个列表~~
+   **这句是错的，2026-11-10 执行后更正**：`/reminders/lists` **不做白名单过滤**，它返回该账户下**全部**提醒事项列表。白名单只作用于条目端点 `GET /reminders/lists/{listID}/items`（`EventKitBridgeServer.swift`：`.listReminders` → `fetchListsMetadata()`，无 `allowlistValidator` 调用；`.getReminders` 第 419 行才 `try allowlistValidator.validate(listID:)`）。实测也印证：白名单只有 1 条时枚举返回 2 条（见结果回执 F20/F21）。
+   **这对本申请的后果**：不能把"只能看到一个列表"当成身份证据。身份只能靠**在返回集合中定位目标并以四元组核对**来判定；账户里还有别的列表属于**正常现象**，不是越权，也不是异常。
 2. 四元组一致：`listID` = 绑定值、`sourceType` = `calDAV`、`sourceName` = `iCloud`、`sourceID` = 绑定值；
 3. 记录 `calendarIdentifier` / `sourceIdentifier` 完整值到受限记录；
 4. 报告中只出现掩码。
+
+> 枚举返回的是账户级元数据（`listID`、`title`、`sourceID`、`sourceType`、`sourceName`、`color`、`isImmutable`，**不含**数量与内容）。因此"不扩大数据范围"的正确做法**不是**假设端点只返回一条，而是：**只把目标那一条的字段落盘**，其余列表的标题与标识**不写入任何证据文件**（客户端 2.2.0 起在 `boundary.non_target_metadata_persisted` 显式记录这一点）。
 
 > `writable:false` 是网关代码常量，不作为身份或权限证据。
 
@@ -455,8 +460,9 @@ REMAIN=$(( T0 + 2700 - $(date +%s) ))   # 第一次与第二次都用这个值
 
 | 命令 | 结果 | 覆盖 |
 | :--- | :--- | :--- |
-| `python3 scripts/tests/test_r1_bridge_client.py` | **53/53 通过**（本轮改动后回归，未新增条目） | 空列表 / 非空保真 / 重复事项 / 错误日期 / priority 0 / isCompleted / 空 itemID / fake store / 多列表 / 清理未生效 / 证据目录占用 / 令牌权限 / 全目录令牌扫描 / 不可达 / 非回环拒绝 / **3xx 拒绝** / **代理改道拒绝** |
-| `bash scripts/tests/test_r1_window.sh` | **125/125 通过** | 上述 91 项全部保留，新增：<br>**[19]** 无 owner 的锁在宽限期内**不被回收**（且无重载、配置字节不变、回执 `failure_stage=lock` + `disk_written_before_failure=false`），把同一把锁 mtime 改老后才回收并留痕<br>**[20] 确定性并发**：首个持有者在"owner 记录已写、锁名未发布"处暂停（测试注入点，生产无该变量即失效），此时断言"锁名不存在、owner 记录已在盘"；第二个操作持锁期间首个恢复运行 → 首个退出 **7**、全流程**只有一次重载**、败者未写盘、结束后无锁残留、互斥仍可复用<br>**[21]** 证据目录不可用：`--work-dir` 父目录不存在（不 invent 目录树）/ 不可写 → **17**；`gate --out` 目录不存在 / 不可写 → **6**；客户端 → **4** + `EVIDENCE_DIR_UNUSABLE`（与传输失败可区分）；看门狗状态目录不可建 → **FATAL/4**；以上均断言"生产配置与 launchctl 日志零变化" |
+| `python3 scripts/tests/test_r1_bridge_client.py` | **63/63 通过**（客户端升 2.2.0 后回归，+10 项） | 空列表 / 非空保真 / 重复事项 / 错误日期 / priority 0 / isCompleted / 空 itemID / fake store / **账户级枚举（目标在 2 条中→继续且不落非目标元数据；目标不在→唯一以 20 退出）** / 清理未生效 / 证据目录占用 / 令牌权限 / 全目录令牌扫描 / 不可达 / 非回环拒绝 / **3xx 拒绝** / **代理改道拒绝** |
+| `bash scripts/tests/test_r1_token_extract.sh` | **24/24 通过**（本轮新增） | **双引号值→剥离**（P0 干跑失败的那个形状）/ 单引号 / 无引号 / 首尾空白 / CRLF / 短值拒绝 / 空值拒绝 / 缺键拒绝 / 同键不同值拒绝 / 嵌套引号拒绝 / 目标已存在不覆盖 / 目标目录不存在 / 键含通配符拒绝 / **secret 从不被打印** / **客户端对带引号令牌报 `TokenFileError` 而非 401** |
+| `bash scripts/tests/test_r1_window.sh` | **125/125 通过**（后台执行，用时 4m44s，rc=0） | 上述断言全部保留。本轮只改了客户端，窗口夹具走单列表路径（目标可见 → 继续），不需要改夹具。**过程如实记录**：前台执行两次都在约 120s 处被运行环境终止（exit 137，无输出），改后台执行后跑完并通过——这两次终止是执行环境限制，不是测试失败，也不拿"应该通过"代替结果 |
 | `python3 scripts/write_build_metadata.py --self-test` | **7/7 通过** | 溯源字段完整性、脏树标记、二进制变更检测 |
 | `swift test --disable-sandbox`（此前已跑，未改动 Swift 源码） | 91/91 通过 | 桥实现与协议 |
 
@@ -529,9 +535,10 @@ scp integrations/apple-icloud-mcp/macserver-eventkit/scripts/r1_window.sh \
 ssh macserver-ts "cd $HARNESS && shasum -a 256 r1_window.sh r1_gate.sh r1_watchdog.sh r1_bridge_client.py && chmod 700 *.sh *.py"
 # 逐个比对 §3.2 的哈希；不一致即停止，报 BLOCKED
 
-# 令牌准备（A3；用户不参与输入）
-ssh macserver-ts "umask 077; awk -F= '/^EVENTKIT_BRIDGE_BEARER_TOKEN=/{sub(/^EVENTKIT_BRIDGE_BEARER_TOKEN=/,\"\"); print; exit}' \
-  ~/.config/muse-macserver/bridge.env > $HARNESS/token && chmod 600 $HARNESS/token && test -s $HARNESS/token" \
+# 令牌准备（A3；用户不参与输入；引号处理有断言，见 §3.3）
+ssh macserver-ts "$HARNESS/r1_token_extract.sh \
+  --env-file ~/.config/muse-macserver/bridge.env \
+  --key EVENTKIT_BRIDGE_BEARER_TOKEN --out $HARNESS/token" \
   || { echo "TOKEN_UNAVAILABLE - BLOCKED"; }
 
 # 干跑：只读前置 + 计划打印，不产生任何变更
