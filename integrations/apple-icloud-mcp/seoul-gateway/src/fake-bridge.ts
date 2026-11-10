@@ -14,6 +14,7 @@
  */
 
 import http from 'node:http';
+import fs from 'node:fs';
 import type { ReminderItem, RemindersList } from './types.ts';
 
 export interface RecordedRequest {
@@ -30,6 +31,7 @@ export interface FakeBridgeOptions {
   mockLists?: RemindersList[];
   mockItems?: Record<string, ReminderItem[]>;
   useSwiftDateEncoding?: boolean;
+  configFile?: string;
 }
 
 export class FakeEventKitBridge {
@@ -42,6 +44,7 @@ export class FakeEventKitBridge {
   public mockLists: RemindersList[];
   public mockItems: Map<string, ReminderItem[]>;
   public useSwiftDateEncoding: boolean;
+  public configFile?: string;
 
   // Fault injection controls
   public delayMs: number = 0;
@@ -60,11 +63,47 @@ export class FakeEventKitBridge {
     this.mockLists = options.mockLists || [];
     this.mockItems = new Map();
     this.useSwiftDateEncoding = options.useSwiftDateEncoding ?? true;
+    this.configFile = options.configFile || process.env.EVENTKIT_BRIDGE_CONFIG_FILE;
 
     if (options.mockItems) {
       for (const [k, v] of Object.entries(options.mockItems)) {
         this.mockItems.set(k, v);
       }
+    }
+
+    this.reloadFromConfig();
+
+    // SIGHUP configuration reload support
+    try {
+      process.on('SIGHUP', () => {
+        this.reloadFromConfig();
+      });
+    } catch {}
+  }
+
+  public reloadFromConfig(): void {
+    const configPath = this.configFile || process.env.EVENTKIT_BRIDGE_CONFIG_FILE;
+    if (configPath && fs.existsSync(configPath)) {
+      try {
+        const content = fs.readFileSync(configPath, 'utf8');
+        for (const line of content.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const eq = trimmed.indexOf('=');
+          if (eq === -1) continue;
+          const k = trimmed.slice(0, eq).trim();
+          let v = trimmed.slice(eq + 1).trim();
+          if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+            v = v.slice(1, -1);
+          }
+          if (k === 'EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED' || k === 'EVENTKIT_PRODUCTION_AUTHORIZED') {
+            this.productionAuthorized = (v === 'true' || v === '1');
+          }
+          if (k === 'EVENTKIT_BRIDGE_BEARER_TOKEN') {
+            this.validToken = v;
+          }
+        }
+      } catch {}
     }
   }
 

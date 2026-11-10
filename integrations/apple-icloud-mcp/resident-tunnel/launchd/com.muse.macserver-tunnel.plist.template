@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      AG-05 MacServer Resident Reverse SSH Tunnel Launchd Service
+      Manages the run-resident-tunnel.sh supervisor lifecycle under macOS user launchd domain:
+      gui/501 (or user launch agents ~/Library/LaunchAgents/com.muse.macserver-tunnel.plist)
+    -->
+    <key>Label</key>
+    <string>com.muse.macserver-tunnel</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__RUNNER_SCRIPT_PATH__</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>CONFIG_DIR</key>
+        <string>__CONFIG_DIR__</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <!-- If supervisor exits cleanly with 0 on SIGTERM/SIGINT, launchd won't immediately respawn -->
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>__CONFIG_DIR__/launchd.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>__CONFIG_DIR__/launchd.stderr.log</string>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

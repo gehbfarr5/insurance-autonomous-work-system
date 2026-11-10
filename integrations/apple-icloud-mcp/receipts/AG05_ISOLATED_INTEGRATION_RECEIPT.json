@@ -1,0 +1,40 @@
+{
+  "receipt_id": "AG05-ISOLATED-INTEGRATION-1794206999",
+  "task": "AG-05 Resident Read-Only Candidate Isolated Integration",
+  "execution_timestamp": "2026-11-09T06:49:59Z",
+  "git_commit": "de8aa004ac3a95d74eaed02a99cc24cca027b7da",
+  "tree_sha": "939691068a0e92a5c1a6dc36129cb712b4692f58",
+  "test_environment": {
+    "type": "ISOLATED_REAL_PROCESSES",
+    "host_os": "macOS",
+    "ports": {
+      "isolated_sshd": 22266,
+      "fake_bridge": 18777,
+      "reverse_forward": 18766
+    },
+    "fixtures": {
+      "list_id": "00000000-0000-0000-0000-000000000001",
+      "source_id": "00000000-0000-0000-0000-000000000002"
+    }
+  },
+  "assertions": [
+    { "name": "interactive_shell_rejection", "result": "PASS", "details": "ssh rejected with non-zero exit code" },
+    { "name": "arbitrary_command_rejection", "result": "PASS", "details": "remote command execution blocked" },
+    { "name": "unapproved_forward_rejection", "result": "PASS", "details": "permitlisten strictly rejected port 19999" },
+    { "name": "host_key_mismatch_rejection", "result": "PASS", "details": "known_hosts mismatch strictly rejected" },
+    { "name": "approved_reverse_forward_success", "result": "PASS", "details": "127.0.0.1:18766 established and listening" },
+    { "name": "health_probe_active_check", "result": "PASS", "details": "tunnel-ctl.sh health probed /health returning 200" },
+    { "name": "gateway_query_over_tunnel", "result": "PASS", "details": "real Gateway retrieved metadata and rich non-empty items" },
+    { "name": "rich_fields_fidelity", "result": "PASS", "details": "title, notes, priority, is_all_day, time_zone, due dates verified" },
+    { "name": "mcp_protocol_discovery", "result": "PASS", "details": "client.listTools discovered reminders_lists and reminders_list over InMemoryTransport" },
+    { "name": "mcp_protocol_reminders_lists", "result": "PASS", "details": "reminders_lists returned valid list with writable: false" },
+    { "name": "mcp_protocol_reminders_list_rich_fields", "result": "PASS", "details": "reminders_list returned non-empty priority, is_all_day, time_zone, and multi-line notes" },
+    { "name": "mcp_protocol_safe_mode_403_rejection", "result": "PASS", "details": "protocol call returned isError: true on Bridge 403, not empty array" },
+    { "name": "mcp_protocol_crash_error_propagation", "result": "PASS", "details": "protocol call returned isError: true on Bridge crash, not empty array" },
+    { "name": "true_ssh_exit_code_capture", "result": "PASS", "details": "non-zero exit code captured and recorded in status JSON" },
+    { "name": "exponential_backoff_progression", "result": "PASS", "details": "backoff increments with factor 2 and caps at max" },
+    { "name": "atomic_singleton_locking", "result": "PASS", "details": "concurrent invocation blocked by mkdir lock directory" },
+    { "name": "clean_termination_zero_residuals", "result": "PASS", "details": "tunnel-ctl.sh stop cleared supervisor and left 0 listeners" }
+  ],
+  "overall_status": "ALL_ISOLATED_TESTS_PASSED"
+}

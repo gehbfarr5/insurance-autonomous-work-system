@@ -1,0 +1,74 @@
+{
+  "receipt_type": "AG08_GATED_WRAPPER_REPAIR_RECEIPT",
+  "task": "AG-08",
+  "component": "apple-icloud-mcp (carddav-mcp-client / safe_write.py)",
+  "execution_date": "2026-11-10",
+  "target_asset": {
+    "environment": "/home/hatch/workspace/carddav-mcp-client/",
+    "file_path": "/home/hatch/workspace/carddav-mcp-client/safe_write.py",
+    "backup_path": "/home/hatch/workspace/carddav-mcp-client/safe_write.py.bak-ag08-etagfix-20261110",
+    "pre_edit_sha256": "b1cdf6b298fe6dd46fea0692d7b5ec495b568ac808de554633098c18d1568a79",
+    "post_edit_sha256": "49c02417832ba8a68bfb2189bb63d1804e95d49cdd1f7b3d4b92a831e83d9c63",
+    "patch_path": "patches/apple-icloud-mcp/0003-safe-write-preserve-expected-etag-20261110.patch",
+    "patch_verification": {
+      "command_check": "git apply --check /tmp/ag08-patch-check-u_k2xkks/repair.patch",
+      "check_exit": 0,
+      "command_apply": "git apply /tmp/ag08-patch-check-u_k2xkks/repair.patch",
+      "apply_exit": 0,
+      "applied_file_sha256": "49c02417832ba8a68bfb2189bb63d1804e95d49cdd1f7b3d4b92a831e83d9c63",
+      "sha256_match": true,
+      "source_files_unchanged": true
+    },
+    "target_function": "SafeWriteManager.submit()",
+    "modified_lines": "1597-1613"
+  },
+  "runtime_execution_state": {
+    "on_disk_source_status": "MODIFIED_ON_DISK (/home/hatch/workspace/carddav-mcp-client/safe_write.py)",
+    "resident_process_model": "SUBPROCESS_PER_OP (execute_ag08.py 以独立子进程单次调用 isolated_test_v2.py，每次调用从磁盘加载最新源码)",
+    "resident_daemon_status": "待 MUSE 现场 ps aux 只读核验确认无常驻进程挂载旧模块",
+    "container_deployment_status": "ZERO container deployments performed",
+    "service_restart_status": "ZERO service restarts performed",
+    "real_apple_writes": "ZERO real Apple data writes sent in this round",
+    "authorization_audit": "待核实 (现场改动基于工程定位指令完成，尚未记录独立用户授权，不补写授权事实)"
+  },
+  "fix_specification": {
+    "defect": "SafeWriteManager.submit() previously used pre_state['etag'] to unconditionally overwrite caller's expected_etag, masking CAS conflicts and bypassing server 412 precondition checks.",
+    "resolution": "Implemented three-branch CAS preservation: (1) caller expected_etag is strictly preserved; (2) caller expected_etag mismatch with server etag returns CONFLICT locally with 0 sends and audit log; (3) omitted expected_etag attaches server etag for default optimistic locking.",
+    "return_signature_adherence": "Maintained file-wide (status, payload) 2-tuple return contract ('return CONFLICT, None'); prevented upstream unpack crashes in IsolatedAdapter.",
+    "empty_string_boundary": "expected_etag='' is treated as explicit per 'is not None'; triggers CONFLICT if server etag is non-empty."
+  },
+  "preserved_security_mechanisms": {
+    "hmac_verification": "handover.py: verify_credential() (line 296; atomic nonce consumption, revocation check)",
+    "deny_target_filtering": "isolated_test_v2.py: Gate 6 (lines 448-456; deny_ag08.json) & isolated_adapter.py: IsolatedAdapter._check_target() (line 117; allowlist default-deny)",
+    "intent_persistence": "safe_write.py: IntentStore.claim() (line 1230; lock-protected dedup + intent append) & _send() (line 1795; SEND_STARTED/UNKNOWN marker pre-send)"
+  },
+  "offline_test_evidence": {
+    "custom_test_script": "~/workspace/ag08-acceptance/verify_etag_fix.py",
+    "test_cases": {
+      "case_a_equal_etag": "PASS: caller etag = server etag -> APPLIED; caller etag forwarded verbatim, server etag advanced",
+      "case_b_stale_etag": "PASS: stale etag submitted -> CONFLICT; network sends: 0, target event untouched, audit 'submit_refused_stale_etag' recorded",
+      "case_c_omitted_etag": "PASS: omitted etag -> APPLIED; attached pre-read latest etag (legacy default behavior preserved)"
+    },
+    "regression_suite": {
+      "test_b2c_a3": "21/21 PASS",
+      "readback_safety": "16/16 PASS",
+      "entry_fix": "32/32 PASS",
+      "a4_reminders": "15/15 PASS",
+      "b2": "26/26 PASS",
+      "b2a": "23/23 PASS",
+      "b2b": "15/15 PASS",
+      "auth_wiring": "10/10 PASS",
+      "partial": "8/8 PASS",
+      "a3safetyfix": "21/21 PASS"
+    },
+    "isolated_baseline_failures": {
+      "p03a_race_condition": "test_b2c_a3live2 (9/10): expects stale race condition (total==2), but IntentStore.claim() reloads in lock (total==1). Confirmed identical on pre-edit baseline file. NOT counted as pass.",
+      "a3closure": "Missing /tmp/b2c-hardening-staging directory. Confirmed identical on pre-edit baseline file. NOT counted as pass."
+    }
+  },
+  "git_and_remote_status": {
+    "local_branch": "feat/ag05-resident-readonly-candidate",
+    "associated_pr": "#23",
+    "remote_push_status": "BLOCKED_BY_AUTH (gh/git push 需要交互式刷新认证；本地成果完好保留，不宣称已完成远端归档)"
+  }
+}

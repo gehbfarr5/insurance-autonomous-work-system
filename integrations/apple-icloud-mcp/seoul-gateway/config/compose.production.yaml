@@ -1,11 +1,11 @@
 # Production Docker Compose specification for Seoul MCP with Reminders Readonly Gateway
-# Locked candidate image ID: sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61
+# Locked candidate image ID: sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929
 # Compose Project: insurance-carddav-mcp
 # Production Network: insurance-carddav-mcp_default (Gateway: 172.19.0.1)
 
 services:
   carddav:
-    image: ${CARDDAV_IMAGE:-sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61}
+    image: ${CARDDAV_IMAGE:-sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929}
     restart: unless-stopped
     command: ["/bin/sh", "-c", "umask 077; exec node dist/bin/http.js"]
     mem_limit: 256m

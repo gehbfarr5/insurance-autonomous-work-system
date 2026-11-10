@@ -1,0 +1,106 @@
+{
+  "manifest_version": "1.7.0",
+  "task": "AG-06 Blocker Fix: Intel Bridge Multi-Architecture Signing & Authorization Identity Delivery",
+  "generated_at": "2026-11-09T14:35:00Z",
+  "git": {
+    "branch": "feat/ag05-resident-readonly-candidate",
+    "pr": 23,
+    "upstream_baseline_commit": "743c2007331036bcec48835a0446978532d7c154",
+    "traceability_notes": "Fixed Intel x86_64 slice code signing defect in Universal Bridge binary by implementing build-and-sign-universal.sh, embedding Info.plist with NSRemindersUsageDescription into Mach-O __TEXT,__info_plist, enforcing codesign --verify --strict --all-architectures gate, recording CDHashes and Designated Requirements, and validating multi-arch lifecycle on both x86_64 and arm64."
+  },
+  "artifacts": {
+    "candidate_docker_image": {
+      "repository": "insurance-carddav-mcp-carddav",
+      "tag": "candidate-ag05-delivery-20261108",
+      "image_id": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+      "registry_repo_digest": null,
+      "registry_note": "Local Docker build image on Seoul MCP host; distinct from remote registry RepoDigest (local build only, not pushed to external registry).",
+      "supersedes": "sha256:b812009113d9ab16b6cbca686bbea2f21e9111136b489e385555cffbcbcebb61",
+      "rationale": "Incorporates AG-05 non-empty rich fields (is_all_day, time_zone, last_modified, url) into Reminder mapping and protocol responses."
+    },
+    "expected_production_baseline": {
+      "repository": "insurance-carddav-mcp-carddav",
+      "tag": "latest",
+      "image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0"
+    },
+    "macserver_eventkit_bridge_release_binary": {
+      "path": "integrations/apple-icloud-mcp/macserver-eventkit/.build/release/EventKitBridgeServer",
+      "format": "Mach-O universal binary with 2 architectures: [x86_64: Mach-O 64-bit executable x86_64] [arm64: Mach-O 64-bit executable arm64]",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "target_device_compatibility": "Native execution on Intel x86_64 MacServer and Apple Silicon arm64",
+      "minimum_deployment_target": "macOS 14.0 (minos 14.0, sdk 14.0)",
+      "signature": "codesign -s - --identifier com.muse.macserver-eventkit --options runtime --force",
+      "signature_verification": "codesign --verify --strict --all-architectures (PASSED)",
+      "sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
+      "cdhash_x86_64": "a25782f93277e3d6f965a3fab1a72e8ea1569a34",
+      "cdhash_arm64": "f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b",
+      "embedded_info_plist": true,
+      "offline_verification": "Tests/test-universal-bridge-offline.sh (multi-arch lifecycle, Fake Store, write block, graceful stop & restart 100% OK)",
+      "features": [
+        "Universal fat binary executing natively on target MacServer (x86_64)",
+        "Strict code signing across all architectures with Hardened Runtime",
+        "Embedded Info.plist with NSRemindersUsageDescription and NSRemindersFullAccessUsageDescription",
+        "Pure ReminderDateMapper components conversion (zero timezone drift)",
+        "Strict all-day vs timed due date separation",
+        "Safe mode 403 lock switch support",
+        "Zero reminder content logging"
+      ]
+    },
+    "canonical_patch": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/patches/0001-ag05-shared-gateway-wiring.patch",
+      "sha256": "2705c85122d0ef156e3d3597e8f09915e09d96171f25558b478fd3e730e6acb0"
+    },
+    "orchestrated_recovery_script": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/scripts/orchestrated-recovery.sh",
+      "description": "Unified cross-device shutdown & baseline recovery orchestration (MacServer switch 403 verification -> verified task PID teardown -> Seoul container baseline rollback -> manifest-based SSH config restore -> baseline health verification -> failure aggregation)."
+    },
+    "targeted_drills_suite": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-watchdog-and-orchestration-drills.sh",
+      "result": "ALL 6 TARGETED DRILLS PASSED (100%)"
+    },
+    "orchestrated_recovery_drills_suite": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-orchestrated-recovery-drills.sh",
+      "result": "ALL 13 RECOVERY DRILLS PASSED (100%)",
+      "scenarios_verified": [
+        "MacServer local switch persisted false and 403 asserted on /reminders/lists",
+        "Local session deadline watchdog persistence across crash and autonomous 403 shutdown",
+        "Cross-device network severed failsafe (UNKNOWN status + non-zero exit)",
+        "Task PID cleanup with zero collateral damage to unrelated processes",
+        "Concurrent recovery idempotency (.rollback.lock mutual exclusion)",
+        "SSH manifest-based restoration fidelity (preserves pre-existing, cleans task drop-in)",
+        "Partial step failure aggregation and non-zero exit guarantee",
+        "Concurrent recovery failure propagation (Negative Concurrency: both exit 1)",
+        "MacServer NOT_CONFIGURED safety barrier (deploy blocked; recovery non-zero)",
+        "Container stop failure safety barrier (skips rsync & docker compose up)",
+        "Precise process attribution & zero collateral damage (unrelated bridge/SSH survive)",
+        "Local business close failure traceability (persists failure and exit 42)",
+        "SSH authorized_keys fidelity (All 3 Cases: delete new, restore pre-existing, custom path)"
+      ]
+    },
+    "safety_boundaries_negative_suite": {
+      "path": "integrations/apple-icloud-mcp/seoul-gateway/tests/test-safety-boundaries.sh",
+      "result": "ALL 5 SAFETY BOUNDARY TESTS PASSED (100%)",
+      "scenarios_verified": [
+        "authorized_keys backup failure blocks deployment before changes",
+        "Indeterminate SSH authorized_keys path refuses deploy (no guessing current ~/.ssh)",
+        "Docker inspect fail / empty / unknown strictly blocks restore & config overwrite",
+        "PID file points to unrelated process: zero collateral damage",
+        "watchdog.pid points to unrelated process or different deadline: refuses reuse"
+      ]
+    }
+  },
+  "build_inputs": {
+    "src/config.ts": "a102299c963c23b1bd5c4e3186b7de8b1cbfde5a93bbbef528bdbbd79583f728",
+    "src/fake-bridge.ts": "cfa712e145ecd48ed9b58669e066d870cb07e751cd177fc2c3f16ae657c34a1e",
+    "src/index.ts": "1e6bb6e12fe2daa406c29636ebfce3a7ffb1d24bcaa93837313ffd839489272c",
+    "src/server.ts": "c0c5860879455eba0cf4958a85c9fd953eed73abd3a377d83f9be27e8c239411",
+    "src/service.ts": "a4838f957ac100be8ee6680919ecf21f1c42a2559e607ca50c01d46fd36cc7fc",
+    "src/transport.ts": "fd592c9ce1336b5f714474d3780e271e7a1a51f2c57b835c683eea418f078552",
+    "src/types.ts": "bf437f0359142c71a6b480e10bf8a1bae055678ee29f5186c2ee521ec038a113",
+    "package.json": "e3497adfc7db791141fb13db2abfc3e2debc82ae89420022840fad9e42473b15",
+    "Dockerfile.candidate": "9fa8be6d4f88cd1de075d1c77de27329b36ba9560360df3412954878fb72f11e"
+  }
+}

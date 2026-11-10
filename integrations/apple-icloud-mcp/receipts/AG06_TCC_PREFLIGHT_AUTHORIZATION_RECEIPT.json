@@ -1,0 +1,66 @@
+{
+  "receipt_type": "AG06_TCC_PREFLIGHT_AUTHORIZATION_RECEIPT",
+  "task": "AG-06",
+  "component": "macserver-eventkit-readonly",
+  "execution_date": "2026-11-09",
+  "source_baseline_commit": "a2e84eeb431b1f8970b2a5d0a5e66d4c9b6e052d",
+  "target_installation": {
+    "host": "MacServer (macOS 15.7.7 Sequoia, x86_64)",
+    "installed_path": "/Users/shared/bin/EventKitBridgeServer",
+    "permissions": "0755",
+    "owner": "jin:staff",
+    "sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
+    "sha256_match_frozen_candidate": true,
+    "atomic_backup_path": "/Users/shared/backup/pre_tcc_auth_1794237357"
+  },
+  "signature_verification": {
+    "command": "codesign --verify --strict --all-architectures -vvv /Users/shared/bin/EventKitBridgeServer",
+    "verification_status": "PASSED",
+    "designated_requirement": "# designated => cdhash H\"f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b\" or cdhash H\"a25782f93277e3d6f965a3fab1a72e8ea1569a34\"",
+    "cdhash_x86_64": "a25782f93277e3d6f965a3fab1a72e8ea1569a34",
+    "cdhash_arm64": "f00641aa5ddebd8cb2c6aa9d7eeb9d141396a61b",
+    "embedded_info_plist": true,
+    "min_macos_version": "14.0"
+  },
+  "user_tcc_authorization_execution": {
+    "domain": "gui/501 (Aqua)",
+    "active_user": "jin",
+    "status_before_prompt": {
+      "raw_output": "{\"authorization_status\":\"notDetermined\",\"authorized\":false}",
+      "exit_code": 2
+    },
+    "request_mechanism": "/Users/shared/bin/EventKitBridgeServer --request-authorization via LaunchAgent single-shot in gui/501",
+    "user_action": "Native macOS Sequoia dialog presented on console display; user manually confirmed and granted full access to Reminders",
+    "request_process_output": "[EventKitBridge] Authorization GRANTED by user.",
+    "status_after_grant": {
+      "raw_output": "{\"authorization_status\":\"authorized\",\"authorized\":true}",
+      "exit_code": 0,
+      "authorized_boolean": true
+    }
+  },
+  "service_status": {
+    "launchagent_label": "com.muse.macserver-eventkit",
+    "pid": 51084,
+    "health_endpoint": "http://127.0.0.1:18765/health",
+    "health_http_status": 200,
+    "health_response": "{\"generation\":0,\"status\":\"ok\",\"mode\":\"readonly\",\"max_store_operations\":10,\"active_requests\":0,\"active_store_operations\":0,\"store\":\"production\"}",
+    "business_switch": {
+      "key": "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED",
+      "value": "false",
+      "maintained_strictly_closed": true
+    },
+    "business_probes_performed": 0,
+    "reminder_items_read": 0,
+    "apple_store_writes": 0
+  },
+  "boundaries_maintained": {
+    "seoul_candidate_deployed": false,
+    "seoul_baseline_image": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+    "seoul_health_http_status": 200,
+    "seoul_port_18765_listening": false,
+    "ssh_reverse_tunnel_running": false,
+    "tcc_database_tampered": false,
+    "real_apple_data_accessed": false,
+    "fidelity_claim_disclaimer": "Foreground TCC authorization is confirmed ready. This receipt does NOT claim real reminder reading or MUSE E2E integration has passed."
+  }
+}

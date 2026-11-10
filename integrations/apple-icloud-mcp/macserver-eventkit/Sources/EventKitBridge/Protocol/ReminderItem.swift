@@ -34,6 +34,24 @@ public struct ReminderItem: Sendable, Codable, Equatable {
     /// The list ID this reminder belongs to.
     public let listID: String
 
+    /// Whether the reminder is an all-day reminder (no specific hour/minute).
+    public let isAllDay: Bool
+
+    /// TimeZone identifier (e.g. "Asia/Shanghai" or "America/New_York"), if set.
+    public let timeZone: String?
+
+    /// Completion date, if completed.
+    public let completionDate: Date?
+
+    /// Creation date of the reminder.
+    public let creationDate: Date?
+
+    /// Last modification date.
+    public let lastModifiedDate: Date?
+
+    /// Associated URL string, if any.
+    public let url: String?
+
     public init(
         itemID: String,
         title: String,
@@ -41,14 +59,26 @@ public struct ReminderItem: Sendable, Codable, Equatable {
         dueDate: Date? = nil,
         priority: Int = 0,
         notes: String? = nil,
-        listID: String
+        listID: String,
+        isAllDay: Bool = false,
+        timeZone: String? = nil,
+        completionDate: Date? = nil,
+        creationDate: Date? = nil,
+        lastModifiedDate: Date? = nil,
+        url: String? = nil
     ) {
-        self.itemID      = itemID
-        self.title       = title
-        self.isCompleted = isCompleted
-        self.dueDate     = dueDate
-        self.priority    = priority
-        self.notes       = notes
-        self.listID      = listID
+        self.itemID           = itemID
+        self.title            = title
+        self.isCompleted      = isCompleted
+        self.dueDate          = dueDate
+        self.priority         = priority
+        self.notes            = notes
+        self.listID           = listID
+        self.isAllDay         = isAllDay
+        self.timeZone         = timeZone
+        self.completionDate   = completionDate
+        self.creationDate     = creationDate
+        self.lastModifiedDate = lastModifiedDate
+        self.url              = url
     }
 }

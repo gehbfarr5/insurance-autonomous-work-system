@@ -23,6 +23,34 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# If docker is not present in local test environment, provide a minimal mock docker for compose config validation
+if ! command -v docker >/dev/null 2>&1; then
+  MOCK_BIN="$STAGING_DIR/bin"
+  mkdir -p "$MOCK_BIN"
+  cat << 'EOF' > "$MOCK_BIN/docker"
+#!/usr/bin/env bash
+if [ "$1" = "compose" ]; then
+  if [ -z "${MACSERVER_EVENTKIT_AUTH_TOKEN:-}" ] || [ -z "${MACSERVER_EVENTKIT_ALLOWED_LISTS:-}" ]; then
+    echo "ERROR: Missing required gateway environment variables" >&2
+    exit 1
+  fi
+  cat << YAMLEOF
+services:
+  carddav:
+    image: ${CARDDAV_IMAGE:-sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929}
+    environment:
+      ALLOW_REMINDERS_READ_1: "true"
+      ALLOW_REMINDERS_WRITE_1: "false"
+YAMLEOF
+  exit 0
+fi
+echo "Mock docker: unrecognized command: $*" >&2
+exit 1
+EOF
+  chmod +x "$MOCK_BIN/docker"
+  export PATH="$MOCK_BIN:$PATH"
+fi
+
 echo "========================================================================"
 echo " RUNNING ISOLATED PRODUCTION ENTRY VERIFICATION"
 echo " Staging Dir: $STAGING_DIR"

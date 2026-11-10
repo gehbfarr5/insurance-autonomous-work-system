@@ -1,0 +1,41 @@
+--- a/safe_write.py
++++ b/safe_write.py
+@@ -1572,9 +1572,12 @@
+         # Pre-state check for update/delete (B2-05, B2a-A): stable id +
+         # current state must be read before sending. The full schema
+         # (2026-11-05) proves expected_etag EXISTS on 9 of the 15 B2
+-        # tools, so the pre-read etag is attached as expected_etag for
+-        # conditional update; a stale etag makes the server refuse.
+-        # Creates have no expected_etag.
++        # tools. An explicit caller etag is authoritative and is never
++        # silently overwritten: if it differs from the pre-read etag
++        # the call is refused locally as CONFLICT with zero sends
++        # (AG-08 fix, 2026-11-10); only when the caller passes no
++        # etag is the pre-read etag attached as the default
++        # optimistic lock. Creates have no expected_etag.
+         # B2c readback safety fix: the precheck is unconditional for
+         # update/delete (no read_fn is itself a refusal, not a silent
+         # pass), and a BLOCKED precheck -- untrusted read, ambiguous
+@@ -1594,9 +1597,20 @@
+             if pre == "ALREADY":
+                 self._audit("submit_already_applied_precheck", tool=tool)
+                 return APPLIED, None
+-            if tool in ETAG_TOOLS and pre_state.get("etag"):
++            caller_etag = args.get("expected_etag")
++            server_etag = pre_state.get("etag")
++            if caller_etag is not None:
++                # Explicit caller etag is authoritative: never silently
++                # overwritten. A mismatch is a local CONFLICT: refuse
++                # with zero sends, never submit to _send(), never retry.
++                if server_etag is not None and caller_etag != server_etag:
++                    self._audit("submit_refused_stale_etag", tool=tool)
++                    return CONFLICT, None
+                 send_args = dict(args)
+-                send_args["expected_etag"] = pre_state["etag"]
++                send_args["expected_etag"] = caller_etag
++            elif tool in ETAG_TOOLS and server_etag:
++                send_args = dict(args)
++                send_args["expected_etag"] = server_etag
+ 
+         attempt_no = self.store.sends_for_dedup(dedup_key) + 1
+         intent = {

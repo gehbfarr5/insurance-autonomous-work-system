@@ -1,0 +1,97 @@
+{
+  "receipt_type": "AG06_ACCEPTANCE_WINDOW_RECEIPT",
+  "task": "AG-06",
+  "component": "macserver-eventkit-readonly",
+  "execution_date": "2026-11-09",
+  "review_baseline_pr23_commit": "743c2007331036bcec48835a0446978532d7c154",
+  "approved_candidate_artifacts": {
+    "seoul_gateway_image_id": "sha256:faa6e380ee4b9f9d96dd424ced56bf27a0778722a02323efedd542b29f362929",
+    "universal_bridge_sha256": "6b4a0b826b904c9d844c890e3f39062775b0fecec5df439eb78217395bf657b6"
+  },
+  "chronological_protection_and_execution_sequence": {
+    "sequence_audit_finding": "EXPLICIT_FINDING: Binary deployment (08:58:30Z) preceded watchdog/deadline initialization (09:01:27Z) by 2 minutes 57 seconds. Previous claims of 'full-process pre-change protection' (全过程事前保护) are hereby retracted as inaccurate.",
+    "timeline": {
+      "candidate_binary_deployed_at": "2026-11-09T08:58:30Z",
+      "watchdog_deadline_initialized_at": "2026-11-09T09:01:27Z",
+      "pre_watchdog_unmonitored_window_seconds": 177,
+      "business_switch_enabled_at": "2026-11-09T09:01:46Z",
+      "business_switch_disabled_at": "2026-11-09T09:02:15Z",
+      "business_switch_open_duration_seconds": 29,
+      "launchagent_restored_reverified_at": "2026-11-09T09:02:43Z"
+    },
+    "concrete_changes_and_status_during_interim": {
+      "interim_window": "2026-11-09T08:58:30Z to 2026-11-09T09:01:27Z (177 seconds)",
+      "changes_performed": "Candidate Universal Binary (sha256: 6b4a0b82...) was deployed to /Users/shared/bin/EventKitBridgeServer.",
+      "state_before_watchdog": "During these 177 seconds, the newly placed binary sat on disk, but EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED remained 'false' in bridge.env and the LaunchAgent was not yet activated with the candidate. No reverse SSH tunnel was open.",
+      "evidence_boundary": "No watchdog was running during this deployment window; watchdog was initialized only at 09:01:27Z. No unrecorded actions occurred."
+    },
+    "concrete_changes_and_restoration_during_switch_window": {
+      "switch_window": "2026-11-09T09:01:46Z to 2026-11-09T09:02:15Z (29 seconds)",
+      "changes_performed": [
+        "session_deadline.env written with DEADLINE_EPOCH=1794216687 (1800s timeout) at 09:01:27Z",
+        "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED set to 'true' in ~/.config/muse-macserver/bridge.env at 09:01:46Z",
+        "LaunchAgent com.muse.macserver-eventkit kickstarted at 09:01:46Z",
+        "Active HTTP probe sent to GET http://127.0.0.1:18765/reminders/lists"
+      ],
+      "probe_result": {
+        "http_status": 403,
+        "response_payload": {
+          "code": "PERMISSION_DENIED",
+          "error": "EventKit access permission was denied or revoked.",
+          "success": "false"
+        },
+        "reminder_items_read": 0,
+        "reminder_content_exposed": 0
+      },
+      "restoration_actions_completed": [
+        "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED reverted to 'false' in bridge.env at 09:02:15Z",
+        "~/Library/LaunchAgents/com.muse.macserver-eventkit.plist reverted via plutil -remove at 09:02:43Z",
+        "LaunchAgent unloaded and reloaded",
+        "Follow-up probe to GET /reminders/lists verified HTTP 403 under safe baseline mode"
+      ]
+    }
+  },
+  "root_cause_investigation": {
+    "defect_identified": "x86_64_SLICE_UNSIGNED_AND_INFO_PLIST_MISSING",
+    "codesign_verification_result": {
+      "command": "codesign --verify -vvv /Users/shared/bin/EventKitBridgeServer",
+      "output": "code object is not signed at all In architecture: x86_64"
+    },
+    "tcc_authorization_check": {
+      "command": "/Users/shared/bin/EventKitBridgeServer --check-authorization",
+      "exit_code": 2,
+      "output": "{\"authorization_status\":\"notDetermined\",\"authorized\":false}"
+    },
+    "operating_system_behavior": "macOS 15.7.7 Sequoia refuses to grant TCC authorization or display Aqua consent prompt to unsigned x86_64 binaries lacking embedded Info.plist."
+  },
+  "immediate_safe_baseline_restoration": {
+    "macserver_safety_lock": {
+      "bridge_env_path": "/Users/jin/.config/muse-macserver/bridge.env",
+      "production_authorized_value": "false",
+      "launchagent_plist": "~/Library/LaunchAgents/com.muse.macserver-eventkit.plist",
+      "reverification_status": 403,
+      "reverification_code": "PERMISSION_DENIED"
+    },
+    "seoul_mcp_baseline_status": {
+      "container_name": "insurance-carddav-mcp-carddav-1",
+      "image_id": "sha256:f3e697fe266f58910c01985f9c906a84479705846c88fd7d2ea1ccf12c0da2f0",
+      "health_check_status": 200,
+      "temporary_configs_removed": [
+        "/etc/ssh/sshd_config.d/60-macserver-gateway.conf",
+        "/opt/insurance-carddav-mcp/gateway.env"
+      ]
+    },
+    "network_and_process_cleanup": {
+      "seoul_port_18765_listening": false,
+      "macserver_tunnel_supervisor_running": false,
+      "macserver_orphan_watchdog_running": false
+    }
+  },
+  "desensitized_entities": {
+    "bound_target_test_list_id": "9D9A****03F3",
+    "bound_target_source_id": "9BBB****",
+    "bound_target_source_type": "calDAV",
+    "bound_target_source_name": "iCloud",
+    "credential_storage": "Restricted to local hosts; no plain-text UUIDs or credentials archived in repository."
+  }
+}

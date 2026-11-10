@@ -644,10 +644,10 @@ index 0000000..ae26362
 +}
 diff --git a/src/modules/reminders/gateway/service.ts b/src/modules/reminders/gateway/service.ts
 new file mode 100644
-index 0000000..9b0e923
+index 0000000..adafb4d
 --- /dev/null
 +++ b/src/modules/reminders/gateway/service.ts
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,324 @@
 +/**
 + * service.ts
 + * MacServerReminderService implementation for Seoul -> MacServer Reminders Readonly Gateway.
@@ -911,6 +911,21 @@ index 0000000..9b0e923
 +              const crIso = parseBridgeDate(item.creationDate);
 +              if (crIso) reminderObj.created = crIso;
 +            } catch {}
++          }
++          if (item.isAllDay !== undefined) {
++            reminderObj.is_all_day = Boolean(item.isAllDay);
++          }
++          if (typeof item.timeZone === 'string' && item.timeZone.trim().length > 0) {
++            reminderObj.time_zone = item.timeZone;
++          }
++          if (item.lastModifiedDate) {
++            try {
++              const modIso = parseBridgeDate(item.lastModifiedDate);
++              if (modIso) reminderObj.last_modified = modIso;
++            } catch {}
++          }
++          if (typeof item.url === 'string' && item.url.trim().length > 0) {
++            reminderObj.url = item.url.trim();
 +          }
 +
 +          allReminders.push(reminderObj);
@@ -1219,10 +1234,10 @@ index 0000000..f8deb45
 +}
 diff --git a/src/modules/reminders/gateway/types.ts b/src/modules/reminders/gateway/types.ts
 new file mode 100644
-index 0000000..3e7c433
+index 0000000..f97456a
 --- /dev/null
 +++ b/src/modules/reminders/gateway/types.ts
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,81 @@
 +import type { AccountConfig } from '../../../core/config.js';
 +import type {
 +  ReminderListSummary,
@@ -1284,6 +1299,8 @@ index 0000000..3e7c433
 +  creationDate?: number | string | null;
 +  lastModifiedDate?: number | string | null;
 +  url?: string | null;
++  isAllDay?: boolean;
++  timeZone?: string | null;
 +}
 +
 +export interface BoundListConfig {
@@ -1342,6 +1359,21 @@ index 1f3f034..53322f2 100644
          // 信封账号：变量在用户自己的 .env 里，「重启服务」既做不到也没用（与 capabilityHint 同一口径）；
          // 消息也不带 label——它默认就是邮箱，而 wrapTool 会把这条消息记进日志。
          if (account.origin === 'envelope') {
+diff --git a/src/parsers/ical.ts b/src/parsers/ical.ts
+index d3825f5..77936aa 100644
+--- a/src/parsers/ical.ts
++++ b/src/parsers/ical.ts
+@@ -827,6 +827,10 @@ export interface Reminder {
+   priority?: number;
+   percent_complete?: number;
+   created?: string;
++  is_all_day?: boolean;
++  time_zone?: string;
++  last_modified?: string;
++  url?: string;
+ }
+ 
+ export function parseTodoObject(icsText: string, ref: ResourceRef): Reminder[] {
 diff --git a/src/parsers/vcard-groups.ts b/src/parsers/vcard-groups.ts
 new file mode 100644
 index 0000000..a1d8b7f

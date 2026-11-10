@@ -1,0 +1,11 @@
+# AG-05 | Least-privilege authorized_keys entry for MacServer resident reverse tunnel key
+# Placed in ~mac-operator/.ssh/authorized_keys on Seoul host.
+#
+# Constraints enforced:
+# - restrict: disable all forwarding, pty, user-rc, environment by default
+# - port-forwarding: allow only port forwarding capability
+# - permitlisten: strictly white-list reverse forward bind ports
+# - command="/bin/false": immediate non-zero exit if shell/command attempted
+# - no-pty, no-X11-forwarding, no-agent-forwarding: explicit defense-in-depth
+
+restrict,port-forwarding,permitlisten="172.19.0.1:18765",permitlisten="127.0.0.1:18765",command="/bin/false",no-pty,no-X11-forwarding,no-agent-forwarding __PUBLIC_KEY_CONTENT__

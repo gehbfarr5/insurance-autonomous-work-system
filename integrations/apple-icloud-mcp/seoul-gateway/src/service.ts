@@ -251,6 +251,12 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
           if (dueIso) {
             reminderObj.due = dueIso;
           }
+          if (item.isAllDay !== undefined) {
+            reminderObj.is_all_day = Boolean(item.isAllDay);
+          }
+          if (typeof item.timeZone === 'string' && item.timeZone.trim().length > 0) {
+            reminderObj.time_zone = item.timeZone;
+          }
           if (item.completionDate) {
             try {
               const compIso = parseBridgeDate(item.completionDate);
@@ -262,6 +268,15 @@ export function createMacServerReminderService(deps: MacServerReminderServiceDep
               const crIso = parseBridgeDate(item.creationDate);
               if (crIso) reminderObj.created = crIso;
             } catch {}
+          }
+          if (item.lastModifiedDate) {
+            try {
+              const modIso = parseBridgeDate(item.lastModifiedDate);
+              if (modIso) reminderObj.last_modified = modIso;
+            } catch {}
+          }
+          if (typeof item.url === 'string' && item.url.trim().length > 0) {
+            reminderObj.url = item.url;
           }
 
           allReminders.push(reminderObj);
