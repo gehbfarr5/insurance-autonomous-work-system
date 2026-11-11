@@ -512,6 +512,106 @@ eq "the interrupted run enumerated nothing" "$(enumeration_calls "$REQ_LOG")" "0
 ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
 stop_bridge
 
+# ====================== 10. the budget expires while the open still holds the lock
+# The deadline decides when a restore starts trying, not when the gate is shut.
+# If the open is still inside its reload, it holds the mutex, and the watchdog's
+# close cannot take it: the close fails at the lock, not at the reload, and with
+# its attempts spent the watchdog gives up while the gate is still open. That is
+# the honest limit of a design whose only writer is serialised by one mutex, and
+# this scenario measures it instead of describing it.
+echo "[10] budget expires while the open holds the mutex"
+new_fixture; start_bridge
+export STUB_LAUNCHCTL_SLEEP=20     # the open holds the lock ~23s, longer than --lock-wait 15
+export R1_RESTORE_ATTEMPTS=1       # one attempt, so the outcome is not a race with the retry
+BIN="$BIN" FROZEN_SHA256="$SHA" "$WINDOW" \
+  --list-id "$LIST_ID" --canary-id "$CANARY_ID" --token-file "$FX/token" \
+  --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --endpoint "$URL" --work-dir "$FX/work" --label l \
+  --window-seconds 60 --open-budget 3 --confirm > "$FX/window.out" 2>&1 &
+WIN_PID=$!
+STATE_DIR=""
+# Two files, in this order: the watchdog publishes its status when it arms, the
+# stamp is written just before the gate changes. Reading the stamp after the
+# status alone would race the open and silently measure from zero.
+for _ in $(seq 1 120); do
+  STATE_DIR="$(echo "$FX"/work/window-l-*/state 2>/dev/null)"
+  if [ -f "$STATE_DIR/watchdog_status.env" ] && [ -s "$STATE_DIR/gate_open_since" ]; then break; fi
+  sleep 0.5
+done
+STAMP="$(cat "$STATE_DIR/gate_open_since" 2>/dev/null || echo 0)"
+check "the budget stamp was observed before measuring anything" \
+  "$([ "${STAMP:-0}" -gt 0 ] && echo 1 || echo 0)" "stamp=${STAMP:-none}"
+BUDGET_EXPIRED=$(( STAMP + 3 ))
+if wait_watchdog_state "$STATE_DIR" 45; then check "the watchdog fired during the open" 1
+else check "the watchdog fired during the open" 0 "still RUNNING"; fi
+FIRED_AT="$(date +%s)"
+eq "it fired on the open budget, not the deadline" \
+  "$(awk -F= '/^WATCHDOG_REASON=/{print $2}' "$STATE_DIR/watchdog_status.env" 2>/dev/null)" \
+  "open_budget"
+eq "it could not restore: the lock was held by the open" \
+  "$(watchdog_state "$STATE_DIR")" "FIRED_RESTORE_FAILED"
+# The decisive evidence: at the moment the watchdog gave up, the gate was still
+# open. The deadline did not close it; the deadline only started a attempt.
+GATE_AT_GIVEUP="$(gate_value)"
+eq "the gate was still open when the watchdog gave up" "$GATE_AT_GIVEUP" "true"
+eq "the close that failed was refused by the mutex, not by the reload" \
+  "$(python3 -c 'import json,glob
+f=sorted(glob.glob("'"$STATE_DIR"'/gate_close_open_budget_attempt*.json"))
+print(json.load(open(f[0])).get("failure_stage") if f else "no-receipt")' 2>/dev/null)" \
+  "lock"
+# It still finishes its own close, so the gate does get shut - later, and by the
+# window, not by the watchdog.
+wait "$WIN_PID" 2>/dev/null
+WINDOW_RC=$?
+eq "the window exits 16 because the watchdog fired" "$WINDOW_RC" "16"
+WINDOW_CLOSE="$(echo "$FX"/work/window-l-*/gate_close_normal_attempt1.json)"
+eq "the window's own close eventually verified" \
+  "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("probe_classification") or "none")' "$WINDOW_CLOSE" 2>/dev/null)" \
+  "GATE_RESTORED_CLOSED"
+# The number the application has to quote: the receipt is written after the
+# verification, so its mtime is when the gate was effectively shut - not when
+# the file value flipped, which happens before the reload.
+CLOSED_AT="$(stat -f %m "$WINDOW_CLOSE" 2>/dev/null || echo 0)"
+CLOSE_LAG=$(( CLOSED_AT - BUDGET_EXPIRED ))
+# Bounded on both sides: a lag of 0 would mean the deadline did shut the gate,
+# and a lag in the hundreds would mean the measurement drifted rather than that
+# the gate stayed open. The window's close costs one reload (~20s here) plus its
+# verification, so a few tens of seconds is what this fixture should produce.
+check "the gate was shut tens of seconds after the budget expired, not at it" \
+  "$([ "$CLOSE_LAG" -ge 10 ] && [ "$CLOSE_LAG" -le 120 ] && echo 1 || echo 0)" \
+  "lag=${CLOSE_LAG}s"
+eq "the gate is shut at the end" "$(gate_value)" "false"
+echo "  [note] budget expired at $BUDGET_EXPIRED; watchdog gave up at $FIRED_AT;"
+echo "  [note] gate was still '$GATE_AT_GIVEUP' at give-up; shut at $CLOSED_AT (lag ${CLOSE_LAG}s)"
+eq "the window reports a truncated window" \
+  "$(python3 -c 'import json,glob;print(json.load(open(glob.glob("'"$FX"'/work/window-l-*/summary.json")[0]))["window_outcome"])' 2>/dev/null)" \
+  "TRUNCATED"
+eq "the lock-held run enumerated nothing" "$(enumeration_calls "$REQ_LOG")" "0"
+ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
+
+# 10b. After an open that overran its budget, can the gate be opened again? The
+# answer has to come from a second open, not from the absence of an error.
+unset STUB_LAUNCHCTL_SLEEP
+unset R1_RESTORE_ATTEMPTS
+"$GATE" open --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --list-id "$LIST_ID" \
+  --require-no-enumeration --purpose test:reopen --out "$FX/reopen.json" >/dev/null 2>&1
+REOPEN_RC=$?
+eq "the gate can be opened again after the overrun" "$REOPEN_RC" "0"
+eq "the second open verified" \
+  "$(python3 -c 'import json;print(json.load(open("'"$FX"'/reopen.json"))["verification"])' 2>/dev/null)" \
+  "PASS"
+eq "the second open left the gate open" "$(gate_value)" "true"
+"$CLOSE" --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --list-id "$LIST_ID" \
+  --purpose test:reclose --out "$FX/reclose.json" >/dev/null 2>&1
+RECLOSE_RC=$?
+eq "and it can be closed again" "$RECLOSE_RC" "0"
+eq "the gate is closed at the end of the scenario" "$(gate_value)" "false"
+eq "the reopen cycle enumerated nothing" "$(enumeration_calls "$REQ_LOG")" "0"
+ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
+stop_bridge
+
 # ============================================================================
 eq "across every scenario, the account-wide endpoint was never called" "$ALL_ENUM" "0"
 echo
