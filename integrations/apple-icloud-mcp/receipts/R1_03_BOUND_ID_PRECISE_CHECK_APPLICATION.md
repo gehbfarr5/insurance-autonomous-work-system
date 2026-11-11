@@ -514,7 +514,7 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 
 - **`--list-id` 是必需的**：缺失（或为空）→ 打印缺哪个参数并 `exit 2`，**在调用 `r1_gate.sh` 之前**，因此不写盘、不重载、不取锁、不生成回执、不发一个请求。
 - **`--require-no-enumeration` 不是参数**：它由 wrapper 自己附加。没有开关能把它关掉，因为"这个命令是什么"不该由调用方决定。
-- 三条路径共用它：窗口的正常/失败关闸、看门狗的恢复、人工的紧急关闸。文档里只有这一种写法（§7.4.4），前一版"`r1_gate.sh close --plist ... --token-file ...`（可加 `--list-id`）"的示例已删除——那是唯一一个能走到枚举的示例。
+- 三条路径共用它：窗口的正常/失败关闸、看门狗的恢复、人工的紧急关闸。文档里只有这一种写法（§7.4.4）。前一版那条"带 `--plist`/`--token-file`、目标 ID 可加可不加"的关闸写法已整条删除，**连它的字面都不再保留**——能复制的范例比一段说明更容易被复制。
 - R1 的回放路径不受影响：`r1_window.sh` 与 `test_r1_window.sh` 照旧直接调 `r1_gate.sh`，走 `legacy_enumeration`。这不是"给 R1-03 留了后门"，而是 R1-03 的调用点根本不在那条路上。
 
 ### 7.4 申请所需的执行要素（脚本、哈希、临时文件、期限、预算、恢复）
@@ -588,7 +588,7 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | 主进程被杀 | **看门狗**独立发起同一条 `r1_probe_close.sh` | 同上，且 `WATCHDOG_STATE=FIRED_RESTORED` | `FIRED_RESTORE_FAILED`，退出码 6 |
 | 人工紧急关窗 | 同一条命令，手敲：`r1_probe_close.sh --list-id ID --token-file T --plist P --out O` | 回执 `verification == PASS` | rc≠0，看回执里的 `failure_stage` |
 
-**只有这一种写法。** 前一版这里写的是 `r1_gate.sh close --plist P --token-file T --out O`（"可加 `--list-id`"）——那是一个会走账户级枚举的示例，已删除。`r1_probe_close.sh` 没有"不带目标 ID"的调用方式，缺参数时在改动之前就 `exit 2`（§7.2.2 场景 7）。
+**只有这一种写法。** 前一版这里给过一条不带目标 ID 也"可以"的关闸命令——那是一个会走账户级枚举的范例，已整条删除，字面也不保留。`r1_probe_close.sh` 没有"不带目标 ID"的调用方式，缺参数时在改动之前就 `exit 2`（§7.2.2 场景 7）。
 
 **恢复失败时不做的事**：不重试到"看起来成功"（`R1_RESTORE_ATTEMPTS` 默认 2，用完即报失败）、**不 disarm 看门狗、不写 `stop`、不删除 `gate_open_since`**、不手工改 plist 掩盖、不卸载服务、不删证据。恢复失败是一次需要人介入的状态，脚本的职责是**如实命名它**、保住现场，并把剩下的期限保护留在原地。
 
