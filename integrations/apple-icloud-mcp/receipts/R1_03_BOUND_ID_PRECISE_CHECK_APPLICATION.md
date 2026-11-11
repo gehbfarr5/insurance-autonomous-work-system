@@ -797,7 +797,7 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 | 4 | 窗口集成用例（四类失效场景 + 预算 + 开闸时限 10a/10a2/10b/10c + 中断 + 零枚举，**134 项**） | `scripts/tests/test_r1_probe_window.sh` |
 | 5 | 脚本哈希清单 | 本文件 §7.4.1 |
 | 6 | 执行回执（2026-11-11 已生成，公开版 **v2**：窗后枚举计入全程请求账；复核统一 `probe --phase post`；脱敏——内网地址、凭据路径与令牌指纹不进公开文档，原始证据留在主机受限位置） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
-| 9 | 旧凭据副本清理方案（发现于 2026-11-10 21:23 的 harness 残留，含与在用凭据一致的令牌；**待授权**） | `receipts/R1_03_TOKEN_COPY_REMOVAL_PLAN.md` |
+| 9 | 旧凭据副本清理（2026-11-10 21:23 的 harness 残留，含与在用凭据一致的令牌；**已按批准执行**，方案 §4 复核范围执行前收窄为四项） | 方案 `receipts/R1_03_TOKEN_COPY_REMOVAL_PLAN.md`；回执 `receipts/R1_03_TOKEN_COPY_REMOVAL_RECEIPT.json` |
 | 10 | 专用列表去向取舍：恢复原列表 vs 新建并改绑（**离线准备，待决策**） | `receipts/R1_03_LIST_RECOVERY_OPTIONS.md` |
 | 7 | 窗口汇总（执行后） | `<work-dir>/window-<label>-<UTC>/summary.json` + `probe_pre.json` / `gate_open.json` / `gate_close_*.json` |
 | 8 | 关窗与恢复核验（执行后） | 并入回执：闸门键回原值、`/health` 200、plist 与开窗前逐字节比对、`probe_classification=GATE_RESTORED_CLOSED` |
