@@ -2,8 +2,8 @@
   "receipt_type": "R1_03_BOUND_ID_PROBE_RESULT",
   "task": "REM-R1-01",
   "step": "R1-03",
-  "revision": 1,
-  "revision_note": "First and only real execution of R1-03. One window, one probe, one close, one read-only recheck. The receipt also records one request that fell outside the authorization (section request_accounting.deviation) and one pre-existing token copy found on the host (section preexisting_residue). Neither is softened.",
+  "revision": 2,
+  "revision_note": "v2 changes only the form of this receipt, not any measurement. (1) The post-window request to the account-level endpoint is now counted in the whole-operation request accounting, not parked in a side note. (2) A corrective rule is recorded: every future closed-gate recheck uses probe --phase post, never the R1-only `gate` subcommand. (3) Sanitisation: internal network addresses, credential-locatable file paths and token fingerprints are removed from the public receipt; the original evidence stays in its restricted location on the host, and exact paths live in the private run log. The 404 verdict and every number are unchanged from v1. No probe was re-run.",
   "executed_at_utc": "2026-11-11T01:54:17Z/2026-11-11T01:56:00Z",
   "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
   "authorization": "R1-03 v6 executed once, against commit 4648966 and the script hashes in section 7.4.1 of receipts/R1_03_BOUND_ID_PRECISE_CHECK_APPLICATION.md. Scope: temporary use of the existing token, single-key gate change, reload of the existing service, one target probe, bounded restore. Out of scope and not performed: rebinding, deployment, Apple data writes, Seoul changes, R2.",
@@ -16,13 +16,12 @@
 
   "preconditions": {
     "device": {
-      "hostname": "MacServer",
+      "host_alias": "MAC-1 (production MacServer; network addresses withheld from the public receipt)",
       "macos": "15.7.7",
       "arch": "x86_64",
       "uid": 501,
       "login_domain": "gui/501",
-      "reachable_as": "macserver-ts (100.100.172.91), LAN 192.168.31.141",
-      "note": "The `macserver` alias (macserver.local, ForwardAgent yes) could not be used: every connection through it was terminated locally while `macserver-ts` worked. Recorded because the execution channel is part of the evidence."
+      "note": "One SSH alias to this host worked and another did not; the unusable alias is recorded in the private run log because the execution channel is part of the evidence, and its name is a routable locator so it stays out of the public receipt."
     },
     "binary": {
       "path": "/Users/shared/bin/EventKitBridgeServer",
@@ -65,7 +64,7 @@
     "dry_run": {
       "performed": true,
       "result": "preflight passed, pre phase observed 403 GATE_CLOSED_AS_EXPECTED, DRY RUN exit 0, no gate operation",
-      "evidence": "/Users/jin/r1-03-evidence/20261111T015417Z/window-p0-20261111T015434Z"
+      "evidence": "restricted evidence tree on the host, window label p0 (path withheld from the public receipt)"
     }
   },
 
@@ -76,20 +75,20 @@
     "restore_attempts_allowed": 2,
     "op_timeout_vs_budget_note": "30 - 120 < 15 x 3, so the recovery could always take the lock had the open stalled",
     "canary": "not sent: no canary id was used, so no request of any kind was addressed to a list other than the target",
-    "evidence": "/Users/jin/r1-03-evidence/20261111T015417Z/window-r103-20261111T015440Z"
+    "evidence": "restricted evidence tree on the host, window label r103 (path withheld from the public receipt)"
   },
 
   "timeline_utc": [
     {"at": "2026-11-11T01:54:17Z", "what": "restricted harness and evidence directories created (0700), write probe passed"},
     {"at": "2026-11-11T01:54:19Z", "what": "six scripts uploaded, sha256 compared one by one against section 7.4.1"},
-    {"at": "2026-11-11T01:54:2xZ", "what": "token extracted from the existing config into a 0600 file (65 bytes, digest f17daa3bf3ff)"},
+    {"at": "2026-11-11T01:54:2xZ", "what": "token extracted from the existing config into a 0600 file (65 bytes; fingerprint withheld from the public receipt)"},
     {"at": "2026-11-11T01:54:40Z", "what": "pre phase: 403 PERMISSION_DENIED, GATE_CLOSED_AS_EXPECTED"},
     {"at": "2026-11-11T01:54:41Z", "what": "open budget stamp written BEFORE the gate changed (1794362081)"},
     {"at": "2026-11-11T01:54:46Z", "what": "open verified; target probe answered 404 LIST_NOT_FOUND"},
     {"at": "2026-11-11T01:54:47Z", "what": "open operation returned (duration 6 s, well inside the 30 s deadline)"},
     {"at": "2026-11-11T01:54:52Z", "what": "close verified; post probe answered 403 PERMISSION_DENIED, GATE_RESTORED_CLOSED"},
     {"at": "2026-11-11T01:54:53Z", "what": "watchdog disarmed by the window (DISARMED_BY_MAIN, restore exit 0)"},
-    {"at": "2026-11-11T01:55:19Z", "what": "read-only recheck: 403 GATE_AS_EXPECTED (see deviation)"},
+    {"at": "2026-11-11T01:55:19Z", "what": "post-window recheck: 403 GATE_AS_EXPECTED (this request is counted in the whole-operation accounting below and detailed in authorization_deviation)"},
     {"at": "2026-11-11T01:55:4xZ", "what": "plist backups (they embed the token) hashed and removed; token and harness removed; residue scan run"}
   ],
 
@@ -136,7 +135,7 @@
       "error_code": "PERMISSION_DENIED",
       "probe_phase": "post",
       "classification": "GATE_RESTORED_CLOSED",
-      "independent_recheck": "403 GATE_AS_EXPECTED at 2026-11-11T01:55:19Z (same body digest as the post probe, 092333cad793)",
+      "independent_recheck": "403 GATE_AS_EXPECTED at 2026-11-11T01:55:19Z (same body digest as the post probe, 092333cad793); this recheck is the deviation counted below",
       "verified": true
     },
     "no_second_open": {
@@ -147,29 +146,32 @@
     }
   },
 
-  "request_accounting": {
+  "request_accounting_whole_operation": {
+    "note": "Every request this operation sent, including the one after the window closed. Nothing is parked in a side note.",
     "item_endpoint_requests": 4,
     "item_endpoint_cap": 9,
     "item_requests_that_could_have_returned_content": 0,
     "item_requests_that_returned_content": 0,
     "health_requests": 4,
-    "in_window_account_level_requests": 0,
+    "account_level_enumeration_requests": 1,
     "lists_other_than_target_touched": 0,
     "breakdown": [
       {"stage": "dry run pre", "health": 1, "item": 1, "status": 403},
       {"stage": "window pre", "health": 1, "item": 1, "status": 403},
       {"stage": "window open", "health": 1, "item": 1, "status": 404},
-      {"stage": "window close", "health": 1, "item": 1, "status": 403}
-    ],
-    "deviation": {
-      "what": "One request was sent to the account-level endpoint GET /reminders/lists at 2026-11-11T01:55:19Z.",
-      "how": "The step after the window was meant to be an independent read-only recheck, and it used the client's `gate` subcommand. That subcommand is R1-only: it targets /reminders/lists. R1-03 forbids that endpoint on every path, including the ones that change nothing.",
-      "why_it_was_wrong": "The subcommand is documented in the client's own header as deprecated for R1-03, and the correct closed-gate recheck is a `probe --phase post`, which the window had already done. Choosing `gate` was a mistake in the recheck step, not a gap in the tooling.",
-      "what_it_returned": "HTTP 403 PERMISSION_DENIED with no list metadata in the body. The gate was closed at that moment, so the request was refused before any list was produced.",
-      "what_is_claimed": "That the request was sent and was refused with 403. That is the whole claim.",
-      "what_is_not_claimed": "Not claimed: that nothing was enumerated underneath. A 403 at the entry gate is not a measurement of what EventKit did internally, and this receipt does not use it as one.",
-      "counted_where": "Outside the in-window count above, because the window had already closed. Recorded here rather than folded into a total that would hide it."
-    }
+      {"stage": "window close", "health": 1, "item": 1, "status": 403},
+      {"stage": "post-window recheck", "account_level": 1, "status": 403, "see": "authorization_deviation"}
+    ]
+  },
+
+  "authorization_deviation": {
+    "what": "One request was sent to the account-level endpoint GET /reminders/lists at 2026-11-11T01:55:19Z, after the window had closed and the gate had been verified closed.",
+    "how": "The step after the window was meant to be an independent read-only recheck, and it used the client's `gate` subcommand. That subcommand is R1-only: it targets /reminders/lists. R1-03 forbids that endpoint on every path, including the ones that change nothing.",
+    "why_it_was_wrong": "The subcommand is documented in the client's own header as deprecated for R1-03, and the correct closed-gate recheck is a `probe --phase post`, which the window had already done. Choosing `gate` was a mistake in the recheck step, not a gap in the tooling.",
+    "what_it_returned": "HTTP 403 PERMISSION_DENIED with no list metadata in the body. The gate was closed at that moment, so the request was refused before any list was produced.",
+    "what_is_claimed": "That the request was sent and was refused with 403. That is the whole claim.",
+    "what_is_not_claimed": "Not claimed: that nothing was enumerated underneath. A 403 at the entry gate is not a measurement of what EventKit did internally, and this receipt does not use it as one.",
+    "corrective_rule_from_now_on": "Every closed-gate recheck, manual or automatic, goes through `probe --phase post` on the item endpoint - the same request class the window itself uses. The `gate` subcommand is not used in any R1-03 path again. This rule is also recorded in section 7.4.4 of the application."
   },
 
   "restore": {
@@ -195,14 +197,14 @@
   "cleanup": {
     "sequence": "only after the restore was verified, the watchdog had exited on its own, and the on-disk key had been read back",
     "removed": [
-      "token (0600, 65 bytes) in the harness directory",
-      "harness directory /Users/jin/r1-03-harness-20261111T015417Z (six scripts)",
-      "two gate plist backups, because a plist backup embeds the bearer token (sha256_16 d2755f7e69bd3fd6 and 9da02bf9b6d24e80, hashed before deletion)"
+      "token (0600, 65 bytes) in this window's harness directory",
+      "this window's harness directory (six scripts; exact path withheld from the public receipt)",
+      "two gate plist backups, because a plist backup embeds the bearer token (hashed before deletion; the hashes are of plist files, not of the token, and are recorded in the private run log)"
     ],
     "kept": {
-      "evidence_dir": "/Users/jin/r1-03-evidence/20261111T015417Z",
+      "evidence": "a restricted evidence tree on the host (path withheld from the public receipt; recorded in the private run log)",
       "size": "84K",
-      "contains": "summary.json, probe_pre.json, gate_open.json (+ .probe/.health), gate_close_normal_attempt1.json (+ .probe/.health), static_config.json, state/, p5/gate_recheck_readonly.json",
+      "contains": "summary.json, probe_pre.json, gate_open.json (+ .probe/.health), gate_close_normal_attempt1.json (+ .probe/.health), static_config.json, state/, p5 recheck receipt",
       "why_kept": "This is the receipt of record; it holds digests and classifications, no item content and no token."
     },
     "residue_scan": {
@@ -218,12 +220,12 @@
   },
 
   "preexisting_residue": {
-    "found": "/Users/jin/r1-harness-20261110T132312Z (created 2026-11-10 21:23, before the R1 window), containing r1_bridge_client.py, r1_gate.sh, r1_watchdog.sh, r1_window.sh and a token (0600, 65 bytes)",
+    "found": "A harness directory created 2026-11-10 21:23, before the R1 window, containing four r1 scripts and a token (0600, 65 bytes). Exact path withheld from the public receipt; it is recorded in the private run log and identified in R1_03_TOKEN_COPY_REMOVAL_PLAN.md by creation time and contents.",
     "token_matches_live_credential": true,
-    "token_sha256_12": "f17daa3bf3ff",
-    "why_it_matters": "It is byte-identical to the bearer token this window used, so a valid credential has been sitting on disk since 2026-11-10 21:23. R1's closure receipt names a different harness directory (r1-harness-20261110T143931Z) and reports the harness as deleted; this directory is not covered by that claim.",
+    "how_verified": "sha256 of the file compared against the token this window extracted; the two digests are identical. The digest values themselves are withheld from the public receipt.",
+    "why_it_matters": "A valid credential has been sitting on disk since 2026-11-10 21:23. R1's closure receipt names a different harness directory and reports the harness as deleted; this directory is not covered by that claim.",
     "action_taken": "none - reported, not deleted",
-    "why_not_deleted": "It was not created by this window and it is evidence of a closure claim that does not hold. Removing it is a decision for the focal point, not a side effect of this run."
+    "why_not_deleted": "It was not created by this window and it is evidence of a closure claim that does not hold. Removal is prepared in R1_03_TOKEN_COPY_REMOVAL_PLAN.md and waits for authorization."
   },
 
   "what_this_does_not_prove": [
@@ -235,5 +237,5 @@
 
   "verdict": "RESOLVED_ID_NOT_RESOLVABLE",
   "verdict_assertion": "The bound list 9D9A****03F3 does not resolve on MAC-1 as of 2026-11-11T01:54:46Z. With the gate open and the store healthy, GET /reminders/lists/9D9A****03F3/items returned HTTP 404 LIST_NOT_FOUND; the same request before the gate opened and after it closed returned 403 PERMISSION_DENIED, so the 404 is an answer from an open gate, not a refusal. Combined with R1's enumeration result (two lists, target absent) this says the identifier is gone from this store's view; it does not say why.",
-  "next_step": "Recorded, not started: a decision is needed before anything else happens. Non-empty results never trigger a read; a 404 triggers nothing at all."
+  "next_step": "Recorded, not started: a decision is needed before anything else happens. Non-empty results never trigger a read; a 404 triggers nothing at all. The two prepared follow-ups - removal of the legacy token copy, and the restore-vs-rebind comparison - are in R1_03_TOKEN_COPY_REMOVAL_PLAN.md and R1_03_LIST_RECOVERY_OPTIONS.md, and both wait for explicit authorization."
 }

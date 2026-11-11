@@ -695,6 +695,8 @@ v5 把"到期不等于关掉"这个边界写清楚了，但没有消除它。v6 
 
 **只有这一种写法。** 前一版这里给过一条不带目标 ID 也"可以"的关闸命令——那是一个会走账户级枚举的范例，已整条删除，字面也不保留。`r1_probe_close.sh` 没有"不带目标 ID"的调用方式，缺参数时在改动之前就 `exit 2`（§7.2.2 场景 7）。
 
+**复核入口（2026-11-11 起的规则）**：闸门关闭状态的任何复核——人工或自动——一律走 `probe --phase post`（条目端点，与窗口自身同一请求类）。客户端的 `gate` 子命令是 R1 专用（打 `/reminders/lists`），R1-03 的任何路径都不再用它；本轮执行中的一次越界使用已单独记入 `R1_03_BOUND_ID_PROBE_RESULT.json` v2 的 `authorization_deviation`，并计入全程请求账。
+
 **恢复失败时不做的事**：不重试到"看起来成功"（`R1_RESTORE_ATTEMPTS` 默认 2，用完即报失败）、**不 disarm 看门狗、不写 `stop`、不删除 `gate_open_since`**、不手工改 plist 掩盖、不卸载服务、不删证据。恢复失败是一次需要人介入的状态，脚本的职责是**如实命名它**、保住现场，并把剩下的期限保护留在原地。
 
 **恢复目标**（§8.4）：原有常驻服务健康 + 业务闸门关闭 + plist 除该键外逐字节一致 + `/health` 仍 200。不包含"卸载""pid 归零"。
@@ -794,7 +796,9 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 | 3 | 窗口编排 + 接入 gate / watchdog + 唯一关闸入口 | `scripts/r1_probe_window.sh`、`scripts/r1_gate.sh`、`scripts/r1_watchdog.sh`、`scripts/r1_probe_close.sh` |
 | 4 | 窗口集成用例（四类失效场景 + 预算 + 开闸时限 10a/10a2/10b/10c + 中断 + 零枚举，**134 项**） | `scripts/tests/test_r1_probe_window.sh` |
 | 5 | 脚本哈希清单 | 本文件 §7.4.1 |
-| 6 | 执行回执（2026-11-11 已生成） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
+| 6 | 执行回执（2026-11-11 已生成，公开版 **v2**：窗后枚举计入全程请求账；复核统一 `probe --phase post`；脱敏——内网地址、凭据路径与令牌指纹不进公开文档，原始证据留在主机受限位置） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
+| 9 | 旧凭据副本清理方案（发现于 2026-11-10 21:23 的 harness 残留，含与在用凭据一致的令牌；**待授权**） | `receipts/R1_03_TOKEN_COPY_REMOVAL_PLAN.md` |
+| 10 | 专用列表去向取舍：恢复原列表 vs 新建并改绑（**离线准备，待决策**） | `receipts/R1_03_LIST_RECOVERY_OPTIONS.md` |
 | 7 | 窗口汇总（执行后） | `<work-dir>/window-<label>-<UTC>/summary.json` + `probe_pre.json` / `gate_open.json` / `gate_close_*.json` |
 | 8 | 关窗与恢复核验（执行后） | 并入回执：闸门键回原值、`/health` 200、plist 与开窗前逐字节比对、`probe_classification=GATE_RESTORED_CLOSED` |
 
