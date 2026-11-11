@@ -27,7 +27,34 @@
 #   r1_gate.sh open|close --plist P --token-file T --out O
 #              [--list-id ID] [--canary-id CID] [--require-no-enumeration]
 #              [--config-file F] [--endpoint E] [--purpose TEXT]
-#              [--lock-wait SECONDS] [--dry-run]
+#              [--lock-wait SECONDS] [--op-timeout SECONDS] [--dry-run]
+#
+# Operation deadline
+# ------------------
+# --op-timeout bounds the time this operation spends holding the mutex: it
+# starts when the lock is taken, and it is checked before every step that can
+# wait - the reload, the settle, each HTTP request - each of which is killed
+# together with its children once the budget is gone. --lock-wait bounds the
+# waiting for the lock instead; waiting holds nothing.
+#
+# The deadline exists because the operation reloads while holding the gate
+# mutex, and a reload can block. An unbounded open holds the lock past the
+# window's open budget, and every restore then fails at the lock instead of
+# closing the gate - that is measured, not hypothesised (application v5, test
+# scenario 10: the watchdog gave up while the gate was still open, and the gate
+# was shut 46 s after the budget by the window's own close).
+#
+# When the deadline passes: the in-flight command is killed, the one key this
+# operation wrote is put back to closed, the observed value is read back and
+# recorded, and the operation exits 8 without reloading a second time. Putting
+# the key back matters - a disk value of "the gate is open" that no process is
+# running is itself a hazard, because the next restart of the service would
+# honour it. The lock is released on the way out, which is what lets the
+# recovery path take it and close the gate for real.
+#
+# Only local file writes are not interrupted mid-flight (a plutil -replace, a
+# temp-file rename). They wait on nothing, and the check that precedes them
+# bounds when they start.
 #
 # Verification mode
 # -----------------
@@ -46,7 +73,9 @@
 #
 # Exit codes: 0 verified success, 2 precondition, 3 write/backup/verification
 #             failure, 4 reload failure, 5 no authoritative source, 6 evidence
-#             directory or lock record unusable, 7 mutex busy or mutex lost.
+#             directory or lock record unusable, 7 mutex busy or mutex lost,
+#             8 operation deadline exceeded (key set back to closed, the
+#               in-flight command killed, no second reload).
 
 set -uo pipefail
 
@@ -55,6 +84,10 @@ MODE="${1:-}"; shift || true
 
 PLIST=""; CONFIG_FILE=""; TOKEN_FILE=""; ENDPOINT="http://127.0.0.1:18765"; OUT=""
 DRY=0; PURPOSE="unspecified"; LOCK_WAIT=20
+# Default: comfortably longer than a normal open (R1 measured ~8 s) and shorter
+# than the recovery's own lock budget (--lock-wait 15 x 3 attempts = 45 s), so a
+# stalled open always ends before the restore that has to follow it gives up.
+OP_TIMEOUT="${R1_OP_TIMEOUT:-30}"
 LIST_ID=""; CANARY_ID=""; NO_ENUM=0
 LAUNCHCTL="${LAUNCHCTL_BIN:-launchctl}"
 PLUTIL="${PLUTIL_BIN:-plutil}"
@@ -71,6 +104,7 @@ while [ $# -gt 0 ]; do
     --out) OUT="$2"; shift 2 ;;
     --purpose) PURPOSE="$2"; shift 2 ;;
     --lock-wait) LOCK_WAIT="$2"; shift 2 ;;
+    --op-timeout) OP_TIMEOUT="$2"; shift 2 ;;
     --list-id) LIST_ID="$2"; shift 2 ;;
     --canary-id) CANARY_ID="$2"; shift 2 ;;
     --require-no-enumeration) NO_ENUM=1; shift ;;
@@ -82,6 +116,16 @@ done
 
 [ -n "$PLIST" ] || { echo "PRECONDITION: --plist required" >&2; exit 2; }
 [ "$DRY" -eq 1 ] || [ -n "$OUT" ] || { echo "PRECONDITION: --out required" >&2; exit 2; }
+# The deadline is the only thing that keeps this operation from holding the
+# mutex indefinitely, so a malformed value is refused rather than coerced into
+# something that looks like it works.
+case "$OP_TIMEOUT" in
+  ''|*[!0-9]*) echo "PRECONDITION: --op-timeout must be a whole number of seconds" >&2; exit 2 ;;
+esac
+[ "$OP_TIMEOUT" -ge 1 ] || { echo "PRECONDITION: --op-timeout must be at least 1" >&2; exit 2; }
+case "$LOCK_WAIT" in
+  ''|*[!0-9]*) echo "PRECONDITION: --lock-wait must be a whole number of seconds" >&2; exit 2 ;;
+esac
 
 # Two verification modes. `probe` reads one bound ID through the item endpoint
 # and cannot construct the enumeration URL at all; the legacy mode asserts the
@@ -167,6 +211,9 @@ emit_failure_receipt() {
   R1_BEFORE="${BEFORE_PID:-}" R1_AFTER="${AFTER_PID:-}" R1_CFG="$CONFIG_FILE" \
   R1_PLIST="$PLIST" R1_BACKUP="${BACKUP:-}" R1_PURPOSE="$PURPOSE" \
   R1_CFG_BACKUP="${CFG_BACKUP:-}" R1_DISK_WRITTEN="$DISK_WRITTEN" \
+  R1_ROLLED_BACK="${ROLLED_BACK:-0}" R1_OP_TIMEOUT="${OP_TIMEOUT:-0}" \
+  R1_RELOAD_KILLED="${RELOAD_KILLED:-0}" R1_DEADLINE_PHASE="${DEADLINE_PHASE:-}" \
+  R1_VALUE_BEFORE="${EFFECTIVE:-}" R1_VALUE_AFTER="${GATE_KEY_AFTER:-}" \
   "$PYTHON" - <<'PYEOF' || echo "[r1_gate] WARNING: could not write the failure receipt to $OUT" >&2
 import json, os
 env = os.environ
@@ -190,6 +237,17 @@ receipt = {
   "failure_stage": env["R1_STAGE"],
   "failure_exit_code": int(env["R1_RC"]),
   "disk_written_before_failure": env.get("R1_DISK_WRITTEN") == "1",
+  # An operation that ran out of time must say what it left behind: which step
+  # it was in, whether the in-flight command was killed, which value the key had
+  # before, which value the file holds now (read back, not assumed), and whether
+  # a reload is still pending anywhere in this process (it is not).
+  "operation_timeout_seconds": int(env.get("R1_OP_TIMEOUT") or 0),
+  "deadline_phase": env.get("R1_DEADLINE_PHASE") or None,
+  "reload_killed": env.get("R1_RELOAD_KILLED") == "1",
+  "gate_key_before_operation": env.get("R1_VALUE_BEFORE") or None,
+  "gate_key_after_deadline": env.get("R1_VALUE_AFTER") or None,
+  "gate_key_left_closed": (env.get("R1_ROLLED_BACK") == "1"
+                           and env.get("R1_VALUE_AFTER") == "false"),
   "authoritative_source": env["R1_SOURCE"],
   "plist_backup": env.get("R1_BACKUP") or None,
   "plist_backup_mode": "0600" if env.get("R1_BACKUP") else None,
@@ -203,7 +261,8 @@ receipt = {
 with open(env["R1_OUT"], "w", encoding="utf-8") as fh:
     json.dump(receipt, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
-print("[r1_gate] FAILURE RECEIPT written: stage=%s rc=%s" % (env["R1_STAGE"], env["R1_RC"]))
+print("[r1_gate] FAILURE RECEIPT written: stage=%s rc=%s key_left_closed=%s"
+      % (env["R1_STAGE"], env["R1_RC"], receipt["gate_key_left_closed"]))
 PYEOF
 }
 
@@ -450,6 +509,83 @@ PYEOF
   exit 7
 fi
 
+# --- 3b. the operation's clock ----------------------------------------------
+# The clock starts here, not at the top of the script: --lock-wait already
+# bounds the waiting, and waiting holds no mutex. What has to be bounded is the
+# time spent *holding* it, because that is the time a restore cannot get in.
+OP_START="$(date +%s)"
+# State that a deadline exit has to report. Declared up front so the receipt
+# writer never has to guess whether a variable exists.
+DEADLINE_KILLED=0; ROLLED_BACK=0; RELOAD_KILLED=0; DEADLINE_PHASE=""; GATE_KEY_AFTER=""
+
+op_remaining() {
+  local used left
+  used=$(( $(date +%s) - OP_START ))
+  left=$(( OP_TIMEOUT - used ))
+  [ "$left" -lt 0 ] && left=0
+  printf '%s' "$left"
+}
+
+# Kill a process and everything it started. The reload can be a wrapper script
+# that sleeps in a child process, so killing only the parent would leave the
+# child running - the operation would be "stopped" while its work carried on,
+# which is exactly the difference this change is about.
+#
+# The walk is defensive on purpose: the child list comes from an external
+# command, and an implementation that trusts it can recurse on a pid reported as
+# its own child until the process dies of it. Anything that is not a plain
+# number, a repeat of the caller, or nested deeper than any real wrapper is
+# dropped instead of followed.
+kill_tree() {   # $1 = pid, $2 = depth (internal)
+  local pid="$1" depth="${2:-0}" child waited=0
+  case "$pid" in ''|*[!0-9]*) return 0 ;; esac
+  [ "$pid" -gt 1 ] || return 0
+  if [ "$depth" -lt 8 ]; then
+    for child in $(pgrep -P "$pid" 2>/dev/null); do
+      case "$child" in ''|*[!0-9]*) continue ;; esac
+      [ "$child" = "$pid" ] && continue
+      kill_tree "$child" $((depth + 1))
+    done
+  fi
+  kill -TERM "$pid" 2>/dev/null || true
+  while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 5 ]; do sleep 0.2; waited=$((waited + 1)); done
+  kill -KILL "$pid" 2>/dev/null || true
+}
+
+# Run one external command with at most `limit` seconds. Returns the command's
+# own status, or 124 when the deadline arrived first - the sentinel `timeout(1)`
+# uses, so the convention is not new. Sets DEADLINE_KILLED, which the caller
+# turns into a receipt and an exit, never into a silent continuation.
+run_bounded() {
+  local limit="$1" pid started rc=0; shift
+  if [ "$limit" -le 0 ]; then DEADLINE_KILLED=1; return 124; fi
+  "$@" &
+  pid=$!
+  started="$(date +%s)"
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ $(( $(date +%s) - started )) -ge "$limit" ]; then
+      kill_tree "$pid"
+      wait "$pid" 2>/dev/null
+      DEADLINE_KILLED=1
+      return 124
+    fi
+    sleep 0.2
+  done
+  wait "$pid" 2>/dev/null
+  rc=$?
+  return "$rc"
+}
+
+# Read the authoritative source, not the value this process last intended. Every
+# claim about "the key is closed now" is made from this, never from $WANT.
+read_source_value() {
+  if [ "$SOURCE" = "launchd_env" ]; then
+    "$PLUTIL" -extract EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED raw "$PLIST" 2>/dev/null
+  elif [ "$SOURCE" = "config_file" ]; then
+    awk -F= '/^[[:space:]]*EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED[[:space:]]*=/{v=$2; gsub(/[[:space:]"]/,"",v); print v; exit}' "$CONFIG_FILE" 2>/dev/null
+  fi
+}
+
 # --- 4. back up the authoritative source before touching it ------------------
 # Both files may contain the bearer token, so neither backup may be readable by
 # others and neither sits next to the original.
@@ -478,12 +614,12 @@ elif [ "$SOURCE" = "config_file" ]; then
 fi
 
 # --- 5. write exactly the authoritative source, atomically -------------------
-set_config_gate() {
+set_config_gate() {   # $1 = the value to write into the one gate key
   [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ] || return 7
   # Write a sibling temp file with the original mode, then rename: a reader
   # (including the next process) never sees a half-written config, and the
   # single-key scope is enforced by the regex below.
-  "$PYTHON" - "$CONFIG_FILE" "$WANT" <<'PYEOF'
+  "$PYTHON" - "$CONFIG_FILE" "$1" <<'PYEOF'
 import os, re, sys, tempfile
 path, want = sys.argv[1], sys.argv[2]
 with open(path, encoding="utf-8") as fh:
@@ -506,6 +642,51 @@ finally:
 PYEOF
 }
 
+# The one writer. Both the requested write and the deadline rollback go through
+# it, so "put the key back" cannot end up being a different, weaker edit than
+# "set the key" - the same single key, the same file, the same atomic rename.
+write_gate_value() {   # $1 = value
+  if [ "$SOURCE" = "launchd_env" ]; then
+    "$PLUTIL" -replace EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED -string "$1" "$PLIST"
+  elif [ "$SOURCE" = "config_file" ]; then
+    set_config_gate "$1"
+  else
+    return 1
+  fi
+}
+
+# The only way out when the clock runs out. It cannot reload: every reload site
+# sits after an op_guard(), and this function exits. It does write, exactly once
+# and only to `false`, because the operation that just failed must not leave the
+# disk saying "open" for the next restart of the service to honour.
+deadline_exit() {   # $1 = the step that ran out of time
+  DEADLINE_PHASE="$1"
+  RELOAD_KILLED="$DEADLINE_KILLED"
+  echo "[r1_gate] DEADLINE EXCEEDED in $1: ${OP_TIMEOUT}s budget gone; this operation stops here" >&2
+  if [ "$DEADLINE_KILLED" -eq 1 ]; then
+    echo "[r1_gate] the in-flight command was killed together with its children; this process will not reload again" >&2
+  fi
+  if [ "$DISK_WRITTEN" -eq 1 ]; then
+    if write_gate_value "false"; then
+      ROLLED_BACK=1
+      echo "[r1_gate] the gate key was put back to false (no reload: this process is done)" >&2
+    else
+      echo "[r1_gate] CRITICAL: could not put the gate key back to false; the disk may still say open" >&2
+    fi
+  fi
+  GATE_KEY_AFTER="$(read_source_value)"
+  echo "[r1_gate] key read back after the deadline: ${GATE_KEY_AFTER:-unreadable} (was ${EFFECTIVE:-undefined} before this operation)" >&2
+  emit_failure_receipt op_timeout 8
+  exit 8
+}
+
+# Checked before every step that can wait. A step that starts after the deadline
+# would be a step the deadline does not bound.
+op_guard() {
+  if [ "$(op_remaining)" -le 0 ]; then deadline_exit "$1"; fi
+  return 0
+}
+
 WRITE_RC=0
 # Both production-facing steps are gated on still owning the mutex. A lock that
 # was stolen or reclaimed while we were working cannot lead to a write or a
@@ -516,13 +697,12 @@ if ! assert_lock_owned; then
   emit_failure_receipt lock_lost 7
   exit 7
 fi
-if [ "$SOURCE" = "launchd_env" ]; then
-  "$PLUTIL" -replace EnvironmentVariables.EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED -string "$WANT" "$PLIST" || WRITE_RC=$?
-elif [ "$SOURCE" = "config_file" ]; then
-  set_config_gate || WRITE_RC=$?
-else
+op_guard write
+if [ "$SOURCE" = "absent" ]; then
   # absent + close: nothing to write, only the endpoint has to be proven closed.
   echo "[r1_gate] no authoritative source defines the gate; nothing to rewrite (close verifies only)"
+else
+  write_gate_value "$WANT" || WRITE_RC=$?
 fi
 if [ "$WRITE_RC" -ne 0 ]; then
   echo "[r1_gate] FAILED: writing the gate source returned $WRITE_RC" >&2
@@ -539,24 +719,37 @@ if ! assert_lock_owned; then
 fi
 BEFORE_PID="$(pgrep -x EventKitBridgeServer 2>/dev/null | head -1 || true)"
 RELOAD_RC=0
+# Every launchctl call below is bounded by what is left of the operation's
+# clock, and a 124 from run_bounded leaves through deadline_exit - which cannot
+# come back here, so no second reload is possible from this process.
 if [ "$SOURCE" = "launchd_env" ]; then
+  op_guard reload
   BOOTOUT_RC=0
-  "$LAUNCHCTL" bootout "gui/$(id -u)/$LABEL" 2>/dev/null || BOOTOUT_RC=$?
+  run_bounded "$(op_remaining)" "$LAUNCHCTL" bootout "gui/$(id -u)/$LABEL" 2>/dev/null || BOOTOUT_RC=$?
+  [ "$BOOTOUT_RC" -eq 124 ] && deadline_exit reload
   if [ "$BOOTOUT_RC" -ne 0 ]; then
     # bootout fails when the job is not loaded; that is only acceptable if the
     # job really is not loaded. Anything else is a main-path error and must not
     # be swallowed before bootstrap.
-    if "$LAUNCHCTL" print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
+    PRINT_RC=0
+    run_bounded "$(op_remaining)" "$LAUNCHCTL" print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || PRINT_RC=$?
+    [ "$PRINT_RC" -eq 124 ] && deadline_exit reload
+    if [ "$PRINT_RC" -eq 0 ]; then
       echo "[r1_gate] FAILED: bootout returned $BOOTOUT_RC but the job is still loaded" >&2
       emit_failure_receipt bootout "$BOOTOUT_RC"
       exit 4
     fi
     echo "[r1_gate] bootout reported $BOOTOUT_RC and the job is not loaded; continuing"
   fi
-  sleep 1
-  "$LAUNCHCTL" bootstrap "gui/$(id -u)" "$PLIST" || RELOAD_RC=$?
+  SETTLE_STOP=0
+  run_bounded "$(op_remaining)" sleep 1 || SETTLE_STOP=$?
+  [ "$SETTLE_STOP" -eq 124 ] && deadline_exit reload
+  run_bounded "$(op_remaining)" "$LAUNCHCTL" bootstrap "gui/$(id -u)" "$PLIST" || RELOAD_RC=$?
+  [ "$RELOAD_RC" -eq 124 ] && deadline_exit reload
 elif [ "$SOURCE" = "config_file" ]; then
-  "$LAUNCHCTL" kickstart -k "gui/$(id -u)/$LABEL" || RELOAD_RC=$?
+  op_guard reload
+  run_bounded "$(op_remaining)" "$LAUNCHCTL" kickstart -k "gui/$(id -u)/$LABEL" || RELOAD_RC=$?
+  [ "$RELOAD_RC" -eq 124 ] && deadline_exit reload
 fi
 if [ "$RELOAD_RC" -ne 0 ]; then
   echo "[r1_gate] FAILED: reload returned $RELOAD_RC" >&2
@@ -566,11 +759,18 @@ if [ "$RELOAD_RC" -ne 0 ]; then
 fi
 
 # --- 7. verify by behaviour and by process identity (always) ----------------
-sleep "${R1_SETTLE_SECONDS:-3}"
+# Verification is inside the same clock: it holds the mutex too, and a probe
+# that never returns would keep a restore out exactly like a stuck reload. If
+# the clock runs out here the key is still put back - an operation that could
+# not verify has not been shown to have happened.
+SETTLE_RC=0
+run_bounded "$(op_remaining)" sleep "${R1_SETTLE_SECONDS:-3}" || SETTLE_RC=$?
+[ "$SETTLE_RC" -eq 124 ] && deadline_exit verify
 AFTER_PID="$(pgrep -x EventKitBridgeServer 2>/dev/null | head -1 || true)"
 VERIFY_RC=0
 HEALTH_JSON="$OUT.health.json"
-"$PYTHON" "$CLIENT" health --endpoint "$ENDPOINT" --out "$HEALTH_JSON" >/dev/null 2>&1 || VERIFY_RC=3
+run_bounded "$(op_remaining)" "$PYTHON" "$CLIENT" health --endpoint "$ENDPOINT" --out "$HEALTH_JSON" >/dev/null 2>&1 || VERIFY_RC=$?
+[ "$VERIFY_RC" -eq 124 ] && deadline_exit verify
 
 GATE_JSON="$OUT.gate.json"
 PROBE_JSON="$OUT.probe.json"
@@ -591,11 +791,12 @@ if [ "$VERIFY_RC" -eq 0 ]; then
                 --list-id "$LIST_ID" --phase "$([ "$MODE" = "close" ] && echo post || echo open)"
                 --expect "$PROBE_EXPECT" --out "$PROBE_JSON")
     [ -n "$CANARY_ID" ] && PROBE_ARGS+=(--canary-id "$CANARY_ID")
-    "$PYTHON" "$CLIENT" probe "${PROBE_ARGS[@]}" >/dev/null 2>&1 || VERIFY_RC=3
+    run_bounded "$(op_remaining)" "$PYTHON" "$CLIENT" probe "${PROBE_ARGS[@]}" >/dev/null 2>&1 || VERIFY_RC=$?
   else
-    "$PYTHON" "$CLIENT" gate --endpoint "$ENDPOINT" --token-file "$TOKEN_FILE" \
-      --expect "$EXPECT_CODE" --out "$GATE_JSON" >/dev/null 2>&1 || VERIFY_RC=3
+    run_bounded "$(op_remaining)" "$PYTHON" "$CLIENT" gate --endpoint "$ENDPOINT" \
+      --token-file "$TOKEN_FILE" --expect "$EXPECT_CODE" --out "$GATE_JSON" >/dev/null 2>&1 || VERIFY_RC=$?
   fi
+  [ "$VERIFY_RC" -eq 124 ] && deadline_exit verify
 fi
 
 ENV_OBS="not_applicable"
@@ -636,6 +837,10 @@ receipt = {
   "verification_mode": "$VERIFY_MODE",
   "verification": "PASS" if ("$VERIFY_RC" == "0") else "FAIL",
   "verification_basis": "http behaviour after reload + process identity; never the file value",
+  # How long this operation was allowed to hold the mutex, and how long it took.
+  # A reader can check the second against the first instead of trusting a claim.
+  "operation_timeout_seconds": $OP_TIMEOUT,
+  "operation_duration_seconds": $(( $(date +%s) - OP_START )),
   "plist_backup": "${BACKUP}" or None,
   "plist_backup_mode": "0600" if "${BACKUP}" else None,
   "config_backup": "${CFG_BACKUP}" or None,

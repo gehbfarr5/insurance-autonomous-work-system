@@ -18,11 +18,16 @@
 #   r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 #                     [--config-file F] [--endpoint U]
 #                     [--purpose TEXT] [--lock-wait SECONDS]
+#                     [--op-timeout SECONDS]
+#
+# --op-timeout is forwarded to the gate, which uses it to bound the time this
+# close spends holding the mutex. A close that runs out of time puts the key
+# back to closed and exits 8; the wrapper does not swallow that code.
 #
 # Exit codes
 #   2  refused: a required argument is missing (nothing was read or changed)
 #   3  the gate script is missing (nothing changed)
-#   *  whatever r1_gate.sh close returns (0 verified, 3/4/6/7 otherwise)
+#   *  whatever r1_gate.sh close returns (0 verified, 3/4/6/7/8 otherwise)
 
 set -uo pipefail
 
@@ -31,6 +36,7 @@ GATE="${R1_GATE_BIN:-$HERE/r1_gate.sh}"
 
 LIST_ID=""; TOKEN_FILE=""; PLIST=""; CONFIG_FILE=""; OUT=""
 ENDPOINT="http://127.0.0.1:18765"; PURPOSE="r1-03:close"; LOCK_WAIT=15
+OP_TIMEOUT="${R1_OP_TIMEOUT:-30}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -42,6 +48,7 @@ while [ $# -gt 0 ]; do
     --out) OUT="$2"; shift 2 ;;
     --purpose) PURPOSE="$2"; shift 2 ;;
     --lock-wait) LOCK_WAIT="$2"; shift 2 ;;
+    --op-timeout) OP_TIMEOUT="$2"; shift 2 ;;
     *) echo "r1_probe_close: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -76,4 +83,5 @@ exec "$GATE" close \
   --require-no-enumeration \
   --purpose "$PURPOSE" \
   --lock-wait "$LOCK_WAIT" \
+  --op-timeout "$OP_TIMEOUT" \
   --out "$OUT"

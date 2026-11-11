@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 # test_r1_probe_window.sh — offline verification of the R1-03 probe window.
 #
-# Four scenarios the application must stand behind, plus the one structural
-# claim the whole design rests on:
+# What the application has to stand behind, scenario by scenario:
 #   1. a normal close: open, probe, close, restore verified
 #   2. the window process is SIGKILLed after the gate opened
 #   3. the watchdog fires on the absolute deadline, and on the open budget
 #   4. the restore itself fails and is reported as a failure, never as success
-#   5. across every one of those runs, the request log contains no call to the
-#      account-wide enumeration endpoint
+#   5. a failed restore does not disarm the watchdog or delete the budget stamp
+#   6. a blocked open is charged to the budget from before the change
+#   7. an emergency close without a target refuses before changing anything
+#   8. restore retries never re-ask the open question
+#   9. an interrupt is reported as truncated, never as a completed window
+#  10. a stalled open is stopped at its own deadline: the key goes back to
+#      closed, the lock is released, the recovery gets in and shuts the gate,
+#      and the gate can be opened again afterwards
+#   and across every one of those runs, the request log contains no call to the
+#   account-wide enumeration endpoint.
 #
 # launchctl / codesign / pgrep / ps are stubs; the bridge is the loopback fake,
 # which logs every request it answers. No EventKit, no TCC, no Apple account,
@@ -86,6 +93,10 @@ PLIST
   cat > "$FX/bin/launchctl" <<'STUB'
 #!/bin/sh
 echo "launchctl $*" >> "$STUB_DIR/launchctl.log"
+# The value the gate was told to load, sampled at the moment of the call. This
+# is what makes "it did not reload the open state again" checkable from the
+# outside instead of inferred from the absence of an error.
+echo "gate_at_call=$(sed -n 's/^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=//p' "$STUB_DIR/conf/bridge.env")" >> "$STUB_DIR/launchctl.gate"
 COUNT_FILE="$STUB_DIR/launchctl.count"
 N=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
 N=$((N + 1)); echo "$N" > "$COUNT_FILE"
@@ -102,9 +113,23 @@ if [ -f "$STUB_DIR/fail_on_close" ] \
 fi
 # A slow reload: proves that the budget is charged from the moment the gate is
 # told to change, not from the moment the change returns.
+#
+# slow_on_open narrows it to the reload that is bringing the gate UP, so a
+# fixture can stall the open without also stalling the recovery that has to
+# follow it. Without that marker every reload is slow.
 if [ -n "${STUB_LAUNCHCTL_SLEEP:-}" ]; then
-  [ -f "$STUB_DIR/reload.first" ] || date +%s > "$STUB_DIR/reload.first"
-  sleep "${STUB_LAUNCHCTL_SLEEP}"
+  STALL=1
+  if [ -f "$STUB_DIR/slow_on_open" ] \
+     && grep -q '^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false' "$STUB_DIR/conf/bridge.env"; then
+    STALL=0
+  fi
+  if [ "$STALL" -eq 1 ]; then
+    [ -f "$STUB_DIR/reload.first" ] || date +%s > "$STUB_DIR/reload.first"
+    # exec, not a child: the blocking process has to *be* the one that gets
+    # killed, or a test of "the deadline stops the reload" would only prove that
+    # a wrapper died while its work carried on.
+    exec sleep "${STUB_LAUNCHCTL_SLEEP}"
+  fi
 fi
 exit 0
 STUB
@@ -116,6 +141,12 @@ STUB
   cat > "$FX/bin/pgrep" <<'STUB'
 #!/bin/sh
 [ -n "${STUB_NO_PROCESS:-}" ] && exit 1
+# The stubs model single-process commands. pgrep -x answers with the fake
+# service pid; pgrep -P (the deadline's child walk) honestly finds nothing
+# rather than inventing a grandchild that would then be killed for real.
+case "$*" in
+  *-P*) exit 1 ;;
+esac
 echo 4242
 STUB
   cat > "$FX/bin/ps" <<'STUB'
@@ -153,6 +184,21 @@ stop_bridge() { [ -n "${BRIDGE_PID:-}" ] && kill "$BRIDGE_PID" 2>/dev/null; wait
 trap 'stop_bridge; [ -n "${WD_PID:-}" ] && kill "$WD_PID" 2>/dev/null; true' EXIT
 
 gate_value() { awk -F= '/^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=/{print $2}' "$FX/conf/bridge.env"; }
+
+# How many reloads the fixture saw, and how many of them were loading an open
+# gate. The second number is the "no second open" evidence: a gate operation
+# that keeps working after its deadline would add another `true` here.
+reload_calls() { awk 'END{print NR+0}' "$FX/launchctl.gate" 2>/dev/null; }
+reloads_with_gate_open() {
+  awk -F= '$1=="gate_at_call" && $2=="true"{n++} END{print n+0}' "$FX/launchctl.gate" 2>/dev/null
+}
+receipt_field() {  # $1 = receipt path, $2 = field
+  python3 -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1], encoding="utf-8")).get(sys.argv[2]))
+except Exception:
+    print(None)' "$1" "$2" 2>/dev/null
+}
 
 # --- request-log assertions -------------------------------------------------
 enumeration_calls() { awk -F'\t' '$3=="/reminders/lists"{n++} END{print n+0}' "$1"; }
@@ -437,6 +483,17 @@ eq "the gate refuses --require-no-enumeration without --list-id" "$GATECLOSE_RC"
 eq "the config file is still untouched" \
   "$(/usr/bin/shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_BEFORE"
 eq "still no request was sent" "$(wc -l < "$REQ_LOG" | tr -d ' ')" "0"
+# A deadline that cannot be honoured is refused rather than read as "no
+# deadline": the whole point of the number is that it is always in force.
+"$GATE" close --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --require-no-enumeration \
+  --list-id "$LIST_ID" --op-timeout 0 --out "$FX/badtimeout.json" > "$FX/badtimeout.out" 2>&1
+BAD_TIMEOUT_RC=$?
+eq "the gate refuses an op-timeout it cannot honour" "$BAD_TIMEOUT_RC" "2"
+eq "that refusal changed nothing either" \
+  "$(/usr/bin/shasum -a 256 "$FX/conf/bridge.env" | awk '{print $1}')" "$CFG_BEFORE"
+eq "and it wrote no receipt" \
+  "$([ -f "$FX/badtimeout.json" ] && echo yes || echo no)" "no"
 ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
 stop_bridge
 
@@ -512,22 +569,94 @@ eq "the interrupted run enumerated nothing" "$(enumeration_calls "$REQ_LOG")" "0
 ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
 stop_bridge
 
-# ====================== 10. the budget expires while the open still holds the lock
-# The deadline decides when a restore starts trying, not when the gate is shut.
-# If the open is still inside its reload, it holds the mutex, and the watchdog's
-# close cannot take it: the close fails at the lock, not at the reload, and with
-# its attempts spent the watchdog gives up while the gate is still open. That is
-# the honest limit of a design whose only writer is serialised by one mutex, and
-# this scenario measures it instead of describing it.
-echo "[10] budget expires while the open holds the mutex"
+# ====================== 10a. a stalled open is stopped at its own deadline
+# The previous version of this scenario measured a limit instead of a behaviour:
+# the open held the mutex through a blocked reload, the watchdog's close failed
+# at the lock, and the gate stayed open 46 s past the budget until the window's
+# own close got there. The gate now bounds how long one operation may hold the
+# mutex, so the same stall has to end at the deadline - with the key back at
+# closed, the lock back in the pool, and no reload left running.
+echo "[10a] a stalled open is stopped at its deadline and leaves the key closed"
 new_fixture; start_bridge
-export STUB_LAUNCHCTL_SLEEP=20     # the open holds the lock ~23s, longer than --lock-wait 15
-export R1_RESTORE_ATTEMPTS=1       # one attempt, so the outcome is not a race with the retry
+: > "$FX/slow_on_open"          # only the reload that opens is slow
+export STUB_LAUNCHCTL_SLEEP=40   # the reload would run 5x longer than the deadline
+OPEN_T0="$(date +%s)"
+"$GATE" open --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --list-id "$LIST_ID" \
+  --require-no-enumeration --purpose test:stalled-open \
+  --lock-wait 10 --op-timeout 8 --out "$FX/open.json" > "$FX/open.out" 2>&1
+OPEN_RC=$?
+OPEN_ELAPSED=$(( $(date +%s) - OPEN_T0 ))
+unset STUB_LAUNCHCTL_SLEEP
+eq "the stalled open gives up with exit 8" "$OPEN_RC" "8"
+# Bounded on both sides: < 8 would mean the exit was not caused by the deadline,
+# and > 20 would mean the deadline did not reach the reload.
+check "it stopped near its deadline, not when the reload would have finished" \
+  "$([ "$OPEN_ELAPSED" -ge 8 ] && [ "$OPEN_ELAPSED" -le 20 ] && echo 1 || echo 0)" \
+  "elapsed=${OPEN_ELAPSED}s"
+echo "  [note] deadline 8s, the reload would have run 40s; stopped at ${OPEN_ELAPSED}s"
+eq "the disk key is closed again without anyone else touching it" "$(gate_value)" "false"
+eq "the receipt names the deadline, not the reload" \
+  "$(receipt_field "$FX/open.json" failure_stage)" "op_timeout"
+eq "the receipt names the step that ran out of time" \
+  "$(receipt_field "$FX/open.json" deadline_phase)" "reload"
+eq "the receipt records the deadline it was given" \
+  "$(receipt_field "$FX/open.json" operation_timeout_seconds)" "8"
+eq "the receipt says the in-flight reload was killed" \
+  "$(receipt_field "$FX/open.json" reload_killed)" "True"
+eq "the receipt says the key was left closed" \
+  "$(receipt_field "$FX/open.json" gate_key_left_closed)" "True"
+eq "the receipt records the value before this operation" \
+  "$(receipt_field "$FX/open.json" gate_key_before_operation)" "false"
+eq "the receipt records the value it read back, not the one it wanted" \
+  "$(receipt_field "$FX/open.json" gate_key_after_deadline)" "false"
+eq "no receipt claims the open succeeded" \
+  "$(receipt_field "$FX/open.json" verification)" "FAIL"
+# The proof that the operation stopped, from outside the script: one reload was
+# issued, and none followed the kill. `gate_at_call` is the value the reload was
+# actually loading, so a second open-phase reload cannot hide here.
+eq "the abandoned open issued exactly one reload" "$(reload_calls)" "1"
+eq "nothing after the deadline reloaded an open gate" "$(reloads_with_gate_open)" "1"
+eq "the lock was given back, so a recovery can take it" \
+  "$([ -e "$FX/lock/gate.lock" ] && echo held || echo free)" "free"
+eq "the stalled open enumerated nothing" "$(enumeration_calls "$REQ_LOG")" "0"
+ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
+
+# 10a2. The close wrapper is the only close entry, so the deadline has to survive
+# the handover. A value that is dropped there would leave every restore running
+# with the gate default while the window believes otherwise.
+#
+# The budget is 2 s rather than 1 s on purpose: the point here is the handover,
+# not the phase the clock happens to land in. Which step is interrupted is
+# asserted by 10a, where an 8 s budget against a 40 s reload cannot be ambiguous.
+echo "[10a2] the close wrapper hands the deadline to the gate"
+"$CLOSE" --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --list-id "$LIST_ID" \
+  --purpose test:close-deadline --op-timeout 2 \
+  --out "$FX/close_timeout.json" > "$FX/close_timeout.out" 2>&1
+CLOSE_TIMEOUT_RC=$?
+eq "a close given two seconds stops with exit 8" "$CLOSE_TIMEOUT_RC" "8"
+eq "the receipt carries the deadline the wrapper was given" \
+  "$(receipt_field "$FX/close_timeout.json" operation_timeout_seconds)" "2"
+eq "and the receipt names the deadline as the reason" \
+  "$(receipt_field "$FX/close_timeout.json" failure_stage)" "op_timeout"
+eq "the gate is closed on disk after that" "$(gate_value)" "false"
+stop_bridge
+
+# ============== 10b. the recovery path takes the lock the open gave back
+# Same stall, now inside the real window: the budget fires while the open is
+# still inside its reload. The point of the change is that the watchdog's close
+# no longer has to give up at the mutex - the open is out of the way at its own
+# deadline, so the restore gets in, and the gate is closed and verified.
+echo "[10b] the recovery path takes the lock the stalled open had to give back"
+new_fixture; start_bridge
+: > "$FX/slow_on_open"
+export STUB_LAUNCHCTL_SLEEP=40
 BIN="$BIN" FROZEN_SHA256="$SHA" "$WINDOW" \
   --list-id "$LIST_ID" --canary-id "$CANARY_ID" --token-file "$FX/token" \
   --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
   --endpoint "$URL" --work-dir "$FX/work" --label l \
-  --window-seconds 60 --open-budget 3 --confirm > "$FX/window.out" 2>&1 &
+  --window-seconds 60 --open-budget 6 --op-timeout 12 --confirm > "$FX/window.out" 2>&1 &
 WIN_PID=$!
 STATE_DIR=""
 # Two files, in this order: the watchdog publishes its status when it arms, the
@@ -541,58 +670,77 @@ done
 STAMP="$(cat "$STATE_DIR/gate_open_since" 2>/dev/null || echo 0)"
 check "the budget stamp was observed before measuring anything" \
   "$([ "${STAMP:-0}" -gt 0 ] && echo 1 || echo 0)" "stamp=${STAMP:-none}"
-BUDGET_EXPIRED=$(( STAMP + 3 ))
-if wait_watchdog_state "$STATE_DIR" 45; then check "the watchdog fired during the open" 1
-else check "the watchdog fired during the open" 0 "still RUNNING"; fi
+BUDGET_EXPIRED=$(( STAMP + 6 ))
+if wait_watchdog_state "$STATE_DIR" 60; then check "the watchdog reached a terminal state" 1
+else check "the watchdog reached a terminal state" 0 "still RUNNING after 60s"; fi
 FIRED_AT="$(date +%s)"
-eq "it fired on the open budget, not the deadline" \
+eq "the recovery restored the gate instead of failing at the mutex" \
+  "$(watchdog_state "$STATE_DIR")" "FIRED_RESTORED"
+eq "it fired on the open budget" \
   "$(awk -F= '/^WATCHDOG_REASON=/{print $2}' "$STATE_DIR/watchdog_status.env" 2>/dev/null)" \
   "open_budget"
-eq "it could not restore: the lock was held by the open" \
-  "$(watchdog_state "$STATE_DIR")" "FIRED_RESTORE_FAILED"
-# The decisive evidence: at the moment the watchdog gave up, the gate was still
-# open. The deadline did not close it; the deadline only started a attempt.
-GATE_AT_GIVEUP="$(gate_value)"
-eq "the gate was still open when the watchdog gave up" "$GATE_AT_GIVEUP" "true"
-eq "the close that failed was refused by the mutex, not by the reload" \
+CLOSE_RECEIPT=""
+for f in "$STATE_DIR"/gate_close_open_budget_attempt*.json; do
+  [ -f "$f" ] || continue
+  if [ "$(receipt_field "$f" verification)" = "PASS" ]; then CLOSE_RECEIPT="$f"; break; fi
+done
+check "the restore produced a receipt that verified" \
+  "$([ -n "$CLOSE_RECEIPT" ] && echo 1 || echo 0)" "no verified receipt in $STATE_DIR"
+# 1. the service is healthy
+eq "1. the service was healthy when the gate was closed" \
+  "$(receipt_field "$CLOSE_RECEIPT" health_store)" "production"
+eq "1b. and the health check classified it as production" \
+  "$(receipt_field "$CLOSE_RECEIPT" health_classification)" "HEALTH_PRODUCTION_STORE_OK"
+# 2. the target request is refused again
+eq "2. the target request is refused again" \
+  "$(receipt_field "$CLOSE_RECEIPT" probe_classification)" "GATE_RESTORED_CLOSED"
+eq "2b. refused by the store guard, not by the allowlist or the token" \
+  "$(receipt_field "$CLOSE_RECEIPT" probe_error_code)" "PERMISSION_DENIED"
+eq "2c. with http 403" "$(receipt_field "$CLOSE_RECEIPT" probe_http_status)" "403"
+eq "2d. and it was asked as a post question, never as an open one" \
+  "$(receipt_field "$CLOSE_RECEIPT" probe_phase)" "post"
+# 3. the gate was never reported open, and nothing reloaded an open gate again
+eq "3. the window's open was abandoned at its deadline" \
+  "$(receipt_field "$(echo "$FX"/work/window-l-*/gate_open.json)" failure_stage)" "op_timeout"
+eq "3b. the window's open was never reported as open" \
+  "$(receipt_field "$(echo "$FX"/work/window-l-*/gate_open.json)" verification)" "FAIL"
+eq "3c. exactly one reload loaded an open gate, the one that was killed" \
+  "$(reloads_with_gate_open)" "1"
+check "3d. no close failed at the mutex any more" \
   "$(python3 -c 'import json,glob
-f=sorted(glob.glob("'"$STATE_DIR"'/gate_close_open_budget_attempt*.json"))
-print(json.load(open(f[0])).get("failure_stage") if f else "no-receipt")' 2>/dev/null)" \
-  "lock"
-# It still finishes its own close, so the gate does get shut - later, and by the
-# window, not by the watchdog.
+bad = [f for f in glob.glob("'"$STATE_DIR"'/gate_close_*.json")
+       if json.load(open(f)).get("failure_stage") == "lock"]
+print(1 if not bad else 0)' 2>/dev/null)" "1"
+# 4. zero account-wide enumeration
+eq "4. zero account-level enumeration in the whole run" "$(enumeration_calls "$REQ_LOG")" "0"
+eq "4b. no request outside /health and the item path" "$(other_calls "$REQ_LOG")" "0"
+ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
 wait "$WIN_PID" 2>/dev/null
 WINDOW_RC=$?
-eq "the window exits 16 because the watchdog fired" "$WINDOW_RC" "16"
-WINDOW_CLOSE="$(echo "$FX"/work/window-l-*/gate_close_normal_attempt1.json)"
-eq "the window's own close eventually verified" \
-  "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("probe_classification") or "none")' "$WINDOW_CLOSE" 2>/dev/null)" \
-  "GATE_RESTORED_CLOSED"
-# The number the application has to quote: the receipt is written after the
-# verification, so its mtime is when the gate was effectively shut - not when
-# the file value flipped, which happens before the reload.
-CLOSED_AT="$(stat -f %m "$WINDOW_CLOSE" 2>/dev/null || echo 0)"
-CLOSE_LAG=$(( CLOSED_AT - BUDGET_EXPIRED ))
-# Bounded on both sides: a lag of 0 would mean the deadline did shut the gate,
-# and a lag in the hundreds would mean the measurement drifted rather than that
-# the gate stayed open. The window's close costs one reload (~20s here) plus its
-# verification, so a few tens of seconds is what this fixture should produce.
-check "the gate was shut tens of seconds after the budget expired, not at it" \
-  "$([ "$CLOSE_LAG" -ge 10 ] && [ "$CLOSE_LAG" -le 120 ] && echo 1 || echo 0)" \
-  "lag=${CLOSE_LAG}s"
-eq "the gate is shut at the end" "$(gate_value)" "false"
-echo "  [note] budget expired at $BUDGET_EXPIRED; watchdog gave up at $FIRED_AT;"
-echo "  [note] gate was still '$GATE_AT_GIVEUP' at give-up; shut at $CLOSED_AT (lag ${CLOSE_LAG}s)"
-eq "the window reports a truncated window" \
+eq "the window reports the open as failed, not as a completed window" "$WINDOW_RC" "11"
+eq "the summary names the failed open" \
   "$(python3 -c 'import json,glob;print(json.load(open(glob.glob("'"$FX"'/work/window-l-*/summary.json")[0]))["window_outcome"])' 2>/dev/null)" \
-  "TRUNCATED"
-eq "the lock-held run enumerated nothing" "$(enumeration_calls "$REQ_LOG")" "0"
-ALL_ENUM=$((ALL_ENUM + $(enumeration_calls "$REQ_LOG")))
+  "GATE_OPEN_FAILED"
+eq "the summary still records a verified restore" \
+  "$(python3 -c 'import json,glob;print(json.load(open(glob.glob("'"$FX"'/work/window-l-*/summary.json")[0]))["restore_verified"])' 2>/dev/null)" \
+  "True"
+eq "the summary records the deadline the gate operations ran under" \
+  "$(python3 -c 'import json,glob;print(json.load(open(glob.glob("'"$FX"'/work/window-l-*/summary.json")[0]))["gate_operation_timeout_seconds"])' 2>/dev/null)" \
+  "12"
+# The number the application has to quote: how long after the budget expired the
+# gate was actually shut. It is now bounded by the open's own deadline plus one
+# close, instead of by how long the stalled reload felt like running.
+CLOSED_AT="$(stat -f %m "$CLOSE_RECEIPT" 2>/dev/null || echo 0)"
+CLOSE_LAG=$(( CLOSED_AT - BUDGET_EXPIRED ))
+check "the gate was shut seconds after the budget expired, not tens of seconds" \
+  "$([ "$CLOSE_LAG" -ge 0 ] && [ "$CLOSE_LAG" -le 30 ] && echo 1 || echo 0)" \
+  "lag=${CLOSE_LAG}s"
+echo "  [note] budget expired at $BUDGET_EXPIRED; watchdog restored at $FIRED_AT;"
+echo "  [note] gate shut at $CLOSED_AT (lag ${CLOSE_LAG}s), open deadline was 12s"
 
-# 10b. After an open that overran its budget, can the gate be opened again? The
+# 10c. After an open that overran its budget, can the gate be opened again? The
 # answer has to come from a second open, not from the absence of an error.
 unset STUB_LAUNCHCTL_SLEEP
-unset R1_RESTORE_ATTEMPTS
 "$GATE" open --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
   --token-file "$FX/token" --endpoint "$URL" --list-id "$LIST_ID" \
   --require-no-enumeration --purpose test:reopen --out "$FX/reopen.json" >/dev/null 2>&1

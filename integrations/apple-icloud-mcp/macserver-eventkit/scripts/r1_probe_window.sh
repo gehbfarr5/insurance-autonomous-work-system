@@ -46,7 +46,15 @@
 #                      --work-dir D [--config-file C] [--canary-id CID]
 #                      [--endpoint http://127.0.0.1:18765]
 #                      [--window-seconds 300] [--open-budget 120]
-#                      [--label r103] [--confirm]
+#                      [--op-timeout 30] [--label r103] [--confirm]
+#
+# --op-timeout is passed to every gate operation this window starts (the open
+# and each close), where it bounds the time that operation may hold the mutex.
+# A recovery can only take that lock if the operation lets go before the
+# restorer's own lock window runs out, i.e. while
+#     op_timeout - open_budget < lock-wait x attempts
+# The default pair satisfies it comfortably (30 - 120 < 15 x 3), so "the budget
+# expired" is recoverable instead of a wait for a lock that never comes back.
 #
 # Exit codes
 #   0  window complete: probe result recorded, restore verified
@@ -74,6 +82,7 @@ FROZEN_SHA256="${FROZEN_SHA256:-f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad
 LIST_ID=""; TOKEN_FILE=""; PLIST=""; CONFIG_FILE=""; WORK_ROOT=""
 CANARY_ID=""; ENDPOINT="http://127.0.0.1:18765"
 WINDOW_SECONDS=300; OPEN_BUDGET=120; LABEL="r103"; CONFIRM=0
+OP_TIMEOUT="${R1_OP_TIMEOUT:-30}"
 RESTORE_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-2}"
 RESTORE_DELAY="${R1_RESTORE_DELAY:-2}"
 
@@ -88,6 +97,7 @@ while [ $# -gt 0 ]; do
     --work-dir) WORK_ROOT="$2"; shift 2 ;;
     --window-seconds) WINDOW_SECONDS="$2"; shift 2 ;;
     --open-budget) OPEN_BUDGET="$2"; shift 2 ;;
+    --op-timeout) OP_TIMEOUT="$2"; shift 2 ;;
     --label) LABEL="$2"; shift 2 ;;
     --confirm) CONFIRM=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -110,6 +120,10 @@ trap 'INTERRUPTED=1; echo "[window] signal received; the window will be reported
 case "$WINDOW_SECONDS$OPEN_BUDGET" in
   *[!0-9]*) die args "--window-seconds and --open-budget must be integers" 2 ;;
 esac
+case "$OP_TIMEOUT" in
+  ''|*[!0-9]*) die args "--op-timeout must be a whole number of seconds" 2 ;;
+esac
+[ "$OP_TIMEOUT" -ge 1 ] || die args "--op-timeout must be at least 1" 2
 [ "$OPEN_BUDGET" -lt "$WINDOW_SECONDS" ] \
   || die args "--open-budget ($OPEN_BUDGET) must be smaller than the window ($WINDOW_SECONDS)" 2
 
@@ -222,7 +236,15 @@ cat "$RUN_DIR/probe_pre.out"
 echo "  evidence    : $RUN_DIR/probe_pre.json"
 
 echo "== plan =="
-echo "  window=${WINDOW_SECONDS}s open_budget=${OPEN_BUDGET}s restore_attempts=$RESTORE_ATTEMPTS"
+echo "  window=${WINDOW_SECONDS}s open_budget=${OPEN_BUDGET}s restore_attempts=$RESTORE_ATTEMPTS op_timeout=${OP_TIMEOUT}s"
+# Said out loud rather than enforced: a gate operation allowed to run past the
+# budget is a window whose recovery depends on the lock being given back, and
+# whoever reads this output should know which of the two situations they are in.
+if [ "$OP_TIMEOUT" -gt "$OPEN_BUDGET" ]; then
+  echo "  NOTE        : --op-timeout (${OP_TIMEOUT}s) > --open-budget (${OPEN_BUDGET}s): a"
+  echo "                stalled open can still hold the lock past the budget; the recovery"
+  echo "                then depends on --lock-wait (15s x attempts) covering the difference"
+fi
 if [ "$CONFIRM" -ne 1 ]; then
   echo "DRY RUN: preflight passed, no gate operation was performed; evidence kept in $RUN_DIR"
   echo "         re-run with --confirm inside the approved window"
@@ -272,7 +294,7 @@ write_summary() {
   R1_OPENED="$OPEN_OK" R1_RESTORED="$RESTORE_OK" R1_TRUNC="${TRUNCATED}" \
   R1_DEADLINE="$DEADLINE" R1_BUDGET="$OPEN_BUDGET" R1_PID_BEFORE="$PID_BEFORE" \
   R1_RESTORE_USED="$RESTORE_USED" R1_INTERRUPTED="$INTERRUPTED" R1_STAMP="$OPEN_STAMP" \
-  R1_RESTORE_MAX="$RESTORE_ATTEMPTS" \
+  R1_RESTORE_MAX="$RESTORE_ATTEMPTS" R1_OP_TIMEOUT="$OP_TIMEOUT" \
   "$PYTHON" - "$RUN_DIR" <<'PYEOF'
 import json, os, sys
 run_dir = sys.argv[1]
@@ -294,6 +316,9 @@ summary = {
     "interrupted": env["R1_INTERRUPTED"] == "1",
     "absolute_deadline_epoch": int(env["R1_DEADLINE"]),
     "open_budget_seconds": int(env["R1_BUDGET"]),
+    # The per-operation deadline handed to every gate operation, so a reader can
+    # tell how long a stalled open was allowed to hold the mutex.
+    "gate_operation_timeout_seconds": int(env["R1_OP_TIMEOUT"]),
     # The stamp is written before the gate changes, so it is the lower bound of
     # the time the gate may have been open - never the moment the open returned.
     "gate_open_since_epoch": int(env["R1_STAMP"]) if env["R1_STAMP"] else None,
@@ -338,7 +363,8 @@ restore() {
     "$CLOSE" --plist "$PLIST" --config-file "$CONFIG_FILE" \
       --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
       --list-id "$LIST_ID" --purpose "window:$purpose" \
-      --lock-wait 15 --out "$out" >> "$RUN_DIR/gate_close_$purpose.log" 2>&1
+      --lock-wait 15 --op-timeout "$OP_TIMEOUT" \
+      --out "$out" >> "$RUN_DIR/gate_close_$purpose.log" 2>&1
     rc=$?
     RESTORE_USED="$attempt"
     RESTORE_CLASS="$("$PYTHON" -c 'import json,sys
@@ -376,7 +402,8 @@ echo "  budget      : starts at $OPEN_STAMP (written before the gate changed)"
 if ! "$GATE" open --plist "$PLIST" --config-file "$CONFIG_FILE" \
       --token-file "$TOKEN_FILE" --endpoint "$ENDPOINT" \
       --list-id "$LIST_ID" --require-no-enumeration --purpose "window:open" \
-      --lock-wait 20 --out "$RUN_DIR/gate_open.json" >> "$RUN_DIR/gate_open.log" 2>&1; then
+      --lock-wait 20 --op-timeout "$OP_TIMEOUT" \
+      --out "$RUN_DIR/gate_open.json" >> "$RUN_DIR/gate_open.log" 2>&1; then
   echo "[window] gate open failed or did not verify; see $RUN_DIR/gate_open.log" >&2
   # No disarm here on failure: if the close cannot be verified the watchdog is
   # the only thing still holding a deadline over this gate.
