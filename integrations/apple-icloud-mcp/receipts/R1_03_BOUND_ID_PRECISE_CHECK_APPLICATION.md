@@ -5,6 +5,7 @@
 - **前置判定**：R1 = `BLOCKED_TARGET_NOT_VISIBLE`（2026-11-10T14:45:13Z，枚举 HTTP 200、2 条、无目标）。R1 窗口已结束，不续期。
 - **本文件性质**：**方案 + 已实现的离线工具**。除离线验证外**本轮不执行任何真实操作**——不连 MacServer、不部署、不重启、不开闸、不调用账户级枚举、不读取其他列表、不读取任何事项内容。
 - **v6 的增量**：给**持锁的开闸操作本身**加了执行时限（§7.4.3.3）。v5 只把"到期不等于关掉"这个边界写清楚了，v6 消除它的成因：到期就停、键放回关闭、锁让出来，恢复路径才拿得到锁。同一场景重测：预算到期后 **12 s** 关闸（v5 为 46 s）。
+- **已执行（2026-11-11T01:54:17Z–01:56:00Z，一次窗口）**：结果见 `receipts/R1_03_BOUND_ID_PROBE_RESULT.json`。判定 **`RESOLVED_ID_NOT_RESOLVABLE`**——闸门开启、store 正常时，`9D9A****03F3` 的条目请求得到 **404 `LIST_NOT_FOUND`**；开闸前后同一请求均为 403。该回执同时记录了**一次越出授权的请求**（只读复核误用 R1 专用子命令，打到 `/reminders/lists`，被 403 拒绝）与**一处先于本轮就存在的令牌副本**，两者都按事实记账，不做修饰。
 - **R2 仍不开启。**
 
 ---
@@ -750,7 +751,7 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 
 **时限（三句话，全部有实测支撑）**：
 
-1. `--window-seconds` 300 s 是**脚本的运行上限**，也是看门狗**开始尝试关闸**的时刻——不是"闸门在 300 s 前一定关闭"的承诺。
+1. `--window-seconds` 300 s 是**看门狗开始尝试关闸的期限**——不是"闸门在 300 s 前一定关闭"的承诺。
 2. 但**持锁的 gate 操作自己有 30 s 上限**（`--op-timeout`）：到期就 kill 正在跑的步骤、把那个键写回 `false`、`exit 8`、释放锁（§7.4.3.3）。所以"关闸要等锁"的等待是有界的，而不是取决于那次 reload 想跑多久。
 3. 实测：预算到期后 **12 s** 闸门关闭并验证，看门狗 `FIRED_RESTORED`（v5 同一场景是 46 s，且当时报 `FIRED_RESTORE_FAILED`）。仍然存在的例外：若持锁者**不是**本脚本（旧版本进程、或挂死在别处），没有任何东西界得住它，看门狗用完 `--lock-wait × --restore-attempts`（15 s × 3）后停止尝试、报失败、闸门保持开着等人工。
 
@@ -793,7 +794,7 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 | 3 | 窗口编排 + 接入 gate / watchdog + 唯一关闸入口 | `scripts/r1_probe_window.sh`、`scripts/r1_gate.sh`、`scripts/r1_watchdog.sh`、`scripts/r1_probe_close.sh` |
 | 4 | 窗口集成用例（四类失效场景 + 预算 + 开闸时限 10a/10a2/10b/10c + 中断 + 零枚举，**134 项**） | `scripts/tests/test_r1_probe_window.sh` |
 | 5 | 脚本哈希清单 | 本文件 §7.4.1 |
-| 6 | 执行回执（批准并执行后） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
+| 6 | 执行回执（2026-11-11 已生成） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
 | 7 | 窗口汇总（执行后） | `<work-dir>/window-<label>-<UTC>/summary.json` + `probe_pre.json` / `gate_open.json` / `gate_close_*.json` |
 | 8 | 关窗与恢复核验（执行后） | 并入回执：闸门键回原值、`/health` 200、plist 与开窗前逐字节比对、`probe_classification=GATE_RESTORED_CLOSED` |
 
