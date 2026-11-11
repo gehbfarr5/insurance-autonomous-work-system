@@ -387,46 +387,59 @@ def cmd_capture(args: argparse.Namespace) -> int:
         return 20
 
     # 2. metadata for the single bound list
-    status, body, raw = http_get(f"{args.endpoint}/reminders/lists", token, args.timeout)
-    lists = body if isinstance(body, list) else []
-    target = next(
-        (e for e in lists if isinstance(e, dict) and e.get("listID") == args.list_id), None
-    )
-    receipt["list_metadata"] = {
-        "http_status": status,
-        "visible_list_count": len(lists),
-        "target_visible": target is not None,
-        "source_type": (target or {}).get("sourceType"),
-        "source_name": (target or {}).get("sourceName"),
-        "source_id_masked": mask_uuid((target or {}).get("sourceID") or "") or None,
-        "error_code": (body or {}).get("code") if isinstance(body, dict) else None,
-    }
-    if status != 200:
-        receipt["classification"] = f"ERROR_LIST_METADATA_HTTP_{status}"
-        emit(receipt, os.path.join(args.batch_dir, "capture.json"))
-        print(f"capture: ERROR_LIST_METADATA_HTTP_{status}")
-        return 3
-    add("preconditions", "list_metadata_http_200", True)
-    # The endpoint enumerates the whole account and is not allowlist-filtered
-    # (EventKitBridgeServer: .listReminders -> fetchListsMetadata, no
-    # allowlistValidator call). Requiring exactly one visible list therefore
-    # made this precondition unsatisfiable on any account with more than one
-    # list - which is why v2.1.0 could never capture on this host. The
-    # account-wide count is recorded as context in list_metadata, and only the
-    # target's presence gates the capture.
-    add("preconditions", "target_list_visible", target is not None,
-        f"visible_list_count={len(lists)}")
-    add(
-        "preconditions",
-        "source_binding_caldav_icloud",
-        (target or {}).get("sourceType") == "calDAV" and (target or {}).get("sourceName") == "iCloud",
-        f"{ (target or {}).get('sourceType') }/{ (target or {}).get('sourceName') }",
-    )
-    if target is None:
-        receipt["classification"] = "ERROR_TARGET_LIST_IDENTITY"
-        emit(receipt, os.path.join(args.batch_dir, "capture.json"))
-        print("capture: ERROR_TARGET_LIST_IDENTITY (target not in enumeration)")
-        return 20
+    #
+    # This GET is account-wide. R1-04 windows that already proved the binding
+    # with the single-ID availability probe run capture with
+    # --skip-list-metadata, so a fidelity pass then touches nothing but the
+    # item endpoint of the one bound ID. The default is unchanged: without the
+    # flag the metadata read happens exactly as it always has.
+    target = None
+    if getattr(args, "skip_list_metadata", False):
+        receipt["list_metadata"] = {
+            "skipped": True,
+            "reason": "id-only capture requested; the binding was proven by the availability window",
+        }
+    else:
+        status, body, raw = http_get(f"{args.endpoint}/reminders/lists", token, args.timeout)
+        lists = body if isinstance(body, list) else []
+        target = next(
+            (e for e in lists if isinstance(e, dict) and e.get("listID") == args.list_id), None
+        )
+        receipt["list_metadata"] = {
+            "http_status": status,
+            "visible_list_count": len(lists),
+            "target_visible": target is not None,
+            "source_type": (target or {}).get("sourceType"),
+            "source_name": (target or {}).get("sourceName"),
+            "source_id_masked": mask_uuid((target or {}).get("sourceID") or "") or None,
+            "error_code": (body or {}).get("code") if isinstance(body, dict) else None,
+        }
+        if status != 200:
+            receipt["classification"] = f"ERROR_LIST_METADATA_HTTP_{status}"
+            emit(receipt, os.path.join(args.batch_dir, "capture.json"))
+            print(f"capture: ERROR_LIST_METADATA_HTTP_{status}")
+            return 3
+        add("preconditions", "list_metadata_http_200", True)
+        # The endpoint enumerates the whole account and is not allowlist-filtered
+        # (EventKitBridgeServer: .listReminders -> fetchListsMetadata, no
+        # allowlistValidator call). Requiring exactly one visible list therefore
+        # made this precondition unsatisfiable on any account with more than one
+        # list - which is why v2.1.0 could never capture on this host. The
+        # account-wide count is recorded as context in list_metadata, and only the
+        # target's presence gates the capture.
+        add("preconditions", "target_list_visible", target is not None,
+            f"visible_list_count={len(lists)}")
+        add(
+            "preconditions",
+            "source_binding_caldav_icloud",
+            (target or {}).get("sourceType") == "calDAV" and (target or {}).get("sourceName") == "iCloud",
+            f"{ (target or {}).get('sourceType') }/{ (target or {}).get('sourceName') }",
+        )
+        if target is None:
+            receipt["classification"] = "ERROR_TARGET_LIST_IDENTITY"
+            emit(receipt, os.path.join(args.batch_dir, "capture.json"))
+            print("capture: ERROR_TARGET_LIST_IDENTITY (target not in enumeration)")
+            return 20
 
     # 3. items
     status, body, raw = http_get(
@@ -910,6 +923,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_cap.add_argument("--expect-notes", required=True)
     p_cap.add_argument("--expect-due-utc", default="")
     p_cap.add_argument("--expect", required=True, choices=["presence", "absence"])
+    p_cap.add_argument("--skip-list-metadata", action="store_true",
+                       help="capture by the bound ID only; skips the account-wide metadata read")
     p_cap.add_argument("--batch-dir", required=True)
     p_cap.add_argument("--label", default="unspecified")
     p_cap.set_defaults(func=cmd_capture)

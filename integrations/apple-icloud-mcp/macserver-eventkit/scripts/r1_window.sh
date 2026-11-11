@@ -20,6 +20,13 @@
 #                [--endpoint http://127.0.0.1:18765] [--passes 2] [--interval 60]
 #                [--window-seconds 1800] [--open-budget 180]
 #                [--expect presence|absence] [--label r1] [--confirm]
+#                [--skip-metadata]
+#
+#   --skip-metadata              capture by the bound ID only: the account-wide
+#                                metadata read is skipped (R1-04 W2/W3, where
+#                                the binding was already proven by the W1
+#                                availability probe). Default off: without the
+#                                flag the capture behaves exactly as before.
 #
 #   --expect presence (default)  the synthetic item must be readable and exact
 #   --expect absence             the list must be empty again after cleanup
@@ -49,7 +56,7 @@ CODESIGN_BIN="${CODESIGN_BIN:-codesign}"
 LIST_ID=""; TITLE=""; NOTES=""; DUE_UTC=""; TOKEN_FILE=""
 PLIST=""; CONFIG_FILE=""; ENDPOINT="http://127.0.0.1:18765"
 WORK_ROOT=""; PASSES=2; INTERVAL=60; WINDOW_SECONDS=1800; OPEN_BUDGET=180
-LABEL="r1"; CONFIRM=0; EXPECT="presence"
+LABEL="r1"; CONFIRM=0; EXPECT="presence"; SKIP_METADATA=0
 RESTORE_ATTEMPTS="${R1_RESTORE_ATTEMPTS:-2}"
 BIN="${BIN:-/Users/shared/bin/EventKitBridgeServer}"
 FROZEN_SHA256="${FROZEN_SHA256:-f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074}"
@@ -71,6 +78,7 @@ while [ $# -gt 0 ]; do
     --open-budget) OPEN_BUDGET="$2"; shift 2 ;;
     --label) LABEL="$2"; shift 2 ;;
     --expect) EXPECT="$2"; shift 2 ;;
+    --skip-metadata) SKIP_METADATA=1; shift ;;
     --confirm) CONFIRM=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -235,7 +243,7 @@ LSTART_BEFORE="$(ps -p "$PID_BEFORE" -o lstart= 2>/dev/null | sed -e 's/^[[:spac
 echo "  process     : pid=$PID_BEFORE lstart='$LSTART_BEFORE'"
 
 echo "== plan =="
-echo "  passes=$PASSES interval=${INTERVAL}s window=${WINDOW_SECONDS}s open_budget=${OPEN_BUDGET}s expect=$EXPECT"
+echo "  passes=$PASSES interval=${INTERVAL}s window=${WINDOW_SECONDS}s open_budget=${OPEN_BUDGET}s expect=$EXPECT skip_metadata=$([ "$SKIP_METADATA" -eq 1 ] && echo yes || echo no)"
 if [ "$CONFIRM" -ne 1 ]; then
   echo "DRY RUN: preflight passed, no gate operation was performed; preflight evidence kept in $RUN_DIR"
   echo "         re-run with --confirm inside the approved window"
@@ -401,11 +409,18 @@ for pass in $(seq 1 "$PASSES"); do
   fi
   BDIR="$RUN_DIR/batch-${pass}-$LABEL"
   echo "== capture pass $pass -> $BDIR =="
+  # Id-only capture (R1-04 W2/W3): --skip-metadata drops the account-wide
+  # metadata GET; the binding was already proven by the W1 availability probe.
+  # The conditional expansion keeps macOS bash 3.2 + set -u happy with an
+  # empty array.
+  CAPTURE_EXTRA=()
+  [ "$SKIP_METADATA" -eq 1 ] && CAPTURE_EXTRA+=(--skip-list-metadata)
   "$PYTHON" "$CLIENT" capture \
     --endpoint "$ENDPOINT" --token-file "$TOKEN_FILE" \
     --list-id "$LIST_ID" --expect-title "$TITLE" --expect-notes "$NOTES" \
     --expect-due-utc "$DUE_UTC" --expect "$EXPECT" \
-    --batch-dir "$BDIR" --label "pass-$pass" >>"$RUN_DIR/window.log" 2>&1
+    --batch-dir "$BDIR" --label "pass-$pass" \
+    ${CAPTURE_EXTRA[@]+"${CAPTURE_EXTRA[@]}"} >>"$RUN_DIR/window.log" 2>&1
   rc=$?
   CAPTURE_RC_SUMMARY="$CAPTURE_RC_SUMMARY $rc"
   PASSES_DONE="$pass"

@@ -1,6 +1,6 @@
 # R1-04 新建专用测试列表、改绑并验收真实非空读取（一次审批执行方案）
 
-- **任务**：REM-R1-01 后续，编号 **R1-04**，版本 **v1**（2026-11-11 CST）
+- **任务**：REM-R1-01 后续，编号 **R1-04**，版本 **v2**（2026-11-11 CST；v1 → v2：离线准备完成，§1.4 记录更正、§2/§3.2 工具与 W0 序列落地、§4.2 探针相位更正、§6/§7 按实际调用路径重算请求账、§8 哈希回填）
 - **申请方**：WorkBuddy（本专项唯一工程主执行 Agent）
 - **前置事实**：R1-03 判定 `RESOLVED_ID_NOT_RESOLVABLE`（2026-11-11T01:54:46Z，闸门开启、store 正常时 `9D9A****03F3` → 404 `LIST_NOT_FOUND`）。旧绑定指向一个不再可解析的 ID，无法恢复读取能力。
 - **本文件性质**：**一次审批、一次执行的方案**。当前授权仅覆盖本方案的离线准备；真实建表、枚举、改绑和开闸等，待你对 §6 的 A1–A8 一次性批准后执行。
@@ -56,7 +56,7 @@
 
 | 动作 | 执行者 | 依据 |
 | :--- | :--- | :--- |
-| 新建列表、新建 1 条事项、精准删除该事项 | **你，在原生提醒事项 App** | 桥是只读的：服务端只有 `GET /health`、`GET /reminders/lists`、`GET /reminders/lists/{id}/items` 三个路由，写方法一律 405（`WriteIsolationTests.swift` 锁定该行为）；工程侧无任何 Apple 写授权；R1 的 P1/P3/P4 即由你以同样方式完成，工具面没有变化 |
+| 新建列表、新建 1 条事项、精准删除该事项 | **你，在原生提醒事项 App** | 桥是只读的：服务端只有 `GET /health`、`GET /reminders/lists`、`GET /reminders/lists/{id}/items` 三个路由，写方法一律 405（`WriteIsolationTests.swift` 锁定该行为）；工程侧无任何 Apple 写授权。**本任务线没有先例可引**：R1 实际执行为**零写入**（P5 回执 `synthetic_items_created: 0`，absence 模式），R1 方案里的 P1（用户建事项）从未执行过；因此"由你在前台创建"的依据不是先例，而只是能力事实——桥只读、工程侧无写授权，前台操作只能由你完成 |
 | 其余全部：ID 发现、改绑、重载、三次窗口、取证、复核、回退、回执、排障 | **WorkBuddy** | 既有脚本体系 |
 
 需要你做的只有 **3 个动作**（创建列表、创建事项、删除事项），其余不劳你动手。**测试列表保留**（见 §7），"删除测试列表"不在本方案内。
@@ -65,14 +65,17 @@
 
 ## 2. 复用与新增的工具
 
-**全部沿用现有脚本**（哈希见 §8）：`r1_gate.sh`（唯一改闸入口，含 `--op-timeout`）、`r1_probe_window.sh`、`r1_probe_close.sh`、`r1_watchdog.sh`、`r1_window.sh`（保真采集窗，`--expect presence/absence`）、`r1_bridge_client.py`（2.3.0）、`r1_token_extract.sh`。二进制不换：`/Users/shared/bin/EventKitBridgeServer`，冻结 sha256 `f78e24e5…3074`，每窗 preflight 校验 + 签名验证。
+**全部沿用现有脚本**（哈希见 §8）：`r1_gate.sh`（唯一改闸入口，含 `--op-timeout`；**不带 `--list-id` 的 legacy 模式是唯一真正支持 W0 这种"绑定仍指旧 ID"场景的开/关闸验证入口**）、`r1_probe_window.sh`、`r1_probe_close.sh`（仅适用于绑定已指向有效 ID 的窗口）、`r1_watchdog.sh`（**不带 `--list-id` 时 restore 原生走 legacy `r1_gate.sh close`，W0 直接使用，无需改动**）、`r1_window.sh`（保真采集窗，`--expect presence/absence`，**v2 新增 `--skip-metadata`：W2/W3 仅按新 ID 采集**）、`r1_bridge_client.py`（2.3.0，**v2 新增 `capture --skip-list-metadata`，默认行为不变**）、`r1_token_extract.sh`。二进制不换：`/Users/shared/bin/EventKitBridgeServer`，冻结 sha256 `f78e24e5…3074`，每窗 preflight 校验 + 签名验证。
 
-**新增两个小工具**（执行前离线实现并按既有夹具风格测试，哈希回填 §8 后才允许执行任何真实动作）：
+**离线准备已实现并测试**（隔离测试 `scripts/tests/test_r1_r104_tools.sh` 76/76 通过；回归 `test_r1_window.sh` 125/125、`test_r1_bridge_client.py` 63/63 通过；哈希见 §8）：
 
-| 工具 | 职责 | 关键行为 |
+| 工具 | 职责 | 关键行为（已实现） |
 | :--- | :--- | :--- |
-| `r1_list_discover.py` | 一次元数据读取 + 匹配 | 复用 `r1_bridge_client` 的 `http_get`（固定回环、空代理、拒绝 3xx、令牌只从 0600 文件读）。对 `GET /reminders/lists` 的响应按 §3 规则匹配；**完整 `listID`/`sourceID` 只写服务器上 0600 私有文件**；公开回执只落掩码（前 4 后 4）、`title`、`sourceType`、`sourceName` 与候选计数；其余候选的一切字段**不落盘** |
-| `r1_rebind.sh` | 成对改绑两键 + 重载 + 验证 + 失败自动回退 | 与 `r1_gate.sh` **同一把互斥锁**（同锁名、同 owners 目录，锁代码逐字复用 → 与任何 gate 操作天然互斥）；备份 plist+config（0600）；来源判定沿 plist 优先规则，**两键同时存在于 plist 与 config 时拒绝**（防脱同步）；写入后 bootout+bootstrap 重载；验证 = 服务健康 + 进程身份 + 静态检查（allowlist 恰为新 ID、binding calDAV/iCloud）+ 行为探测（带令牌 403，闸门关闭态）；任一步失败 → 自动恢复备份 → 同一入口重载 → 重新验证，并以非零退出 |
+| `r1_list_discover.py` | 一次元数据读取 + 匹配 | 复用 `r1_bridge_client` 的 `http_get`（固定回环、空代理、拒绝 3xx、令牌只从 0600 文件读）。对 `GET /reminders/lists` 按 §3 规则匹配；退出码 0 / 3（HTTP 错误）/ 40（0 候选 UNKNOWN）/ 41（多候选）/ 42（sourceType 不符）/ 43（账户不符：sourceName 或 sourceID）；**完整 `listID`/`sourceID` 只写 0600 私有文件，已存在则拒绝覆盖**；公开回执只落掩码（前 4 后 4）、`title`、`sourceType`、`sourceName` 与候选计数；其余候选的一切字段**不落盘** |
+| `r1_rebind.sh` | 成对改绑两键 + 重载 + 验证 + 失败自动回退 | 与 `r1_gate.sh` **同一把互斥锁**（锁代码逐字复用 → 与任何 gate 操作天然互斥）；备份 0600；来源判定沿 plist 优先规则，**两键分跨 plist 与 config 时拒绝**（exit 5）；预检探针（旧 ID，`--phase pre`，严格 `GATE_CLOSED_AS_EXPECTED`）证明闸门已关；写入后 bootout+bootstrap（或 kickstart）重载；验证 = health + 后置探针（新 ID，`--phase post`，严格 `GATE_RESTORED_CLOSED`）；任一步失败 → 自动恢复备份 → 重载 → 以旧 ID 重验（同一严格探针），并exit非零（4=重载失败、3=验证失败、8=超时且备份已回写） |
+| `r1_discover_window.sh` | **W0 编排** | preflight（二进制哈希+签名、令牌 0600、health、**静态** gate=false 检查——预检不做活体 403 读，把账户级读取封顶在 3 次）→ 看门狗（无 `--list-id`，legacy restore）→ `gate_open_since` 先写 → legacy open → `r1_list_discover.py` 恰 1 次（UNKNOWN 不重试）→ **无论成败 legacy close**（`r1_gate.sh close`，不带 `--list-id`）→ 验证通过才 disarm → summary（分类与请求账） |
+
+**关于"一次成功的元数据响应能否同时用于开闸验证和候选匹配"**：**不可行，两次 200 读取都列入授权（A2）**。`r1_gate.sh` 的验证响应在其内部消费（回执只落 `body_digest`，不留正文）；复用它要么改动冻结的 gate 客户端、要么绕过验证——两者都不可接受。故 W0 = 开闸验证 200（读 1）+ 发现 200（读 2）+ 关闸验证 403 拒绝（读 3），共 3 次账户级读取。
 
 ---
 
@@ -86,7 +89,7 @@
 
 - **端点**：`GET http://127.0.0.1:18765/reminders/lists`（Bearer 认证）。这是账户级端点——本方案唯一一次把它用作**数据来源**。
 - **响应字段**（源码逐行核对：`RemindersList.swift:38-61`，`EventKitBridgeServer.swift:397-404`）：每个列表返回 `listID`、`title`、`sourceID`、`sourceType`、`sourceName`、`color`、`isImmutable`。**不含任何事项内容与计数**（`FIX-R4A-01`）。
-- **只在受控窗口内读**（W0）：看门狗武装（期限 300 s / 预算 120 s）→ `r1_gate.sh open`（legacy 模式，因此时绑定仍指旧 ID，probe 模式无法验证）→ `r1_list_discover.py` 1 次 → `r1_probe_close.sh`（legacy 模式）关闸并验证。
+- **只在受控窗口内读**（W0，由 `r1_discover_window.sh` 编排）：看门狗武装（无 `--list-id`，期限 300 s / 预算 120 s）→ `r1_gate.sh open`（legacy 模式，因此时绑定仍指旧 ID，probe 模式无法验证；其验证读取 = 200）→ `r1_list_discover.py` 1 次（200）→ `r1_gate.sh close`（legacy，其验证读取 = 403 拒绝）。**关闸入口明确为 `r1_gate.sh close`（不带 `--list-id`）**：这是唯一支持 legacy 验证模式的关闸路径；`r1_probe_close.sh` 强制 `--list-id`，此处不可用。
 
 ### 3.3 匹配规则
 
@@ -122,14 +125,23 @@
 
 两键同时、一次改绑完成，不出现"白名单已换、绑定未换"的中间态。权威来源按既有 plist 优先规则判定（R1-03 实测 `gate_source=launchd_env`）；`r1_rebind.sh` 在两键于 plist 与 config 同时存在时拒绝执行。
 
-### 4.2 验证
+### 4.2 验证（v2 更正探针相位）
 
-改绑后（闸门仍关）：`/health` 200 + `store=production`；进程身份（pid 变更记录）；静态检查（allowlist 恰为新 ID、binding 为 calDAV/iCloud、gate=false）；带令牌行为探测 403 `PERMISSION_DENIED`。**"绑定真的可用"由 W1 的 200/`[]` 证明**，改绑步骤本身不声称这一点。
+改绑前后各一次单 ID 探针，都是**严格**的关闸证明：
 
-### 4.3 回退
+- **前置探针（改绑前，旧 ID）**：`probe --phase pre --expect GATE_CLOSED_AS_EXPECTED`。旧 ID 在当前 allowlist 上，所以它的 403 `PERMISSION_DENIED` 只能来自闸门/store 守卫——这是严格的关闸证明。若观察到 200（→ `GATE_ALREADY_OPEN`）说明闸门开着，改绑拒绝执行。
+- **后置探针（改绑后，新 ID）**：`probe --phase post --expect GATE_RESTORED_CLOSED`。改绑后新 ID 是唯一在 allowlist 上的 ID，同样的推理成立：allowlist 通过后的 `PERMISSION_DENIED` 证明闸门对新绑定关闭。若观察到 `LIST_NOT_ALLOWED` 说明重载未生效 → 失败回退。
+- **v1 的"新 ID 宽松前置探针"方案弃用**：真服务端 allowlist 检查在 store 守卫**之前**（`EventKitBridgeServer.swift:468-473`），改绑前对新 ID 的 403 无法区分"闸门关着"还是"尚未加白"，宽松期望有接受开闸状态的风险。旧 ID 前置探针严格且无歧义，改用它。
+- 另有 `/health` 200 + `store=production`、进程身份（pid 变更记录）。**"绑定真的可用"由 W1 的 200/`[]` 证明**，改绑步骤本身不声称这一点。
 
-- 改绑任一步失败 → `r1_rebind.sh` 自动恢复备份（两键回旧值）→ 同一入口重载 → 重验服务健康与 403。
-- W1 得 `RESOLVED_SOURCE_IDENTITY_CHANGED`（来源身份与绑定不符）→ 停止 → 恢复备份 → 重载 → 验证。新列表保留。
+### 4.3 回退与保留（v2 明确条件）
+
+- 改绑任一步失败 → `r1_rebind.sh` 自动恢复备份（两键回旧值）→ 同一入口重载 → 以旧 ID 严格探针重验；重验失败也如实报 CRITICAL（磁盘/进程可能分叉，等人工），**从不把失败报成成功**。
+- **成功后新绑定保留**：`r1_rebind.sh` 验证通过即结束，不回滚；新绑定是 R1-04 之后的常态配置（A8）。
+- **W1 失败时恢复旧配置的条件**（仅当 W1 之后需要回退时适用）：
+  - `RESOLVED_SOURCE_IDENTITY_CHANGED`（来源身份与绑定不符）→ **恢复旧绑定**：用改绑备份把两键写回 → 重载 → 旧 ID 严格探针重验。旧 ID 已 404，恢复后读能力依旧是失效状态——这是**已知且可接受的**，目的只是回到 R1-03 之后的既知基线。
+  - W1 得 UNKNOWN 分类（`BLOCKED_*`/`ERROR_*`）→ 只读核对一次、禁止重试，绑定**保持新值不动**，等人工决定（新列表本身已验证存在且同账户，盲目回退旧失效绑定没有收益）。
+  - 无论哪种：新测试列表都**保留**，不删除。
 - 最终核验：plist 与改绑前备份逐字节比对，**除两键外必须一致**；不一致即报失败。
 - 旧绑定完整值记入私有日志与改绑回执（掩码进公开层），任何时候可精确还原。
 
@@ -141,13 +153,13 @@
 | :--- | :--- | :--- |
 | S0 | 受控目录 + 令牌提取 + 脚本上传 + 哈希逐个比对（沿用 R1-03 流程） | 全部一致才继续 |
 | S1 | 你创建列表 `MUSE-R1-04-SYNTEST`（iCloud 分组） | 完成后告知 |
-| S2 | **W0 发现窗口**：看门狗 → legacy open → 1 次元数据读取 → legacy close | §3.3/§3.4；0/多候选/账户不符 → 停止 |
-| S3 | 改绑（`r1_rebind.sh`）+ 验证 | 失败自动回退 |
-| S4 | **W1 绑定可用性窗口**（`r1_probe_window.sh`，新 ID；预算 120 s / 时限 30 s / 窗口 300 s） | `RESOLVED_IDENTITY_MATCH_EMPTY`（200/`[]`）= 绑定可用；**不是 PASS**；`SOURCE_MISMATCH` → 停止+回滚 |
+| S2 | **W0 发现窗口**（`r1_discover_window.sh`）：看门狗（无 `--list-id`）→ legacy open → 1 次元数据读取 → legacy close（无论成败）→ disarm | §3.3/§3.4；0/多候选/账户不符 → 停止；账户级读取恰 3 次（open 验证 200、发现 200、close 403） |
+| S3 | 改绑（`r1_rebind.sh`）+ 验证 | 失败自动回退；前置/后置严格探针见 §4.2 |
+| S4 | **W1 绑定可用性窗口**（`r1_probe_window.sh`，新 ID；预算 120 s / 时限 30 s / 窗口 300 s） | `RESOLVED_IDENTITY_MATCH_EMPTY`（200/`[]`）= 绑定可用；**不是 PASS**；`SOURCE_MISMATCH` → 停止+回滚（条件见 §4.3） |
 | S5 | 你创建 1 条合成事项（§1.3 字段） | 恰 1 条；输错不重试 |
-| S6 | **W2 非空验收窗口**（`r1_window.sh --expect presence`，passes 2、interval 60） | capture 完成 + 全部保真断言 PASS + restore 验证，三者独立判定 |
+| S6 | **W2 非空验收窗口**（`r1_window.sh --expect presence --skip-metadata`，passes 2、interval 60） | capture 完成 + 全部保真断言 PASS + restore 验证，三者独立判定；**仅按新 ID 采集，无账户级元数据前置**（绑定已由 W1 证明） |
 | S7 | 你精准删除该 1 条事项 | 只删这一条 |
-| S8 | **W3 清理核验窗口**（`--expect absence`，passes 1） | `list_empty_after_removal` |
+| S8 | **W3 清理核验窗口**（`--expect absence --skip-metadata`，passes 1） | `list_empty_after_removal`；同 W2，仅按新 ID 采集 |
 | S9 | 收尾：`probe --phase post` 关闸复核 + 服务健康 + plist 与改绑前备份逐字节比对 + 看门狗退出确认 → 清理令牌与脚本（顺序沿用 R1-03 规则） | 全部 PASS 才清理 |
 | S10 | 提交脱敏回执 | 记录分类、请求账、各步时间 |
 
@@ -160,7 +172,7 @@
 | # | 授权内容 | 边界 |
 | :--- | :--- | :--- |
 | **A1** | 创建专用测试列表 `MUSE-R1-04-SYNTEST` | 由你在原生 App 完成（工程侧无写能力）；只建这一个 |
-| **A2** | 账户级列表元数据读取：W0 的 1 次发现读取 + W2/W3 每批前置的元数据读取（工具内建行为，逐次记账，见 §7） + W0 门禁验证的 2 次（1×200 + 1×403 拒绝） | 仅列表元数据（ID/标题/来源/颜色），零事项内容、零计数；匹配与丢弃按 §3 |
+| **A2** | 账户级列表元数据读取（每次在回执逐次记账）：W0 的 3 次（open 验证 200、发现 200、close 验证 403 拒绝——**单响应复用不可行，两次 200 都列入授权**，见 §2）；W2/W3 因 `--skip-metadata` 改为仅按新 ID 采集，其账户级读取只剩窗口自身的 preflight 403、open 验证 200、close 验证 403（见 §7） | 仅列表元数据（ID/标题/来源/颜色），零事项内容、零计数；匹配与丢弃按 §3 |
 | **A3** | 改绑两键 + 重载（`r1_rebind.sh`，含失败自动回退） | 只动这两个键；plist 与 config 其余内容逐字节不动；重载仅用 bootout/bootstrap 让配置生效 |
 | **A4** | 创建 1 条合成事项（字段见 §1.3） | 由你在原生 App 完成；恰 1 条 |
 | **A5** | 非空字段验收（W2：读取该列表事项内容并做字段断言） | 仅新列表；回执只落字段匹配结论与摘要，不落盘标题/备注原文（掩码记入） |
@@ -172,19 +184,24 @@
 
 ---
 
-## 7. 数据范围与请求账（上限封顶，实际以回执账单为准）
+## 7. 数据范围与请求账（v2：按实际调用路径分列正常与恢复上限）
 
-| 窗 | 账户级元数据 | 条目请求 | 事项内容触达 | health |
-| :--- | ---: | ---: | :--- | ---: |
-| W0 发现 | 3（open 验证 200、发现 200、close 403 拒绝） | 0 | 无 | 0 |
-| W1 可用性 | 0 | 3（403 / 200-`[]` / 403） | 无（列表为空） | 3 |
-| W2 验收（passes 2） | 2（每批前置 1 次） | 5（pre 1 + open 验证 1 + 每批 1 + close 1） | 5 次，唯一列表、唯一合成事项 | 3 |
-| W3 清理（passes 1） | 1 | 4（pre 1 + open 验证 1 + 1 批 + close 1） | 4 次，预期空列表 | 3 |
-| 收尾复核 | 0 | 1（403） | 无 | 1 |
-| **合计上限** | **6** | **≤ 18** | **≤ 10，全部限于专用测试列表** | **≤ 12** |
+每格数字来自脚本的实际调用路径，逐次在回执记账，不做合并：
 
-- 可能读到事项内容的请求 ≤ 10，且对象只有新建专用列表（其中至多 1 条我们自己的合成事项）；**不读其他任何列表的事项**。
-- 账户级元数据读取共 6 次，全部为列表元数据（无事项、无计数）；每次都在回执按次记账，不做"只算一次"的合并。
+| 窗 | 账户级枚举（正常） | 条目请求（正常） | health（正常） | 恢复上限（每窗） |
+| :--- | ---: | ---: | ---: | :--- |
+| W0 发现 | **3**（open 验证 200、发现 200、close 403） | 0 | 3 | close 重试 ≤2 + 看门狗 ≤3，每次 1 枚举 + 1 health |
+| W1 可用性 | 0 | **3**（pre 403 / open 200-`[]` / close 403，均新 ID） | 3 | 同上（恢复经 `r1_probe_close.sh`，读取为条目请求） |
+| W2 验收（passes 2，`--skip-metadata`） | **3**（preflight 403、open 验证 200、close 403） | **2**（每批 1，仅新 ID） | 5 | 同上 |
+| W3 清理（passes 1，`--skip-metadata`） | **3** | **1** | 4 | 同上 |
+| 收尾复核 | 0 | **1**（403） | 1 | — |
+| **合计（正常）** | **9** | **7** | **16** | — |
+
+- **可能读到事项内容的请求 ≤ 7**，对象只有新建专用列表（其中至多 1 条我们自己的合成事项）；**不读其他任何列表的事项**。
+- **发现失败可恢复**：W0 的 legacy close 在 discover 任何退出码（含 UNKNOWN 40/41/42/43）后照常执行并验证——该路径已由离线测试 W2 场景覆盖（UNKNOWN 后仍有恰 3 次枚举读取、闸门回关）。
+- **改绑失败可恢复**：备份回写 → 重载 → 旧 ID 严格探针重验；重载失败也回写备份并如实报 4——已由离线测试 R2/R6 场景覆盖。改绑自身的探针开销：正常 2 次条目请求（前置旧 ID + 后置新 ID），失败回退再加 ≤1 次（回滚重验）。
+- 恢复读取与正常读取**同样逐次记账**；每个恢复读取都是 1 次账户级读取 + 1 次 health，不因"是恢复"而免记账。
+- v1 账目的更正：v1 把 W2/W3 的 preflight/open/close 枚举读取误记为"条目请求"，且未计入 preflight health；v2 按实际调用路径分列。`--skip-metadata` 使 W2/W3 的采集批零账户级读取（测试 C1/C2 场景已断言）。
 - 令牌只存在于 0600 文件；不落明文、不进回执。
 
 ---
@@ -193,16 +210,20 @@
 
 | 脚本 | 行数 | sha256 | 状态 |
 | :--- | ---: | :--- | :--- |
-| `scripts/r1_window.sh` | 480 | `b728467aabbccb603007aca49b1acdb0afffd8483836ce061548b28b3dfdac55` | 沿用 |
+| `scripts/r1_window.sh` | 495 | `6fafd01758441b4e09ba7ce372adb44fb8370cab6ded15a149bfc75dead1cb3b` | v2 更新（`--skip-metadata` 透传） |
 | `scripts/r1_gate.sh` | 879 | `3205fdce306c166db7d1fad88c98542eec7476ff47f208082d190eca56470af7` | 沿用 |
 | `scripts/r1_probe_window.sh` | 458 | `8a01fa0740023931b8d1e5a995914817c545aa8fc6254ba053fe23457e22e7d7` | 沿用 |
 | `scripts/r1_probe_close.sh` | 87 | `97dcb7b076232e97b601634296c07c5b20777f4eb81db5555412cff889c92ba7` | 沿用 |
 | `scripts/r1_watchdog.sh` | 211 | `4134c238b8fdde93d99882a3527665c076140501158d06000bdea146db4791f7` | 沿用 |
-| `scripts/r1_bridge_client.py` | 966 | `daa0de1921169cfdab087a7c659df3a67c09debbd373ace4dc5f527060ac591a` | 沿用 |
+| `scripts/r1_bridge_client.py` | 981 | `84a3ab6970bb64131e0fc60ee5578d1a56490b35e19898f9afca33edd52d6db8` | v2 更新（`capture --skip-list-metadata`，默认行为不变） |
 | `scripts/r1_token_extract.sh` | 137 | `bec944107a19394754f1aef561a4e397f3e798260cb1bd59990f3466bc96e4a0` | 沿用 |
 | `scripts/tests/fake_bridge.py` | 254 | `09bd2416e8b3f6cdef7829c9315242fa5b5e0c10db7c36b9dbdf348aa8247869` | 沿用（离线测试） |
-| `scripts/r1_list_discover.py` | —— | 批准后离线实现，哈希回填本表 | **待实现** |
-| `scripts/r1_rebind.sh` | —— | 批准后离线实现，哈希回填本表 | **待实现** |
+| `scripts/r1_list_discover.py` | 227 | `3c6c5614118d1f0ee7372fb6b494735068629f9b43452687b332bee83b8b95be` | **已实现** |
+| `scripts/r1_rebind.sh` | 734 | `4df07b6c9d962bea37f6f50ae7f8c147ce4723c16d4c0188e058516e66cc6530` | **已实现** |
+| `scripts/r1_discover_window.sh` | 382 | `8f1a014c691e94f1505035040904376c4f8901b2d033cc2c25c37e524cefede9` | **已实现**（W0 编排） |
+| `scripts/tests/test_r1_r104_tools.sh` | 473 | `f312bc578a302ce26cf70d5c0cce7addb62d573cb95147f05af1f17b9ef3b82c` | **已实现**（76/76 通过） |
+
+回归结果：`scripts/tests/test_r1_window.sh` **125/125** 通过；`scripts/tests/test_r1_bridge_client.py` **63/63** 通过。
 
 被校验的二进制：`/Users/shared/bin/EventKitBridgeServer`，sha256 固定 `f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074`。**不替换**，只校验。
 
@@ -231,8 +252,8 @@
 
 | # | 产物 | 位置 |
 | :--- | :--- | :--- |
-| 1 | 本方案 | `receipts/R1_04_NEW_LIST_REBIND_APPLICATION.md` |
-| 2 | 两个新工具（批准后离线实现+测试，哈希回填 §8） | `scripts/r1_list_discover.py`、`scripts/r1_rebind.sh` |
+| 1 | 本方案（v2） | `receipts/R1_04_NEW_LIST_REBIND_APPLICATION.md` |
+| 2 | 三个新工具 + 隔离测试（已实现并测试，哈希见 §8） | `scripts/r1_list_discover.py`、`scripts/r1_rebind.sh`、`scripts/r1_discover_window.sh`、`scripts/tests/test_r1_r104_tools.sh` |
 | 3 | 执行回执（批准并执行后） | `receipts/R1_04_NEW_LIST_REBIND_RESULT.json` |
 | 4 | 窗口证据树 | `<work-dir>/window-<label>-<UTC>/`（受限位置） |
 
