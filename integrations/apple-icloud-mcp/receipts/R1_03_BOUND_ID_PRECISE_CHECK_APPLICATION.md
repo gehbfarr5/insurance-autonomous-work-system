@@ -1,17 +1,24 @@
 # R1-03 历史绑定 ID 精确核验（可执行方案 + 必要授权项）
 
-- **任务**：REM-R1-01 后续，编号 **R1-03**，版本 **v4**（2026-11-11 CST）
+- **任务**：REM-R1-01 后续，编号 **R1-03**，版本 **v5**（2026-11-11 CST）
 - **申请方**：WorkBuddy（本专项唯一工程主执行 Agent）
 - **前置判定**：R1 = `BLOCKED_TARGET_NOT_VISIBLE`（2026-11-10T14:45:13Z，枚举 HTTP 200、2 条、无目标）。R1 窗口已结束，不续期。
 - **本文件性质**：**方案 + 已实现的离线工具**。除离线验证外**本轮不执行任何真实操作**——不连 MacServer、不部署、不重启、不开闸、不调用账户级枚举、不读取其他列表、不读取任何事项内容。
-- **v4 的增量**：修掉三处"恢复路径自己拆掉兜底"的问题（预算起点后置、恢复失败仍 disarm、`TRUNCATED` 被清零），把紧急关闸收进一个**不可能漏参数**的入口（§7.3.5），并把正常探测与有界恢复的请求预算分开记账。
+- **v5 的增量**：把"期限到期等于闸门关闭"这个**不成立的承诺**按实测改写（§7.4.3.2），并把 P2/P3 从"1 次""4 次"改成按相位与恢复重试分列的上下限。
 - **R2 仍不开启。**
 
 ---
 
 ## 0.0 版本修订
 
-### v4 相对 v3（本轮）
+### v5 相对 v4（本轮）
+
+| # | 审查意见 | 修订 |
+| :--- | :--- | :--- |
+| 17 | 补"开闸进程持锁跨过预算"的集成测试与结果；若只能证明到期开始尝试恢复，据实修改时限承诺 | 新增 §7.2.2 场景 10 / 10b（18 项断言）：预算到期时 open 仍持锁 → 看门狗 fire 但 `failure_stage=lock`、**放弃时闸门仍 `true`**、窗口自己的 close 在**到期后 46 s** 才 shut；随后同配置可再次 open（`verification=PASS`）并关闭。时限承诺改写为"到期是**开始尝试**的时刻"（§7.4.3.2、§9） |
+| 18 | 修订 P2/P3，覆盖 pre、post、恢复重试的读取范围，分别列出正常与恢复上限 | P2 从"1 次"改为"每个 200 的目标请求各一次"，最坏 8 次；P3 拆成正常（4 条目 / 3 health）与恢复（窗口 ≤2、看门狗 ≤3），合计条目 ≤9。§3 的"触达 Apple 数据"列同步改为"通常否，但不保证"，并说明 pre/post/恢复为何都会读（§3、§5.1、§7.4.3.1） |
+
+### v4 相对 v3
 
 | # | 审查意见 | 修订 |
 | :--- | :--- | :--- |
@@ -111,11 +118,14 @@ gate_source = launchd_env
 
 | 阶段 | 请求 | 目的 | 触达 Apple 数据 |
 | :--- | :--- | :--- | :--- |
-| **pre**（闸门关） | `GET /health` + `GET .../{CANARY}/items` + `GET .../{TARGET}/items` | ① 进程与 store 模式；② canary 证明白名单精确匹配；③ 目标得到 `403 PERMISSION_DENIED` = **闭闸基线成立**（见 §4.2） | 否（全部在 store 第一道 guard 之前返回） |
+| **pre**（闸门关） | `GET /health` + `GET .../{CANARY}/items` + `GET .../{TARGET}/items` | ① 进程与 store 模式；② canary 证明白名单精确匹配；③ 目标得到 `403 PERMISSION_DENIED` = **闭闸基线成立**（见 §4.2） | **通常否，但不保证**：闸门若实际仍开着（配置 `false` 而进程仍 `true`），target 这一发就会返回 `200` 并**读入事项**；canary 永不在白名单，必停在 `LIST_NOT_ALLOWED` |
 | **开窗** | ——（单键改值 + 重载） | 只改 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` | —— |
 | **open**（闸门开） | `GET .../{TARGET}/items` | 唯一一次真实探测 | **是**：第 7 步解析；若通过第 8 步则读该列表事项 |
 | **关窗** | ——（改回原值 + 重载） | 恢复 | —— |
-| **post**（闸门关） | `GET .../{TARGET}/items` | 必须回到 `403 PERMISSION_DENIED`，否则说明关窗没生效 | 否 |
+| **post**（闸门关） | `GET .../{TARGET}/items` | 必须回到 `403 PERMISSION_DENIED`，否则说明关窗没生效 | **通常否，但不保证**：关窗未生效时它同样会 `200` 并**读入事项**——这正是它存在的理由 |
+| **恢复重试**（可选） | `GET .../{TARGET}/items`（`post` 相位） | 关窗失败后重试 | 同 `post`：每一发都可能 `200` 并读入事项 |
+
+所以"会读内容"的请求**不止 open 那一次**：pre 的 target、post 的 target、每次恢复重试的 target 都在同一判定链上，闸门状态不对时它们同样会 `200`。授权范围按这个最坏情况写（§9 的 P2），不按"只有 open 会读"写。
 
 `pre` 与 `post` 是**同一个请求、同一个判定**，一次开窗前后各跑一次，构成"窗口确实开过、也确实关回去"的闭环——**不需要枚举端点**，也不需要看任何列表清单。
 
@@ -244,7 +254,7 @@ gate_source = launchd_env
 请求照 §3 发。若目标解析成功且 source 匹配 → 服务端读入该列表全部事项并回传 → 客户端**只落盘条数与摘要**，标题/备注/URL/日期一律不写盘、不打印。
 
 - **得到**：完整三态（404 / `SOURCE_MISMATCH` / 200）
-- **代价**：成功分支上确实读了该列表的事项内容（**仅这一条列表**）
+- **代价**：成功分支上确实读了该列表的事项内容（**仅这一条列表**）。**而且是多次**：任何一发返回 200 的目标请求都会读——`open` 至少 1 次，`pre`/`post` 在闸门状态不符时各 1 次，恢复重试每次 1 次；最坏 8 次（§9 P2）
 - **为什么可接受**：目标列表是专用测试列表；读取范围就是它自己；证据只留计数与摘要；链路上只有 loopback
 
 ### 5.2 变体 C：哨兵绑定（零内容读取，但要改一个配置键）
@@ -374,7 +384,7 @@ probe --endpoint http://127.0.0.1:18765 \
 | 8 | 敌意 listID（`..`、`reminders/lists`、`a/b/items`、空串）一律被 URL 结构断言拦下 | PASS |
 | 9 | `probe --help` 里不存在 `--allow-enumeration` | PASS |
 
-#### 7.2.2 窗口集成层（`test_r1_probe_window.sh`，84 项）
+#### 7.2.2 窗口集成层（`test_r1_probe_window.sh`，102 项）
 
 这一层验的不是分类逻辑，而是**接进实际执行路径后是否还成立**：开窗、关闸、看门狗三条路径都走 probe，任何一条偷偷回退到枚举，或者任何一条在失败时拆掉自己的兜底，下面的断言就会红。
 
@@ -390,7 +400,9 @@ probe --endpoint http://127.0.0.1:18765 \
 | **7. 紧急关闸缺目标参数，改动前拒绝** | 直接调 `r1_probe_close.sh`（不带 `--list-id`）与 `r1_gate.sh close --require-no-enumeration` | 两者都 `exit 2`；config 文件 sha256 **未变**；无回执；请求日志 **0 行**；报错里点名 `--list-id` | PASS |
 | **8. 恢复重试不再问开闸问题** | 看门狗 fire 后所有重载都失败 | `FIRED_RESTORE_FAILED`；**没有一份 close 回执带 `probe_phase=open`**；回执文件数 ≤ `--restore-attempts`；零枚举 | PASS |
 | **9. 中断不得变成"完成"** | 计时文件出现后（即 open 进行中）发 `SIGTERM` | 退出码 **16**（不是 0、不是 143）；`window_outcome=TRUNCATED`；`truncated=true`、`interrupted=true`；同时 `restore_verified=true`（照样关回去了） | PASS |
-| **零枚举（贯穿 1–9）** | 假桥 `--request-log` 逐条记录 | 每个场景 `enumeration_calls == 0`；`other_calls == 0`；场景 1 的 `item_calls == 4` 与正常探测账逐次对上；全部场景累加仍为 **0**（末尾单独一条断言） | PASS |
+| **10. 预算到期时开闸仍持锁** | reload 睡 20 s（持锁 ~23 s，长于 `--lock-wait 15`），`--open-budget 3`，看门狗只给 1 次尝试 | 看门狗按时 fire（`open_budget`），但**关不掉**：`FIRED_RESTORE_FAILED`，回执 `failure_stage=lock`；放弃那一刻闸门**仍是 `true`**；随后窗口自己的 close 才把闸门关掉，实测**预算到期后 46 s** 才 shut；窗口最终 `exit 16` / `TRUNCATED` | PASS |
+| **10b. 超时的开闸之后还能不能再开** | 上一步结束后，用同一份配置再开一次 | 第二次 open `rc=0`、`verification=PASS`、闸门 `true`；再用 wrapper 关闭 `rc=0`、闸门 `false`——互斥锁已释放，配置与绑定可复用 | PASS |
+| **零枚举（贯穿 1–10）** | 假桥 `--request-log` 逐条记录 | 每个场景 `enumeration_calls == 0`；`other_calls == 0`；场景 1 的 `item_calls == 4` 与正常探测账逐次对上；全部场景累加仍为 **0**（末尾单独一条断言） | PASS |
 
 **零枚举的证据口径**：不是"脚本里没写"，而是假桥对**每一个被应答的请求**写一行 `{status}\t{command}\t{path}`，测试用 `awk -F'\t'` 统计——`$3=="/reminders/lists"` 的条数、条目路径正则的条数、其余路径的条数。三项一起看，才能既证明"没枚举"，也证明"没走别的路"。
 
@@ -412,7 +424,7 @@ probe --endpoint http://127.0.0.1:18765 \
 ```
 python3 scripts/tests/test_r1_probe.py           # 72/72
 python3 scripts/tests/test_r1_bridge_client.py   # 63/63（夹具改动后的回归，未重跑于本轮）
-bash    scripts/tests/test_r1_probe_window.sh    # 84/84
+bash    scripts/tests/test_r1_probe_window.sh    # 102/102
 ```
 
 `test_r1_probe.py` 的诚实边界写在文件头：它证明的是**客户端的分类逻辑**与矩阵一致，以及客户端**构造不出**枚举 URL；它**不**证明 Swift 服务端真的产出这些响应——假桥是按源码分支手写的，夹具与服务的偏差在这里看不出来。`test_r1_probe_window.sh` 的边界同理：它证明**编排逻辑**正确（谁在什么时候发什么、失败是否被正确命名为失败），不证明 MacServer 上的 `launchd`/`codesign` 真的如桩所模拟的那样回应。
@@ -533,7 +545,7 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | `scripts/r1_token_extract.sh` | 137 | `bec944107a19394754f1aef561a4e397f3e798260cb1bd59990f3466bc96e4a0` | 未改 |
 | `scripts/tests/fake_bridge.py` | 254 | `09bd2416e8b3f6cdef7829c9315242fa5b5e0c10db7c36b9dbdf348aa8247869` | 未改 |
 | `scripts/tests/test_r1_probe.py` | 363 | `a892cb1163dbbd9f068411e52961ae4d405cab1b0bfd94434e275e7cc9a7684a` | 未改 |
-| `scripts/tests/test_r1_probe_window.sh` | 524 | `79b427fa701b7f2b37282bf95934c75d3d8f77181d3a69e0faadd26023e217d9` | 改（39 → 84 项） |
+| `scripts/tests/test_r1_probe_window.sh` | 624 | `303ddf6441e95cd1e8d4231e3ff89031f50fed074f2b7073e2e360402e834677` | 改（84 → 102 项，含持锁跨预算） |
 
 被校验的二进制：`/Users/shared/bin/EventKitBridgeServer`，sha256 固定 `f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074`。**不替换**，只校验。
 
@@ -579,6 +591,32 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 
 **恢复重试不允许再发开闸探测**：恢复只做关窗，相位固定为 `post`。这一点不是靠注释保证的——`r1_probe_close.sh` 只接收关闸参数，`r1_gate.sh` 在 `close` 模式下把相位硬编码为 `post`，测试则扫描所有 close 回执，断言没有一份带 `probe_phase=open`（§7.2.2 场景 8）。
 
+#### 7.4.3.2 期限承诺的边界：到期是"开始尝试"，不是"已经关掉"
+
+闸门只有一个写入口，而且这个入口有互斥锁（`r1_gate.sh` 的 `acquire_lock`）。开闸操作在**写入之前**取锁、**验证之后**释放，一次阻塞的 reload 会让锁被持有整段时间。看门狗到期后发的也是同一个 `close`，它必须先拿到这把锁。
+
+后果很具体，而且是实测的（§7.2.2 场景 10，离线夹具，reload 20 s、`--lock-wait 15`、`--restore-attempts 1`）：
+
+| 时刻 | 发生了什么 |
+| :--- | :--- |
+| t0 | 写 `gate_open_since`，open 取锁，进入 20 s 的 reload |
+| t0+3 s | 预算到期，看门狗 fire（`WATCHDOG_REASON=open_budget`） |
+| t0+3…18 s | 看门狗等锁 15 s，失败。回执 `failure_stage=lock`——**拦住它的是互斥锁，不是 reload** |
+| t0+18 s | 尝试用尽，`FIRED_RESTORE_FAILED`，看门狗退出 6。**此刻闸门仍是 `true`** |
+| t0+23 s | open 完成并释放锁 |
+| t0+46 s | 窗口自己的 close 完成并验证，闸门才真正 shut |
+
+所以承诺必须写成两句话：
+
+> **期限（300 s / 120 s）保证的是"看门狗在到期时开始尝试关闸"，不保证"闸门在到期时已经关闭"。**
+> 闸门的实际关闭时刻 ≈ max(期限, 持锁操作结束) + 一次 close 的耗时（reload + settle + 一次 probe）。本次夹具测得到期后 **46 s**。
+
+**看门狗的尝试窗口是有界的**：`--lock-wait × --restore-attempts`（默认 15 s × 3 = 45 s，加两次 2 s 间隔）。锁在这段时间内释放，它就能关；释放不了，它就报 `FIRED_RESTORE_FAILED` 并**停止尝试**，闸门保持开着。这是需要人工介入的状态，脚本不会假装它关上了。
+
+**什么情况下这个边界不会咬人**：正常开闸（R1 实测 ~8 s，reload 不阻塞）远短于 120 s 预算，锁几乎不可能跨过到期点。这条边界只在 reload 被阻塞或服务挂起时出现——那正是最需要知道"到期不等于关掉"的时刻。
+
+**能重新开闸**：上一步结束后用同一份配置再开一次，`rc=0`、`verification=PASS`、闸门 `true`，再关闭也 `rc=0`。互斥锁已随进程退出释放，配置与绑定没有留下需要清理的状态（§7.2.2 场景 10b）。
+
 #### 7.4.4 恢复步骤（四条路径，全部以"观测到的行为"为准）
 
 | 触发者 | 命令 | 判成功的唯一条件 | 失败时的状态 |
@@ -587,6 +625,7 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | 窗口异常退出（信号） | 同上（trap 置 `INTERRUPTED`，流程照常关窗） | 同上 | `exit 13`，同样不 disarm |
 | 主进程被杀 | **看门狗**独立发起同一条 `r1_probe_close.sh` | 同上，且 `WATCHDOG_STATE=FIRED_RESTORED` | `FIRED_RESTORE_FAILED`，退出码 6 |
 | 人工紧急关窗 | 同一条命令，手敲：`r1_probe_close.sh --list-id ID --token-file T --plist P --out O` | 回执 `verification == PASS` | rc≠0，看回执里的 `failure_stage` |
+| **到期时开闸仍持锁** | 看门狗到期发起，但锁被进行中的 open 拿着 | 拿不到锁就没有"成功"，回执 `failure_stage=lock` | `FIRED_RESTORE_FAILED`，退出码 6；**闸门此时仍开着**，等持锁操作结束后的下一次 close（窗口自己的，或人工）。实测到期后 46 s 才 shut（§7.4.3.2） |
 
 **只有这一种写法。** 前一版这里给过一条不带目标 ID 也"可以"的关闸命令——那是一个会走账户级枚举的范例，已整条删除，字面也不保留。`r1_probe_close.sh` 没有"不带目标 ID"的调用方式，缺参数时在改动之前就 `exit 2`（§7.2.2 场景 7）。
 
@@ -638,15 +677,15 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 | :--- | :--- | :--- | :--- |
 | **P0** | 只读核实 MacServer 现态（§8.3 四项）：服务在不在跑、plist 闸门键当前值、`/health` 是否 200、pid | 只用 `launchctl list`、`ps eww`（仅过滤闸门键一行）、`GET /health`、`plutil -extract`；不重启、不改配置、不碰 Apple 数据 | ≤ 60 s |
 | **P1** | 单键开窗：`EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` → `true`，按 §3.1 判定重载一次（`gate_source=launchd_env` 时 `bootout`+`bootstrap`；`config_file` 时 `kickstart -k`）；窗口结束**改回原值**并同样重载 | **只此一个键**；重载前后各记 plist sha256；`bootout`/`bootstrap` 仅用于让该键生效，**不换二进制、不改 label、不改 `ProgramArguments`、不 `disable` job**；含紧急关窗 | `--open-budget` **120 s**（R1 为 600 s）；开窗实测预期 < 15 s |
-| **P2** | **读取绑定目标列表**（变体 A 才需要）：可能读入该列表全部事项内容 | 仅该一条列表；回执只落 `item_count` 与 `body_digest`；不落盘标题/备注/URL/日期 | 1 次 |
-| **P3** | 发送 4 次 loopback 条目请求 + health：pre（canary 1 + target 1）→ open（target 1）→ post（target 1） | 仅 `127.0.0.1:18765`；`GET` only；**不调用 `/reminders/lists`**（URL 构造器在结构上拒绝，`--require-no-enumeration` 在参数层拒绝） | 4 次条目请求，硬上限 |
+| **P2** | **读取绑定目标列表的事项内容**。不是"1 次"，而是**每个返回 200 的目标请求各一次**：`pre` 的 target（闸门若实际已开）、`open` 的 target、`post` 的 target（关窗若未生效）、**以及每次恢复重试的 target**。逐相位列在上方说明里，上限见下一行 | 仅这一条列表；canary 永不读取（不在白名单，必 `403 LIST_NOT_ALLOWED`）；回执只落 `item_count` 与 `body_digest`；不落盘标题/备注/URL/日期 | **正常 ≤ 3 次**（pre/open/post 各 1）**＋ 恢复 ≤ 2 次**（窗口）× **≤ 3 次**（看门狗独立）＝ 最坏 **8 次** |
+| **P3** | 发送 loopback 请求。**两笔账分开**：正常 = `pre`（canary 1 + target 1）+ `open`（target 1）+ `post`（target 1）＝ 4 次条目 + 3 次 health；恢复 = 每次重试 1 次条目（`post` 相位）+ 1 次 health | 仅 `127.0.0.1:18765`；`GET` only；**不调用 `/reminders/lists`**（URL 构造器在结构上拒绝，`--require-no-enumeration` 在参数层拒绝）；**恢复只关窗，不重发开闸探测** | **正常 4 次条目 / 3 次 health（硬上限）**；**恢复 ≤ 2 次条目（窗口）**；**看门狗独立 ≤ 3 次条目**；合计条目 ≤ **9** |
 | **P4** | 记录进程环境中的闸门值（§4.3 手段 1） | 只输出 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=` 一行；令牌键一律丢弃 | 1 次 |
 | **P5** | 关窗与恢复核验：闸门键回原值 + `/health` 仍 200 + plist 与开窗前逐字节比对 + probe 得 `GATE_RESTORED_CLOSED` | **不卸载服务、不重启系统、不动二进制**；四条恢复路径见 §7.4.4 | ≤ 60 s |
 | **P6** | 运行 `r1_probe_window.sh`（含内嵌看门狗），关闸一律经 `r1_probe_close.sh` | `--window-seconds` **300 s**（绝对期限）、`--open-budget` **120 s**、`--confirm` 才真正开闸；不给 `--confirm` 时只跑到 pre 相位 | 一次窗口 |
 
-**总时限**：从 `--confirm` 到脚本退出，硬上限 300 s；超时由看门狗强制关窗并记 `FIRED_RESTORED`（`TRUNCATED`，不报成功）。
+**时限（据实测改写）**：`--window-seconds` 300 s 是**脚本的运行上限**，也是看门狗**开始尝试关闸**的时刻；它**不是"闸门在 300 s 前一定关闭"的承诺**。开闸操作持锁期间，关闸只能等锁释放——离线实测（场景 10）预算到期后 **46 s** 闸门才真正 shut，看门狗在到期后 15 s 就报 `FIRED_RESTORE_FAILED`。若锁一直不释放，看门狗用完 `--lock-wait × --restore-attempts`（15 s × 3）后停止尝试并报失败，闸门**保持开着等人工**。详见 §7.4.3.2。
 
-**预算**：正常探测 4 次条目请求；恢复重试 ≤ 2 次（窗口）× 1 次条目请求；看门狗独立 ≤ 3 次。合计 ≤ 9 次，见 §7.4.3.1。
+**预算**：正常探测 4 次条目请求 + 3 次 health；恢复重试 ≤ 2 次（窗口）× (1 条目 + 1 health)；看门狗独立 ≤ 3 次。合计条目 ≤ 9 次，见 §7.4.3.1；可能读到事项内容的请求 ≤ 8 次，见 P2。
 
 **恢复失败时的行为**（本轮明确）：不 disarm、不写 `stop`、不删计时、不卸载、不删证据；看门狗保持武装，等待它自己的期限或预算把它们关掉。
 
@@ -680,10 +719,10 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 
 | # | 产物 | 位置 |
 | :--- | :--- | :--- |
-| 1 | 本方案（v3） | `receipts/R1_03_BOUND_ID_PRECISE_CHECK_APPLICATION.md` |
+| 1 | 本方案（v5） | `receipts/R1_03_BOUND_ID_PRECISE_CHECK_APPLICATION.md` |
 | 2 | `probe` 子命令 + 离线用例（本轮不执行真实请求） | `scripts/r1_bridge_client.py`（2.3.0）、`scripts/tests/test_r1_probe.py` |
 | 3 | 窗口编排 + 接入 gate / watchdog + 唯一关闸入口 | `scripts/r1_probe_window.sh`、`scripts/r1_gate.sh`、`scripts/r1_watchdog.sh`、`scripts/r1_probe_close.sh` |
-| 4 | 窗口集成用例（四类失效场景 + 预算 + 中断 + 零枚举，84 项） | `scripts/tests/test_r1_probe_window.sh` |
+| 4 | 窗口集成用例（四类失效场景 + 预算 + 持锁跨预算 + 中断 + 零枚举，102 项） | `scripts/tests/test_r1_probe_window.sh` |
 | 5 | 脚本哈希清单 | 本文件 §7.4.1 |
 | 6 | 执行回执（批准并执行后） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
 | 7 | 窗口汇总（执行后） | `<work-dir>/window-<label>-<UTC>/summary.json` + `probe_pre.json` / `gate_open.json` / `gate_close_*.json` |
@@ -693,4 +732,6 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 
 ## 12. 一句话总结
 
-用**一个只带目标 ID 的条目请求**，把"存在/不存在/身份变化"从"说不清"变成三个可区分的状态码；代价是成功分支上会读一次那条列表的内容（可换成哨兵绑定以避免，但要牺牲身份信号）；**不碰账户级枚举，也不声称底层未枚举**。开窗、关闸、看门狗三条路径共用同一个 probe，关闸只有 `r1_probe_close.sh` 一种写法（缺目标 ID 就在改动前拒绝）；预算从变更之前开始计，恢复失败时看门狗不被 disarm；四类失效场景加中断语义共 **84 项**离线断言，零枚举由假桥请求日志逐条统计。执行需要 P0–P6，恢复目标是"服务健康 + 闸门关闭"，不是卸载。本轮只交付代码与离线验证。
+用**一个只带目标 ID 的条目请求**，把"存在/不存在/身份变化"从"说不清"变成三个可区分的状态码；代价是成功分支上会读一次那条列表的内容——**而且不止一次**：pre/post/恢复重试在闸门状态不符时同样会读到，最坏 8 次，授权按这个写。**不碰账户级枚举，也不声称底层未枚举**。开窗、关闸、看门狗三条路径共用同一个 probe，关闸只有 `r1_probe_close.sh` 一种写法；预算从变更之前开始计，恢复失败时看门狗不被 disarm。
+
+**期限不是关闭时刻**：开闸持锁时，看门狗到期只能开始尝试，抢不到锁就报 `FIRED_RESTORE_FAILED` 并停下，闸门继续开着等下一次 close 或人工——离线实测到期后 46 s 才 shut。四类失效场景加持锁、重新开闸、中断语义共 **102 项**断言，零枚举由假桥请求日志逐条统计。执行需要 P0–P6；恢复目标是"服务健康 + 闸门关闭"，不是卸载，也不承诺在期限内关闭。本轮只交付代码与离线验证。
