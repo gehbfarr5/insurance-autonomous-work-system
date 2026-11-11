@@ -1,6 +1,7 @@
 # R1-04 执行停止回执（BLOCKED_TARGET_NOT_VISIBLE）
 
 - **回执类型**: R1_04_EXECUTION_STOP_RECEIPT（脱敏）
+- **修订**: v2（2026-11-11）——按总控令修正授权账：实际枚举 24 次按窗保留，不以完整流程正常预算覆盖重复发现窗口；w0b/w0c 授权证据标为未核实
 - **判定**: `BLOCKED_TARGET_NOT_VISIBLE` —— 目标列表在桥（EventKit）枚举视图中不可见，S2 无法收敛，经总控令结束本次执行
 - **判定时间**: 2026-11-11 17:31 CST
 - **授权基线**: 申请 v3 §6 一次性批准（提交 `a3f6f99`）；诊断工具哈希偏离经会话内交互批准（提交 `85afca7`）
@@ -13,9 +14,9 @@
 
 | 窗口（UTC 目录时间戳） | CST 时间 | 脚本版本 | 结果 | 恢复 | 授权证据 |
 |---|---|---|---|---|---|
-| discover-…T055207Z-w0 | 13:52 | 申请 v3 @ a3f6f99 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | 申请 v3 §6 批准，正常路径预算内 |
-| discover-…T060046Z-w0b | 14:00 | 同上 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | 同上 |
-| discover-…T060344Z-w0c | 14:03 | 同上 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | 同上（3 窗合计 9 枚举 ≤ 正常预算 10） |
+| discover-…T055207Z-w0 | 13:52 | 申请 v3 @ a3f6f99 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | 申请 v3 §6 批准（S2 计划内单窗） |
+| discover-…T060046Z-w0b | 14:00 | 同上 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | 重复发现窗口，超出 S2 单窗计划；会话内无明确开窗批准记录 → **授权证据未核实** |
+| discover-…T060344Z-w0c | 14:03 | 同上 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | 同 w0b：重复窗口、超出单窗计划；**授权证据未核实** |
 | discover-…T070913Z-w0d | 15:09 | 同上 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | **追加窗口**：会话内交互批准（"能看到，确认开窗"）；书面申请未修订 |
 | digest-…T075419Z-diag1 | 15:54 | 诊断 @ 85afca7 | NO_DIGEST_MATCH | VERIFIED | **脚本哈希偏离 + 追加**：会话内交互批准（"批准摘要诊断"） |
 | discover-…T073221Z-w0e | 15:32 | 申请 v3 @ a3f6f99 | UNKNOWN_ZERO_CANDIDATES | VERIFIED | **追加 + 桥重载**（kickstart -k，新进程）：会话内交互批准 |
@@ -28,14 +29,14 @@
 
 | 类别 | 次数 | 说明 |
 |---|---|---|
-| 账户级枚举（GET /reminders/lists） | **24** | 8 窗 × 3，无重试；正常路径 10 + 用户逐窗批准追加 14 |
+| 账户级枚举（GET /reminders/lists） | **24** | 8 窗 × 3，无重试。**按窗保留，逐窗授权证据见 §1**：完整流程正常预算 10 中，发现阶段仅分配 3（w0 单窗，计划内）；7 个重复发现窗口共 21 次均超出 S2 单窗计划——其中 5 窗 15 次有会话内交互批准，w0b/w0c 共 6 次**授权证据未核实**；预算 10 的其余 7 次属未执行的后续阶段，实际零消耗 |
 | health | **9** | 8 次窗预检（预算 17 内）+ 1 次停止终态复核（总控令明确要求，本次唯一新请求） |
 | 条目端点 | **0** | 未达 S6；旧列表条目读取为零（构造性排除兑现） |
 | 写入 | **0** | 合成事项未创建；测试列表未被删除/改名 |
 
 ## 3. 特别记账项
 
-1. **追加窗口**（w0d/w0e/w0f/w0g/diag1，共 +15 枚举 → 超出正常记账 14 次）：均有会话内交互批准记录；**书面申请未随之修订**，属授权证据形式缺口，已如实标注。
+1. **重复发现窗口**（w0b/w0c/w0d/w0e/w0f/w0g/diag1 共 7 窗 21 枚举，均超出 S2 单窗计划，不以完整流程正常预算覆盖）：其中 w0d/w0e/w0f/w0g/diag1（5 窗 15 次）有会话内交互批准记录，**书面申请未随之修订**，属授权证据形式缺口；**w0b/w0c（2 窗 6 次）经会话记录核查无明确开窗批准记录，授权证据未核实**。均如实标注。
 2. **脚本哈希偏离**（新增 `r1_title_digest_diag.py` + `r1_digest_window.sh`，提交 `85afca7`）：会话内交互批准；离线隔离测试 26/26 通过后上传，服务器端哈希 `35864d92…a6ba` / `7e9c9b6d…5e92`。
 3. **iCloud 提醒事项开关切换**（约 16:5x，用户在 Mac 上自行执行）：系统设置变更；会话内交互批准，效果未达成（后续 w0f 仍 UNKNOWN）。
 4. **守护进程软复位**（17:2x，killall calaccessd/remindersd）：用户级按需 XPC，自动重生；会话内交互批准；效果未达成（后续 w0g 仍 UNKNOWN）。
