@@ -1,21 +1,30 @@
 # R1-03 历史绑定 ID 精确核验（可执行方案 + 必要授权项）
 
-- **任务**：REM-R1-01 后续，编号 **R1-03**，版本 **v5**（2026-11-11 CST）
+- **任务**：REM-R1-01 后续，编号 **R1-03**，版本 **v6**（2026-11-11 CST）
 - **申请方**：WorkBuddy（本专项唯一工程主执行 Agent）
 - **前置判定**：R1 = `BLOCKED_TARGET_NOT_VISIBLE`（2026-11-10T14:45:13Z，枚举 HTTP 200、2 条、无目标）。R1 窗口已结束，不续期。
 - **本文件性质**：**方案 + 已实现的离线工具**。除离线验证外**本轮不执行任何真实操作**——不连 MacServer、不部署、不重启、不开闸、不调用账户级枚举、不读取其他列表、不读取任何事项内容。
-- **v5 的增量**：把"期限到期等于闸门关闭"这个**不成立的承诺**按实测改写（§7.4.3.2），并把 P2/P3 从"1 次""4 次"改成按相位与恢复重试分列的上下限。
+- **v6 的增量**：给**持锁的开闸操作本身**加了执行时限（§7.4.3.3）。v5 只把"到期不等于关掉"这个边界写清楚了，v6 消除它的成因：到期就停、键放回关闭、锁让出来，恢复路径才拿得到锁。同一场景重测：预算到期后 **12 s** 关闸（v5 为 46 s）。
 - **R2 仍不开启。**
 
 ---
 
 ## 0.0 版本修订
 
+### v6 相对 v5（本轮）
+
+| # | 审查意见 | 修订 |
+| :--- | :--- | :--- |
+| 19 | 给持锁的开闸操作设执行时限；到期停止该操作，确认它不能再写开闸配置或重载开闸状态，再由恢复路径取锁关闸 | `r1_gate.sh` 新增 `--op-timeout`（默认 **30 s**，从**拿到互斥锁**那一刻起计，与 `--lock-wait` 分工不同）：写入前、reload、settle、每一次 HTTP 请求都按剩余额度执行，到点连同子进程一起 kill；随后把那个键写回 `false`、**读回**实际值、写 `op_timeout` 回执并 `exit 8`，**不再 reload**；锁随进程退出释放。场景 10 重写为 **10a**（单次开闸被停：exit 8、键回 `false`、锁释放、只 reload 过一次）、**10b**（完整窗口：看门狗 fire 后**第一次尝试就拿到锁**、`FIRED_RESTORED`）、**10c**（之后仍可再开）。§7.4.3.3 |
+| 20 | 时限必须与实测一致 | 实测：`--op-timeout 8`、reload 阻塞 40 s → **8 s 停止**（另一次运行 9 s）；窗口预算 6 s + 时限 12 s → 预算到期后 **12 s** 闸门关闭并验证；v5 同一场景是 **46 s**，且当时看门狗报 `FIRED_RESTORE_FAILED`。§7.4.3.2 保留旧测量并标注"修复前"，§7.4.3.3 写"修复后"与仍存在的三条边界 |
+| 21 | 验收要同时核对服务健康、目标请求被拒、无再次开闸、零账户级枚举 | 10b 把这四项拆成逐条断言：`health_store=production` + `HEALTH_PRODUCTION_STORE_OK`；`GATE_RESTORED_CLOSED` / 403 `PERMISSION_DENIED` / `probe_phase=post`；`gate_at_call=true` 全程只出现 **1** 次且开闸回执 `verification=FAIL`；请求日志枚举 **0** 次、非 `/health`+条目路径 **0** 次。§7.2.2 |
+| 22 | —— | 顺手修掉三处会导致"以为停了其实没停"的实现缺陷：`kill_tree` 对子进程列表做数值校验与自递归/深度防护（外部命令的输出不可全信）；测试桩改成 `exec sleep`，让**被 kill 的就是在阻塞的那个进程**；桩的 `pgrep -P` 如实返回"没有子进程" |
+
 ### v5 相对 v4（本轮）
 
 | # | 审查意见 | 修订 |
 | :--- | :--- | :--- |
-| 17 | 补"开闸进程持锁跨过预算"的集成测试与结果；若只能证明到期开始尝试恢复，据实修改时限承诺 | 新增 §7.2.2 场景 10 / 10b（18 项断言）：预算到期时 open 仍持锁 → 看门狗 fire 但 `failure_stage=lock`、**放弃时闸门仍 `true`**、窗口自己的 close 在**到期后 46 s** 才 shut；随后同配置可再次 open（`verification=PASS`）并关闭。时限承诺改写为"到期是**开始尝试**的时刻"（§7.4.3.2、§9） |
+| 17 | 补"开闸进程持锁跨过预算"的集成测试与结果；若只能证明到期开始尝试恢复，据实修改时限承诺 | 新增 §7.2.2 场景 10 / 10b（18 项断言）：预算到期时 open 仍持锁 → 看门狗 fire 但 `failure_stage=lock`、**放弃时闸门仍 `true`**、窗口自己的 close 在**到期后 46 s** 才 shut；随后同配置可再次 open（`verification=PASS`）并关闭。时限承诺改写为"到期是**开始尝试**的时刻"（§7.4.3.2、§9）。**v6 已把成因消除：同一场景改为 12 s 关闸，见第 19–21 行** |
 | 18 | 修订 P2/P3，覆盖 pre、post、恢复重试的读取范围，分别列出正常与恢复上限 | P2 从"1 次"改为"每个 200 的目标请求各一次"，最坏 8 次；P3 拆成正常（4 条目 / 3 health）与恢复（窗口 ≤2、看门狗 ≤3），合计条目 ≤9。§3 的"触达 Apple 数据"列同步改为"通常否，但不保证"，并说明 pre/post/恢复为何都会读（§3、§5.1、§7.4.3.1） |
 
 ### v4 相对 v3
@@ -320,8 +329,8 @@ gate_source = launchd_env
 | `scripts/r1_bridge_client.py`（原 645 行 v2.2.0） | **已改** | 新增子命令 `probe`（`item_url` / `classify` / `apply_phase` / `cmd_probe`）；`--expect` 支持逗号分隔的**分类集合**（开窗需要接受 6 种"越过 guard"的标签）；`read_token()`、`http_get()`、`emit()`、`ensure_out_dir()`、`LOOPBACK_RE` 全部复用；版本升 **2.3.0** |
 | `scripts/r1_gate.sh`（原 610 行） | **已改** | 加 `--list-id` / `--canary-id` / `--require-no-enumeration`；验证分 `probe` / `legacy_enumeration` 两种模式，无隐式回退；回执加 7 个 probe 字段（§7.3.2） |
 | `scripts/r1_watchdog.sh`（原 178 行） | **已改** | 加 `--list-id` / `--require-no-enumeration`；有 `--list-id` 时恢复改走 `r1_probe_close.sh`，参数不可能在传递链上丢失（§7.3.3） |
-| `scripts/r1_probe_window.sh` | **新增（431 行）** | R1-03 专用窗口：preflight → 静态核查 → pre → arm watchdog → **写计时** → open → close → disarm → summary（§7.3.1） |
-| `scripts/r1_probe_close.sh` | **新增（79 行）** | 唯一不带参数就无法调用的关闸入口；`--list-id` 缺失即 `exit 2`，`--require-no-enumeration` 由它自己附加（§7.3.5） |
+| `scripts/r1_probe_window.sh` | **新增（456 行）** | R1-03 专用窗口：preflight → 静态核查 → pre → arm watchdog → **写计时** → open → close → disarm → summary（§7.3.1） |
+| `scripts/r1_probe_close.sh` | **新增（87 行）** | 唯一不带参数就无法调用的关闸入口；`--list-id` 缺失即 `exit 2`，`--require-no-enumeration` 由它自己附加（§7.3.5） |
 | `scripts/r1_token_extract.sh`（137 行） | **未改** | 令牌单键提取，`24/24` 已通过；`probe` 沿用同一路径，未重跑 |
 | `scripts/tests/fake_bridge.py` | **已改（仅测试夹具）** | ① 新增 `allowed_ids` 控制文件，**在闸门检查之前**执行精确匹配（镜像真实顺序 `:419` → `:136`）；② 新增 `item_status` 控制文件，按 listID 注入 `status`+`code`；③ 新增 `--request-log`，逐条记录 `{status}\t{command}\t{path}`；④ `items` 控制文件非对象时显式 500，避免夹具错误伪装成"桥不可达"。缺省时行为不变 |
 | `scripts/tests/test_r1_probe.py` | **新增** | 72 项断言，覆盖矩阵 13 类 + 三相转换 + canary 异常 + 边界（§7.2.1） |
@@ -384,7 +393,7 @@ probe --endpoint http://127.0.0.1:18765 \
 | 8 | 敌意 listID（`..`、`reminders/lists`、`a/b/items`、空串）一律被 URL 结构断言拦下 | PASS |
 | 9 | `probe --help` 里不存在 `--allow-enumeration` | PASS |
 
-#### 7.2.2 窗口集成层（`test_r1_probe_window.sh`，102 项）
+#### 7.2.2 窗口集成层（`test_r1_probe_window.sh`，134 项）
 
 这一层验的不是分类逻辑，而是**接进实际执行路径后是否还成立**：开窗、关闸、看门狗三条路径都走 probe，任何一条偷偷回退到枚举，或者任何一条在失败时拆掉自己的兜底，下面的断言就会红。
 
@@ -400,13 +409,17 @@ probe --endpoint http://127.0.0.1:18765 \
 | **7. 紧急关闸缺目标参数，改动前拒绝** | 直接调 `r1_probe_close.sh`（不带 `--list-id`）与 `r1_gate.sh close --require-no-enumeration` | 两者都 `exit 2`；config 文件 sha256 **未变**；无回执；请求日志 **0 行**；报错里点名 `--list-id` | PASS |
 | **8. 恢复重试不再问开闸问题** | 看门狗 fire 后所有重载都失败 | `FIRED_RESTORE_FAILED`；**没有一份 close 回执带 `probe_phase=open`**；回执文件数 ≤ `--restore-attempts`；零枚举 | PASS |
 | **9. 中断不得变成"完成"** | 计时文件出现后（即 open 进行中）发 `SIGTERM` | 退出码 **16**（不是 0、不是 143）；`window_outcome=TRUNCATED`；`truncated=true`、`interrupted=true`；同时 `restore_verified=true`（照样关回去了） | PASS |
-| **10. 预算到期时开闸仍持锁** | reload 睡 20 s（持锁 ~23 s，长于 `--lock-wait 15`），`--open-budget 3`，看门狗只给 1 次尝试 | 看门狗按时 fire（`open_budget`），但**关不掉**：`FIRED_RESTORE_FAILED`，回执 `failure_stage=lock`；放弃那一刻闸门**仍是 `true`**；随后窗口自己的 close 才把闸门关掉，实测**预算到期后 46 s** 才 shut；窗口最终 `exit 16` / `TRUNCATED` | PASS |
-| **10b. 超时的开闸之后还能不能再开** | 上一步结束后，用同一份配置再开一次 | 第二次 open `rc=0`、`verification=PASS`、闸门 `true`；再用 wrapper 关闭 `rc=0`、闸门 `false`——互斥锁已释放，配置与绑定可复用 | PASS |
+| **10a. 开闸被自己的时限停掉** | 单次 `r1_gate.sh open`；reload 桩阻塞 40 s（只阻塞"往开的方向"那次）；`--op-timeout 8` | `exit 8`，**8 s** 停下（另一次 9 s；时限不起作用会是 40 s+）；盘上 `false`；回执 `failure_stage=op_timeout`、`deadline_phase=reload`、`reload_killed=true`、`gate_key_before_operation=false`、`gate_key_after_deadline=false`、`gate_key_left_closed=true`、`verification=FAIL`；`launchctl` 只被调用 **1** 次；锁已释放；零枚举 | PASS |
+| **10a2. 关闸 wrapper 转发时限** | `r1_probe_close.sh --op-timeout 2` | `exit 8`；回执 `operation_timeout_seconds=2`（值没有被传递链吞掉）、`failure_stage=op_timeout`；盘上 `false` | PASS |
+| **10b. 恢复路径拿到锁并关闸（四项验收）** | 完整窗口：`--open-budget 6`、`--op-timeout 12`、reload 阻塞 40 s | 看门狗 fire 后**第一次尝试就拿到锁**，`FIRED_RESTORED`；close 回执 `verification=PASS`、`GATE_RESTORED_CLOSED`、403 `PERMISSION_DENIED`、`probe_phase=post`、`health_store=production`；**没有任何 close 回执带 `failure_stage=lock`**；载入 `true` 的 reload 全程只 **1** 次；预算到期后 **12 s** 关闸；窗口 `exit 11` / `GATE_OPEN_FAILED` / `restore_verified=true` / `gate_operation_timeout_seconds=12`；零枚举 | PASS |
+| **10c. 被停掉之后还能不能再开** | 上一步结束后，用同一份配置再开一次 | 第二次 open `rc=0`、`verification=PASS`、闸门 `true`；再用 wrapper 关闭 `rc=0`、闸门 `false`——互斥锁已释放，配置与绑定可复用 | PASS |
 | **零枚举（贯穿 1–10）** | 假桥 `--request-log` 逐条记录 | 每个场景 `enumeration_calls == 0`；`other_calls == 0`；场景 1 的 `item_calls == 4` 与正常探测账逐次对上；全部场景累加仍为 **0**（末尾单独一条断言） | PASS |
 
 **零枚举的证据口径**：不是"脚本里没写"，而是假桥对**每一个被应答的请求**写一行 `{status}\t{command}\t{path}`，测试用 `awk -F'\t'` 统计——`$3=="/reminders/lists"` 的条数、条目路径正则的条数、其余路径的条数。三项一起看，才能既证明"没枚举"，也证明"没走别的路"。
 
-两个注入点是这轮新加的，都只作用于桩进程，不改变被测脚本：`fail_on_close` 标记让"把闸门关下去"的 reload 失败（按 config 里已写入的值判断，所以开闸那次不受影响）；`STUB_LAUNCHCTL_SLEEP` 让 reload 变慢并记下首次起始时刻，用来证明预算是从变更前开始计的。
+注入点都只作用于桩进程，不改变被测脚本：`fail_on_close` 标记让"把闸门关下去"的 reload 失败（按 config 里已写入的值判断，所以开闸那次不受影响）；`STUB_LAUNCHCTL_SLEEP` 让 reload 变慢并记下首次起始时刻，用来证明预算是从变更前开始计的；`slow_on_open` 把"变慢"限定在**把闸门开上去**的那次 reload，这样同一个夹具既能卡住开闸、又不会把紧接着必须成功的恢复也卡住。
+
+v6 为了让"停了"这件事可被外部核对，做了三处夹具改动，都只让观测更硬、不改变断言口径：桩在 `launchctl` 每次被调用时把**当时盘上的闸门值**记进 `launchctl.gate`（于是"有没有第二次载入 `true`"是数出来的，不是推出来的）；变慢的那一步改用 `exec sleep`，**被 kill 的就是真正在阻塞的进程**（否则只能证明外层 shell 死了）；桩的 `pgrep -P` 如实回答"没有子进程"（否则一个假的子进程 pid 会让 `kill_tree` 去追一条不存在的进程链）。
 
 #### 7.2.3 回归与既有路径
 
@@ -414,6 +427,9 @@ probe --endpoint http://127.0.0.1:18765 \
 | :--- | :--- | :--- |
 | 既有客户端用例（夹具改动后） | `python3 scripts/tests/test_r1_bridge_client.py` | **63/63** |
 | R1 回放路径未被破坏（`legacy_enumeration` 冒烟） | `r1_gate.sh open`（不带 `--list-id`） | rc=0、`verification=PASS`、`verification_mode=legacy_enumeration`、`gate_classification=GATE_AS_EXPECTED` |
+| **R1 自己的窗口用例**（v6 改动落在同一个 `r1_gate.sh` 上，所以本轮复跑了它） | `bash scripts/tests/test_r1_window.sh` | **125/125**，`R1 WINDOW: OFFLINE_TEST_PASS`，0 失败 |
+| **v6 的 `legacy_enumeration` 冒烟**（同一份改动下的复跑） | `r1_gate.sh open/close`（不带 `--list-id`） | open `rc=0`、`verification=PASS`、`GATE_AS_EXPECTED`、`operation_duration_seconds=5`；close `rc=0`；闸门回 `false`；请求只有 `/health` 与 `/reminders/lists` |
+| **v6 最后一次改动后的完整复跑**（改的是 `kill_tree` 防护、桩的 `exec sleep`、10a2 的额度） | `bash scripts/tests/test_r1_probe_window.sh` | **134/134**，`R1-03 PROBE WINDOW: OFFLINE_TEST_PASS`，耗时 3 m 55 s |
 
 `legacy_enumeration` 的存在只有一个理由：让 R1 的窗口能被原样回放。**R1-03 的任何调用都带 `--list-id`**，并且 `--require-no-enumeration` 在没有 `--list-id` 时直接 exit 2——回退是"被拒绝"，不是"默认"。
 
@@ -424,7 +440,7 @@ probe --endpoint http://127.0.0.1:18765 \
 ```
 python3 scripts/tests/test_r1_probe.py           # 72/72
 python3 scripts/tests/test_r1_bridge_client.py   # 63/63（夹具改动后的回归，未重跑于本轮）
-bash    scripts/tests/test_r1_probe_window.sh    # 102/102
+bash    scripts/tests/test_r1_probe_window.sh    # 134/134
 ```
 
 `test_r1_probe.py` 的诚实边界写在文件头：它证明的是**客户端的分类逻辑**与矩阵一致，以及客户端**构造不出**枚举 URL；它**不**证明 Swift 服务端真的产出这些响应——假桥是按源码分支手写的，夹具与服务的偏差在这里看不出来。`test_r1_probe_window.sh` 的边界同理：它证明**编排逻辑**正确（谁在什么时候发什么、失败是否被正确命名为失败），不证明 MacServer 上的 `launchd`/`codesign` 真的如桩所模拟的那样回应。
@@ -433,14 +449,14 @@ bash    scripts/tests/test_r1_probe_window.sh    # 102/102
 
 前版只有"客户端能分类"和"gate 能带参数"两件事，中间的执行编排是空的。v3 补上这一段，由四个脚本分担，职责不重叠：窗口决定顺序，gate 决定改什么，close wrapper 决定「关闸这件事长什么样」，看门狗负责在主进程已经不在了的时候还照着做。
 
-#### 7.3.1 `r1_probe_window.sh`（新增，431 行）——唯一的窗口入口
+#### 7.3.1 `r1_probe_window.sh`（新增，458 行）——唯一的窗口入口
 
 ```
 r1_probe_window.sh --list-id ID --token-file F --plist P --work-dir D
                    [--config-file C] [--canary-id CID]
                    [--endpoint http://127.0.0.1:18765]
                    [--window-seconds 300] [--open-budget 120]
-                   [--label r103] [--confirm]
+                   [--op-timeout 30] [--label r103] [--confirm]
 ```
 
 执行顺序（**顺序本身就是安全属性，不能重排**）：
@@ -450,8 +466,9 @@ r1_probe_window.sh --list-id ID --token-file F --plist P --work-dir D
 3. **`pre` 相位**：`probe --phase pre --expect GATE_CLOSED_AS_EXPECTED`，带 canary。拿不到闭闸基线就 `exit 10` 并且**不开窗**。
 4. **先 arm 看门狗，再开闸**：`nohup ... &` + `disown`，然后校验 `watchdog.pid` 里的进程确实活着、`watchdog_meta.env` 里的 deadline 与预期一致。**看门狗没起来就不开闸**——这是"先有兜底再有动作"的顺序。若此时已经收到中断，不 arm 之后继续，而是 disarm 并以 `TRUNCATED`/16 结束。
 5. **写预算起点，然后开闸**：**先**把 `date +%s` 写进 `state/gate_open_since`，**再**调 `r1_gate.sh open`。顺序反了就等于把阻塞的时长从账上抹掉（§7.4.3）。
-6. **`open`**：`r1_gate.sh open --list-id ... --require-no-enumeration`。开窗失败 → 尝试关回去，`exit 11`；开成功但回执里没有 `probe_classification` → 关回去，`exit 12`。
-7. **`close`**：走 `r1_probe_close.sh`（§7.3.5），probe 相位 `post`，期望 `GATE_RESTORED_CLOSED`，**有界重试**（`R1_RESTORE_ATTEMPTS`，默认 2）。
+6. **`open`**：`r1_gate.sh open --list-id ... --require-no-enumeration --op-timeout 30`。开窗失败 → 尝试关回去，`exit 11`；开成功但回执里没有 `probe_classification` → 关回去，`exit 12`。
+   - 这里的 `--op-timeout` 就是**持锁上限**：开闸操作最多持锁 30 s，到点自己停、把键放回 `false`、让出锁（§7.4.3.3）。窗口按 30 s 收到的是一个"停住的失败"（exit 8），不是"还在跑的成功"。
+7. **`close`**：走 `r1_probe_close.sh`（§7.3.5），probe 相位 `post`，期望 `GATE_RESTORED_CLOSED`，**有界重试**（`R1_RESTORE_ATTEMPTS`，默认 2），同样带 `--op-timeout 30`。
    - 恢复成功 → 继续。
    - 恢复失败 → `exit 13`，**不 disarm、不写 stop、不删除 `gate_open_since`**，整个 `RUN_DIR` 保留。这是本轮修掉的最严重的一处：原实现在这里调 `disarm_watchdog`，等于让失败的那一方亲手拆掉唯一的期限保护。
 8. **disarm**：只在恢复已验证后写 `stop`，等 `DISARMED_BY_MAIN`。若看门狗在 disarm 之前已经 fire（`FIRED_*`），即使恢复成功也记 `TRUNCATED` 并 `exit 16`。
@@ -463,7 +480,7 @@ r1_probe_window.sh --list-id ID --token-file F --plist P --work-dir D
 
 `.r1-write-probe.$$` 是一个 0 字节的写权限探针，创建后立即删除；`RUN_DIR` 用 `mkdir -m 700` 建，且**拒绝复用已存在的目录**（两次窗口不共享一棵证据树）。
 
-#### 7.3.2 `r1_gate.sh`（610 → 674 行）——唯一改闸门的地方
+#### 7.3.2 `r1_gate.sh`（610 → 674 → 879 行）——唯一改闸门的地方
 
 新增两个开关：`--list-id` 与 `--require-no-enumeration`。验证模式二选一，无隐式回退：
 
@@ -483,6 +500,8 @@ else VERIFY_MODE="legacy_enumeration"; fi
 `open` 接受集合而不是单一值，是因为**开窗成功只意味着"请求越过了 guard"**，越过后具体是 404 还是 200 属于探测结论，不属于开窗成败。但**观测到的那个标签仍原样写进回执**（`probe_classification`），异常标签（如 `ANOMALOUS_SOURCE_NOT_ALLOWED`）不会被"平均掉"。
 
 回执新增字段：`verification_mode`、`probe_phase`、`probe_classification`、`probe_http_status`、`probe_error_code`、`probe_item_count`、`probe_enumeration_calls`；`evidence_files` 按模式指向 `.probe.json` 或 `.gate.json`。`verification_basis` 一字未改，仍是"http behaviour after reload + process identity; never the file value"。
+
+v6 又加了**一个额度**和一整套到期路径（详见 §7.4.3.3）：`operation_timeout_seconds`、`operation_duration_seconds` 进成功回执；失败回执多出 `deadline_phase`、`reload_killed`、`gate_key_before_operation`、`gate_key_after_deadline`（**读回值**）、`gate_key_left_closed`。退出码新增 **8 = 操作时限到、键已放回关闭、reload 已 kill**。`--op-timeout` 必须在 `1..` 区间且为整数，`0` 或非数字直接 `exit 2`——"没有时限"不是可选项，因为这条路径的意义就是不留下一个可以无限持锁的调用。
 
 #### 7.3.3 `r1_watchdog.sh`（178 → 211 行）——独立进程的兜底
 
@@ -513,7 +532,7 @@ fi
 
 canary 只在 `pre` 跑一次：白名单的主张在那里建立；开窗与关窗都不触碰白名单，重复发只是多两次请求。
 
-#### 7.3.5 `r1_probe_close.sh`（新增，79 行）——唯一能不带参数的关闸入口被删掉了
+#### 7.3.5 `r1_probe_close.sh`（新增，87 行）——唯一能不带参数的关闸入口被删掉了
 
 `r1_gate.sh close` 在没有 `--list-id` 时按 R1 的方式验证——调 `/reminders/lists`。对 R1-03 来说这条回退不该存在，但"不该用"离"不会用"差一个手滑，而这个手滑最可能发生在**恢复**的时候。
 
@@ -521,11 +540,13 @@ canary 只在 `pre` 跑一次：白名单的主张在那里建立；开窗与关
 
 ```
 r1_probe_close.sh --list-id ID --token-file T --plist P --out O
-                  [--config-file F] [--endpoint U] [--purpose TEXT] [--lock-wait S]
+                  [--config-file F] [--endpoint U] [--purpose TEXT]
+                  [--lock-wait S] [--op-timeout S]
 ```
 
 - **`--list-id` 是必需的**：缺失（或为空）→ 打印缺哪个参数并 `exit 2`，**在调用 `r1_gate.sh` 之前**，因此不写盘、不重载、不取锁、不生成回执、不发一个请求。
 - **`--require-no-enumeration` 不是参数**：它由 wrapper 自己附加。没有开关能把它关掉，因为"这个命令是什么"不该由调用方决定。
+- **`--op-timeout` 是转发参数**：wrapper 不解释它，只把它交给 gate。转发这件事本身有断言（§7.2.2 场景 10a2）——一个在传递链上被吞掉的时限，等于每次恢复都用默认额度跑。
 - 三条路径共用它：窗口的正常/失败关闸、看门狗的恢复、人工的紧急关闸。文档里只有这一种写法（§7.4.4）。前一版那条"带 `--plist`/`--token-file`、目标 ID 可加可不加"的关闸写法已整条删除，**连它的字面都不再保留**——能复制的范例比一段说明更容易被复制。
 - R1 的回放路径不受影响：`r1_window.sh` 与 `test_r1_window.sh` 照旧直接调 `r1_gate.sh`，走 `legacy_enumeration`。这不是"给 R1-03 留了后门"，而是 R1-03 的调用点根本不在那条路上。
 
@@ -538,14 +559,14 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | 脚本 | 行数 | sha256 | 本轮 |
 | :--- | ---: | :--- | :--- |
 | `scripts/r1_bridge_client.py` | 966 | `daa0de1921169cfdab087a7c659df3a67c09debbd373ace4dc5f527060ac591a` | 未改（2.3.0） |
-| `scripts/r1_gate.sh` | 674 | `57e70235ddf4fe89d66e6fed118a931ac6628b2bf2d4068c246bc683392ea677` | 未改 |
+| `scripts/r1_gate.sh` | 879 | `3205fdce306c166db7d1fad88c98542eec7476ff47f208082d190eca56470af7` | 改（`--op-timeout` + 到期回滚 + 有界执行；退出码 8） |
 | `scripts/r1_watchdog.sh` | 211 | `4134c238b8fdde93d99882a3527665c076140501158d06000bdea146db4791f7` | 改（恢复走 wrapper；移除 `--canary-id`） |
-| `scripts/r1_probe_window.sh` | 431 | `bb2eac421982670ec9ae7b79ab830864e9466ab4f6d90afa972189ee7ed1d4f0` | 改（预算起点前移、失败不 disarm、中断不再被清零） |
-| `scripts/r1_probe_close.sh` | 79 | `a1719b9811a04d752def8a99ad316605bf19588c29c773225babc42af6fc9bb0` | **新增** |
+| `scripts/r1_probe_window.sh` | 458 | `8a01fa0740023931b8d1e5a995914817c545aa8fc6254ba053fe23457e22e7d7` | 改（+`--op-timeout` 并转发给开闸与每次关闸；summary 记 `gate_operation_timeout_seconds`） |
+| `scripts/r1_probe_close.sh` | 87 | `97dcb7b076232e97b601634296c07c5b20777f4eb81db5555412cff889c92ba7` | 新增；v6 加 `--op-timeout` 转发 |
 | `scripts/r1_token_extract.sh` | 137 | `bec944107a19394754f1aef561a4e397f3e798260cb1bd59990f3466bc96e4a0` | 未改 |
 | `scripts/tests/fake_bridge.py` | 254 | `09bd2416e8b3f6cdef7829c9315242fa5b5e0c10db7c36b9dbdf348aa8247869` | 未改 |
 | `scripts/tests/test_r1_probe.py` | 363 | `a892cb1163dbbd9f068411e52961ae4d405cab1b0bfd94434e275e7cc9a7684a` | 未改 |
-| `scripts/tests/test_r1_probe_window.sh` | 624 | `303ddf6441e95cd1e8d4231e3ff89031f50fed074f2b7073e2e360402e834677` | 改（84 → 102 项，含持锁跨预算） |
+| `scripts/tests/test_r1_probe_window.sh` | 772 | `d9daa5b10eb3146357d1508240dd118a7f22704b031179d5aa04f2eae7cf0dfa` | 改（102 → **134** 项：时长时限 10a / 10a2 / 10b / 10c，退出码 8，四项验收） |
 
 被校验的二进制：`/Users/shared/bin/EventKitBridgeServer`，sha256 固定 `f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074`。**不替换**，只校验。
 
@@ -558,20 +579,21 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | 看门狗状态 | `<RUN_DIR>/state/` | `0700` | `watchdog.pid`、`watchdog_meta.env`、`watchdog_status.env`、`gate_open_since`、`stop`、`gate_close_*.log`。恢复失败时**整套保留**，包括 `gate_open_since` |
 | plist / config 备份 | `r1_gate.sh` 自动生成，路径写入回执的 `plist_backup` / `config_backup` | `0600` | 关窗成功后保留至人工确认，用于逐字节比对 |
 | 写权限探针 | `<work-dir>/.r1-write-probe.$$`、`<out_dir>/.r1-gate-probe.$$` | —— | 0 字节，创建后立即删除，仅用于证明"失败时能留下回执" |
-| 锁 | `r1_gate.sh` 的互斥文件 | —— | 进程退出即释放；`--lock-wait` 有界（窗口 20 s / 关窗 15 s），**忙等视为失败**，不并发写 |
+| 锁 | `r1_gate.sh` 的互斥文件 | —— | 进程退出即释放；`--lock-wait` 有界（窗口 20 s / 关窗 15 s），**忙等视为失败**，不并发写；拿到锁之后的持锁时长由 `--op-timeout`（30 s）界定，到期即停并放锁（§7.4.3.3） |
 
 **不产生**的东西：事项内容、事项标题/备注/URL/日期、非目标列表元数据、令牌明文、任何`.env`导出。
 
-#### 7.4.3 绝对期限与开闸预算
+#### 7.4.3 绝对期限、开闸预算与单次操作时限
 
-先分两个量，它们衡量的是不同的东西：
+先分三个量，它们衡量的是不同的东西：
 
 | 量 | 参数 | 默认 | 含义 | 触发后 |
 | :--- | :--- | ---: | :--- | :--- |
 | **绝对期限** | `--window-seconds` | 300 s | 从 arm 那一刻起算的**墙钟**上限，写入 `watchdog_meta.env` 的 `WATCHDOG_DEADLINE_EPOCH` | `WATCHDOG_REASON=deadline` → 关窗 |
 | **开闸预算** | `--open-budget` | 120 s | 闸门处于 `true` 的**累计**时长上限，按 `gate_open_since` 计算 | `WATCHDOG_REASON=open_budget` → 关窗 |
+| **单次操作时限**（v6） | `--op-timeout` | 30 s | 一次 gate 操作**持锁**的墙钟上限，从拿到锁起计；到点 kill 在跑的步骤、键写回 `false`、`exit 8` | 操作自己停，锁让出来；恢复路径的 close 因此能进去 |
 
-不变量：`--open-budget < --window-seconds`，否则参数阶段就 `exit 2`（预算是期限的子集，反过来说明参数写错了）。R1 实测开窗约 8 s，120 s 是 15 倍余量。
+不变量：`--open-budget < --window-seconds`，否则参数阶段就 `exit 2`（预算是期限的子集，反过来说明参数写错了）。R1 实测开窗约 8 s，120 s 是 15 倍余量。第三个量与前两个不是子集关系而是**因果配对**：前两个决定"什么时候开始尝试关"，第三个决定"那个持锁的操作什么时候必须让开"。三者合起来才有 §7.4.3.3 的结论。
 
 **预算起点写在变更之前**。`gate_open_since` 在调用 `r1_gate.sh open` 的**前一行**写入，而不是等它返回：一次被阻塞的 reload 若在返回后才开始计时，那段时间等于免费的，预算就变成了"这次开窗允许再开 120 s"。测试用 5 s 的慢 reload 把这条钉住（§7.2.2 场景 6）：开闸回执的 mtime 至少比计时晚 5 s。
 
@@ -595,7 +617,7 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 
 闸门只有一个写入口，而且这个入口有互斥锁（`r1_gate.sh` 的 `acquire_lock`）。开闸操作在**写入之前**取锁、**验证之后**释放，一次阻塞的 reload 会让锁被持有整段时间。看门狗到期后发的也是同一个 `close`，它必须先拿到这把锁。
 
-后果很具体，而且是实测的（§7.2.2 场景 10，离线夹具，reload 20 s、`--lock-wait 15`、`--restore-attempts 1`）：
+**修复前**（v5 的实测，§7.2.2 旧场景 10，离线夹具，reload 20 s、`--lock-wait 15`、`--restore-attempts 1`）：
 
 | 时刻 | 发生了什么 |
 | :--- | :--- |
@@ -606,16 +628,58 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | t0+23 s | open 完成并释放锁 |
 | t0+46 s | 窗口自己的 close 完成并验证，闸门才真正 shut |
 
-所以承诺必须写成两句话：
+那次之后，承诺只能这么写：
 
-> **期限（300 s / 120 s）保证的是"看门狗在到期时开始尝试关闸"，不保证"闸门在到期时已经关闭"。**
-> 闸门的实际关闭时刻 ≈ max(期限, 持锁操作结束) + 一次 close 的耗时（reload + settle + 一次 probe）。本次夹具测得到期后 **46 s**。
+> 期限（300 s / 120 s）保证的是"看门狗在到期时**开始尝试**关闸"，不保证"闸门在到期时已经关闭"。
 
-**看门狗的尝试窗口是有界的**：`--lock-wait × --restore-attempts`（默认 15 s × 3 = 45 s，加两次 2 s 间隔）。锁在这段时间内释放，它就能关；释放不了，它就报 `FIRED_RESTORE_FAILED` 并**停止尝试**，闸门保持开着。这是需要人工介入的状态，脚本不会假装它关上了。
+**v6 消除的是这句话的成因，不是这句话的后半句。** 现在每个 gate 操作都有持锁上限（`--op-timeout`，默认 30 s），到期就停、把键放回关闭、让出锁——看门狗的下一次尝试因此能拿到锁。实测同一场景：**预算到期后 12 s 闸门关闭并验证**，看门狗 `FIRED_RESTORED`，回执里不再出现 `failure_stage=lock`（§7.4.3.3、§7.2.2 场景 10b）。
 
-**什么情况下这个边界不会咬人**：正常开闸（R1 实测 ~8 s，reload 不阻塞）远短于 120 s 预算，锁几乎不可能跨过到期点。这条边界只在 reload 被阻塞或服务挂起时出现——那正是最需要知道"到期不等于关掉"的时刻。
+**看门狗的尝试窗口仍然是有界的**：`--lock-wait × --restore-attempts`（默认 15 s × 3 = 45 s，加两次 2 s 间隔）。区别在于，现在对面那个持锁者自己有个上限（30 s < 45 s），所以"等不到锁"从常态变成了异常。
 
-**能重新开闸**：上一步结束后用同一份配置再开一次，`rc=0`、`verification=PASS`、闸门 `true`，再关闭也 `rc=0`。互斥锁已随进程退出释放，配置与绑定没有留下需要清理的状态（§7.2.2 场景 10b）。
+**什么情况下这条边界不会咬人**：正常开闸（R1 实测 ~8 s，reload 不阻塞）远短于 30 s 时限，时限本身在正常情况下根本用不到；它只在 reload 被阻塞或服务挂起时起作用——那正是最需要"停下并让出锁"的时刻。
+
+**能重新开闸**：一次被时限停掉的开闸之后，用同一份配置再开一次，`rc=0`、`verification=PASS`、闸门 `true`，再关闭也 `rc=0`。互斥锁已随进程退出释放，配置与绑定没有留下需要清理的状态（§7.2.2 场景 10c）。
+
+#### 7.4.3.3 操作时限：到期就停，而不是等它结束
+
+v5 把"到期不等于关掉"这个边界写清楚了，但没有消除它。v6 消除的是它的成因：**开闸/关闸这一次操作本身有执行时限**。
+
+| 项 | 值 | 说明 |
+| :--- | :--- | :--- |
+| 参数 | `--op-timeout` | 从**拿到互斥锁**那一刻开始计。`--lock-wait` 管的是等锁（等锁时不持有任何东西），两个额度分工不同，不能互相代替 |
+| 默认 | **30 s** | R1 实测一次开窗 ≈ 8 s，3.75 倍余量；并且 **< 看门狗的等锁预算 15 s × 3 = 45 s**，所以"到期放锁"总能被恢复路径接住 |
+| 覆盖 | 写入前的检查、reload、settle、每一次 HTTP 请求 | 每个会等待的步骤都按剩余额度执行（`run_bounded`），到点连同子进程一起 kill |
+| 不覆盖 | 两次本地文件写入（`plutil -replace`、临时文件 rename） | 它们不等待任何东西；它们**何时开始**由前一条检查界定 |
+| 到期动作 | kill 在跑的进程 → 把那个键写回 `false` → **读回实际值** → 写回执 → `exit 8` | 不再 reload、不再写"开"的值；锁随进程退出释放 |
+| 回执字段 | `failure_stage=op_timeout`、`deadline_phase`、`reload_killed`、`gate_key_before_operation`、`gate_key_after_deadline`、`gate_key_left_closed`、`operation_timeout_seconds` | "键现在是关的"来自**读回**，不来自"我们打算写 false" |
+
+为什么超时还要再写一次（且只写 `false`）：一次没有验证成功的开闸，不该在盘上留下 `true`。一个没有进程在跑、却写着 `true` 的键本身就是隐患——下次服务重启会照着它把闸门打开。所以到期路径允许自己写一次 `false`，并且**不允许自己 reload**：`deadline_exit` 是这条路径唯一的出口，它 `exit`，不返回。
+
+**实测（同一套离线夹具；桩进程改为 `exec sleep`，被 kill 的就是真正在阻塞的那个进程）**：
+
+| 场景 | 设置 | 结果 |
+| :--- | :--- | :--- |
+| 10a | 单次 `r1_gate.sh open`；reload 阻塞 40 s；`--op-timeout 8` | `exit 8`；**8 s** 停止（两次运行 8 s / 9 s；若时限不起作用会是 40 s+）；盘上 `false`；锁已释放；`launchctl` 全程只被调用 **1** 次，其中载入 `true` 的只有那 1 次 |
+| 10a2 | `r1_probe_close.sh --op-timeout 2` | `exit 8`；回执 `operation_timeout_seconds=2`、`failure_stage=op_timeout`（证明 wrapper 没有吞掉这个值）；盘上 `false` |
+| 10b | 完整窗口：`--open-budget 6`、`--op-timeout 12`、reload 阻塞 40 s | 预算到期 → 看门狗 fire → 开闸在 t+12 放弃并放锁 → 看门狗**第一次尝试就拿到锁**，close 验证 `GATE_RESTORED_CLOSED`，`FIRED_RESTORED`；闸门在预算到期后 **12 s** 关闭（v5 同场景 46 s） |
+| 10c | 上一步之后用同一份配置再开一次 | `rc=0`、`verification=PASS`、闸门 `true`；再关 `rc=0`、闸门 `false` |
+
+10a2 用 2 s 而不是 1 s，且**只断言"时限被交到了 gate 手上"**（退出码 8 + 回执里的秒数 + `failure_stage`），不逐字段断言被中断的是哪一步——额度小到只剩一两秒时，时钟落在哪一步本来就不确定。**"停在哪一步"由 10a 钉住**：8 s 的额度对上 40 s 的 reload，`elapsed` 只有 8 s（另一次 9 s），这个落差不可能含糊。
+
+**验收四项在 10b 里是逐条断言的，不是合并成一句"恢复成功"**：
+
+| 验收项 | 断言（来自 10b 那次 close 的回执与请求日志） |
+| :--- | :--- |
+| 服务健康 | `health_store == "production"` 且 `health_classification == HEALTH_PRODUCTION_STORE_OK` |
+| 目标请求被拒绝 | `probe_classification == GATE_RESTORED_CLOSED`、`probe_http_status == 403`、`probe_error_code == PERMISSION_DENIED`、`probe_phase == "post"` |
+| 无再次开闸 | 桩记录的"载入 `true` 的 reload"全程只有 **1** 次（就是被 kill 的那次）；开闸回执 `verification=FAIL`；结束态盘上 `false` |
+| 零账户级枚举 | 请求日志 `/reminders/lists` 计数 **0**；`/health` 与条目路径之外的请求 **0** |
+
+**仍然存在的三条边界（写清楚，不靠措辞盖过去）**：
+
+1. **恢复路径能拿到锁，是有条件的**。充分条件：`op_timeout − open_budget < 看门狗的实际等锁时间`。申请值 `30 − 120 < 0`，恒成立；一旦有人把 `--op-timeout` 调到大于预算，就得自己核这个不等式（窗口在 `--op-timeout > --open-budget` 时会打印一条 NOTE，不阻止执行）。
+2. **停掉的只是这个进程**。kill 的是 reload 客户端（`launchctl`），`launchd` 那一侧是否已经加载了 job 不由我们决定。所以进程可能短暂地仍以 `true` 在跑，而盘上已是 `false`。收敛靠恢复路径那次 close：它按盘上的 `false` 重新 `bootout`/`bootstrap`（或 `kickstart`），并**验证**端点行为——10b 里它的结论就是 `GATE_RESTORED_CLOSED`。回执把两件事分开记（`reload_killed=true`、`gate_key_left_closed=true`），不合并成"已关闭"。
+3. **持锁的不是一个带时限的 gate 操作时，这条修复不适用**。例如旧版本脚本仍在跑、或某个进程挂死在 `plutil` 之外：没有任何东西界得住它，看门狗用完 45 s 仍会 `FIRED_RESTORE_FAILED`，闸门保持开着等人工。这一条 v5 就写过，现在它只对"持锁者是本脚本"这一情形失效。
 
 #### 7.4.4 恢复步骤（四条路径，全部以"观测到的行为"为准）
 
@@ -625,7 +689,8 @@ r1_probe_close.sh --list-id ID --token-file T --plist P --out O
 | 窗口异常退出（信号） | 同上（trap 置 `INTERRUPTED`，流程照常关窗） | 同上 | `exit 13`，同样不 disarm |
 | 主进程被杀 | **看门狗**独立发起同一条 `r1_probe_close.sh` | 同上，且 `WATCHDOG_STATE=FIRED_RESTORED` | `FIRED_RESTORE_FAILED`，退出码 6 |
 | 人工紧急关窗 | 同一条命令，手敲：`r1_probe_close.sh --list-id ID --token-file T --plist P --out O` | 回执 `verification == PASS` | rc≠0，看回执里的 `failure_stage` |
-| **到期时开闸仍持锁** | 看门狗到期发起，但锁被进行中的 open 拿着 | 拿不到锁就没有"成功"，回执 `failure_stage=lock` | `FIRED_RESTORE_FAILED`，退出码 6；**闸门此时仍开着**，等持锁操作结束后的下一次 close（窗口自己的，或人工）。实测到期后 46 s 才 shut（§7.4.3.2） |
+| **开闸被时限停掉**（v6） | `r1_gate.sh` 自己在 `--op-timeout` 到期时停：kill reload → 键写回 `false` → `exit 8` | 不需要"成功"：这是一次**已停止**的操作，闸门键已放回关闭 | 回执 `failure_stage=op_timeout`、`gate_key_left_closed=true`；锁已释放，由下一条恢复路径（窗口的 close 或看门狗的 close）真正关闸并验证 |
+| **到期时锁仍被占着**（v6 之后只在持锁者不是本脚本时出现） | 看门狗到期发起，但锁被一个不带时限的进程拿着 | 拿不到锁就没有"成功"，回执 `failure_stage=lock` | `FIRED_RESTORE_FAILED`，退出码 6；闸门保持开着等人工（§7.4.3.3 边界 3） |
 
 **只有这一种写法。** 前一版这里给过一条不带目标 ID 也"可以"的关闸命令——那是一个会走账户级枚举的范例，已整条删除，字面也不保留。`r1_probe_close.sh` 没有"不带目标 ID"的调用方式，缺参数时在改动之前就 `exit 2`（§7.2.2 场景 7）。
 
@@ -676,14 +741,18 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 | 编号 | 授权内容 | 边界 | 预算 |
 | :--- | :--- | :--- | :--- |
 | **P0** | 只读核实 MacServer 现态（§8.3 四项）：服务在不在跑、plist 闸门键当前值、`/health` 是否 200、pid | 只用 `launchctl list`、`ps eww`（仅过滤闸门键一行）、`GET /health`、`plutil -extract`；不重启、不改配置、不碰 Apple 数据 | ≤ 60 s |
-| **P1** | 单键开窗：`EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` → `true`，按 §3.1 判定重载一次（`gate_source=launchd_env` 时 `bootout`+`bootstrap`；`config_file` 时 `kickstart -k`）；窗口结束**改回原值**并同样重载 | **只此一个键**；重载前后各记 plist sha256；`bootout`/`bootstrap` 仅用于让该键生效，**不换二进制、不改 label、不改 `ProgramArguments`、不 `disable` job**；含紧急关窗 | `--open-budget` **120 s**（R1 为 600 s）；开窗实测预期 < 15 s |
+| **P1** | 单键开窗：`EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED` → `true`，按 §3.1 判定重载一次（`gate_source=launchd_env` 时 `bootout`+`bootstrap`；`config_file` 时 `kickstart -k`）；窗口结束**改回原值**并同样重载 | **只此一个键**；重载前后各记 plist sha256；`bootout`/`bootstrap` 仅用于让该键生效，**不换二进制、不改 label、不改 `ProgramArguments`、不 `disable` job**；含紧急关窗；单次操作时限 `--op-timeout` **30 s**，到期即停并把该键放回 `false`（`exit 8`） | `--open-budget` **120 s**（R1 为 600 s）；`--op-timeout` **30 s**；开窗实测预期 < 15 s |
 | **P2** | **读取绑定目标列表的事项内容**。不是"1 次"，而是**每个返回 200 的目标请求各一次**：`pre` 的 target（闸门若实际已开）、`open` 的 target、`post` 的 target（关窗若未生效）、**以及每次恢复重试的 target**。逐相位列在上方说明里，上限见下一行 | 仅这一条列表；canary 永不读取（不在白名单，必 `403 LIST_NOT_ALLOWED`）；回执只落 `item_count` 与 `body_digest`；不落盘标题/备注/URL/日期 | **正常 ≤ 3 次**（pre/open/post 各 1）**＋ 恢复 ≤ 2 次**（窗口）× **≤ 3 次**（看门狗独立）＝ 最坏 **8 次** |
 | **P3** | 发送 loopback 请求。**两笔账分开**：正常 = `pre`（canary 1 + target 1）+ `open`（target 1）+ `post`（target 1）＝ 4 次条目 + 3 次 health；恢复 = 每次重试 1 次条目（`post` 相位）+ 1 次 health | 仅 `127.0.0.1:18765`；`GET` only；**不调用 `/reminders/lists`**（URL 构造器在结构上拒绝，`--require-no-enumeration` 在参数层拒绝）；**恢复只关窗，不重发开闸探测** | **正常 4 次条目 / 3 次 health（硬上限）**；**恢复 ≤ 2 次条目（窗口）**；**看门狗独立 ≤ 3 次条目**；合计条目 ≤ **9** |
 | **P4** | 记录进程环境中的闸门值（§4.3 手段 1） | 只输出 `EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=` 一行；令牌键一律丢弃 | 1 次 |
 | **P5** | 关窗与恢复核验：闸门键回原值 + `/health` 仍 200 + plist 与开窗前逐字节比对 + probe 得 `GATE_RESTORED_CLOSED` | **不卸载服务、不重启系统、不动二进制**；四条恢复路径见 §7.4.4 | ≤ 60 s |
-| **P6** | 运行 `r1_probe_window.sh`（含内嵌看门狗），关闸一律经 `r1_probe_close.sh` | `--window-seconds` **300 s**（绝对期限）、`--open-budget` **120 s**、`--confirm` 才真正开闸；不给 `--confirm` 时只跑到 pre 相位 | 一次窗口 |
+| **P6** | 运行 `r1_probe_window.sh`（含内嵌看门狗），关闸一律经 `r1_probe_close.sh` | `--window-seconds` **300 s**（绝对期限）、`--open-budget` **120 s**、`--op-timeout` **30 s**（单次 gate 操作持锁上限，会转发给开闸与每一次关闸）、`--confirm` 才真正开闸；不给 `--confirm` 时只跑到 pre 相位 | 一次窗口 |
 
-**时限（据实测改写）**：`--window-seconds` 300 s 是**脚本的运行上限**，也是看门狗**开始尝试关闸**的时刻；它**不是"闸门在 300 s 前一定关闭"的承诺**。开闸操作持锁期间，关闸只能等锁释放——离线实测（场景 10）预算到期后 **46 s** 闸门才真正 shut，看门狗在到期后 15 s 就报 `FIRED_RESTORE_FAILED`。若锁一直不释放，看门狗用完 `--lock-wait × --restore-attempts`（15 s × 3）后停止尝试并报失败，闸门**保持开着等人工**。详见 §7.4.3.2。
+**时限（三句话，全部有实测支撑）**：
+
+1. `--window-seconds` 300 s 是**脚本的运行上限**，也是看门狗**开始尝试关闸**的时刻——不是"闸门在 300 s 前一定关闭"的承诺。
+2. 但**持锁的 gate 操作自己有 30 s 上限**（`--op-timeout`）：到期就 kill 正在跑的步骤、把那个键写回 `false`、`exit 8`、释放锁（§7.4.3.3）。所以"关闸要等锁"的等待是有界的，而不是取决于那次 reload 想跑多久。
+3. 实测：预算到期后 **12 s** 闸门关闭并验证，看门狗 `FIRED_RESTORED`（v5 同一场景是 46 s，且当时报 `FIRED_RESTORE_FAILED`）。仍然存在的例外：若持锁者**不是**本脚本（旧版本进程、或挂死在别处），没有任何东西界得住它，看门狗用完 `--lock-wait × --restore-attempts`（15 s × 3）后停止尝试、报失败、闸门保持开着等人工。
 
 **预算**：正常探测 4 次条目请求 + 3 次 health；恢复重试 ≤ 2 次（窗口）× (1 条目 + 1 health)；看门狗独立 ≤ 3 次。合计条目 ≤ 9 次，见 §7.4.3.1；可能读到事项内容的请求 ≤ 8 次，见 P2。
 
@@ -719,10 +788,10 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 
 | # | 产物 | 位置 |
 | :--- | :--- | :--- |
-| 1 | 本方案（v5） | `receipts/R1_03_BOUND_ID_PRECISE_CHECK_APPLICATION.md` |
+| 1 | 本方案（v6） | `receipts/R1_03_BOUND_ID_PRECISE_CHECK_APPLICATION.md` |
 | 2 | `probe` 子命令 + 离线用例（本轮不执行真实请求） | `scripts/r1_bridge_client.py`（2.3.0）、`scripts/tests/test_r1_probe.py` |
 | 3 | 窗口编排 + 接入 gate / watchdog + 唯一关闸入口 | `scripts/r1_probe_window.sh`、`scripts/r1_gate.sh`、`scripts/r1_watchdog.sh`、`scripts/r1_probe_close.sh` |
-| 4 | 窗口集成用例（四类失效场景 + 预算 + 持锁跨预算 + 中断 + 零枚举，102 项） | `scripts/tests/test_r1_probe_window.sh` |
+| 4 | 窗口集成用例（四类失效场景 + 预算 + 开闸时限 10a/10a2/10b/10c + 中断 + 零枚举，**134 项**） | `scripts/tests/test_r1_probe_window.sh` |
 | 5 | 脚本哈希清单 | 本文件 §7.4.1 |
 | 6 | 执行回执（批准并执行后） | `receipts/R1_03_BOUND_ID_PROBE_RESULT.json` |
 | 7 | 窗口汇总（执行后） | `<work-dir>/window-<label>-<UTC>/summary.json` + `probe_pre.json` / `gate_open.json` / `gate_close_*.json` |
@@ -734,4 +803,4 @@ MacServer 侧最后一次有证据的状态来自 R1 / P5 回执：
 
 用**一个只带目标 ID 的条目请求**，把"存在/不存在/身份变化"从"说不清"变成三个可区分的状态码；代价是成功分支上会读一次那条列表的内容——**而且不止一次**：pre/post/恢复重试在闸门状态不符时同样会读到，最坏 8 次，授权按这个写。**不碰账户级枚举，也不声称底层未枚举**。开窗、关闸、看门狗三条路径共用同一个 probe，关闸只有 `r1_probe_close.sh` 一种写法；预算从变更之前开始计，恢复失败时看门狗不被 disarm。
 
-**期限不是关闭时刻**：开闸持锁时，看门狗到期只能开始尝试，抢不到锁就报 `FIRED_RESTORE_FAILED` 并停下，闸门继续开着等下一次 close 或人工——离线实测到期后 46 s 才 shut。四类失效场景加持锁、重新开闸、中断语义共 **102 项**断言，零枚举由假桥请求日志逐条统计。执行需要 P0–P6；恢复目标是"服务健康 + 闸门关闭"，不是卸载，也不承诺在期限内关闭。本轮只交付代码与离线验证。
+**持锁的那一次操作现在有上限**：`--op-timeout` 30 s，到期就 kill 在跑的步骤、把闸门键写回 `false`、`exit 8`、让出互斥锁——所以"到期只能开始尝试关闸"这个边界，从"要等那次 reload 自己结束"变成"最多等 30 s"。实测同一场景：预算到期后 **12 s** 闸门关闭并验证、看门狗 `FIRED_RESTORED`（v5 为 46 s、`FIRED_RESTORE_FAILED`）。验收四项分开核对——服务健康、目标请求被拒、无再次开闸、零账户级枚举——共 **134 项**断言，零枚举由假桥请求日志逐条统计。仍然成立的例外写在 §7.4.3.3：持锁者不是本脚本时，没有任何东西界得住它。执行需要 P0–P6；恢复目标是"服务健康 + 闸门关闭"，不是卸载。本轮只交付代码与离线验证。
