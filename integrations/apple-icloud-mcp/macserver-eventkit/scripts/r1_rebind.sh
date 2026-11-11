@@ -17,24 +17,38 @@
 # Rebinding while the gate is open would let a capture run against a binding
 # that no authorization covered. The proof is behavioural, not a file read:
 #
-#   pre-probe  OLD id, probe --phase pre --expect GATE_CLOSED_AS_EXPECTED
-#     The OLD id is on the current allowlist, so a 403 PERMISSION_DENIED can
-#     only come from the gate/store guard. This is a strict closed-gate proof
-#     (phase "pre" labels the closed-gate 403 GATE_CLOSED_AS_EXPECTED); a 200
-#     here becomes GATE_ALREADY_OPEN and a LIST_NOT_ALLOWED means the config is
-#     not what this script assumes - either way the operation stops.
+#   pre-check  GET /reminders/lists with the token, expect 403 (client gate).
+#     The enumeration endpoint returns LIST METADATA ONLY - it never carries
+#     item content for any list - so this proof cannot read a single reminder
+#     no matter what state the gate is in. 403 means "gate closed, or TCC
+#     denied"; the second case is content-safe as well (no items can be served
+#     at all while TCC denies the store) and would surface at W1.
 #
 #   post-probe NEW id, probe --phase post --expect GATE_RESTORED_CLOSED
-#     After the rebind the NEW id is the only allowlisted id, so the same
-#     reasoning applies: PERMISSION_DENIED after the allowlist check proves the
-#     gate is closed against the NEW binding (phase "post" labels it
-#     GATE_RESTORED_CLOSED). A LIST_NOT_ALLOWED here means the reload did not
-#     take effect - failure, rollback.
+#     After the rebind the NEW id is the only allowlisted id, so PERMISSION_
+#     DENIED after the allowlist check proves the gate is closed against the
+#     NEW binding. A LIST_NOT_ALLOWED here means the reload did not take
+#     effect - failure, rollback. The read targets the new list only.
 #
-# (An earlier sketch probed the NEW id pre-change with a relaxed expectation;
-# that was dropped because on the real server the allowlist check precedes the
-# gate, so a new-id 403 could not distinguish "gate closed" from "not yet
-# allowlisted". The old-id pre-probe is strict and unambiguous.)
+#   rollback / deadline-recovery verification (both checks, in this order):
+#     1. enumeration 403 again (the gate is closed; zero item content);
+#     2. NEW id probe --phase post --expect BLOCKED_NOT_ON_ALLOWLIST.
+#     After the backups are restored, the NEW id must be refused by the (old)
+#     allowlist BEFORE the gate is even consulted - LIST_NOT_ALLOWED is the
+#     behavioural proof that the OLD allowlist is live in the running process.
+#     If PERMISSION_DENIED comes back instead, the new allowlist is still
+#     active and the rollback did NOT take effect.
+#
+#   The OLD list id is NEVER probed by this script. Every item read it makes
+#   targets the new list, so an unexpectedly open gate cannot widen the read
+#   scope beyond the authorized target - the scope conflict an old-id probe
+#   would create is excluded by the execution path, not by documentation.
+#
+#   (Both earlier sketches - the relaxed new-id pre-probe and the old-id
+#   pre-probe - are retired: the first cannot distinguish "gate closed" from
+#   "not yet allowlisted" on the real server, the second reads the old list's
+#   item endpoint, which is outside the authorized item scope when the gate is
+#   unexpectedly open.)
 #
 # Same mutex, same clock, same discipline as r1_gate.sh
 # ------------------------------------------------------
@@ -48,21 +62,39 @@
 # --------
 # If the write, the reload, or the post-probe verification fails, both backups
 # are copied back, the service is reloaded again, and the restore is verified
-# with the same strict old-id probe. A rebind that could not verify its rollback
+# with the two scope-safe checks above (enumeration 403, then the new-id
+# BLOCKED_NOT_ON_ALLOWLIST probe). A rebind that could not verify its rollback
 # exits non-zero and says so; it never reports success.
+#
+# Deadline recovery (differs from r1_gate.sh on purpose)
+# ------------------------------------------------------
+# A gate deadline can leave only a single key behind, and writing it back to
+# "closed" is self-evidently safe. A rebind deadline can leave a rewritten
+# binding pair on disk while the process runs the old one (or the reverse), and
+# neither state is self-evidently safe, so the deadline exit here is a recovery:
+# the backups are restored, the service is reloaded once more under a separate
+# recovery clock (R1_RECOVERY_TIMEOUT, default 45 s - the operation clock is
+# already spent), and the result is verified with health + the two scope-safe
+# checks. Exit code is still 8 (a deadline is never a success), but the receipt
+# records whether the old configuration was actually reloaded, the service is
+# healthy and the gate is closed - or, if even the recovery failed, that manual
+# action is required.
 #
 # Usage:
 #   r1_rebind.sh --plist P --config-file C --token-file T --out O
 #                --old-list-id OLD --new-list-id NEW --new-source-id SID
 #                [--endpoint E] [--purpose TEXT] [--lock-wait SECONDS]
 #                [--op-timeout SECONDS] [--dry-run]
+#     (deadline recovery budget: env R1_RECOVERY_TIMEOUT, default 45 s)
 #
-# Exit codes: 0 verified success, 2 usage, 3 write/backup/probe/verification
-#             failure (rollback attempted), 4 reload failure (rollback
-#             attempted), 5 configuration precondition (sources split, keys
-#             absent, allowlist not exactly the old id), 6 evidence directory
-#             unusable, 7 mutex busy or lost, 8 deadline (backups restored, no
-#             second reload).
+# Exit codes: 0 verified success, 2 usage, 3 write/backup/check/verification
+#             failure (rollback attempted and verified where possible), 4
+#             reload failure (rollback attempted), 5 configuration
+#             precondition (sources split, keys absent, allowlist not exactly
+#             the old id), 6 evidence directory unusable, 7 mutex busy or
+#             lost, 8 deadline (backups restored, recovery reload + health +
+#             scope-safe verification attempted under a separate clock; the
+#             receipt records the recovery verdict).
 
 set -uo pipefail
 
@@ -171,8 +203,8 @@ NEW_BINDINGS="$NEW_ID:$NEW_SOURCE_ID:calDAV:iCloud"
 echo "[r1_rebind] source=$SOURCE reload=$RELOAD old_list=$(printf '%s' "$OLD_ID" | cut -c1-4)**** purpose=$PURPOSE"
 
 if [ "$DRY" -eq 1 ]; then
-  echo "[r1_rebind] DRY RUN: no pre-probe, no lock, no change written"
-  echo "[r1_rebind] plan: pre-probe old id (strict closed-gate) -> backup -> write allowlist+bindings pair -> reload ($RELOAD) -> post-probe new id (strict)"
+  echo "[r1_rebind] DRY RUN: no pre-check, no lock, no change written"
+  echo "[r1_rebind] plan: pre-check via enumeration 403 (zero item reads) -> backup -> write allowlist+bindings pair -> reload ($RELOAD) -> post-probe new id (strict); on failure: restore backups -> reload -> gate 403 + new-id BLOCKED_NOT_ON_ALLOWLIST verification"
   exit 0
 fi
 
@@ -195,6 +227,13 @@ emit_failure_receipt() {  # $1 = stage, $2 = rc, $3 = classification of last pro
   R1_ROLLED_BACK="${ROLLED_BACK:-0}" R1_DISK_WRITTEN="${DISK_WRITTEN:-0}" \
   R1_BACKUP_PLIST="${BACKUP_PLIST:-}" R1_BACKUP_CFG="${BACKUP_CFG:-}" \
   R1_VERIFY="${VERIFY_VERDICT:-FAIL}" \
+  R1_DEADLINE_PHASE="${DEADLINE_PHASE:-}" R1_RELOAD_KILLED="${RELOAD_KILLED:-0}" \
+  R1_RECOVERY_RELOADED="${RECOVERY_RELOADED:-0}" \
+  R1_RECOVERY_HEALTH="${RECOVERY_HEALTH:-}" \
+  R1_RECOVERY_GATE="${RECOVERY_GATE:-}" \
+  R1_RECOVERY_PROBE="${RECOVERY_PROBE:-}" \
+  R1_ROLLBACK_GATE="${ROLLBACK_GATE_CLASS:-}" \
+  R1_ROLLBACK_PROBE="${ROLLBACK_PROBE_CLASS:-}" \
   "$PYTHON" - "$OUT" <<'PYEOF' || echo "[r1_rebind] WARNING: could not write the failure receipt to $OUT" >&2
 import json, os, sys
 env = os.environ
@@ -221,32 +260,63 @@ receipt = {
   "config_backup_present": bool(env.get("R1_BACKUP_CFG")),
   "old_allowlist_masked": mask(os.environ.get("R1_OLD_ALLOWED", "")),
   "old_bindings_masked": mask(os.environ.get("R1_OLD_BINDINGS", "")),
-  "note": "A failed rebind never reports success. When rolled_back is true the "
-          "backups were restored and the restore was reloaded; only the HTTP "
-          "behaviour recorded here proves the endpoint's real state.",
+  "scope_note": "this operation never requests the OLD list's item endpoint; "
+                "every item read targets the new list, so an unexpectedly open "
+                "gate cannot widen the read scope beyond the authorization",
 }
+# Rollback verification (verify-failure path): the two scope-safe checks.
+if env.get("R1_ROLLBACK_GATE") or env.get("R1_ROLLBACK_PROBE"):
+    receipt["rollback_verification"] = {
+        "gate_check": env.get("R1_ROLLBACK_GATE") or None,
+        "new_id_probe": env.get("R1_ROLLBACK_PROBE") or None,
+    }
+# Deadline recovery: what the bounded recovery actually re-established.
+if env.get("R1_DEADLINE_PHASE"):
+    recovery_verified = (env.get("R1_RECOVERY_HEALTH") == "OK"
+                         and env.get("R1_RECOVERY_GATE") == "GATE_AS_EXPECTED"
+                         and env.get("R1_RECOVERY_PROBE") == "BLOCKED_NOT_ON_ALLOWLIST")
+    receipt.update({
+        "deadline_phase": env["R1_DEADLINE_PHASE"],
+        "reload_killed_at_deadline": env.get("R1_RELOAD_KILLED") == "1",
+        "recovery": {
+            "reloaded": env.get("R1_RECOVERY_RELOADED") == "1",
+            "health": env.get("R1_RECOVERY_HEALTH") or None,
+            "gate_check": env.get("R1_RECOVERY_GATE") or None,
+            "new_id_probe": env.get("R1_RECOVERY_PROBE") or None,
+            "verdict": "VERIFIED" if recovery_verified else "FAILED_OR_NOT_ATTEMPTED",
+        },
+        "note": "A deadline is never a success (exit 8). When recovery.verdict is "
+                "VERIFIED, the backups were restored AND the old configuration was "
+                "proven reloaded (new id refused by the old allowlist), the service "
+                "is healthy and the gate is closed. Otherwise manual action is "
+                "required: disk/process divergence is possible.",
+    })
 with open(sys.argv[1], "w", encoding="utf-8") as fh:
     json.dump(receipt, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
 PYEOF
 }
 
-# --- 3. pre-probe: the gate is closed, proven against the OLD id --------------
-# Strict on purpose: the old id is on the current allowlist, so the only 403 it
-# can get is the gate's. A NOT_RESOLVABLE/200 here would mean the gate is open
-# and rebinding now would be out of bounds.
-PRE_JSON="$OUT.preprobe.json"
-"$PYTHON" "$CLIENT" probe --endpoint "$ENDPOINT" --token-file "$TOKEN_FILE" \
-  --list-id "$OLD_ID" --phase pre --expect GATE_CLOSED_AS_EXPECTED --out "$PRE_JSON" >/dev/null 2>&1
+# --- 3. pre-check: the gate is not open, proven WITHOUT touching any items ----
+# The enumeration endpoint answers metadata only - it can never carry item
+# content for any list, whatever the gate state is. 403 here means "gate
+# closed, or TCC denied"; the second case is content-safe as well (no items can
+# be served at all while TCC denies the store) and would surface at W1.
+# This replaces the retired old-id pre-probe, whose item read was outside the
+# authorized scope whenever the gate was unexpectedly open.
+PRE_JSON="$OUT.precheck.json"
+"$PYTHON" "$CLIENT" gate --endpoint "$ENDPOINT" --token-file "$TOKEN_FILE" \
+  --expect 403 --out "$PRE_JSON" >/dev/null 2>&1
 PRE_RC=$?
 PRE_CLASS="$("$PYTHON" -c 'import json,sys;print(json.load(open(sys.argv[1])).get("classification"))' "$PRE_JSON" 2>/dev/null || echo unreadable)"
+PRE_HTTP="$("$PYTHON" -c 'import json,sys;print(json.load(open(sys.argv[1])).get("http_status"))' "$PRE_JSON" 2>/dev/null || echo "?")"
 if [ "$PRE_RC" -ne 0 ]; then
-  echo "[r1_rebind] FAILED: pre-probe did not prove a closed gate (observed=$PRE_CLASS); the gate may be open - rebind refused, nothing changed" >&2
+  echo "[r1_rebind] FAILED: pre-check did not prove a closed gate (observed=$PRE_CLASS http=$PRE_HTTP); the gate may be open - rebind refused, nothing changed" >&2
   R1_OLD_ALLOWED="$OLD_ALLOWED" R1_OLD_BINDINGS="$OLD_BINDINGS" \
-    emit_failure_receipt pre_probe 3 "$PRE_CLASS"
+    emit_failure_receipt pre_check 3 "$PRE_CLASS"
   exit 3
 fi
-echo "[r1_rebind] pre-probe: gate closed proven against the old id ($PRE_CLASS)"
+echo "[r1_rebind] pre-check: gate not open proven without any item read ($PRE_CLASS http=$PRE_HTTP)"
 
 # --- 4. shared mutex (copied verbatim from r1_gate.sh) ------------------------
 LOCK_ROOT="${R1_LOCK_DIR:-$HOME/.muse-r1}"
@@ -472,16 +542,97 @@ op_guard() {
   return 0
 }
 
-# Deadline exit: the backups go back onto disk (no reload from this process,
-# mirroring r1_gate.sh), the receipt says exactly what was left behind.
+# The recovery clock: the operation clock is already spent when a deadline
+# fires, so the recovery gets its own bounded budget - never unbounded, or a
+# stuck reload would hold the gate mutex forever.
+RECOVERY_TIMEOUT="${R1_RECOVERY_TIMEOUT:-45}"
+RECOVERY_START=0
+rec_remaining() {
+  local left=$(( RECOVERY_TIMEOUT - $(date +%s) + RECOVERY_START ))
+  [ "$left" -lt 0 ] && left=0
+  printf '%s' "$left"
+}
+
+# One reload of the authoritative source, bounded by the remaining budget of
+# the clock whose name is passed in ($1: op_remaining or rec_remaining). Used
+# by the rollback paths and the deadline recovery alike, so a rollback can
+# never be a different, weaker reload than the forward one.
+do_reload_bounded() {  # $1 = name of the remaining-seconds function
+  local rem="$1" rc=0
+  if [ "$SOURCE" = "launchd_env" ]; then
+    run_bounded "$($rem)" "$LAUNCHCTL" bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
+    run_bounded "$($rem)" sleep 1 || true
+    run_bounded "$($rem)" "$LAUNCHCTL" bootstrap "gui/$(id -u)" "$PLIST" || rc=$?
+  else
+    run_bounded "$($rem)" "$LAUNCHCTL" kickstart -k "gui/$(id -u)/$LABEL" || rc=$?
+  fi
+  return "$rc"
+}
+
+# Scope-safe proof that a rollback actually took effect: (1) the gate is
+# closed (enumeration 403 - metadata only, zero item content), and (2) the
+# OLD allowlist is live in the process - the NEW id must be refused by the
+# allowlist BEFORE the gate is consulted, so LIST_NOT_ALLOWED proves the old
+# configuration was reloaded. The OLD list id is never requested here.
+# Leaves ROLLBACK_GATE_CLASS / ROLLBACK_PROBE_CLASS for the receipt. Returns
+# 0 verified, 1 not verified, 124 a check hit its clock.
+verify_rollback_state() {  # $1 = gate json, $2 = probe json, $3 = remaining fn
+  local rem="$3" grc=0 prc=0
+  ROLLBACK_GATE_CLASS="FAIL"; ROLLBACK_PROBE_CLASS="FAIL"
+  run_bounded "$($rem)" "$PYTHON" "$CLIENT" gate --endpoint "$ENDPOINT" \
+    --token-file "$TOKEN_FILE" --expect 403 --out "$1" >/dev/null 2>&1 || grc=$?
+  [ "$grc" -ne 0 ] && { [ "$grc" -eq 124 ] && return 124; return 1; }
+  ROLLBACK_GATE_CLASS="$("$PYTHON" -c 'import json,sys;print(json.load(open(sys.argv[1])).get("classification"))' "$1" 2>/dev/null || echo unreadable)"
+  run_bounded "$($rem)" "$PYTHON" "$CLIENT" probe --endpoint "$ENDPOINT" \
+    --token-file "$TOKEN_FILE" --list-id "$NEW_ID" --phase post \
+    --expect BLOCKED_NOT_ON_ALLOWLIST --out "$2" >/dev/null 2>&1 || prc=$?
+  [ "$prc" -ne 0 ] && { [ "$prc" -eq 124 ] && return 124; return 1; }
+  ROLLBACK_PROBE_CLASS="$("$PYTHON" -c 'import json,sys;print(json.load(open(sys.argv[1])).get("classification"))' "$2" 2>/dev/null || echo unreadable)"
+  return 0
+}
+
+# Deadline exit differs from r1_gate.sh on purpose. A gate deadline leaves one
+# key whose safe value is self-evident ("false"); a rebind deadline can leave a
+# rewritten binding pair on disk while the process runs the old one, and that
+# divergence is not self-evidently safe. So this exit RECOVERS: restore the
+# backups, reload once more under the recovery clock, then verify health, gate
+# closed, and the old allowlist live - with the two scope-safe checks above.
+# Exit 8 either way (a deadline is never a success); the receipt records what
+# the recovery actually re-established.
 deadline_exit() {
   DEADLINE_PHASE="$1"
   RELOAD_KILLED="$DEADLINE_KILLED"
-  echo "[r1_rebind] DEADLINE EXCEEDED in $1: ${OP_TIMEOUT}s budget gone; this operation stops here" >&2
+  RECOVERY_RELOADED=0; RECOVERY_HEALTH=""; RECOVERY_GATE=""; RECOVERY_PROBE=""
+  echo "[r1_rebind] DEADLINE EXCEEDED in $1: ${OP_TIMEOUT}s budget gone; entering bounded recovery" >&2
   if [ "$DISK_WRITTEN" -eq 1 ]; then
-    if [ -n "$BACKUP_PLIST" ]; then cp -p "$BACKUP_PLIST" "$PLIST" 2>/dev/null && ROLLED_BACK=1; fi
-    if [ -n "$BACKUP_CFG" ]; then cp -p "$BACKUP_CFG" "$CONFIG_FILE" 2>/dev/null && ROLLED_BACK=1; fi
-    echo "[r1_rebind] backups restored to disk (no reload: this process is done)" >&2
+    restore_backups
+    RECOVERY_START="$(date +%s)"
+    REC_RELOAD_RC=0
+    do_reload_bounded rec_remaining || REC_RELOAD_RC=$?
+    if [ "$REC_RELOAD_RC" -eq 0 ]; then
+      RECOVERY_RELOADED=1
+      echo "[r1_rebind] recovery: the restored (old) configuration was reloaded" >&2
+    else
+      echo "[r1_rebind] CRITICAL: recovery reload failed (rc=$REC_RELOAD_RC); disk holds the OLD pair, the process state is unknown - manual action required" >&2
+    fi
+    if [ "$RECOVERY_RELOADED" -eq 1 ]; then
+      HC=0
+      run_bounded "$(rec_remaining)" "$PYTHON" "$CLIENT" health --endpoint "$ENDPOINT" \
+        --out "$OUT.recovery-health.json" >/dev/null 2>&1 || HC=$?
+      [ "$HC" -eq 0 ] && RECOVERY_HEALTH="OK" || RECOVERY_HEALTH="FAIL"
+      VRC=0
+      verify_rollback_state "$OUT.recovery-gate.json" "$OUT.recovery-probe.json" rec_remaining || VRC=$?
+      RECOVERY_GATE="$ROLLBACK_GATE_CLASS"
+      RECOVERY_PROBE="$ROLLBACK_PROBE_CLASS"
+      if [ "$RECOVERY_HEALTH" = "OK" ] && [ "$RECOVERY_GATE" = "GATE_AS_EXPECTED" ] \
+         && [ "$RECOVERY_PROBE" = "BLOCKED_NOT_ON_ALLOWLIST" ]; then
+        echo "[r1_rebind] recovery VERIFIED: old configuration reloaded, service healthy, gate closed" >&2
+      else
+        echo "[r1_rebind] CRITICAL: recovery NOT verified (health=$RECOVERY_HEALTH gate=$RECOVERY_GATE probe=$RECOVERY_PROBE); manual action required" >&2
+      fi
+    fi
+  else
+    echo "[r1_rebind] nothing had been written; no recovery needed" >&2
   fi
   R1_OLD_ALLOWED="$OLD_ALLOWED" R1_OLD_BINDINGS="$OLD_BINDINGS" \
     emit_failure_receipt op_timeout 8
@@ -611,16 +762,19 @@ if [ "$RELOAD_RC" -ne 0 ]; then
   restore_backups
   ROLLBACK_RELOAD_RC=0
   op_guard rollback_reload
-  if [ "$SOURCE" = "launchd_env" ]; then
-    run_bounded "$(op_remaining)" "$LAUNCHCTL" bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
-    run_bounded "$(op_remaining)" sleep 1 || true
-    run_bounded "$(op_remaining)" "$LAUNCHCTL" bootstrap "gui/$(id -u)" "$PLIST" || ROLLBACK_RELOAD_RC=$?
-  else
-    run_bounded "$(op_remaining)" "$LAUNCHCTL" kickstart -k "gui/$(id -u)/$LABEL" || ROLLBACK_RELOAD_RC=$?
-  fi
+  do_reload_bounded op_remaining || ROLLBACK_RELOAD_RC=$?
   [ "$ROLLBACK_RELOAD_RC" -eq 124 ] && deadline_exit rollback_reload
   AFTER_PID="$(pgrep -x EventKitBridgeServer 2>/dev/null | head -1 || true)"
+  # Verify what the rollback actually re-established (scope-safe checks).
+  VRC=0
+  verify_rollback_state "$OUT.rollbackgate.json" "$OUT.rollbackprobe.json" op_remaining || VRC=$?
+  [ "$VRC" -eq 124 ] && deadline_exit rollback_verify
   R1_OLD_ALLOWED="$OLD_ALLOWED" R1_OLD_BINDINGS="$OLD_BINDINGS" emit_failure_receipt reload 4
+  if [ "$VRC" -eq 0 ]; then
+    echo "[r1_rebind] rollback verified: old allowlist live, gate closed" >&2
+  else
+    echo "[r1_rebind] CRITICAL: rollback NOT verified (gate=$ROLLBACK_GATE_CLASS probe=$ROLLBACK_PROBE_CLASS); manual action required" >&2
+  fi
   exit 4
 fi
 
@@ -650,32 +804,25 @@ if [ "$VERIFY_RC" -ne 0 ]; then
   restore_backups
   ROLLBACK_RELOAD_RC=0
   op_guard rollback_reload
-  if [ "$SOURCE" = "launchd_env" ]; then
-    run_bounded "$(op_remaining)" "$LAUNCHCTL" bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
-    run_bounded "$(op_remaining)" sleep 1 || true
-    run_bounded "$(op_remaining)" "$LAUNCHCTL" bootstrap "gui/$(id -u)" "$PLIST" || ROLLBACK_RELOAD_RC=$?
-  else
-    run_bounded "$(op_remaining)" "$LAUNCHCTL" kickstart -k "gui/$(id -u)/$LABEL" || ROLLBACK_RELOAD_RC=$?
-  fi
+  do_reload_bounded op_remaining || ROLLBACK_RELOAD_RC=$?
   [ "$ROLLBACK_RELOAD_RC" -eq 124 ] && deadline_exit rollback_reload
   if [ "$ROLLBACK_RELOAD_RC" -ne 0 ]; then
     echo "[r1_rebind] CRITICAL: rollback reload failed ($ROLLBACK_RELOAD_RC); disk holds the OLD pair but the running process may hold the new one - manual action required" >&2
     R1_OLD_ALLOWED="$OLD_ALLOWED" R1_OLD_BINDINGS="$OLD_BINDINGS" emit_failure_receipt rollback_reload 4 "$POST_CLASS"
     exit 4
   fi
-  # Verify the rollback the same way the operation was verified: old id, strict.
-  RB_JSON="$OUT.rollbackprobe.json"
-  RB_RC=0
-  run_bounded "$(op_remaining)" "$PYTHON" "$CLIENT" probe --endpoint "$ENDPOINT" \
-    --token-file "$TOKEN_FILE" --list-id "$OLD_ID" --phase post \
-    --expect GATE_RESTORED_CLOSED --out "$RB_JSON" >/dev/null 2>&1 || RB_RC=$?
-  RB_CLASS="$("$PYTHON" -c 'import json,sys;print(json.load(open(sys.argv[1])).get("classification"))' "$RB_JSON" 2>/dev/null || echo unreadable)"
+  # Verify the rollback with the two scope-safe checks: the gate is closed
+  # (enumeration 403) and the OLD allowlist is live in the process (the NEW id
+  # refused by the allowlist). The old list id is never requested.
+  VRC=0
+  verify_rollback_state "$OUT.rollbackgate.json" "$OUT.rollbackprobe.json" op_remaining || VRC=$?
+  [ "$VRC" -eq 124 ] && deadline_exit rollback_verify
   R1_OLD_ALLOWED="$OLD_ALLOWED" R1_OLD_BINDINGS="$OLD_BINDINGS" \
     emit_failure_receipt verify_rolled_back 3 "$POST_CLASS"
-  if [ "$RB_RC" -ne 0 ]; then
-    echo "[r1_rebind] CRITICAL: rollback probe did not re-prove the closed gate (observed=$RB_CLASS); manual verification required" >&2
+  if [ "$VRC" -eq 0 ]; then
+    echo "[r1_rebind] rollback verified: old allowlist live, gate closed (gate=$ROLLBACK_GATE_CLASS probe=$ROLLBACK_PROBE_CLASS)"
   else
-    echo "[r1_rebind] rollback verified: old binding restored, gate closed re-proven ($RB_CLASS)"
+    echo "[r1_rebind] CRITICAL: rollback NOT verified (gate=$ROLLBACK_GATE_CLASS probe=$ROLLBACK_PROBE_CLASS); manual verification required" >&2
   fi
   exit 3
 fi
@@ -695,21 +842,24 @@ def load(p):
         return {}
 health = load(out + ".health.json")
 post = load(out + ".postprobe.json")
+pre = load(out + ".precheck.json")
 receipt = {
   "receipt_type": "R1_REBIND_OPERATION",
   "purpose": "$PURPOSE",
   "gate_source_detected": "$SOURCE",
   "reload_method": "$RELOAD",
   "verification": "PASS",
-  "verification_basis": "strict closed-gate probes against the old id before the change and the new id after it; never the file value",
+  "verification_basis": "pre-check proves the gate is not open via the enumeration endpoint (metadata only, zero item content); the post-probe proves the closed gate against the NEW binding; never the file value",
   "old_allowlist_masked": client.mask_uuid("$OLD_ALLOWED") or None,
   "old_bindings_masked": client.mask_uuid("$OLD_BINDINGS") or None,
   "new_allowlist_masked": client.mask_uuid("$NEW_ID") or None,
   "new_bindings_masked": client.mask_uuid("$NEW_BINDINGS") or None,
   "old_source_id_masked": client.mask_uuid("$OLD_SOURCE_ID") or None,
   "new_source_id_masked": client.mask_uuid("$NEW_SOURCE_ID") or None,
-  "pre_probe_classification": "$PRE_CLASS",
+  "pre_check_classification": "$PRE_CLASS",
+  "pre_check_http_status": pre.get("http_status"),
   "post_probe_classification": "$POST_CLASS",
+  "scope_note": "this operation never requests the OLD list's item endpoint; every item read targets the new list only",
   "before_pid": "${BEFORE_PID:-none}",
   "after_pid": "${AFTER_PID:-none}",
   "process_restarted": bool("${BEFORE_PID:-}" and "${AFTER_PID:-}" and "${BEFORE_PID}" != "${AFTER_PID}"),
@@ -720,13 +870,13 @@ receipt = {
   "config_backup": "${BACKUP_CFG}" or None,
   "config_backup_mode": "0600" if "${BACKUP_CFG}" else None,
   "binding_persistence": "on success the NEW binding is kept; it is not reverted by this script",
-  "evidence_files": [out + ".preprobe.json", out + ".health.json", out + ".postprobe.json"],
+  "evidence_files": [out + ".precheck.json", out + ".health.json", out + ".postprobe.json"],
 }
 with open(out, "w", encoding="utf-8") as fh:
     json.dump(receipt, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
 print("[r1_rebind] verification: PASS pre=%s post=%s pid %s -> %s" % (
-    receipt["pre_probe_classification"], receipt["post_probe_classification"],
+    receipt["pre_check_classification"], receipt["post_probe_classification"],
     receipt["before_pid"], receipt["after_pid"]))
 PYEOF
 RECEIPT_RC=$?

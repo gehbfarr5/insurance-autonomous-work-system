@@ -95,6 +95,9 @@ echo "launchctl $*" >> "$STUB_DIR/launchctl.log"
 COUNT_FILE="$STUB_DIR/launchctl.count"
 N=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
 N=$((N + 1)); echo "$N" > "$COUNT_FILE"
+if [ -n "${STUB_LAUNCHCTL_SLEEP_ON_CALL:-}" ] && [ "$N" = "${STUB_LAUNCHCTL_SLEEP_ON_CALL:-}" ]; then
+  sleep "${STUB_LAUNCHCTL_SLEEP_SECONDS:-30}"
+fi
 if [ -n "${STUB_LAUNCHCTL_FAIL:-}" ]; then exit "${STUB_LAUNCHCTL_FAIL}"; fi
 if [ -n "${STUB_LAUNCHCTL_FAIL_AFTER:-}" ] && [ "$N" -gt "${STUB_LAUNCHCTL_FAIL_AFTER}" ]; then
   exit 1
@@ -265,8 +268,9 @@ eq "bindings now the new pair" "$(config_field EVENTKIT_BRIDGE_BINDINGS)" "$NEW_
 eq "gate key untouched" "$(config_field EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED)" "false"
 grep -q "kickstart" "$FX/launchctl.log" && check "service reloaded" 1 || check "service reloaded" 0
 grep -q '"verification": "PASS"' "$FX/work/rebind.json" && check "receipt verification PASS" 1 || check "receipt verification PASS" 0
-grep -q "GATE_CLOSED_AS_EXPECTED" "$FX/work/rebind.json" && check "pre-probe strict closed-gate label" 1 || check "pre-probe strict closed-gate label" 0
+grep -q '"pre_check_classification": "GATE_AS_EXPECTED"' "$FX/work/rebind.json" && check "pre-check gate-not-open label" 1 || check "pre-check gate-not-open label" 0
 grep -q "GATE_RESTORED_CLOSED" "$FX/work/rebind.json" && check "post-probe strict closed-gate label" 1 || check "post-probe strict closed-gate label" 0
+eq "exactly 1 enumeration read (pre-check; post-probe is item-scoped)" "$(enum_reads)" "1"
 RB_PERM="$(python3 -c 'import os,sys;print(oct(os.stat(sys.argv[1]).st_mode & 0o777))' "$FX/work/rebind.json.config-backup" 2>/dev/null)"
 eq "config backup is 0600" "$RB_PERM" "0o600"
 stop_bridge
@@ -309,10 +313,9 @@ eq "exit code 5" "$RC" "5"
 eq "config untouched" "$(config_field EVENTKIT_BRIDGE_ALLOWED_LIST_IDS)" "$OLD_ID"
 stop_bridge
 
-echo "[R4] rebind: an open gate is refused by the strict pre-probe"
+echo "[R4] rebind: an open gate is refused by the enumeration pre-check"
 new_fixture; start_bridge
-sed -i '' 's/^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false$/EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true/' "$FX/conf/bridge.env" 2>/dev/null \
-  || sed -i 's/^EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false$/EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=true/' "$FX/conf/bridge.env"
+open_config_gate
 set_items "$GOOD_ITEM"
 RC="$(BIN="$BIN" "$REBIND" --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
   --token-file "$FX/token" --endpoint "$URL" --out "$FX/work/rebind.json" \
@@ -320,8 +323,8 @@ RC="$(BIN="$BIN" "$REBIND" --plist "$FX/conf/agent.plist" --config-file "$FX/con
   >"$FX/r4.out" 2>&1; echo $?)"
 eq "exit code 3" "$RC" "3"
 eq "config untouched" "$(config_field EVENTKIT_BRIDGE_ALLOWED_LIST_IDS)" "$OLD_ID"
-grep -q "GATE_ALREADY_OPEN" "$FX/work/rebind.json" && check "pre-probe observed GATE_ALREADY_OPEN" 1 || check "pre-probe observed GATE_ALREADY_OPEN" 0
-grep -q "failure_stage.: .pre_probe" "$FX/work/rebind.json" && check "failure stage pre_probe" 1 || check "failure stage pre_probe" 0
+grep -q "GATE_UNEXPECTED_HTTP_200" "$FX/work/rebind.json" && check "pre-check observed GATE_UNEXPECTED_HTTP_200" 1 || check "pre-check observed GATE_UNEXPECTED_HTTP_200" 0
+grep -q "failure_stage.: .pre_check" "$FX/work/rebind.json" && check "failure stage pre_check" 1 || check "failure stage pre_check" 0
 stop_bridge
 
 echo "[R5] rebind: dry run changes nothing"
@@ -347,9 +350,39 @@ eq "allowlist restored" "$(config_field EVENTKIT_BRIDGE_ALLOWED_LIST_IDS)" "$OLD
 eq "bindings restored" "$(config_field EVENTKIT_BRIDGE_BINDINGS)" "$OLD_ID:$OLD_SRC:calDAV:iCloud"
 grep -q "failure_stage.: .reload" "$FX/work/rebind.json" && check "failure stage reload" 1 || check "failure stage reload" 0
 grep -q '"rolled_back": true' "$FX/work/rebind.json" && check "backups restored" 1 || check "backups restored" 0
+grep -q '"rollback_verification"' "$FX/work/rebind.json" && check "rollback verification recorded" 1 || check "rollback verification recorded" 0
 stop_bridge
 
-# ====================================================== [W] discovery window
+echo "[R7] rebind: deadline mid-reload -> bounded recovery reloads the old config and verifies it"
+new_fixture; start_bridge
+set_allowed "[\"$OLD_ID\"]"   # after the rollback the NEW id must fail the OLD allowlist
+set_items "$GOOD_ITEM"
+rm -f "$FX/requests.log" "$FX/launchctl.log"
+# op budget 3s; the FIRST launchctl call (the kickstart reload) sleeps 30s and is
+# killed mid-flight by run_bounded -> deadline_exit -> recovery: restore backups,
+# reload again (call 2, no sleep), then health + gate 403 + new-id
+# BLOCKED_NOT_ON_ALLOWLIST under the recovery clock.
+RC="$(BIN="$BIN" STUB_LAUNCHCTL_SLEEP_ON_CALL=1 STUB_LAUNCHCTL_SLEEP_SECONDS=30 \
+  "$REBIND" --plist "$FX/conf/agent.plist" --config-file "$FX/conf/bridge.env" \
+  --token-file "$FX/token" --endpoint "$URL" --out "$FX/work/rebind.json" \
+  --old-list-id "$OLD_ID" --new-list-id "$NEW_ID" --new-source-id "$NEW_SRC" \
+  --op-timeout 3 >"$FX/r7.out" 2>&1; echo $?)"
+eq "exit code 8 (deadline is never a success)" "$RC" "8"
+eq "allowlist restored on disk" "$(config_field EVENTKIT_BRIDGE_ALLOWED_LIST_IDS)" "$OLD_ID"
+eq "bindings restored on disk" "$(config_field EVENTKIT_BRIDGE_BINDINGS)" "$OLD_ID:$OLD_SRC:calDAV:iCloud"
+KICKS="$(grep -c kickstart "$FX/launchctl.log" 2>/dev/null || echo 0)"
+eq "reload attempted twice (killed + recovery)" "$KICKS" "2"
+grep -q '"deadline_phase": "reload"' "$FX/work/rebind.json" && check "deadline phase recorded" 1 || check "deadline phase recorded" 0
+grep -q '"reloaded": true' "$FX/work/rebind.json" && check "recovery reloaded the old config" 1 || check "recovery reloaded the old config" 0
+grep -q '"health": "OK"' "$FX/work/rebind.json" && check "recovery health OK" 1 || check "recovery health OK" 0
+grep -q '"gate_check": "GATE_AS_EXPECTED"' "$FX/work/rebind.json" && check "recovery gate closed" 1 || check "recovery gate closed" 0
+grep -q '"new_id_probe": "BLOCKED_NOT_ON_ALLOWLIST"' "$FX/work/rebind.json" && check "recovery: old allowlist proven live (new id refused)" 1 || check "recovery: old allowlist proven live (new id refused)" 0
+grep -q '"verdict": "VERIFIED"' "$FX/work/rebind.json" && check "recovery verdict VERIFIED" 1 || check "recovery verdict VERIFIED" 0
+eq "recovery reads: 2 enumeration (pre-check + recovery gate), 1 item (new id)" "$(enum_reads)" "2"
+grep -q "GATE_UNEXPECTED" "$FX/work/rebind.json" && check "no unexpected gate state" 0 || check "no unexpected gate state" 1
+[ -f "$FX/work/rebind.json.recovery-health.json" ] && check "recovery health receipt kept" 1 || check "recovery health receipt kept" 0
+[ -f "$FX/work/rebind.json.recovery-probe.json" ] && check "recovery probe receipt kept" 1 || check "recovery probe receipt kept" 0
+stop_bridge
 cleanup_watchdogs() {
   for d in "$FX"/work/discover-*; do
     [ -d "$d" ] || continue
