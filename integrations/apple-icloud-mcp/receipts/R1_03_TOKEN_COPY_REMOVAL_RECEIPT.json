@@ -1,0 +1,74 @@
+{
+  "receipt_type": "R1_03_TOKEN_COPY_REMOVAL_RESULT",
+  "task": "REM-R1-01",
+  "step": "R1-03",
+  "executed_at_utc": "2026-11-11T02:10:00Z/2026-11-11T02:12:00Z",
+  "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
+  "authorization": "Approved 2026-11-11: removal of the single legacy temporary directory and the credential copy inside it, as recorded in receipts/R1_03_BOUND_ID_PROBE_RESULT.json v2 section preexisting_residue. The approval covers that directory only. List restoration, list creation and rebinding are separate decisions and were not part of it.",
+  "plan_followed": "receipts/R1_03_TOKEN_COPY_REMOVAL_PLAN.md, with the recheck scope narrowed to four objects (target directory, resident service, gate, authoritative config) before execution, as instructed; the home-directory shallow scan was removed from the plan and was not run.",
+
+  "object": {
+    "identification": "One harness directory created 2026-11-10 21:23 on the production host, name pattern r1-harness-<UTC timestamp>; the exact path is recorded only in the private run log and does not appear in this public receipt.",
+    "contents_expected_from_private_log": "r1_bridge_client.py, r1_gate.sh, r1_watchdog.sh, r1_window.sh, token (0600, 65 bytes)",
+    "verification_before_deletion": {
+      "directory_existed": true,
+      "file_count": 5,
+      "sizes_match_manifest": true,
+      "sizes": {"r1_bridge_client.py": 25771, "r1_gate.sh": 26001, "r1_watchdog.sh": 7123, "r1_window.sh": 21773, "token": 65},
+      "mtimes_all_2026-11-10_21:23": true,
+      "token_mtime_utc": "2026-11-10T21:23:51Z",
+      "token_permissions": "0600",
+      "mismatch": false,
+      "note": "Per the approved plan, a mismatch would have stopped the operation and been reported. The object matched, so the removal proceeded."
+    },
+    "identity_check": {
+      "token_matches_live_credential": true,
+      "method": "sha256 of the file compared against the token extracted for the R1-03 window; the two digests are identical",
+      "digest_values": "withheld from the public receipt; recorded in the private run log"
+    }
+  },
+
+  "evidence_kept": {
+    "sanitized": "file names, byte sizes, mtimes, permission of the token, and the identity-check method above",
+    "private": "full per-file sha256 values and the exact path, recorded in the private run log before deletion",
+    "no_archive": true,
+    "why_no_archive": "archiving the directory would recreate a live credential copy; the scripts are recoverable from the repository at the pinned versions in application section 7.4.1, and the token is a copy of the authoritative one in the config"
+  },
+
+  "removal": {
+    "method": "single-path rm -rf of that one directory; no wildcards, no other path touched",
+    "removed_at_utc": "2026-11-11T02:11:40Z"
+  },
+
+  "post_checks": {
+    "scope": "exactly the four approved objects; no broader scan",
+    "baseline_before": {
+      "bridge_pid": 73726,
+      "bridge_process_count": 1,
+      "health_http_status": 200,
+      "gate_plist_value": "false",
+      "plist_sha256_12": "9da02bf9b6d2",
+      "config_sha256_12": "ac8ea2c6b2d9",
+      "config_mtime_utc": "2026-11-10T00:50:18Z"
+    },
+    "results": [
+      {"check": "target directory", "result": "PASS", "detail": "does not exist after removal"},
+      {"check": "resident service", "result": "PASS", "detail": "same pid 73726, process count 1, /health 200"},
+      {"check": "gate", "result": "PASS", "detail": "plist key still false, plist sha256_12 unchanged (9da02bf9b6d2)"},
+      {"check": "authoritative config", "result": "PASS", "detail": "sha256_12 unchanged (ac8ea2c6b2d9), mtime unchanged (2026-11-10T00:50:18Z)"}
+    ],
+    "all_pass": true
+  },
+
+  "rollback": {
+    "possible": false,
+    "why": "deletion is irreversible and no archive was kept, by design",
+    "compensation": "the four scripts exist in the repository at pinned versions (application 7.4.1); the token is a copy of the authoritative one and can be re-derived from the config by the repository's token extraction script if ever needed; the directory contained nothing unique"
+  },
+
+  "limits": [
+    "This approval covered only the one legacy directory and its contents. Nothing else was removed, changed or reloaded.",
+    "The bridge service, the plist, the config file and both evidence trees were only read, never written.",
+    "List restoration, list creation and rebinding remain separate decisions (see receipts/R1_03_LIST_RECOVERY_OPTIONS.md) and were not started."
+  ]
+}

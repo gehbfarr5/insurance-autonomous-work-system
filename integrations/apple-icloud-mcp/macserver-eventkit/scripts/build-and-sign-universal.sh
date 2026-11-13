@@ -129,59 +129,22 @@ echo "  Min OS Target: macOS $ARM_MINOS"
 echo "  Info.plist:    Embedded (__TEXT,__info_plist)"
 echo "=========================================================="
 
-# 7. Write Structured BUILD_METADATA.json via Python JSON Serializer
-BUILD_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-python3 -c '
-import json, sys
-
-timestamp = sys.argv[1]
-identifier = sys.argv[2]
-universal_sha = sys.argv[3]
-designated_req = sys.argv[4]
-x86_cdhash = sys.argv[5]
-x86_flags = sys.argv[6]
-x86_minos = sys.argv[7]
-arm_cdhash = sys.argv[8]
-arm_flags = sys.argv[9]
-arm_minos = sys.argv[10]
-target_file = sys.argv[11]
-
-payload = {
-    "build_pipeline": "build-and-sign-universal.sh",
-    "build_timestamp": timestamp,
-    "identifier": identifier,
-    "universal_binary": {
-        "path": ".build/release/EventKitBridgeServer",
-        "sha256": universal_sha,
-        "designated_requirement": designated_req
-    },
-    "architectures": {
-        "x86_64": {
-            "cdhash": x86_cdhash,
-            "flags": x86_flags,
-            "min_macos_version": x86_minos,
-            "embedded_info_plist": True
-        },
-        "arm64": {
-            "cdhash": arm_cdhash,
-            "flags": arm_flags,
-            "min_macos_version": arm_minos,
-            "embedded_info_plist": True
-        }
-    },
-    "signature_verification": {
-        "method": "codesign --verify --strict --all-architectures",
-        "status": "PASSED"
-    }
-}
-
-with open(target_file, "w", encoding="utf-8") as f:
-    json.dump(payload, f, indent=2, ensure_ascii=False)
-    f.write("\n")
-' "$BUILD_TIMESTAMP" "$IDENTIFIER" "$UNIVERSAL_SHA" "$DESIGNATED_REQ" \
-  "$X86_CDHASH" "$X86_FLAGS" "$X86_MINOS" \
-  "$ARM_CDHASH" "$ARM_FLAGS" "$ARM_MINOS" "$METADATA_JSON"
+# 7. Write Structured BUILD_METADATA.json (binary hashes + source provenance)
+# Provenance (commit / dirty state / toolchain) is mandatory: without it there is no
+# evidence that a deployed binary corresponds to a reviewable commit. See R1-01.
+echo "--> 7. Writing BUILD_METADATA.json with source provenance..."
+python3 "$SCRIPT_DIR/write_build_metadata.py" \
+  --identifier "$IDENTIFIER" \
+  --repo-root "$PACKAGE_DIR" \
+  --binary-sha256 "$UNIVERSAL_SHA" \
+  --designated-requirement "$DESIGNATED_REQ" \
+  --x86-cdhash "$X86_CDHASH" \
+  --x86-flags "$X86_FLAGS" \
+  --x86-minos "$X86_MINOS" \
+  --arm-cdhash "$ARM_CDHASH" \
+  --arm-flags "$ARM_FLAGS" \
+  --arm-minos "$ARM_MINOS" \
+  --out "$METADATA_JSON"
 
 # 8. Strict Verification of Generated Metadata JSON
 echo "--> 8. Validating generated JSON integrity..."

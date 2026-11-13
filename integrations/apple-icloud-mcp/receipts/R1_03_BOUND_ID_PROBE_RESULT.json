@@ -1,0 +1,241 @@
+{
+  "receipt_type": "R1_03_BOUND_ID_PROBE_RESULT",
+  "task": "REM-R1-01",
+  "step": "R1-03",
+  "revision": 2,
+  "revision_note": "v2 changes only the form of this receipt, not any measurement. (1) The post-window request to the account-level endpoint is now counted in the whole-operation request accounting, not parked in a side note. (2) A corrective rule is recorded: every future closed-gate recheck uses probe --phase post, never the R1-only `gate` subcommand. (3) Sanitisation: internal network addresses, credential-locatable file paths and token fingerprints are removed from the public receipt; the original evidence stays in its restricted location on the host, and exact paths live in the private run log. The 404 verdict and every number are unchanged from v1. No probe was re-run.",
+  "executed_at_utc": "2026-11-11T01:54:17Z/2026-11-11T01:56:00Z",
+  "executed_by": "WorkBuddy engineering agent (sole engineering executor for this task)",
+  "authorization": "R1-03 v6 executed once, against commit 4648966 and the script hashes in section 7.4.1 of receipts/R1_03_BOUND_ID_PRECISE_CHECK_APPLICATION.md. Scope: temporary use of the existing token, single-key gate change, reload of the existing service, one target probe, bounded restore. Out of scope and not performed: rebinding, deployment, Apple data writes, Seoul changes, R2.",
+  "text_correction_applied_before_execution": {
+    "location": "application section 9, the first of the three deadline sentences",
+    "was": "300 s is the script's run-time ceiling, and also the moment the watchdog starts trying to close the gate",
+    "now": "300 s is the deadline at which the watchdog starts trying to close the gate",
+    "note": "Wording only; no test was re-run for it, as instructed."
+  },
+
+  "preconditions": {
+    "device": {
+      "host_alias": "MAC-1 (production MacServer; network addresses withheld from the public receipt)",
+      "macos": "15.7.7",
+      "arch": "x86_64",
+      "uid": 501,
+      "login_domain": "gui/501",
+      "note": "One SSH alias to this host worked and another did not; the unusable alias is recorded in the private run log because the execution channel is part of the evidence, and its name is a routable locator so it stays out of the public receipt."
+    },
+    "binary": {
+      "path": "/Users/shared/bin/EventKitBridgeServer",
+      "sha256": "f78e24e533c2bf9a77161dc05eb154ce99687de9a5b881ad481bfbe2bbfb3074",
+      "frozen_match": true,
+      "codesign_verify": "VALID",
+      "identifier": "com.muse.macserver-eventkit",
+      "signature": "adhoc + runtime (CodeDirectory v=20500 flags=0x10002)",
+      "replaced": false
+    },
+    "service": {
+      "label": "com.muse.macserver-eventkit",
+      "pid_before_window": 33771,
+      "bridge_process_count_before": 1,
+      "health_http_status": 200,
+      "health_store_field": "production",
+      "health_mode_field": "readonly",
+      "note": "/health says store='production' meaning PRODUCTION mode, not an open gate."
+    },
+    "binding_configuration": {
+      "allowed_list_count": 1,
+      "allowed_list_masked": "9D9A****03F3",
+      "allowed_list_is_exactly_the_target": true,
+      "binding_source_type": "calDAV",
+      "binding_source_title": "iCloud",
+      "bridge_mode": "PRODUCTION",
+      "gate_source": "launchd_env",
+      "gate_value_before": "false",
+      "plist_sha256_12_before": "9da02bf9b6d2"
+    },
+    "scripts_uploaded_and_verified": {
+      "r1_gate.sh": "3205fdce306c166db7d1fad88c98542eec7476ff47f208082d190eca56470af7",
+      "r1_probe_window.sh": "8a01fa0740023931b8d1e5a995914817c545aa8fc6254ba053fe23457e22e7d7",
+      "r1_probe_close.sh": "97dcb7b076232e97b601634296c07c5b20777f4eb81db5555412cff889c92ba7",
+      "r1_watchdog.sh": "4134c238b8fdde93d99882a3527665c076140501158d06000bdea146db4791f7",
+      "r1_bridge_client.py": "daa0de1921169cfdab087a7c659df3a67c09debbd373ace4dc5f527060ac591a",
+      "r1_token_extract.sh": "bec944107a19394754f1aef561a4e397f3e798260cb1bd59990f3466bc96e4a0",
+      "all_match_application_7_4_1": true
+    },
+    "dry_run": {
+      "performed": true,
+      "result": "preflight passed, pre phase observed 403 GATE_CLOSED_AS_EXPECTED, DRY RUN exit 0, no gate operation",
+      "evidence": "restricted evidence tree on the host, window label p0 (path withheld from the public receipt)"
+    }
+  },
+
+  "window_parameters": {
+    "window_seconds": 300,
+    "open_budget_seconds": 120,
+    "gate_operation_timeout_seconds": 30,
+    "restore_attempts_allowed": 2,
+    "op_timeout_vs_budget_note": "30 - 120 < 15 x 3, so the recovery could always take the lock had the open stalled",
+    "canary": "not sent: no canary id was used, so no request of any kind was addressed to a list other than the target",
+    "evidence": "restricted evidence tree on the host, window label r103 (path withheld from the public receipt)"
+  },
+
+  "timeline_utc": [
+    {"at": "2026-11-11T01:54:17Z", "what": "restricted harness and evidence directories created (0700), write probe passed"},
+    {"at": "2026-11-11T01:54:19Z", "what": "six scripts uploaded, sha256 compared one by one against section 7.4.1"},
+    {"at": "2026-11-11T01:54:2xZ", "what": "token extracted from the existing config into a 0600 file (65 bytes; fingerprint withheld from the public receipt)"},
+    {"at": "2026-11-11T01:54:40Z", "what": "pre phase: 403 PERMISSION_DENIED, GATE_CLOSED_AS_EXPECTED"},
+    {"at": "2026-11-11T01:54:41Z", "what": "open budget stamp written BEFORE the gate changed (1794362081)"},
+    {"at": "2026-11-11T01:54:46Z", "what": "open verified; target probe answered 404 LIST_NOT_FOUND"},
+    {"at": "2026-11-11T01:54:47Z", "what": "open operation returned (duration 6 s, well inside the 30 s deadline)"},
+    {"at": "2026-11-11T01:54:52Z", "what": "close verified; post probe answered 403 PERMISSION_DENIED, GATE_RESTORED_CLOSED"},
+    {"at": "2026-11-11T01:54:53Z", "what": "watchdog disarmed by the window (DISARMED_BY_MAIN, restore exit 0)"},
+    {"at": "2026-11-11T01:55:19Z", "what": "post-window recheck: 403 GATE_AS_EXPECTED (this request is counted in the whole-operation accounting below and detailed in authorization_deviation)"},
+    {"at": "2026-11-11T01:55:4xZ", "what": "plist backups (they embed the token) hashed and removed; token and harness removed; residue scan run"}
+  ],
+
+  "decisive_measurement": {
+    "phase": "open",
+    "endpoint": "GET http://127.0.0.1:18765/reminders/lists/{list_id}/items",
+    "list_id_masked": "9D9A****03F3",
+    "http_status": 404,
+    "error_code": "LIST_NOT_FOUND",
+    "item_count": null,
+    "items_persisted": false,
+    "classification": "NOT_RESOLVABLE",
+    "observed_at_utc": "2026-11-11T01:54:46Z",
+    "gate_was_open_at_that_moment": true,
+    "gate_open_proof": "the same operation's open receipt: verification=PASS, target_gate_value=true, process restarted 33771->73564, health_store=production",
+    "interpretation": "With the gate open and the store answering, the bound identifier no longer resolves. This is a resolution result, not a deletion finding: it does not establish that the list was deleted, that it left the account, or that the account changed. What it establishes is that on MAC-1, at 2026-11-11T01:54:46Z, EventKit cannot resolve 9D9A****03F3.",
+    "comparison_with_previous_points": [
+      {"at": "2026-11-07T14:37:11Z", "observed": "target present in enumeration (B2 receipt)"},
+      {"at": "2026-11-09T16:50Z", "observed": "target returned with matching identifier (AG07 receipt)"},
+      {"at": "2026-11-10T14:45:13Z", "observed": "not in enumeration, 2 lists returned (R1)"},
+      {"at": "2026-11-11T01:54:46Z", "observed": "identifier does not resolve at all (this receipt)"}
+    ]
+  },
+
+  "post_conditions": {
+    "service_health": {
+      "health_http_status": 200,
+      "health_store_field": "production",
+      "bridge_process_count": 1,
+      "pid_after_window": 73726,
+      "process_env_gate_value": "EVENTKIT_BRIDGE_PRODUCTION_AUTHORIZED=false",
+      "verified": true
+    },
+    "gate_closed": {
+      "plist_value_on_disk": "false",
+      "plist_sha256_12_after": "9da02bf9b6d2",
+      "plist_identical_to_pre_window": true,
+      "close_receipt_verification": "PASS",
+      "close_receipt_basis": "http behaviour after reload + process identity; never the file value",
+      "verified": true
+    },
+    "target_request_refused": {
+      "http_status": 403,
+      "error_code": "PERMISSION_DENIED",
+      "probe_phase": "post",
+      "classification": "GATE_RESTORED_CLOSED",
+      "independent_recheck": "403 GATE_AS_EXPECTED at 2026-11-11T01:55:19Z (same body digest as the post probe, 092333cad793); this recheck is the deviation counted below",
+      "verified": true
+    },
+    "no_second_open": {
+      "open_receipts": 1,
+      "close_receipts": 1,
+      "gate_value_at_end": "false",
+      "note": "One open, one close, one restore attempt used of two."
+    }
+  },
+
+  "request_accounting_whole_operation": {
+    "note": "Every request this operation sent, including the one after the window closed. Nothing is parked in a side note.",
+    "item_endpoint_requests": 4,
+    "item_endpoint_cap": 9,
+    "item_requests_that_could_have_returned_content": 0,
+    "item_requests_that_returned_content": 0,
+    "health_requests": 4,
+    "account_level_enumeration_requests": 1,
+    "lists_other_than_target_touched": 0,
+    "breakdown": [
+      {"stage": "dry run pre", "health": 1, "item": 1, "status": 403},
+      {"stage": "window pre", "health": 1, "item": 1, "status": 403},
+      {"stage": "window open", "health": 1, "item": 1, "status": 404},
+      {"stage": "window close", "health": 1, "item": 1, "status": 403},
+      {"stage": "post-window recheck", "account_level": 1, "status": 403, "see": "authorization_deviation"}
+    ]
+  },
+
+  "authorization_deviation": {
+    "what": "One request was sent to the account-level endpoint GET /reminders/lists at 2026-11-11T01:55:19Z, after the window had closed and the gate had been verified closed.",
+    "how": "The step after the window was meant to be an independent read-only recheck, and it used the client's `gate` subcommand. That subcommand is R1-only: it targets /reminders/lists. R1-03 forbids that endpoint on every path, including the ones that change nothing.",
+    "why_it_was_wrong": "The subcommand is documented in the client's own header as deprecated for R1-03, and the correct closed-gate recheck is a `probe --phase post`, which the window had already done. Choosing `gate` was a mistake in the recheck step, not a gap in the tooling.",
+    "what_it_returned": "HTTP 403 PERMISSION_DENIED with no list metadata in the body. The gate was closed at that moment, so the request was refused before any list was produced.",
+    "what_is_claimed": "That the request was sent and was refused with 403. That is the whole claim.",
+    "what_is_not_claimed": "Not claimed: that nothing was enumerated underneath. A 403 at the entry gate is not a measurement of what EventKit did internally, and this receipt does not use it as one.",
+    "corrective_rule_from_now_on": "Every closed-gate recheck, manual or automatic, goes through `probe --phase post` on the item endpoint - the same request class the window itself uses. The `gate` subcommand is not used in any R1-03 path again. This rule is also recorded in section 7.4.4 of the application."
+  },
+
+  "restore": {
+    "trigger": "none: the open took 6 s against a 120 s budget and a 300 s deadline, so neither fired",
+    "automatic_restore": "not needed",
+    "manual_remediation": "not needed",
+    "how_the_gate_was_closed": "the window's own close, through r1_probe_close.sh (the only close entry), verified by behaviour",
+    "gate_open_duration_seconds": 11,
+    "open_stamp_epoch": 1794362081,
+    "open_operation_duration_seconds": 6,
+    "close_operation_duration_seconds": 5,
+    "restore_attempts_used": 1,
+    "watchdog": {
+      "state": "DISARMED_BY_MAIN",
+      "reason": "none",
+      "restore_exit_code": 0,
+      "deadline_epoch": 1794362380,
+      "processes_alive_after": 0
+    },
+    "lock": "LOCK_CLEAR (no artifact, no live holder)"
+  },
+
+  "cleanup": {
+    "sequence": "only after the restore was verified, the watchdog had exited on its own, and the on-disk key had been read back",
+    "removed": [
+      "token (0600, 65 bytes) in this window's harness directory",
+      "this window's harness directory (six scripts; exact path withheld from the public receipt)",
+      "two gate plist backups, because a plist backup embeds the bearer token (hashed before deletion; the hashes are of plist files, not of the token, and are recorded in the private run log)"
+    ],
+    "kept": {
+      "evidence": "a restricted evidence tree on the host (path withheld from the public receipt; recorded in the private run log)",
+      "size": "84K",
+      "contains": "summary.json, probe_pre.json, gate_open.json (+ .probe/.health), gate_close_normal_attempt1.json (+ .probe/.health), static_config.json, state/, p5 recheck receipt",
+      "why_kept": "This is the receipt of record; it holds digests and classifications, no item content and no token."
+    },
+    "residue_scan": {
+      "harness_exists": false,
+      "token_files_created_by_this_window": 0,
+      "watchdog_processes": 0,
+      "bridge_processes": 1,
+      "health_http_status": 200,
+      "gate_plist_value": "false",
+      "plist_sha256_12": "9da02bf9b6d2",
+      "lock": "LOCK_CLEAR"
+    }
+  },
+
+  "preexisting_residue": {
+    "found": "A harness directory created 2026-11-10 21:23, before the R1 window, containing four r1 scripts and a token (0600, 65 bytes). Exact path withheld from the public receipt; it is recorded in the private run log and identified in R1_03_TOKEN_COPY_REMOVAL_PLAN.md by creation time and contents.",
+    "token_matches_live_credential": true,
+    "how_verified": "sha256 of the file compared against the token this window extracted; the two digests are identical. The digest values themselves are withheld from the public receipt.",
+    "why_it_matters": "A valid credential has been sitting on disk since 2026-11-10 21:23. R1's closure receipt names a different harness directory and reports the harness as deleted; this directory is not covered by that claim.",
+    "action_taken": "removed on 2026-11-11 with explicit approval; the approval covered only that directory and its contents. See receipts/R1_03_TOKEN_COPY_REMOVAL_RECEIPT.json: manifest verified against the private log before deletion, single-path removal, four post-checks passed (directory gone, service healthy on the same pid, gate false with the plist unchanged, authoritative config unchanged)",
+    "why_it_was_removed": "It held a byte-identical copy of the live credential since 2026-11-10 21:23. The report above was kept as the public record of what the directory was before it ceased to exist."
+  },
+
+  "what_this_does_not_prove": [
+    "It does not prove the list was deleted, that it left the account, or that the account changed. Only that the identifier does not resolve in this store at this time.",
+    "It does not distinguish a deleted list from a list that was never synced to this Mac, from a source-scope change, or from a list sitting in Recently Deleted.",
+    "It does not show that EventKit enumerated nothing underneath; the allowlist rejects at the entry gate, before calendar(withIdentifier:).",
+    "The 404 is produced by the deployed binary; the Swift-side handling of a missing identifier is covered by source reading, not by an independent end-to-end test (that gap is registered in section 4.4 of the application)."
+  ],
+
+  "verdict": "RESOLVED_ID_NOT_RESOLVABLE",
+  "verdict_assertion": "The bound list 9D9A****03F3 does not resolve on MAC-1 as of 2026-11-11T01:54:46Z. With the gate open and the store healthy, GET /reminders/lists/9D9A****03F3/items returned HTTP 404 LIST_NOT_FOUND; the same request before the gate opened and after it closed returned 403 PERMISSION_DENIED, so the 404 is an answer from an open gate, not a refusal. Combined with R1's enumeration result (two lists, target absent) this says the identifier is gone from this store's view; it does not say why.",
+  "next_step": "Recorded, not started: a decision is needed before anything else happens. Non-empty results never trigger a read; a 404 triggers nothing at all. The two prepared follow-ups - removal of the legacy token copy, and the restore-vs-rebind comparison - are in R1_03_TOKEN_COPY_REMOVAL_PLAN.md and R1_03_LIST_RECOVERY_OPTIONS.md, and both wait for explicit authorization."
+}
