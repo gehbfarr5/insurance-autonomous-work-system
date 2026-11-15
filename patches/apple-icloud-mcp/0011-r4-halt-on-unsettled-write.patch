@@ -1,0 +1,88 @@
+diff --git a/src/core/writeLedger.ts b/src/core/writeLedger.ts
+--- a/src/core/writeLedger.ts
++++ b/src/core/writeLedger.ts
+@@ -187,7 +187,11 @@
+     if (typeof e.detail === 'string') entry.detail = e.detail;
+     entries.push(entry);
+   }
+-  return { entries, halt: entries.some((e) => e.outcome === 'SENT_UNKNOWN') };
++  // The process may have exited after sending the request but before recording its result.
++  const latestBySequence = new Map(entries.map((entry) => [entry.seq, entry]));
++  const halt = entries.some((entry) => entry.outcome === 'SENT_UNKNOWN') ||
++    [...latestBySequence.values()].some((entry) => entry.outcome === 'PENDING');
++  return { entries, halt };
+ }
+
+ export function createWriteLedger(options: {
+@@ -213,7 +217,7 @@
+     halt = replayed.halt;
+     if (halt) {
+       // 重放恢复的停发同步进共享停发位：任何持有同一停发位的账本一并停发。
+-      options.sharedHalt?.markHalted(`账本 ${options.path ?? ''} 重放发现 SENT_UNKNOWN`);
++      options.sharedHalt?.markHalted(`账本 ${options.path ?? ''} 重放发现结果未知或未结算的写入`);
+     }
+   }
+
+diff --git a/tests/unit/core/write-ledger.test.ts b/tests/unit/core/write-ledger.test.ts
+--- a/tests/unit/core/write-ledger.test.ts
++++ b/tests/unit/core/write-ledger.test.ts
+@@ -5,6 +5,7 @@
+ import {
+   assertGrantable,
+   createWriteLedger,
++  createSharedHalt,
+   createWritePolicyFromEnv,
+   parseWriteGrantsFromEnv,
+   stableHash,
+@@ -128,33 +129,27 @@
+   const line = (e: Partial<WriteLedgerEntry>): string =>
+     JSON.stringify({ at, tool: 'reminders_create', ...e } as WriteLedgerEntry);
+
+-  it('PENDING and COMPLETED keys stay blocked after a restart (halt absent)', () => {
++  it('halts both backends after restarting with an unsettled write', () => {
+     const dir = mkdtempSync(join(tmpdir(), 'r3-replay-'));
+     const file = join(dir, 'ledger.jsonl');
+-    writeFileSync(
+-      file,
+-      [
+-        line({ seq: 1, dedup_key: 'k-done', outcome: 'COMPLETED' }),
+-        line({ seq: 2, tool: 'reminders_update', dedup_key: 'k-pending', outcome: 'PENDING' }),
+-      ].join('\n') + '\n',
+-    );
+-
+-    // 模拟进程重启：同一路径上的新账本实例。
+     const ledger = createWriteLedger({ mode: 'file', path: file });
+-    expect(ledger.halted()).toBe(false);
+-    expect(ledger.entries()).toHaveLength(2);
+-
+-    for (const key of ['k-done', 'k-pending']) {
+-      try {
+-        ledger.assertSendable('reminders_create', key);
+-        expect.unreachable();
+-      } catch (err) {
+-        // COMPLETED 与未决 PENDING 都阻断重复提交——重启不解除。
+-        expect((err as AppError).code).toBe('DUPLICATE_SUBMIT');
+-      }
+-    }
+-    // 未出现过的 key 不受影响。
+-    expect(() => ledger.assertSendable('reminders_create', 'k-brand-new')).not.toThrow();
++    const finished = ledger.begin('eventkit_update', 'finished');
++    ledger.settle(finished.seq, 'COMPLETED');
++
++    const restarted = createWriteLedger({ mode: 'file', path: file });
++    expect(restarted.halted()).toBe(false);
++    expect(() => restarted.assertSendable('eventkit_update', 'finished')).toThrow();
++    restarted.begin('eventkit_delete', 'unsettled');
++
++    const sharedHalt = createSharedHalt();
++    const recovered = createWriteLedger({ mode: 'file', path: file, sharedHalt });
++    const other = createWriteLedger({ mode: 'memory', sharedHalt });
++    expect(recovered.halted()).toBe(true);
++    for (const candidate of [recovered, other]) {
++      expect(() => candidate.assertSendable('reminders_create', 'new-key')).toThrow(
++        expect.objectContaining({ code: 'SEND_BLOCKED' }),
++      );
++    }
+   });
+
+   it('SENT_UNKNOWN restores the global halt across a restart: every key (old or new) is blocked', () => {
